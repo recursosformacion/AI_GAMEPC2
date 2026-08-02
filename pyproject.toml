@@ -1,0 +1,80 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chorus-study-generator"
+version = "0.1.0"
+description = "Chorus Study Generator with Open Score Acquisition Platform"
+requires-python = ">=3.12"
+license = {text = "MIT"}
+authors = [
+    {name = "Chorus Team"},
+]
+
+[project.scripts]
+osap = "src.osap.cli.main:entrypoint"
+
+[project.optional-dependencies]
+datasets = ["datasets>=3.0"]
+api = ["fastapi>=0.115", "uvicorn[standard]>=0.30"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+disallow_untyped_defs = true
+disallow_any_unimported = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unreachable = true
+explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+# The Hugging Face adapter is the dynamic boundary with the `datasets` library.
+module = "src.osap.infrastructure.hf.*"
+disallow_any_expr = false
+disallow_any_explicit = false
+warn_return_any = false
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# MediaWiki and JSON APIs are dynamic boundaries.
+module = "src.osap.infrastructure.mediawiki.*"
+disallow_any_expr = false
+warn_return_any = false
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "SIM", # flake8-simplify
+    "TCH", # flake8-type-checking
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["tests/*"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 50
