@@ -49,6 +49,7 @@ class OmrCatalogProvider(ICatalogProvider):
         self._api_key = api_key
         self._version = version
         self._provider_id = _PROVIDER_ID
+        self._server_version: str | None = None
 
     @property
     def provider_id(self) -> ProviderId:
@@ -62,8 +63,13 @@ class OmrCatalogProvider(ICatalogProvider):
             offline=False,
             formats=(OutputFormat.MUSICXML, OutputFormat.PDF, OutputFormat.MIDI, OutputFormat.JSON),
             cost_level=CostLevel.EXPENSIVE,
+            supports_title=True,
             supports_composer=True,
             supports_catalogue=True,
+            supports_genre=True,
+            supports_instrumentation=True,
+            supports_key=True,
+            supports_year=True,
             metadata={"source": "http", "base_url": self._base_url, "version": self._version},
         )
 
@@ -74,19 +80,11 @@ class OmrCatalogProvider(ICatalogProvider):
             provider_id=self.provider_id,
             source=self._base_url,
             status=CatalogStatus.INSTALLED,
-            version=self._version,
+            version=self._version_server(),
         )
 
     def search(self, request: SearchRequest) -> tuple[CandidateRepresentation, ...]:
-        params: dict[str, str] = {"type": "score", "page": "1", "per_page": "50"}
-        query = (request.query or request.title or "").strip()
-        if query:
-            params["q"] = query
-        if request.composer:
-            params["composer"] = request.composer
-        if request.catalogue:
-            params["catalog"] = request.catalogue
-        url = self._http.build_url(self._base_url, "/api/search", params)
+        url = self._http.build_url(self._base_url, "/api/search", _search_params(request))
         try:
             payload = self._http.get_json(url, headers=self._headers())
         except HttpError as exc:
@@ -131,6 +129,27 @@ class OmrCatalogProvider(ICatalogProvider):
             headers["X-API-Key"] = self._api_key
         return headers
 
+    def _version_server(self) -> str | None:
+        """Server-reported version, if available; else the configured default.
+
+        Probed once and cached so metadata() is cheap after the first call.
+        """
+        if self._server_version is not None:
+            return self._server_version
+        url = f"{self._base_url}/api/version"
+        try:
+            payload = self._http.get_json(url, headers=self._headers())
+        except HttpError:
+            self._server_version = self._version
+            return self._server_version
+        if isinstance(payload, dict):
+            reported = payload.get("version")
+            if isinstance(reported, str) and reported.strip():
+                self._server_version = reported.strip()
+                return self._server_version
+        self._server_version = self._version
+        return self._server_version
+
     def _to_candidate(self, resource: dict[str, Any]) -> CandidateRepresentation:
         rid = str(resource.get("id") or "")
         title = str(resource.get("title") or "Untitled")
@@ -165,6 +184,40 @@ class OmrCatalogProvider(ICatalogProvider):
                 "expires": access.get("expires"),
             },
         )
+
+
+def _search_params(request: SearchRequest) -> dict[str, str]:
+    """Map the search fields OMR supports, silently ignoring the absent ones.
+
+    OMR does not implement every field yet; the provider sends what exists and
+    never breaks the contract over an unsupported field.
+    """
+    params: dict[str, str] = {"type": "score", "page": "1", "per_page": "50"}
+    if request.query:
+        params["q"] = request.query.strip()
+    elif request.title:
+        params["q"] = request.title.strip()
+    if request.title:
+        params["title"] = request.title.strip()
+    if request.composer:
+        params["composer"] = request.composer.strip()
+    if request.catalogue:
+        params["catalog"] = request.catalogue.strip()
+    if request.genre:
+        params["genre"] = request.genre.strip()
+    if request.key:
+        params["key"] = request.key.strip()
+    if request.instrumentation:
+        params["instrumentation"] = " ".join(request.instrumentation)
+    if request.voices:
+        params["voices"] = " ".join(request.voices)
+    if request.year_range is not None:
+        params["year"] = f"{request.year_range[0]}-{request.year_range[1]}"
+    if request.desired_format is not None:
+        params["format"] = request.desired_format.value
+    if request.public_domain_only is not None:
+        params["public_domain"] = "true" if request.public_domain_only else "false"
+    return params
 
 
 def _resources(payload: object) -> list[dict[str, Any]]:

@@ -127,16 +127,44 @@ No cambia código: congela el comportamiento. `docs/adr/0020-provider-search-str
 
 ---
 
+## V2.0 Freeze
+
+**El núcleo de resolución queda congelado.**
+
+- V2.0.0–V2.0.6 ✅ completadas y verificadas (contratos, SearchRequest, Orchestrator,
+  Aggregator, Evidence, OMR, IMSLP).
+- Validado el caso más importante de OSAP: **varios proveedores describiendo la misma
+  obra** → un solo `WorkGroup` con sus representaciones.
+- OMR e IMSLP funcionan simultáneamente bajo el mismo `ICatalogProvider`, sin casos
+  especiales y sin tocar el núcleo.
+
+**Regla desde aquí:** los siguientes desarrollos (Search Engine, MuseScore, YouTube...)
+se **adaptan** a este núcleo. Solo se modifica si un proveedor real demuestra una
+**limitación general** del contrato. Este freeze marca el momento en que se deja de
+rediseñar arquitectura y se empieza a construir producto.
+
+---
+
 ## V2.1 — Nuevo Search Engine
 
+> **Diseño antes que código.** La V2.1 no empieza implementando: empieza con un
+> documento de diseño (el **4º documento fundamental**, junto a la Auditoría, el
+> ROADMAP y el Provider Contract) que responda, de forma estable:
+
+- ¿Qué significa **buscar una obra**?
+- ¿Qué diferencia hay entre **búsqueda libre** y **resolución**?
+- ¿Cómo se **combinan** los resultados de varios proveedores?
+- ¿Cómo se **ordenan**? ¿Qué peso tienen compositor, catálogo, género, instrumentación...?
+- ¿Qué hace OSAP cuando una búsqueda devuelve **cientos de candidatos**?
+
 **Alcance**
-- No antes: un Search Engine sin dos proveedores reales es teoría.
 - Con OMR e IMSLP funcionando (V2.0.5/0.6), mejorar: sinónimos, transliteración,
   búsquedas por catálogo, normalización y ranking textual.
 - Motor de búsqueda definitivo sobre `WorkMatcher` / `WorkGrouper` / `Lexicon`.
 - Aprovechar el subsistema de datasets (PDMX) e IMSLP como fuentes indexadas.
 
 **Criterios de salida**
+- Documento de diseño estable antes de la implementación.
 - `osap search` consistente entre proveedores (OpenScore, PDMX, IMSLP).
 - Búsqueda correcta en acentos/mayúsculas/parcial.
 
