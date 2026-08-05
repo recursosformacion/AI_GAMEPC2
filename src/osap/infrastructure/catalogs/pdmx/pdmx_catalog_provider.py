@@ -18,6 +18,7 @@ from src.osap.domain.musical_source import MusicalSource
 from src.osap.domain.output_format import OutputFormat
 from src.osap.domain.quality_level import QualityLevel
 from src.osap.domain.resolve_request import ResolveRequest
+from src.osap.domain.search_request import SearchRequest
 from src.osap.domain.value_objects import (
     CandidateId,
     CatalogId,
@@ -165,7 +166,7 @@ class PdmxCatalogProvider(ICatalogProvider):
             status=CatalogStatus.AVAILABLE if self._index_path.exists() else CatalogStatus.STALE,
         )
 
-    def search(self, request: ResolveRequest) -> tuple[CandidateRepresentation, ...]:
+    def search(self, request: SearchRequest) -> tuple[CandidateRepresentation, ...]:
         self._ensure_index()
         if not self._index_path.exists():
             raise ResourceUnavailableError(
@@ -187,7 +188,7 @@ class PdmxCatalogProvider(ICatalogProvider):
         self._ensure_index()
         if not self._index_path.exists():
             return None
-        rows = self._query(request)
+        rows = self._query(SearchRequest.from_resolve(request))
         if rows:
             return _to_candidate(
                 rows[0],
@@ -258,7 +259,7 @@ class PdmxCatalogProvider(ICatalogProvider):
             diagnostics={"source_url": url},
         )
 
-    def _query(self, request: ResolveRequest) -> list[dict[str, Any]]:
+    def _query(self, request: SearchRequest) -> list[dict[str, Any]]:
         clauses: list[str] = []
         params: list[object] = []
         if request.title or request.query:

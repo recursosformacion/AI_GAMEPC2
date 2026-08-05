@@ -32,6 +32,7 @@ from .resolve_result import ResolveResult
 from .resource import Resource, ResourceKind, ResourceStatus
 from .score import Score
 from .score_ranking import ScoreRanking
+from .search_request import SearchRequest, SearchRequestBuilder
 from .strategy import Strategy
 from .strategy_kind import StrategyKind
 from .user_profile import UserProfile
@@ -109,6 +110,8 @@ __all__ = [
     "CandidateRepresentation",
     "ResolveRequest",
     "ResolveRequestBuilder",
+    "SearchRequest",
+    "SearchRequestBuilder",
     "ResolveResult",
     "Resource",
     "ResourceKind",

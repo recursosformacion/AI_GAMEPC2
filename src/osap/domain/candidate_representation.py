@@ -31,4 +31,5 @@ class CandidateRepresentation:
     remote_id: str | None = None
     rating: float | None = None
     notes: str | None = None
+    completeness: float = 1.0
     metadata: dict[str, object] = field(default_factory=dict)

@@ -11,6 +11,7 @@ from src.osap.domain.errors import ResourceUnavailableError
 from src.osap.domain.output_format import OutputFormat
 from src.osap.domain.quality_level import QualityLevel
 from src.osap.domain.resolve_request import ResolveRequest
+from src.osap.domain.search_request import SearchRequest
 from src.osap.domain.value_objects import (
     CandidateId,
     CatalogId,
@@ -74,7 +75,7 @@ class HuggingFaceCatalogProvider(ICatalogProvider):
             status=CatalogStatus.INSTALLED,
         )
 
-    def search(self, request: ResolveRequest) -> tuple[CandidateRepresentation, ...]:
+    def search(self, request: SearchRequest) -> tuple[CandidateRepresentation, ...]:
         try:
             module = self._engine()
             dataset = module.load_dataset(self._path, streaming=request.offline)
@@ -89,7 +90,7 @@ class HuggingFaceCatalogProvider(ICatalogProvider):
             raise ResourceUnavailableError("source unavailable") from None
 
     def resolve(self, request: ResolveRequest) -> CandidateRepresentation | None:
-        candidates = self.search(request)
+        candidates = self.search(SearchRequest.from_resolve(request))
         return candidates[0] if candidates else None
 
     def download(
@@ -105,7 +106,7 @@ class HuggingFaceCatalogProvider(ICatalogProvider):
             raise RuntimeError("The 'datasets' library is required for Hugging Face catalogs") from exc
 
 
-def _to_predicate(request: ResolveRequest) -> Callable[[Row], bool]:
+def _to_predicate(request: SearchRequest) -> Callable[[Row], bool]:
     def predicate(row: Row) -> bool:
         if request.title and request.title.lower() not in str(row.get("title") or "").lower():
             return False

@@ -11,6 +11,7 @@ from src.osap.domain.musical_source import MusicalSource
 from src.osap.domain.output_format import OutputFormat
 from src.osap.domain.quality_level import QualityLevel
 from src.osap.domain.resolve_request import ResolveRequest
+from src.osap.domain.search_request import SearchRequest
 from src.osap.domain.value_objects import (
     CandidateId,
     CatalogId,
@@ -66,7 +67,7 @@ class OpenScoreCatalogProvider(ICatalogProvider):
             status=CatalogStatus.INSTALLED,
         )
 
-    def search(self, request: ResolveRequest) -> tuple[CandidateRepresentation, ...]:
+    def search(self, request: SearchRequest) -> tuple[CandidateRepresentation, ...]:
         candidates: list[CandidateRepresentation] = []
         for repo in self._repos:
             branch, tree = self._load_index(repo)
@@ -80,7 +81,7 @@ class OpenScoreCatalogProvider(ICatalogProvider):
         return tuple(candidates)
 
     def resolve(self, request: ResolveRequest) -> CandidateRepresentation | None:
-        candidates = self.search(request)
+        candidates = self.search(SearchRequest.from_resolve(request))
         return candidates[0] if candidates else None
 
     def download(
@@ -135,7 +136,7 @@ class OpenScoreCatalogProvider(ICatalogProvider):
         return str(entry.get("path") or "").lower().endswith(_MUSICXML_EXTENSIONS)
 
     @staticmethod
-    def _matches(request: ResolveRequest, path: str) -> bool:
+    def _matches(request: SearchRequest, path: str) -> bool:
         title_text = (request.title or request.query or "").strip()
         composer = (request.composer or "").strip()
         if not title_text and not composer:

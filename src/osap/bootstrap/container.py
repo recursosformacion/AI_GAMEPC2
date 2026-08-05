@@ -1,6 +1,7 @@
 from src.osap.application.catalog_manager import CatalogManager
 from src.osap.application.export_manager import ExportManager
 from src.osap.application.library_manager import LibraryManager
+from src.osap.application.provider_orchestrator import ProviderOrchestrator
 from src.osap.application.work_merge_service import WorkMergeService
 from src.osap.application.work_resolution_engine import WorkResolutionEngine
 from src.osap.application.work_resolver import WorkResolver
@@ -165,10 +166,12 @@ class Container:
     def work_resolution_engine(self) -> WorkResolutionEngine:
         if self._ranking_engine is None:
             raise RuntimeError("No ranking engine registered")
+        orchestrator = ProviderOrchestrator(self.catalog_manager(), self._cache)
         return WorkResolutionEngine(
             self.catalog_manager(),
             self._ranking_engine,
             self.work_resolver(),
             self._ranking_config,
             self.library_manager(),
+            orchestrator=orchestrator,
         )

@@ -1,11 +1,12 @@
 import hashlib
 import time
 from collections.abc import Callable
-from dataclasses import dataclass
 from typing import cast
 
 from src.osap.application.catalog_manager import CatalogManager
 from src.osap.application.library_manager import LibraryManager
+from src.osap.application.provider_orchestrator import ProviderOrchestrator
+from src.osap.application.provider_orchestrator import ProviderReport as ProviderReport
 from src.osap.application.work_merge_service import _sort_key
 from src.osap.application.work_resolver import WorkResolver
 from src.osap.domain.acquisition_result import AcquisitionResult
@@ -14,9 +15,9 @@ from src.osap.domain.errors import ResourceUnavailableError, ScoreResolutionErro
 from src.osap.domain.ranking_config import RankingConfig
 from src.osap.domain.resolve_request import ResolveRequest
 from src.osap.domain.resolve_result import ResolveResult
+from src.osap.domain.search_request import SearchRequest
 from src.osap.domain.value_objects import Duration, LibraryId, ProviderId, WorkId
 from src.osap.domain.work_descriptor import WorkDescriptor
-from src.osap.ports.catalog_provider import ICatalogProvider
 from src.osap.ports.ranking_engine import IRankingEngine
 
 # Normalized provider statuses (the only values visible to the user/UI).
@@ -30,15 +31,6 @@ _STRUCTURED_FORMATS = ("musicxml", "mei")
 ProgressCallback = Callable[[str], None]
 
 
-@dataclass(frozen=True)
-class ProviderReport:
-    """Normalized outcome of querying a single catalog provider."""
-
-    provider_id: ProviderId
-    outcome: str  # ok | no_result | unavailable | error
-    detail: str = ""
-
-
 def _notify(on_progress: ProgressCallback | None, message: str) -> None:
     if on_progress is not None:
         on_progress(message)
@@ -47,10 +39,11 @@ def _notify(on_progress: ProgressCallback | None, message: str) -> None:
 class WorkResolutionEngine:
     """Resolves a musical request into a ResolveResult.
 
-    The engine only knows `ICatalogProvider` and `CandidateRepresentation`. It
-    never knows datasets, Hugging Face, PDMX, sizes or downloads: each provider
-    self-manages its own availability and raises `ResourceUnavailableError` when
-    it cannot serve.
+    The engine only knows `ProviderOrchestrator` and `CandidateRepresentation`;
+    it never iterates providers nor knows `CatalogCapabilities`. Deciding whom
+    to ask, in what order, when to stop and when to reuse belongs to the
+    `ProviderOrchestrator`. Selection belongs to the `IRankingEngine` (evidence),
+    never to a provider.
     """
 
     def __init__(
@@ -60,8 +53,9 @@ class WorkResolutionEngine:
         work_resolver: WorkResolver,
         config: RankingConfig,
         library_manager: LibraryManager | None = None,
+        orchestrator: ProviderOrchestrator | None = None,
     ) -> None:
-        self._catalog_manager = catalog_manager
+        self._orchestrator = orchestrator or ProviderOrchestrator(catalog_manager)
         self._ranking_engine = ranking_engine
         self._work_resolver = work_resolver
         self._config = config
@@ -175,7 +169,7 @@ class WorkResolutionEngine:
         )
 
     def download(self, candidate: CandidateRepresentation, request: ResolveRequest) -> AcquisitionResult:
-        provider = self._find(candidate.provider_id)
+        provider = self._orchestrator.provider(candidate.provider_id)
         return provider.download(candidate, request.desired_format)
 
     def rank(
@@ -187,32 +181,7 @@ class WorkResolutionEngine:
     def provider_status(
         self, request: ResolveRequest, on_progress: ProgressCallback | None = None
     ) -> tuple[ProviderReport, ...]:
-        reports: list[ProviderReport] = []
-        for provider in self._catalog_manager.providers():
-            pid = provider.provider_id.value
-            if not self._eligible(provider, request):
-                reports.append(ProviderReport(provider.provider_id, STATUS_UNAVAILABLE, ""))
-                _notify(on_progress, f"{pid}: omitido")
-                continue
-            _notify(on_progress, f"Consultando {pid}...")
-            try:
-                candidates = provider.search(request)
-            except ResourceUnavailableError as exc:
-                reports.append(ProviderReport(provider.provider_id, STATUS_UNAVAILABLE, exc.code or str(exc)))
-                _notify(on_progress, f"{pid}: no disponible")
-                continue
-            except (ScoreResolutionError, NotImplementedError) as exc:
-                reports.append(ProviderReport(provider.provider_id, STATUS_ERROR, str(exc)))
-                _notify(on_progress, f"{pid}: error")
-                continue
-            if candidates:
-                formats = ", ".join(sorted({c.format.value for c in candidates}))
-                reports.append(ProviderReport(provider.provider_id, STATUS_OK, formats))
-                _notify(on_progress, f"{pid}: {len(candidates)} candidato(s)")
-            else:
-                reports.append(ProviderReport(provider.provider_id, STATUS_NO_RESULT, ""))
-                _notify(on_progress, f"{pid}: sin resultados")
-        return tuple(reports)
+        return self._orchestrator.provider_status(SearchRequest.from_resolve(request), on_progress)
 
     @staticmethod
     def _pick(ranking: tuple[CandidateRepresentation, ...], index: int | None) -> CandidateRepresentation | None:
@@ -234,41 +203,8 @@ class WorkResolutionEngine:
     def _collect(
         self, request: ResolveRequest, on_progress: ProgressCallback | None = None
     ) -> tuple[tuple[CandidateRepresentation, ...], list[ProviderId], list[str]]:
-        results: list[CandidateRepresentation] = []
-        used: list[ProviderId] = []
-        diagnostics: list[str] = []
-        for provider in self._catalog_manager.providers():
-            if not self._eligible(provider, request):
-                continue
-            used.append(provider.provider_id)
-            pid = provider.provider_id.value
-            _notify(on_progress, f"Consultando {pid}...")
-            try:
-                found = provider.search(request)
-            except (ResourceUnavailableError, ScoreResolutionError, NotImplementedError):
-                diagnostics.append(f"{pid}: unavailable")
-                _notify(on_progress, f"{pid}: no disponible")
-                continue
-            _notify(on_progress, f"{pid}: {len(found)} candidato(s)")
-            results.extend(found)
-        return tuple(results), used, diagnostics
-
-    @staticmethod
-    def _eligible(provider: ICatalogProvider, request: ResolveRequest) -> bool:
-        if request.allowed_providers and provider.provider_id not in request.allowed_providers:
-            return False
-        if provider.provider_id in request.excluded_providers:
-            return False
-        caps = provider.capabilities()
-        if not request.online and not caps.offline:
-            return False
-        return not (not request.offline and caps.offline)
-
-    def _find(self, provider_id: ProviderId) -> ICatalogProvider:
-        for provider in self._catalog_manager.providers():
-            if provider.provider_id == provider_id:
-                return provider
-        raise ScoreResolutionError(f"No catalog provider registered for {provider_id.value!r}")
+        result = self._orchestrator.search(SearchRequest.from_resolve(request), on_progress)
+        return result.candidates, list(result.providers_used), list(result.diagnostics)
 
 
 def _is_structured(format: object) -> bool:

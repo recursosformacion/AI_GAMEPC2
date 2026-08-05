@@ -6,6 +6,7 @@ from ..domain.catalog_capabilities import CatalogCapabilities
 from ..domain.catalog_info import CatalogInfo
 from ..domain.output_format import OutputFormat
 from ..domain.resolve_request import ResolveRequest
+from ..domain.search_request import SearchRequest
 from ..domain.value_objects import ProviderId
 
 
@@ -24,7 +25,7 @@ class ICatalogProvider(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def search(self, request: ResolveRequest) -> tuple[CandidateRepresentation, ...]:
+    def search(self, request: SearchRequest) -> tuple[CandidateRepresentation, ...]:
         raise NotImplementedError
 
     @abstractmethod

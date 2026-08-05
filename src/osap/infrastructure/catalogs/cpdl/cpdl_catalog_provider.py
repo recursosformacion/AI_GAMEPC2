@@ -5,6 +5,7 @@ from src.osap.domain.catalog_info import CatalogInfo
 from src.osap.domain.catalog_status import CatalogStatus
 from src.osap.domain.output_format import OutputFormat
 from src.osap.domain.resolve_request import ResolveRequest
+from src.osap.domain.search_request import SearchRequest
 from src.osap.domain.value_objects import CatalogId, ProviderId
 from src.osap.ports.catalog_provider import ICatalogProvider
 
@@ -31,7 +32,7 @@ class CPDLCatalogProvider(ICatalogProvider):
             status=CatalogStatus.INSTALLED,
         )
 
-    def search(self, request: ResolveRequest) -> tuple[CandidateRepresentation, ...]:
+    def search(self, request: SearchRequest) -> tuple[CandidateRepresentation, ...]:
         raise NotImplementedError
 
     def resolve(self, request: ResolveRequest) -> CandidateRepresentation | None:

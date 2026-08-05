@@ -1,169 +1,266 @@
-# Provider Contract — OSAP V2
+# Provider Contract — V2.0 (Freeze Public Contracts)
 
-> **Status: draft** (se congelará en V2.0 — Freeze public contracts).
+> **Status: core · frozen en V2.0**
 >
-> Documento más importante de la V2. Define **por escrito** el contrato que todo
-> proveedor obedece. Antes de que IMSLP, MuseScore, OMR, CPDL, OpenScore,
-> Filesystem o PDMX se implementen o amplíen, deben cumplir exactamente este
-> contrato.
+> Especificación definitiva del contrato de proveedores de OSAP. Tercer documento
+> fundamental del proyecto, junto a `docs/architecture-audit.md` y `ROADMAP.md`.
+>
+> Este documento **no se adapta a los proveedores**: los proveedores se adaptan a
+> este contrato.
 
-## Principio rector
+## Regla de congelación (obligatoria)
 
-Para OSAP, **todos los proveedores son iguales**. No existe un camino especial
-para OMR ni para ningún otro. Todos implementan la interfaz `ICatalogProvider`:
+A partir de V2.0, **cualquier nuevo proveedor deberá implementar este contrato sin
+excepciones**.
+
+- El contrato **no** se adapta al proveedor; el proveedor se adapta al contrato.
+- Un proveedor no puede exigir campos nuevos ni ignorar campos obligatorios.
+- Si un proveedor futuro necesita algo que no está aquí, se modifica el contrato
+  **por revisión de versiones**, no por excepción puntual. La regla vale para OMR,
+  IMSLP, MuseScore, CPDL, OpenScore, Filesystem, PDMX y cualquier proveedor futuro.
+
+---
+
+## Principios que gobiernan el contrato
+
+1. **Provider autonomy** — cada proveedor describe únicamente lo que conoce; nunca
+   adapta resultados para favorecer un ranking, nunca fusiona obras, nunca decide
+   cuál es la mejor representación.
+2. **Todos los proveedores son iguales** (ADR-0018) — no hay camino especial para
+   ningún proveedor, incluido OMR.
+3. **Buscar ≠ resolver** — `SearchRequest` y `ResolveRequest` son contratos distintos.
+4. **OSAP piensa y decide** — la lógica de negocio (ranking, fusión, evidencia,
+   selección) vive en el núcleo de OSAP.
+
+### Interfaz canónica
 
 ```python
 class ICatalogProvider(ABC):
     provider_id -> ProviderId
-    search(request: ResolveRequest) -> tuple[CandidateRepresentation, ...]
-    resolve(request: ResolveRequest) -> CandidateRepresentation | None
+    search(request: SearchRequest) -> tuple[CandidateRepresentation, ...]
+    resolve(work: WorkDescriptor) -> CandidateRepresentation | None
     download(candidate, output_format=None) -> AcquisitionResult
     metadata() -> CatalogInfo
     capabilities() -> CatalogCapabilities
 ```
 
-Los tipos de dominio (`Work`, `Representation`, `Evidence`, `ResourceBundle`) son
-parte del contrato público y se congelan en V2.0.
+---
+
+## Contrato 1 — `SearchRequest`
+
+Una **búsqueda**. Puede pedir varios términos a la vez sin intención de resolver
+una obra concreta.
+
+Campos (inmutables):
+- `query` — texto libre (opcional)
+- `title` — título (opcional)
+- `composer` — compositor (opcional)
+- `catalogue` — catálogo, p. ej. `BWV`, `KV` (opcional)
+- `instrumentation` / `voices` — instrumentación / voces (opcional)
+- `genre` — género (opcional)
+- `key` — tonalidad (opcional)
+- `year_range` — rango de años (opcional)
+- `format` — `OutputFormat` deseado (opcional)
+- `min_quality` — calidad mínima (opcional)
+- `public_domain_only` — bool (opcional)
+- `online` / `offline` — modo de red
+- `allowed_providers` / `excluded_providers` — (opcional)
+
+Semántica: *"devuélveme candidatos que coincidan con esto"*. No implica resolver.
 
 ---
 
-## 1. `search()`
+## Contrato 2 — `ResolveRequest`
 
-### Entrada
-`ResolveRequest` — texto, título, compositor, voces, formato, min_quality,
-online/offline, proveedores permitidos/excluidos.
+*"Quiero esta obra concreta."* Contiene la **identidad** de la obra, no texto libre.
 
-### Salida
-`tuple[CandidateRepresentation, ...]` — cero o más candidatos. Cada candidato es
-una **representación posible** de una obra.
+Campos:
+- `work` — `WorkDescriptor` (identidad normalizada) **o** `work_id`
+- `format` / `min_quality` / `public_domain_only` (opcional)
+- `online` / `offline`
 
-### Reglas
-- No debe fallar por un término sin resultados: devuelve tupla vacía.
-- Es **best-effort**: puede devolver candidatos de distinta calidad.
-- No bloquea en red indefinidamente: obedece timeouts del `ProviderExecutionPlan`.
-
-### Errores
-- Errores de red/transporte → el orquestador decide (reintento, degradación, salto).
-- Errores de contrato (formato inesperado) → se reportan como diagnóstico, no como
-  excepción que rompa la búsqueda global.
+Regla: nunca un simple string como `"Mozart Ave Verum"`. Para llegar aquí, OSAP ya
+ha buscado.
 
 ---
 
-## 2. `resolve()`
+## Contrato 3 — `Work` (`WorkDescriptor`)
 
-### Entrada
-`ResolveRequest` (igual que `search`).
+Identidad pura de una obra: título, compositor, movimiento, géneros, instrumentación
+esperada. **Sin formatos ni archivos.**
 
-### Salida
-`CandidateRepresentation | None` — la **mejor** representación del proveedor para la
-obra, o `None` si el proveedor no puede resolverla.
-
-### Reglas
-- Devuelve una sola representación candidata con sus **licencias** y **evidencia**.
-- El proveedor no decide la elección final; solo propone. La elección la hace el
-  `ProviderOrchestrator` + ranking/evidence.
-
-### Representaciones y licencias
-Cada `CandidateRepresentation` declara:
-- formato (`OutputFormat`), proveedor, calidad, confianza, checksum, tamaño, ruta local.
-- licencia y si es de dominio público.
+Es la unidad sobre la que OSAP piensa y sobre la que se agrupan las
+`CandidateRepresentation` de distintos proveedores.
 
 ---
 
-## 3. `download()`
+## Contrato 4 — `Representation` (`CandidateRepresentation`)
 
-### Entrada
-`candidate: CandidateRepresentation`, `output_format: OutputFormat | None`.
+Forma concreta de una obra encontrada en un proveedor. Es un objeto **frozen** con:
 
-### Modos de acceso
-| Modo | Descripción | Soporte |
-|------|-------------|---------|
-| **Acceso directo** | URL/endpoint directo, descarga sin interacción | vía `CatalogCapabilities.supports_download` |
-| **Acceso manual** | Requiere elección/confirmación del usuario (lista numerada) | cuando hay varias versiones |
-| **Streaming** | Obtener sin descargar todo; reproducir/transmitir | vía `CatalogCapabilities.supports_streaming` |
+| Campo | Tipo | Semántica |
+|-------|------|-----------|
+| `candidate_id` | `CandidateId` | identidad del candidato |
+| `work_descriptor` | `WorkDescriptor` | la obra que representa |
+| `provider_id` | `ProviderId` | proveedor que la ofrece |
+| `format` | `OutputFormat` | formato |
+| `origin` / `remote_id` | `str \| None` | dónde está |
+| `license` / `public_domain` | `str \| bool` | licencia |
+| `quality` | `QualityLevel` | calidad (§8) |
+| `confidence` | `Confidence` | confianza (§8) |
+| `completeness` | 0–1 | completitud (§8) |
+| `download_url` / `local_path` | `str \| None` | acceso |
+| `edition` | `str \| None` | edición |
+| `size_bytes` / `checksum` | `int \| str \| None` | integridad |
+| `downloadable` / `manual_download` | `bool` | modo de acceso |
+| `rating` / `notes` / `metadata` | varios | adicional |
 
-### Salida
-`AcquisitionResult` — representación adquirida o reporte de fallo.
-
-### Reglas
-- OSAP decide e instala recursos cuando es necesario; solo pide aprobación si es
-  estrictamente necesario.
-- La descarga respeta costes y límites (ver §5).
-
----
-
-## 4. `capabilities()` — qué soporta un proveedor
-
-`CatalogCapabilities` es el contrato que el orquestador usa para decidir a quién
-consultar. **Nada de listas de proveedores hardcodeadas.**
-
-| Campo | Significado |
-|-------|-------------|
-| `supports_search` | Puede buscar |
-| `supports_download` | Puede descargar |
-| `supports_streaming` | Puede transmitir sin descargar todo |
-| `offline` | Funciona sin red |
-| `formats` | Formatos que ofrece |
-| `public_domain_only` | Solo dominio público |
-| `requires_auth` | Necesita credenciales |
-| `metadata` | Datos adicionales del proveedor |
+Regla: un proveedor devuelve representaciones **completas y verificadas**; no
+rellena campos que no conoce.
 
 ---
 
-## 5. `costs` — coste de uso
+## Contrato 5 — `AcquisitionResult`
 
-OSAP debe **conocer el coste** de cada proveedor. No es un campo cosmético:
-condiciona la orquestación (a quién preguntar, en qué orden, si paralelizar).
+Resultado de `download()`:
 
-| Proveedor | Coste |
-|-----------|-------|
-| OMR | **Sí** (infraestructura de pago). Consultar de forma controlada. |
-| IMSLP | No |
-| Filesystem | No |
-| PDMX / OpenScore / CPDL | No (públicos) |
-| MuseScore | Según API/plan → declarado por el proveedor |
-
-Propuesta: ampliar `CatalogCapabilities.metadata` (o añadir un campo de dominio
-`CostLevel` ya existente) para que cada proveedor declare su coste de forma
-estructurada, y que `ProviderExecutionPlan` lo tenga en cuenta.
+| Campo | Semántica |
+|-------|-----------|
+| `provider_id` | proveedor |
+| `source` | `MusicalSource` obtenido |
+| `confidence` | confianza del resultado |
+| `processing_time` | duración |
+| `format` | formato |
+| `quality_level` | calidad resultante |
+| `warnings` / `diagnostics` | avisos y diagnóstico |
 
 ---
 
-## 6. `quality` — semántica
+## Contrato 6 — `CatalogCapabilities`
 
-Significado de las métricas de calidad, de forma **consistente entre proveedores**:
+Qué puede hacer y qué puede buscar un proveedor. El orquestador lo usa para decidir
+a quién consultar; **sin listas de proveedores hardcodeadas**.
 
-- **`confidence`** — qué seguros estamos de que el candidato **es la obra buscada**
-  (coincidencia de identidad con `WorkDescriptor`).
-- **`quality`** — qué buena es la representación **en sí misma** (nivel de la fuente,
-  notación, metadatos): el `QualityLevel` del dominio.
-- **`completeness`** — qué completa está la obra en esa representación (movimientos
-  completos, instrumentación, edición).
+Capacidades de operación:
+- `supports_search` — puede buscar
+- `supports_download` — puede descargar
+- `supports_streaming` — puede transmitir sin descargar todo
+- `supports_reference` — solo ofrece referencias (sin descarga)
+- `offline` — funciona sin red
+- `formats` — formatos que ofrece
+- `public_domain_only` — solo dominio público
+- `requires_auth` — necesita credenciales
+- `cost_level` — `CostLevel` (§7)
+- `metadata` — adicional
 
-Regla: los tres se normalizan a una escala común (p. ej. 0–1) para que el
-`ProviderResultAggregator` pueda comparar proveedores heterogéneos.
+Campos de búsqueda soportados:
+- `supports_title`
+- `supports_composer`
+- `supports_catalogue`
+- `supports_instrumentation`
+- `supports_genre`
+- `supports_key`
+- `supports_year`
+
+> Ejemplo: el usuario busca por catálogo `BWV`; no se consulta a un proveedor que
+> no soporta catálogo. Ahorra tiempo y consultas.
 
 ---
 
-## 7. Contratos de dominio congelados (V2.0)
+## Contrato 7 — `CostLevel` (coste de consulta)
 
-Se escriben y se congelan antes de implementar:
-- `ResourceBundle` — agrupación de recursos de una obra.
-- `Work` (`WorkDescriptor`) — identidad de la obra.
-- `Representation` (`CandidateRepresentation`) — forma concreta.
-- `Evidence` — justificación de por qué se eligió una representación.
+El coste **de consulta** de un proveedor. No es solo dinero: es dinero, cuota,
+limitación de API o latencia. El orquestador solo necesita saber si consultar ese
+proveedor es caro, **no por qué**.
+
+| Nivel canónico | Significado | Ejemplos |
+|----------------|-------------|----------|
+| `FREE` | Sin coste relevante | Filesystem, PDMX local, OpenScore (GitHub público), IMSLP |
+| `CHEAP` | Coste/límite bajo | APIs con límite generoso |
+| `NORMAL` | Coste moderado | APIs con cuota moderada |
+| `EXPENSIVE` | Caro o muy limitado | OMR (infraestructura de pago), APIs de pago |
+
+> Nota de alineación V2.0: el `CostLevel` actual del dominio es
+> `FREE/LOW/MEDIUM/HIGH`; se alinea a la nomenclatura canónica
+> `FREE/CHEAP/NORMAL/EXPENSIVE`.
 
 ---
 
-## 8. Modelo mental
+## Contrato 8 — Quality: `confidence`, `quality`, `completeness`
+
+Separación canónica (no se mezclan):
+
+- **`confidence`** — *¿es esta obra?* Seguridad de que el candidato coincide con la
+  identidad de `WorkDescriptor`. Escala 0–1.
+- **`quality`** — *¿qué calidad tiene?* Calidad de la representación en sí
+  (`QualityLevel`: `UNREADABLE → PARTIAL_STRUCTURE → BASIC_MELODY → FULL_NOTATION →
+  HUMAN_VALIDATED`).
+- **`completeness`** — *¿está completa?* Qué completa está la obra en esa
+  representación (movimientos, instrumentación, edición). Escala 0–1.
+
+Regla: los tres se normalizan a una escala común (0–1 / niveles ordenados) para que
+el `ProviderResultAggregator` compare proveedores heterogéneos.
+
+---
+
+## Contrato 9 — `ResourceBundle`
+
+Agrupación de **todos los recursos** que OSAP necesita u obtiene para una obra:
+representaciones, datasets, modelos, diccionarios, cachés, referencias. El
+`ResourceManager` decide qué instalar; el proveedor solo declara lo que conoce.
+
+---
+
+## Contrato 10 — `Evidence`
+
+Justificación **trazable** de por qué se eligió una representación: fuente, calidad,
+confianza, licencia, checksum, proveedor, motivo del ranking. Cada `ResolveResult`
+expone la evidencia de su elección.
+
+---
+
+## Contrato 11 — `ProviderExecutionPlan` (contrato, no implementación)
+
+Documento de comportamiento de la orquestación, definido como **contrato** (no se
+congela una implementación). Un plan responde a:
+
+- ¿A quién se pregunta primero y después?
+- ¿Se paraleliza? ¿Se espera? ¿Se cancela?
+- ¿Cuándo se da la búsqueda por terminada?
+- ¿Cuándo merece la pena consultar un proveedor lento (según `CostLevel`)?
+- ¿Cuándo se reutiliza una búsqueda anterior (caché)?
+
+---
+
+## Contrato 12 — `ProviderOrchestrator` (concepto)
+
+Componente que decide el plan de ejecución y agrega resultados. Es un **concepto**
+de la V2, no una implementación congelada aquí:
+
+```
+ProviderOrchestrator
+    ↓  decide
+ProviderExecutionPlan
+    ↓  consulta proveedores (todos iguales)
+ProviderResultAggregator   ← normaliza y une resultados
+    ↓
+ranking + evidence → selección
+```
+
+El orquestador usa `CatalogCapabilities` (incl. `cost_level` y campos de búsqueda)
+para decidir. La lógica de decisión vive en OSAP, nunca en el proveedor.
+
+---
+
+## Modelo mental
 
 ```
 OSAP
-  search()      -> tuple[CandidateRepresentation, ...]
-  resolve()     -> CandidateRepresentation | None
-  download()    -> AcquisitionResult
-  capabilities()-> CatalogCapabilities  (incl. costs)
-  quality       -> confidence | quality | completeness
+  search(SearchRequest)   -> tuple[CandidateRepresentation, ...]
+  resolve(WorkDescriptor) -> CandidateRepresentation | None
+  download(candidate)     -> AcquisitionResult
+  capabilities()          -> CatalogCapabilities (cost_level + campos de búsqueda)
+  quality                 -> confidence | quality | completeness
 ```
 ```
 consulta IMSLP

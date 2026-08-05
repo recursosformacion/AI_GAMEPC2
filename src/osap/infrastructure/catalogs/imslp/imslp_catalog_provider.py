@@ -10,6 +10,7 @@ from src.osap.domain.musical_source import MusicalSource
 from src.osap.domain.output_format import OutputFormat
 from src.osap.domain.quality_level import QualityLevel
 from src.osap.domain.resolve_request import ResolveRequest
+from src.osap.domain.search_request import SearchRequest
 from src.osap.domain.value_objects import (
     CandidateId,
     CatalogId,
@@ -68,7 +69,7 @@ class IMSLPCatalogProvider(ICatalogProvider):
             status=CatalogStatus.AVAILABLE,
         )
 
-    def search(self, request: ResolveRequest) -> tuple[CandidateRepresentation, ...]:
+    def search(self, request: SearchRequest) -> tuple[CandidateRepresentation, ...]:
         query = _build_search(request)
         if not query:
             return ()
@@ -83,7 +84,7 @@ class IMSLPCatalogProvider(ICatalogProvider):
         return tuple(candidates)
 
     def resolve(self, request: ResolveRequest) -> CandidateRepresentation | None:
-        candidates = self.search(request)
+        candidates = self.search(SearchRequest.from_resolve(request))
         return candidates[0] if candidates else None
 
     def download(
@@ -181,7 +182,7 @@ def _is_non_work(title: str, snippet: str) -> bool:
     return not bool(_WORK_TITLE_RE.search(title))
 
 
-def _build_search(request: ResolveRequest) -> str:
+def _build_search(request: SearchRequest) -> str:
     parts: list[str] = []
     if request.title or request.query:
         parts.append(request.title or request.query or "")

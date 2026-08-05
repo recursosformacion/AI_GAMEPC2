@@ -12,6 +12,7 @@ from src.osap.domain.musical_source import MusicalSource
 from src.osap.domain.output_format import OutputFormat
 from src.osap.domain.quality_level import QualityLevel
 from src.osap.domain.resolve_request import ResolveRequest
+from src.osap.domain.search_request import SearchRequest
 from src.osap.domain.value_objects import (
     CandidateId,
     CatalogId,
@@ -69,7 +70,7 @@ class LocalCatalogProvider(ICatalogProvider):
             status=CatalogStatus.AVAILABLE,
         )
 
-    def search(self, request: ResolveRequest) -> tuple[CandidateRepresentation, ...]:
+    def search(self, request: SearchRequest) -> tuple[CandidateRepresentation, ...]:
         if not self._root.exists():
             return ()
         candidates: list[CandidateRepresentation] = []
@@ -103,7 +104,7 @@ class LocalCatalogProvider(ICatalogProvider):
         return tuple(candidates)
 
     def resolve(self, request: ResolveRequest) -> CandidateRepresentation | None:
-        candidates = self.search(request)
+        candidates = self.search(SearchRequest.from_resolve(request))
         return candidates[0] if candidates else None
 
     def download(
@@ -188,7 +189,7 @@ def _score_file(folder: Path) -> Path | None:
     return None
 
 
-def _matches(request: ResolveRequest, work: WorkDescriptor) -> bool:
+def _matches(request: SearchRequest, work: WorkDescriptor) -> bool:
     title_text = (request.title or request.query or "").strip()
     composer = (request.composer or "").strip()
     if not title_text and not composer:
