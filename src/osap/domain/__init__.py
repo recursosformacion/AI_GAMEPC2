@@ -37,6 +37,15 @@ from .pipeline_log import PipelineLog, PipelineStep
 from .preference_policy import SourcePreferencePolicy
 from .quality_level import QualityLevel
 from .quality_report import QualityDimension, QualityReport
+from .ranking import (
+    RankingContext,
+    RankingCriterion,
+    RankingReason,
+    RankingResult,
+    RankingScore,
+    SortingPolicy,
+    UserPreferences,
+)
 from .ranking_config import RankingConfig
 from .request_type import RequestType
 from .resolve_request import ResolveRequest, ResolveRequestBuilder
@@ -136,6 +145,13 @@ __all__ = [
     "AppliedRule",
     "CanonicalResult",
     "ResolveRequest",
+    "RankingCriterion",
+    "RankingReason",
+    "RankingScore",
+    "RankingResult",
+    "RankingContext",
+    "UserPreferences",
+    "SortingPolicy",
     "ResolveRequestBuilder",
     "SearchRequest",
     "SearchRequestBuilder",

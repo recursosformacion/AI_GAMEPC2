@@ -181,12 +181,19 @@ rediseñar arquitectura y se empieza a construir producto.
 > `WorkGroupingMatcher` para eliminar la colisión.
 | **V2.1.3** | Ranking | pesos **medidos** (no decididos), ranking de obras, paginación, filtros |
 
-> **Diseño**: `docs/ranking-design.md` (V2.1.3). Principio: **el Ranking nunca cambia
-> la identidad de una obra; solo ordena las alternativas** (WorkMatcher decide,
-> Ranking ordena). Se rankean **obras** (`WorkGroup`), no candidatos; `score =
-> peso_objetivo×objective + peso_preferencia×preference`; métricas objetivas vs
-> preferencias; `NDCG@k`/`MRR` sobre un golden set para medir mejora; `WorkRankScore`
-> alimenta al Evidence Engine. No se escribe código hasta congelar el diseño.
+> **V2.1.3 ✅ Hecho.** Contrato en `docs/ranking-design.md` (ADR-0023 cierra V2.1).
+> Principio: **el Ranking nunca cambia la identidad de una obra; solo ordena las
+> alternativas**. Se rankean **obras** (`WorkGroup`); criterios por familia
+> (`RELEVANCE_*`, `QUALITY_*`, `PREFERENCE_*`, `COVERAGE`), sin ejes fijos; contrato
+> tipado paralelo a V2.1.2 (`RankingCriterion`, `RankingReason`, `RankingScore`,
+> `RankingResult`), sin `str` ni `dict[str,…]`; `RankingContext` mínimo (no el
+> `SearchRequest`); **Ranking ≠ Sorting** (`SortingPolicy`); `enabled_criteria` en
+> `RankingConfig`. Evaluación (`MRR`/`NDCG`, golden ranking) en documento separado.
+
+> **V2.1 Freeze.** `Canonicalizer`, `WorkMatcher`, `WorkGrouping` y `Ranking` forman el
+> **Search Intelligence Pipeline**, validado de extremo a extremo con un test de
+> integración del dominio. **`domain/` y `ports/` son API pública congelada**: cambiar
+> un contrato requiere un ADR. (ADR-0022 y ADR-0023.)
 
 **Alcance**
 - Con OMR e IMSLP funcionando (V2.0.5/0.6), mejorar: sinónimos, transliteración,
@@ -202,22 +209,47 @@ rediseñar arquitectura y se empieza a construir producto.
 
 ---
 
-## V2.2 — Evidence Engine
+## V2.2 — Evidence definitivo → Dedup/Merge → Jobs
+
+Orden: primero se termina la **inteligencia del dominio** (Evidence, Dedup/Merge);
+después la **infraestructura** (Jobs).
+
+### V2.2.a — Evidence definitivo
 
 **Alcance**
 - Responde a una única pregunta: **¿por qué OSAP ha elegido esta representación?**
 - Modelo **completamente estructurado** (sin IA, sin lenguaje natural): `Evidence`
   con `reasons` (confidence, format, public_domain, quality, completeness, checksum),
   `metrics`, `provider`, `checksum`, `ranking_score`. Asociado al `ResolveResult`.
-- Versión definitiva: motor de jobs asíncronos para adquisición/validación no
-  bloqueante y verificación de dedup/fusión.
+- El propio ranking es explicable (`RankingReason`); un renderer los convierte a texto.
 
-**Estado:** núcleo ✅ **Hecho** (modelo estructurado + `EvidenceEngine`); queda el
-scope definitivo (jobs + dedup/merge).
+**Estado:** núcleo ✅ **Hecho** (modelo estructurado + `EvidenceEngine`); queda pulir la
+integración con `RankingReason`.
 
-**Criterios de salida**
+### V2.2.b — Dedup / Merge (dominio)
+
+**Alcance**
+- Verificación de deduplicación/fusión (`Dedup`/`Merge`) sobre los `WorkGroup`.
+- Aplicar dedup/fusión de forma **verificable** (sin romper la identidad decidida por
+  el WorkMatcher).
+
+### V2.2.c — Jobs (infraestructura)
+
+**Alcance**
+- Motor de jobs asíncronos definitivo (hoy `InMemoryJobEngine` mínimo) para
+  adquisición y validación no bloqueante.
+- Se entra por **último**: es infraestructura, no dominio.
+
+**Criterios de salida (V2.2)**
 - Cada `ResolveResult` con candidato elegido incluye `Evidence` trazable.
 - Deduplicación/fusión se aplica de forma verificable.
+- Jobs asíncronos funcionando (tras Evidence y Dedup/Merge).
+
+### V2.2.d — Knowledge Mining (puente a V3)
+
+**Alcance**
+- Observar el funcionamiento de OSAP y generar **propuestas** (`knowledge/proposals/`).
+- Puente natural hacia V3 (conocimiento declarativo, sin IA).
 
 ---
 
@@ -270,3 +302,5 @@ scope definitivo (jobs + dedup/merge).
 - **El núcleo ya está maduro.** No se tocan `ProviderOrchestrator`, `Evidence`,
   `Aggregator`, `Ranking`, `SearchRequest` ni `ResolveRequest` salvo que un proveedor
   real obligue a cambiarlos. No se cambia el diseño por nuevas posibilidades.
+- **Contratos congelados (API pública):** `domain/` y `ports/` (V2.1) no cambian sin
+  un ADR.
