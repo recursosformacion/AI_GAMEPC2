@@ -13,6 +13,7 @@ from .document_type import DocumentType
 from .edition import Edition
 from .errors import DomainError, ScoreResolutionError
 from .event import Event
+from .evidence import Evidence, EvidenceMetrics, EvidenceReason, EvidenceReasonKind
 from .job import Job, JobResult, JobState, JobSubmission
 from .knowledge_base_entry import KnowledgeBaseEntry
 from .metrics import MetricRecord
@@ -81,6 +82,10 @@ __all__ = [
     "DiagnosticMessage",
     "DomainError",
     "ScoreResolutionError",
+    "Evidence",
+    "EvidenceMetrics",
+    "EvidenceReason",
+    "EvidenceReasonKind",
     "RequestType",
     "OutputFormat",
     "CostLevel",

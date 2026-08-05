@@ -1,4 +1,5 @@
 from src.osap.application.catalog_manager import CatalogManager
+from src.osap.application.evidence_engine import EvidenceEngine
 from src.osap.application.export_manager import ExportManager
 from src.osap.application.library_manager import LibraryManager
 from src.osap.application.provider_orchestrator import ProviderOrchestrator
@@ -174,4 +175,5 @@ class Container:
             self._ranking_config,
             self.library_manager(),
             orchestrator=orchestrator,
+            evidence_engine=EvidenceEngine(),
         )

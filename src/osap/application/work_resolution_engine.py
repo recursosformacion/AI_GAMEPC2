@@ -4,6 +4,7 @@ from collections.abc import Callable
 from typing import cast
 
 from src.osap.application.catalog_manager import CatalogManager
+from src.osap.application.evidence_engine import EvidenceEngine
 from src.osap.application.execution_plan import AggregatedProviderResult
 from src.osap.application.library_manager import LibraryManager
 from src.osap.application.provider_orchestrator import ProviderOrchestrator
@@ -55,12 +56,14 @@ class WorkResolutionEngine:
         config: RankingConfig,
         library_manager: LibraryManager | None = None,
         orchestrator: ProviderOrchestrator | None = None,
+        evidence_engine: EvidenceEngine | None = None,
     ) -> None:
         self._orchestrator = orchestrator or ProviderOrchestrator(catalog_manager)
         self._ranking_engine = ranking_engine
         self._work_resolver = work_resolver
         self._config = config
         self._library_manager = library_manager
+        self._evidence_engine = evidence_engine or EvidenceEngine()
 
     def resolve(
         self,
@@ -158,6 +161,11 @@ class WorkResolutionEngine:
         if chosen is not None and chosen.downloadable is False and manual_fallback is not None:
             chosen = manual_fallback
 
+        evidence = None
+        if chosen is not None and ranking:
+            scores = self._ranking_engine.rank_detailed(ranking, request, self._config)
+            evidence = self._evidence_engine.explain(chosen, request, scores)
+
         return ResolveResult(
             request=request,
             selected_work=work,
@@ -166,6 +174,7 @@ class WorkResolutionEngine:
             providers_used=tuple(providers),
             duration=duration,
             selection_reason=f"Top-ranked by RankingEngine (provider {chosen.provider_id.value})",
+            evidence=evidence,
             local_path=local_path,
             score_id=score_id,
             downloaded=downloaded,

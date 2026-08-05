@@ -19,6 +19,9 @@ Principios de V2:
   `Usuario → OSAP Search → Work → Resolve → Provider → Download`. Nunca se
   preguntan cosas complejas directamente a OMR. Esto mantiene ambos proyectos
   independientes y permite sustituir OMR por otro proveedor sin tocar el núcleo.
+- **Primero el contrato en acción, luego la prueba de estrés.** OMR (V2.0.5)
+  demuestra que el contrato funciona **sin casos especiales**; IMSLP (V2.0.6)
+  prueba que el mismo contrato generaliza a un proveedor completamente distinto.
 
 Leyenda de impacto (de la auditoría):
 - 🔒 **Núcleo** = se queda.
@@ -28,136 +31,133 @@ Leyenda de impacto (de la auditoría):
 
 ---
 
-## V2.0 — Freeze public contracts
-
-Se **definen por escrito** los contratos públicos de OSAP. `docs/provider-contract.md`
-es la especificación definitiva.
+## V2.0.0 — Auditoría + limpieza + contratos públicos
 
 **Alcance**
-- `search()` / `resolve()` / `download()` / `metadata()` / `capabilities()`.
-- Contratos de dominio congelados: `SearchRequest`, `ResolveRequest`,
-  `ResourceBundle`, `Work`, `Representation`, `Evidence`.
-- `ProviderExecutionPlan` (como contrato) y `ProviderOrchestrator` (como concepto).
+- Architecture Audit 2026 (`docs/architecture-audit.md`), congelada.
+- Limpieza del árbol (código muerto fuera, OMR separado, `docs/old/`).
+- `docs/provider-contract.md` como especificación de contratos públicos.
+- ADR-0018 (todos los proveedores son iguales), ADR-0019 (búsqueda en dos fases).
 
-**Criterios de salida**
-- `docs/provider-contract.md` revisado y aceptado.
-- Los contratos de dominio están escritos y no cambian por implementación.
+**Estado:** ✅ **Hecho**
 
 ---
 
-## V2.0.1 — Adaptar el núcleo al nuevo contrato
-
-Todavía no se tocan proveedores. Solo cambia el **núcleo** para que piense con los
-nuevos contratos.
+## V2.0.1 — Congelar contratos públicos
 
 **Alcance**
-- `SearchRequest`, `ResolveRequest`, `WorkDescriptor`, `CandidateRepresentation`,
-  `AcquisitionResult`, `CatalogCapabilities`, `CostLevel` son los **únicos objetos**
-  que circulan por el sistema.
-- Los servicios de aplicación (`WorkResolutionEngine`, `WorkMatcher`, ...) se alinean
-  a estos tipos.
-- No se modifica ningún proveedor.
+- Contratos de dominio congelados: `SearchRequest`, `ResolveRequest`, `CostLevel`,
+  `CatalogCapabilities`, `CandidateRepresentation`, `AcquisitionResult`, `Evidence`.
+- El núcleo piensa con estos tipos (`SearchRequest` circula en el sistema).
 
-**Criterios de salida**
-- El núcleo compila y pasa tests pensando en los contratos nuevos.
-- `ruff` / `mypy` limpios.
+**Estado:** ✅ **Hecho**
 
 ---
 
-## V2.0.2 — ProviderOrchestrator
+## V2.0.2 — Provider Orchestrator
 
-Aquí empieza realmente la V2. Todo pasa por `ProviderOrchestrator`, no por llamadas
-directas de cada comando a un proveedor.
+El cerebro que decide:
+- qué proveedores consultar
+- en qué orden (por coste de consulta)
+- coste (`FREE/CHEAP/NORMAL/EXPENSIVE`)
+- caché (reutilizar búsquedas recientes)
+- parada temprana (no consultar un proveedor caro si uno barato basta)
 
-**Flujo**
-```
-Search
-   ↓
-ExecutionPlan
-   ↓
-IMSLP | OMR | MuseScore | Filesystem | ...
-   ↓
-Aggregator
-   ↓
-Ranking
-   ↓
-Resultado
-```
-
-**Alcance**
-- `ProviderOrchestrator` decide el plan de ejecución; no necesita ser inteligente.
-  Puede empezar con un plan fijo:
-  ```
-  ExecutionPlan:
-    1. Filesystem
-    2. OMR
-    3. IMSLP
-  ```
-- `ProviderExecutionPlan` y `ProviderResultAggregator` como contratos.
-- Usa `CatalogCapabilities` (incl. `cost_level` y campos de búsqueda) para decidir.
-- Es el componente que convierte a OSAP en una **plataforma multiproveedor real**.
-
-**Criterios de salida**
-- `osap search/resolve` fluyen a través del orquestador.
-- Añadir un proveedor = implementar el contrato, no modificar el núcleo.
+**Estado:** ✅ **Hecho**
 
 ---
 
-## V2.0.3 — OMR Provider
+## V2.0.3 — Provider Result Aggregator
+
+Responsable de:
+- unificar resultados multiproveedor
+- deduplicar (mismo proveedor + `remote_id` / `checksum`)
+- agrupar por obra (`WorkDescriptor`)
+- entregar una colección homogénea al ranking
+- conservar diagnósticos y procedencia
+
+**Estado:** ✅ **Hecho**
+
+---
+
+## ADR-0020 — Provider Search Strategy (previo)
+
+Documento **muy pequeño (2–3 páginas)** que congela el comportamiento del orquestador
+antes de conectar cualquier proveedor real. Responde de forma definitiva:
+
+- ¿Cuándo se detiene el `ProviderOrchestrator`?
+- ¿Cuándo merece la pena consultar un proveedor caro?
+- ¿Cuándo se reutiliza la caché?
+- ¿Cuándo se ejecuta en paralelo?
+- ¿Qué significa que una búsqueda está "satisfecha"?
+
+No cambia código: congela el comportamiento. `docs/adr/0020-provider-search-strategy.md`.
+
+---
+
+## V2.0.5 — OMR Provider
 
 **Alcance**
 - Open Music Repository como `ICatalogProvider` estándar.
-- Implementa exactamente `search()`, `resolve()`, `download()`, `metadata()`,
+- Implementa únicamente `search()`, `resolve()`, `download()`, `metadata()`,
   `capabilities()`.
-- **Nada más.** Sin privilegios, sin rutas especiales, sin `if provider == omr`.
-- OSAP **no publica** nada en OMR; OMR ya contiene sus propios recursos.
+- **Sin hacks, sin excepciones, sin `if provider == "omr"` por ninguna parte.**
+  Si hay que escribir eso, la arquitectura está mal.
+- No es especial: demuestra que el contrato funciona tal cual.
 
 **Criterios de salida**
 - `osap search/resolve` consulta OMR como un proveedor más.
+- No existe ninguna referencia a "omr" especializada en el núcleo.
 
 ---
 
-## V2.0.4 — IMSLP
+## V2.0.6 — IMSLP
 
 **Alcance**
 - Adaptar `catalogs/imslp` al contrato (hoy adaptador real pero parcial).
-- MediaWiki como índice, descarga, múltiples formatos, metadata rica, licencias y
-  dominio público.
+- IMSLP es la **prueba de estrés**: búsqueda compleja, múltiples ediciones,
+  licencias, varias representaciones, MediaWiki, errores, páginas ambiguas,
+  descargas manuales.
 - `mediawiki/MediaWikiClient` y `auth/*` a producción (credenciales por proveedor).
 
 **Criterios de salida**
-- Con OMR e IMSLP funcionando hay **dos proveedores reales** bajo el mismo contrato.
+- Si el **mismo contrato** que sirve a OMR sirve a IMSLP, significa que acertamos.
 - `resolve` y `download` con IMSLP de extremo a extremo, con metadata-first.
+- Cualquier hueco del contrato se corrige **en el contrato**, no con excepciones.
 
 ---
 
 ## V2.1 — Nuevo Search Engine
 
 **Alcance**
+- No antes: un Search Engine sin dos proveedores reales es teoría.
+- Con OMR e IMSLP funcionando (V2.0.5/0.6), mejorar: sinónimos, transliteración,
+  búsquedas por catálogo, normalización y ranking textual.
 - Motor de búsqueda definitivo sobre `WorkMatcher` / `WorkGrouper` / `Lexicon`.
-- Búsqueda tolerante, sinónimos, transliteración, por compositor/obra/movimiento.
 - Aprovechar el subsistema de datasets (PDMX) e IMSLP como fuentes indexadas.
-- `WorkResolutionEngine` fija el **pipeline canónico** de resolución (sobre el
-  `ProviderOrchestrator` de V2.0.2).
 
 **Criterios de salida**
 - `osap search` consistente entre proveedores (OpenScore, PDMX, IMSLP).
-- Búsqueda correcta en acentos/mayúsculas/parcial (ya hay tests, ampliar al dataset real).
+- Búsqueda correcta en acentos/mayúsculas/parcial.
 
 ---
 
-## V2.2 — Evidence Engine definitivo
+## V2.2 — Evidence Engine
 
 **Alcance**
-- Sustituir la selección por ranking simple por un **motor de evidencia**: cada
-  representación se justifica (fuente, calidad, licencia, confianza, checksum).
-- `QualityReport` y `ScoreRanking` se convierten en el contrato de evidencia.
-- Motor de jobs asíncronos definitivo (hoy `InMemoryJobEngine` mínimo) para adquisición
-  y validación no bloqueante.
+- Responde a una única pregunta: **¿por qué OSAP ha elegido esta representación?**
+- Modelo **completamente estructurado** (sin IA, sin lenguaje natural): `Evidence`
+  con `reasons` (confidence, format, public_domain, quality, completeness, checksum),
+  `metrics`, `provider`, `checksum`, `ranking_score`. Asociado al `ResolveResult`.
+- Versión definitiva: motor de jobs asíncronos para adquisición/validación no
+  bloqueante y verificación de dedup/fusión.
+
+**Estado:** núcleo ✅ **Hecho** (modelo estructurado + `EvidenceEngine`); queda el
+scope definitivo (jobs + dedup/merge).
 
 **Criterios de salida**
-- Cada `ResolveResult` incluye evidencia trazable de por qué se eligió.
-- Deduplicación/fusión (`Dedup`/`Merge`) se aplica de forma verificable.
+- Cada `ResolveResult` con candidato elegido incluye `Evidence` trazable.
+- Deduplicación/fusión se aplica de forma verificable.
 
 ---
 
@@ -207,3 +207,6 @@ Resultado
 - No se implementa exportación/CDN dentro de OSAP: eso es OMR.
 - No hay camino especial para OMR: es un `ICatalogProvider` más.
 - No se consultan cosas complejas directamente a OMR: siempre búsqueda en dos fases (ADR-0019).
+- **El núcleo ya está maduro.** No se tocan `ProviderOrchestrator`, `Evidence`,
+  `Aggregator`, `Ranking`, `SearchRequest` ni `ResolveRequest` salvo que un proveedor
+  real obligue a cambiarlos. No se cambia el diseño por nuevas posibilidades.
