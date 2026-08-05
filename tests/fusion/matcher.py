@@ -10,27 +10,27 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from src.osap.application.work_grouper import WorkGrouper
-from src.osap.application.work_matcher import (
+from src.osap.application.work_grouping_matcher import (
     MergeDecision,
     MergeVerdict,
-    WorkMatcher,
+    WorkGroupingMatcher,
 )
 
 if TYPE_CHECKING:
     from src.osap.domain.candidate_representation import CandidateRepresentation
 
-__all__ = ["WorkMatcher", "WorkGrouper", "MergeDecision", "MergeVerdict", "compare", "group"]
+__all__ = ["WorkGroupingMatcher", "WorkGrouper", "MergeDecision", "MergeVerdict", "compare", "group"]
 
 
 def compare(
-    a: CandidateRepresentation, b: CandidateRepresentation, matcher: WorkMatcher | None = None
+    a: CandidateRepresentation, b: CandidateRepresentation, matcher: WorkGroupingMatcher | None = None
 ) -> MergeDecision:
     """¿Se fusionan dos representaciones? (reglas con prioridad + evidencia)."""
-    return (matcher or WorkMatcher()).compare(a, b)
+    return (matcher or WorkGroupingMatcher()).compare(a, b)
 
 
 def group(
-    reps: tuple[CandidateRepresentation, ...], matcher: WorkMatcher | None = None
+    reps: tuple[CandidateRepresentation, ...], matcher: WorkGroupingMatcher | None = None
 ) -> tuple[object, ...]:
     """Agrupa representaciones en obras (clusters)."""
-    return WorkGrouper(matcher or WorkMatcher()).group(reps)
+    return WorkGrouper(matcher or WorkGroupingMatcher()).group(reps)

@@ -3,12 +3,12 @@
 This module is PURE extraction: it parses structured elements (catalogue,
 work number, key, opus) out of a raw title WITHOUT modifying the original
 title. The display title is always the raw title; extraction only feeds the
-``NormalizedMetadata`` (comparison-only) used by the ``WorkMatcher``.
+``NormalizedMetadata`` (comparison-only) used by the ``WorkGroupingMatcher``.
 
 Separation of concerns (required by the project):
   1. Extract metadata   -> here, never touches the title
   2. Normalize          -> ``MetadataNormalizer.normalize`` (comparison-only)
-  3. Match              -> ``WorkMatcher.compare`` (scored ``MergeDecision``)
+  3. Match              -> ``WorkGroupingMatcher.compare`` (scored ``MergeDecision``)
   4. Group              -> ``WorkGrouper.group`` (clusters by score)
 """
 

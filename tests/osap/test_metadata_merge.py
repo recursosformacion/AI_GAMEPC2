@@ -1,7 +1,7 @@
 from src.osap.application.metadata_normalizer import MetadataNormalizer
-from src.osap.application.work_matcher import (
+from src.osap.application.work_grouping_matcher import (
     CatalogEquivalent,
-    WorkMatcher,
+    WorkGroupingMatcher,
 )
 from src.osap.application.work_merge_service import WorkMergeService
 from src.osap.domain.candidate_representation import CandidateRepresentation
@@ -37,7 +37,7 @@ def _candidate(cid: str, title: str, composer: str, provider: str) -> CandidateR
 
 class TestWorkMatcher:
     def test_same_work_variants_merge(self) -> None:
-        matcher = WorkMatcher()
+        matcher = WorkGroupingMatcher()
         decision = matcher.compare(
             _candidate("c1", "Ave Verum Corpus", "W.A. Mozart", "pdmx"),
             _candidate("c2", "Ave verum corpus, K.618", "Wolfgang Amadeus Mozart", "imslp"),
@@ -49,7 +49,7 @@ class TestWorkMatcher:
         assert {"composer", "title_similarity"} <= set(labels)
 
     def test_catalog_equivalent_evidence(self) -> None:
-        matcher = WorkMatcher()
+        matcher = WorkGroupingMatcher()
         decision = matcher.compare(
             _candidate("c1", "Ave Verum Corpus K.618", "Mozart", "pdmx"),
             _candidate("c2", "Ave verum corpus KV 618", "Mozart", "imslp"),
@@ -61,7 +61,7 @@ class TestWorkMatcher:
         assert catalogs[0].weight == 0.2
 
     def test_distinct_sonatas_do_not_merge(self) -> None:
-        matcher = WorkMatcher()
+        matcher = WorkGroupingMatcher()
         decision = matcher.compare(
             _candidate("c1", "Piano Sonata No.11 in A, K.331", "Mozart", "pdmx"),
             _candidate("c2", "Piano Sonata No.12 in F, K.332", "Mozart", "pdmx"),
@@ -71,7 +71,7 @@ class TestWorkMatcher:
         assert "catalog" not in decision.reason_labels()  # disagreeing catalog is a discriminator
 
     def test_different_composers_do_not_merge(self) -> None:
-        matcher = WorkMatcher()
+        matcher = WorkGroupingMatcher()
         decision = matcher.compare(
             _candidate("c1", "Ave Maria", "Gounod", "pdmx"),
             _candidate("c2", "Ave Maria", "Franz Schubert", "pdmx"),
@@ -79,7 +79,7 @@ class TestWorkMatcher:
         assert not decision.merged
 
     def test_decision_has_work_key_and_id(self) -> None:
-        matcher = WorkMatcher()
+        matcher = WorkGroupingMatcher()
         decision = matcher.compare(
             _candidate("c1", "Ave Verum Corpus", "W.A. Mozart", "pdmx"),
             _candidate("c2", "Ave verum corpus, K.618", "Wolfgang Amadeus Mozart", "imslp"),

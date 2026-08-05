@@ -1,7 +1,7 @@
 """Backward-compatible facade over the scored matching pipeline.
 
 The real grouping logic now lives in ``work_grouper`` (``WorkGrouper``) using
-``work_matcher`` (``WorkMatcher`` + ``MergeDecision``). This module keeps the
+``work_grouping_matcher`` (``WorkGroupingMatcher`` + ``MergeDecision``). This module keeps the
 pre-existing public API (``WorkMergeService``, ``WorkGroup``, ``_sort_key``) so
 the rest of OSAP (engine, CLI, API) does not change.
 """
@@ -21,7 +21,7 @@ __all__ = ["WorkMergeService", "WorkGroup", "_sort_key"]
 class WorkMergeService:
     """Groups equivalent CandidateRepresentations into distinct works.
 
-    Delegates to ``WorkGrouper`` + ``WorkMatcher`` (scored ``MergeDecision``).
+    Delegates to ``WorkGrouper`` + ``WorkGroupingMatcher`` (scored ``MergeDecision``).
     """
 
     def __init__(self) -> None:

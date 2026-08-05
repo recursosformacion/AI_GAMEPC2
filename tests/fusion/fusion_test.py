@@ -30,7 +30,7 @@ import yaml
 from src.osap.application.metadata_normalizer import MetadataNormalizer
 from src.osap.application.metadata_parser import extract_metadata
 from src.osap.application.work_grouper import WorkGrouper
-from src.osap.application.work_matcher import WorkMatcher, MergeDecision
+from src.osap.application.work_grouping_matcher import WorkGroupingMatcher, MergeDecision
 from src.osap.domain.candidate_representation import CandidateRepresentation
 from src.osap.domain.output_format import OutputFormat
 from src.osap.domain.value_objects import CandidateId, ProviderId, WorkId
@@ -163,8 +163,8 @@ def load_cases(path: Path) -> list[dict[str, object]]:
     return cases if isinstance(cases, list) else []
 
 
-def _build(reps: list[CandidateRepresentation]) -> tuple[WorkMatcher, list[object], dict[CandidateId, tuple[int, str]]]:
-    matcher = WorkMatcher()
+def _build(reps: list[CandidateRepresentation]) -> tuple[WorkGroupingMatcher, list[object], dict[CandidateId, tuple[int, str]]]:
+    matcher = WorkGroupingMatcher()
     groups = WorkGrouper(matcher).group(tuple(reps))
     rep_to_group = {
         rep.candidate_id: (i, group.work.title)
@@ -675,7 +675,7 @@ def _jaccard(a: str, b: str) -> float:
 def cmd_explain(reps: list[CandidateRepresentation]) -> None:
     from identity import parse_identity
 
-    matcher = WorkMatcher()
+    matcher = WorkGroupingMatcher()
     grouper = WorkGrouper(matcher)
     groups = grouper.group(tuple(reps))
     rep_to_group = {

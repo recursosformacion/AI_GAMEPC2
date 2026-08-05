@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from src.osap.application.metadata_normalizer import MetadataNormalizer
 from src.osap.application.metadata_parser import extract_metadata
-from src.osap.application.work_matcher import WorkMatcher
+from src.osap.application.work_grouping_matcher import WorkGroupingMatcher
 from src.osap.domain.output_format import OutputFormat
 from src.osap.domain.value_objects import WorkId
 from src.osap.domain.work_descriptor import WorkDescriptor
@@ -54,8 +54,8 @@ class WorkGrouper:
     grouping logic.
     """
 
-    def __init__(self, matcher: WorkMatcher | None = None) -> None:
-        self._matcher = matcher or WorkMatcher()
+    def __init__(self, matcher: WorkGroupingMatcher | None = None) -> None:
+        self._matcher = matcher or WorkGroupingMatcher()
         self._normalizer = MetadataNormalizer()
 
     def group(self, candidates: tuple[CandidateRepresentation, ...]) -> tuple[WorkGroup, ...]:

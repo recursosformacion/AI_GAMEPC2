@@ -1,7 +1,7 @@
 """Scored matching between musical representations.
 
-The ``WorkMatcher`` decides whether two representations belong to the same work
-by a weighted agreement across fields. It returns a ``MergeDecision`` whose
+The ``WorkGroupingMatcher`` decides whether two representations belong to the same
+work by a weighted agreement across fields. It returns a ``MergeDecision`` whose
 ``evidence`` is a list of structured, explainable objects:
 
     MergeDecision(
@@ -150,8 +150,8 @@ class MergeDecision:
         return self.evidence_labels()
 
 
-class WorkMatcher:
-    """Decides whether two representations are the same work.
+class WorkGroupingMatcher:
+    """Decides whether two representations are the same work (V2.0 grouping).
 
     Procedimiento de DECISIÓN POR REGLAS sobre la identidad normalizada
     (RepresentationIdentity). Sin regexes y sin comparar texto: solo igualdades.

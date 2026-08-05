@@ -1,7 +1,7 @@
 """Normalized metadata for comparing musical works.
 
 ``NormalizedMetadata`` is a COMPARISON-ONLY value object: it is produced from a
-raw title + extracted metadata and consumed exclusively by the ``WorkMatcher``.
+raw title + extracted metadata and consumed exclusively by the ``WorkGroupingMatcher``.
 It is NEVER shown to the user. The display title always comes from the original
 (canonical) title, never from this object.
 """

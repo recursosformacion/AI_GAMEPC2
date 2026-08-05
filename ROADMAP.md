@@ -171,7 +171,22 @@ rediseñar arquitectura y se empieza a construir producto.
 > declarativas (`catalogue_aliases.yaml`, ...); el `WorkMatcher` compara solo formas
 > ya normalizadas. Es la **única incorporación antes de escribir código de V2.1.1**.
 | **V2.1.2** | Matching | `WorkMatcher` real, `WorkMerge`, coincidencias, puntuación explicable |
+
+> **V2.1.2 ✅ Hecho.** Contrato congelado en `docs/work-matcher-design.md` e
+> implementado: `MatchLevel` (SAME/POSSIBLE/DIFFERENT), `field_score` continuo
+> (título parcial 0.6), `MatchReason` tipado sin `matched`, `FieldComparison.SKIPPED`,
+> el matcher itera `config.weights` (campos desactivables sin código) y las reglas de
+> veto (catálogo → DIFFERENT) y coincidencia segura (authority → SAME) viven en
+> `MatchingConfig`, no en el código. El `WorkMatcher` V2.0 se renombró a
+> `WorkGroupingMatcher` para eliminar la colisión.
 | **V2.1.3** | Ranking | pesos **medidos** (no decididos), ranking de obras, paginación, filtros |
+
+> **Diseño**: `docs/ranking-design.md` (V2.1.3). Principio: **el Ranking nunca cambia
+> la identidad de una obra; solo ordena las alternativas** (WorkMatcher decide,
+> Ranking ordena). Se rankean **obras** (`WorkGroup`), no candidatos; `score =
+> peso_objetivo×objective + peso_preferencia×preference`; métricas objetivas vs
+> preferencias; `NDCG@k`/`MRR` sobre un golden set para medir mejora; `WorkRankScore`
+> alimenta al Evidence Engine. No se escribe código hasta congelar el diseño.
 
 **Alcance**
 - Con OMR e IMSLP funcionando (V2.0.5/0.6), mejorar: sinónimos, transliteración,

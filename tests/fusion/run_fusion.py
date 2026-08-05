@@ -32,7 +32,7 @@ import yaml
 from src.osap.application.metadata_normalizer import MetadataNormalizer
 from src.osap.application.metadata_parser import extract_metadata
 from src.osap.application.work_grouper import WorkGrouper
-from src.osap.application.work_matcher import WorkMatcher, MergeDecision
+from src.osap.application.work_grouping_matcher import WorkGroupingMatcher, MergeDecision
 from src.osap.domain.candidate_representation import CandidateRepresentation
 from src.osap.domain.output_format import OutputFormat
 from src.osap.domain.value_objects import CandidateId, ProviderId, WorkId
@@ -207,7 +207,7 @@ def _print_grouping(groups: tuple[object, ...]) -> None:
 
 def _run_case(case: dict[str, object]) -> dict[str, object]:
     candidates = _parse_reps(case.get("representations") or case.get("reps") or [])
-    matcher = WorkMatcher()
+    matcher = WorkGroupingMatcher()
     grouper = WorkGrouper(matcher)
     groups = grouper.group(candidates)
     pairs = [(a, b, matcher.compare(a, b)) for i, a in enumerate(candidates) for b in candidates[i + 1:]]

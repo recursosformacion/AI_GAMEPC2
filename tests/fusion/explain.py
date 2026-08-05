@@ -8,7 +8,7 @@ dos representaciones se fusionan o no.
 from __future__ import annotations
 
 from normalizer import RepresentationIdentity, build_identity
-from src.osap.application.work_matcher import MergeDecision
+from src.osap.application.work_grouping_matcher import MergeDecision
 
 
 def explain_decision(decision: MergeDecision) -> list[str]:

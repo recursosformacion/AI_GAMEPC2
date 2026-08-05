@@ -62,7 +62,7 @@ class MetadataNormalizer:
       - `clean_display_title` / `canonical_composer` -> display helpers
 
     There is intentionally NO `work_key`/`clean_title`: merging is done by the
-    `WorkMatcher` using a scored `MergeDecision`, never by comparing an exact
+    `WorkGroupingMatcher` using a scored `MergeDecision`, never by comparing an exact
     concatenated string.
     """
 

@@ -17,6 +17,16 @@ from .event import Event
 from .evidence import Evidence, EvidenceMetrics, EvidenceReason, EvidenceReasonKind
 from .job import Job, JobResult, JobState, JobSubmission
 from .knowledge_base_entry import KnowledgeBaseEntry
+from .matching import (
+    Authority,
+    AuthorityIdentifier,
+    FieldComparison,
+    MatchField,
+    MatchingConfig,
+    MatchLevel,
+    MatchReason,
+    MatchResult,
+)
 from .metrics import MetricRecord
 from .music_query_normalizer import MusicQueryNormalizer
 from .musical_document import MusicalDocument
@@ -95,6 +105,14 @@ __all__ = [
     "QualityLevel",
     "MusicalDocument",
     "MusicalSource",
+    "MatchField",
+    "MatchLevel",
+    "FieldComparison",
+    "MatchReason",
+    "MatchResult",
+    "MatchingConfig",
+    "Authority",
+    "AuthorityIdentifier",
     "WorkDescriptor",
     "Edition",
     "Arrangement",
