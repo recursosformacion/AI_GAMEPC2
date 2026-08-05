@@ -4,6 +4,7 @@ from collections.abc import Callable
 from typing import cast
 
 from src.osap.application.catalog_manager import CatalogManager
+from src.osap.application.execution_plan import AggregatedProviderResult
 from src.osap.application.library_manager import LibraryManager
 from src.osap.application.provider_orchestrator import ProviderOrchestrator
 from src.osap.application.provider_orchestrator import ProviderReport as ProviderReport
@@ -85,7 +86,10 @@ class WorkResolutionEngine:
             diagnostics: list[str] = []
             chosen = self._pick(ranking, index)
         else:
-            candidates, providers, diagnostics = self._collect(request, on_progress)
+            result = self._collect(request, on_progress)
+            candidates = result.candidates
+            providers = list(result.providers_used)
+            diagnostics = list(result.diagnostics)
             ranking = self._ranking_engine.rank(candidates, request, self._config)
             chosen = self._pick(ranking, index)
         duration = Duration(time.monotonic() - started)
@@ -175,8 +179,8 @@ class WorkResolutionEngine:
     def rank(
         self, request: ResolveRequest, on_progress: ProgressCallback | None = None
     ) -> tuple[CandidateRepresentation, ...]:
-        candidates, _, _ = self._collect(request, on_progress)
-        return self._ranking_engine.rank(candidates, request, self._config)
+        result = self._collect(request, on_progress)
+        return self._ranking_engine.rank(result.candidates, request, self._config)
 
     def provider_status(
         self, request: ResolveRequest, on_progress: ProgressCallback | None = None
@@ -202,9 +206,8 @@ class WorkResolutionEngine:
 
     def _collect(
         self, request: ResolveRequest, on_progress: ProgressCallback | None = None
-    ) -> tuple[tuple[CandidateRepresentation, ...], list[ProviderId], list[str]]:
-        result = self._orchestrator.search(SearchRequest.from_resolve(request), on_progress)
-        return result.candidates, list(result.providers_used), list(result.diagnostics)
+    ) -> AggregatedProviderResult:
+        return self._orchestrator.search(SearchRequest.from_resolve(request), on_progress)
 
 
 def _is_structured(format: object) -> bool:

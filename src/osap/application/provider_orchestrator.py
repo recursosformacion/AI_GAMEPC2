@@ -3,12 +3,12 @@ from dataclasses import dataclass
 
 from src.osap.application.catalog_manager import CatalogManager
 from src.osap.application.execution_plan import (
+    AggregatedProviderResult,
     ProviderExecutionPlan,
-    ProviderSearchResult,
     ProviderStep,
     cost_rank,
 )
-from src.osap.domain.candidate_representation import CandidateRepresentation
+from src.osap.application.provider_result_aggregator import ProviderResultAggregator
 from src.osap.domain.errors import ResourceUnavailableError, ScoreResolutionError
 from src.osap.domain.search_request import SearchRequest
 from src.osap.domain.value_objects import ProviderId
@@ -55,19 +55,13 @@ class ProviderOrchestrator:
 
     def search(
         self, search: SearchRequest, on_progress: ProgressCallback | None = None
-    ) -> ProviderSearchResult:
+    ) -> AggregatedProviderResult:
         cached = self._cached(search)
         if cached is not None:
             return cached
 
         plan = self._build_plan(search)
-        candidates, used, diagnostics = self._execute(plan, search, on_progress)
-        result = ProviderSearchResult(
-            candidates=tuple(candidates),
-            providers_used=tuple(used),
-            diagnostics=tuple(diagnostics),
-            cached=False,
-        )
+        result = self._execute(plan, search, on_progress)
         self._store(search, result)
         return result
 
@@ -114,10 +108,8 @@ class ProviderOrchestrator:
 
     def _execute(
         self, plan: ProviderExecutionPlan, search: SearchRequest, on_progress: ProgressCallback | None
-    ) -> tuple[list[CandidateRepresentation], list[ProviderId], list[str]]:
-        results: list[CandidateRepresentation] = []
-        used: list[ProviderId] = []
-        diagnostics: list[str] = []
+    ) -> AggregatedProviderResult:
+        aggregator = ProviderResultAggregator()
         for step in plan.steps:
             provider = self.provider(step.provider_id)
             pid = provider.provider_id.value
@@ -126,30 +118,29 @@ class ProviderOrchestrator:
             try:
                 found = provider.search(search)
             except (ResourceUnavailableError, ScoreResolutionError, NotImplementedError):
-                diagnostics.append(f"{pid}: unavailable")
+                aggregator.add_diagnostic(f"{pid}: unavailable")
                 continue
-            used.append(provider.provider_id)
-            results.extend(found)
+            aggregator.add_candidates(provider.provider_id, found)
             if on_progress is not None:
                 on_progress(f"{pid}: {len(found)} candidato(s)")
             if found and step.stop_if_found and self._sufficient(provider, search):
                 break
-        return results, used, diagnostics
+        return aggregator.result()
 
-    def _cached(self, search: SearchRequest) -> ProviderSearchResult | None:
+    def _cached(self, search: SearchRequest) -> AggregatedProviderResult | None:
         if self._cache is None:
             return None
         value = self._cache.get(self._cache_key(search))
-        if isinstance(value, ProviderSearchResult):
-            return ProviderSearchResult(
-                candidates=value.candidates,
+        if isinstance(value, AggregatedProviderResult):
+            return AggregatedProviderResult(
+                groups=value.groups,
                 providers_used=value.providers_used,
                 diagnostics=value.diagnostics,
                 cached=True,
             )
         return None
 
-    def _store(self, search: SearchRequest, result: ProviderSearchResult) -> None:
+    def _store(self, search: SearchRequest, result: AggregatedProviderResult) -> None:
         if self._cache is not None:
             self._cache.set(self._cache_key(search), result, ttl_seconds=self._cache_ttl_seconds)
 
