@@ -26,6 +26,8 @@ class Configuration:
     github_cache: bool = True
     openscore_repos: tuple[str, ...] = ("OpenScore/Lieder",)
     imslp_verify_ssl: bool = True
+    omr_base_url: str | None = None
+    omr_api_key: str | None = None
     datasets_cache_dir: str | None = None
     datasets_mode: str = "auto"
     datasets_num_proc: int | None = None
@@ -43,6 +45,8 @@ _CONFIG_FIELDS: dict[str, tuple[str, str, str]] = {
     "pdmx_index_path": ("pdmx", "index_path", "OSAP_PDMX_INDEX_PATH"),
     "library_root": ("osap", "library_root", "OSAP_LIBRARY_ROOT"),
     "imslp_base_url": ("osap", "imslp_base_url", "OSAP_IMSLP_BASE_URL"),
+    "omr_base_url": ("omr", "base_url", "OSAP_OMR_BASE_URL"),
+    "omr_api_key": ("omr", "api_key", "OSAP_OMR_API_KEY"),
     "datasets_cache_dir": ("osap", "datasets_cache_dir", "OSAP_DATASETS_CACHE_DIR"),
 }
 

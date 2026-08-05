@@ -14,6 +14,7 @@ from src.osap.infrastructure.cache import InMemoryCache
 from src.osap.infrastructure.catalogs import (
     IMSLPCatalogProvider,
     LocalCatalogProvider,
+    OmrCatalogProvider,
     OpenScoreCatalogProvider,
     PdmxCatalogProvider,
 )
@@ -24,6 +25,7 @@ from src.osap.infrastructure.dedup import DuplicateResolver
 from src.osap.infrastructure.events import InMemoryEventBus
 from src.osap.infrastructure.github import GitHubClient
 from src.osap.infrastructure.hf.hf_dataset_installer import HuggingFaceDatasetInstaller
+from src.osap.infrastructure.http import HttpClient
 from src.osap.infrastructure.jobs import InMemoryJobEngine
 from src.osap.infrastructure.mediawiki import MediaWikiClient
 from src.osap.infrastructure.merge import MergeEngine
@@ -63,6 +65,10 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
         )
     )
     container.register_catalog_provider(LocalCatalogProvider(Path(config.library_root)))
+    if config.omr_base_url:
+        container.register_catalog_provider(
+            OmrCatalogProvider(HttpClient(), config.omr_base_url, api_key=config.omr_api_key)
+        )
 
     container.register_library(LocalLibrary(Path(config.library_root)))
     container.register_exporter(MusicXmlExporter())

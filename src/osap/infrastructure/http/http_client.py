@@ -17,17 +17,18 @@ class HttpClient:
     Wrapped behind an interface so providers can be tested offline with fakes.
     """
 
-    def get(self, url: str) -> bytes:
+    def get(self, url: str, headers: dict[str, str] | None = None) -> bytes:
+        request = urllib.request.Request(url, headers=headers or {})
         try:
-            with urllib.request.urlopen(url, timeout=30) as response:  # noqa: S310
+            with urllib.request.urlopen(request, timeout=30) as response:  # noqa: S310
                 return cast("bytes", response.read())
         except urllib.error.URLError as exc:
             raise HttpError(f"HTTP request failed for {url}: {exc.reason}") from exc
         except TimeoutError as exc:
             raise HttpError(f"HTTP request timed out for {url}") from exc
 
-    def get_json(self, url: str) -> object:
-        raw = self.get(url)
+    def get_json(self, url: str, headers: dict[str, str] | None = None) -> object:
+        raw = self.get(url, headers=headers)
         try:
             return cast("object", json.loads(raw.decode("utf-8")))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
