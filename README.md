@@ -89,6 +89,8 @@ osap resource list
 
 - [Arquitectura](docs/architecture.md)
 - [Contrato de proveedores (V2)](docs/provider-contract.md)
+- [Search Intelligence (diseño V2.1)](docs/search-engine-design.md)
+- [Normalización explicable (V2.1.1)](docs/normalization-explorable.md)
 - [Auditoría arquitectónica 2026 (congelada)](docs/architecture-audit.md)
 - [Pipeline](docs/pipeline.md)
 - [Subsistema de datasets](docs/datasets.md)

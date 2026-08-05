@@ -2,6 +2,7 @@ from .acquisition_result import AcquisitionResult
 from .arrangement import Arrangement
 from .auth import AuthRequirements, AuthType, Credential
 from .candidate_representation import CandidateRepresentation
+from .canonicalization import AppliedRule, CanonicalResult, CanonicalRule
 from .catalog_capabilities import CatalogCapabilities
 from .catalog_info import CatalogInfo
 from .catalog_status import CatalogStatus
@@ -113,6 +114,9 @@ __all__ = [
     "UserProfile",
     "MusicalRequest",
     "CandidateRepresentation",
+    "CanonicalRule",
+    "AppliedRule",
+    "CanonicalResult",
     "ResolveRequest",
     "ResolveRequestBuilder",
     "SearchRequest",

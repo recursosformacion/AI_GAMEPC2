@@ -145,17 +145,33 @@ rediseñar arquitectura y se empieza a construir producto.
 
 ---
 
-## V2.1 — Nuevo Search Engine
+## V2.1 — Search Intelligence (Nuevo Search Engine)
 
 > **Diseño antes que código.** La V2.1 no empieza implementando: empieza con un
-> documento de diseño (el **4º documento fundamental**, junto a la Auditoría, el
-> ROADMAP y el Provider Contract) que responda, de forma estable:
+> documento de diseño (`docs/search-engine-design.md`, el **4º documento fundamental**,
+> junto a la Auditoría, el ROADMAP y el Provider Contract) que responda, de forma estable:
 
 - ¿Qué significa **buscar una obra**?
 - ¿Qué diferencia hay entre **búsqueda libre** y **resolución**?
 - ¿Cómo se **combinan** los resultados de varios proveedores?
 - ¿Cómo se **ordenan**? ¿Qué peso tienen compositor, catálogo, género, instrumentación...?
 - ¿Qué hace OSAP cuando una búsqueda devuelve **cientos de candidatos**?
+
+> **El Search Engine ya existe** (`SearchRequest → Orchestrator → Providers →
+> Aggregator → WorkGroups`). V2.1 no construye infraestructura: la hace **inteligente**
+> (Search Intelligence). Se divide en tres bloques de algoritmos:
+
+| Sub | Bloque | Contenido |
+|-----|--------|-----------|
+| **V2.1.1** | Normalización | `Lexicon` creciente, catálogos (BWV/KV), nombres, acentos, transliteraciones |
+
+> **Normalización explicable** (`docs/normalization-explorable.md`) + **ADR-0021**
+> (Separation of Classification and Canonicalization): el `Lexicon` clasifica (se
+> mantiene igual); un **Canonicalizer** transforma alias → canónico con reglas
+> declarativas (`catalogue_aliases.yaml`, ...); el `WorkMatcher` compara solo formas
+> ya normalizadas. Es la **única incorporación antes de escribir código de V2.1.1**.
+| **V2.1.2** | Matching | `WorkMatcher` real, `WorkMerge`, coincidencias, puntuación explicable |
+| **V2.1.3** | Ranking | pesos **medidos** (no decididos), ranking de obras, paginación, filtros |
 
 **Alcance**
 - Con OMR e IMSLP funcionando (V2.0.5/0.6), mejorar: sinónimos, transliteración,
@@ -167,6 +183,7 @@ rediseñar arquitectura y se empieza a construir producto.
 - Documento de diseño estable antes de la implementación.
 - `osap search` consistente entre proveedores (OpenScore, PDMX, IMSLP).
 - Búsqueda correcta en acentos/mayúsculas/parcial.
+- Sin IA / embeddings / LLM / búsqueda semántica: solo conocimiento musicológico.
 
 ---
 

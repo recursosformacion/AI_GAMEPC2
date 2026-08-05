@@ -1,0 +1,17 @@
+- canonical: Wolfgang Amadeus Mozart
+  confidence: 0.95
+  aliases:
+    - Wolfgang Amadeus Mozart
+    - W. A. Mozart
+    - W.A.Mozart
+    - W A Mozart
+    - Wolfgang A. Mozart
+    - Wolfg. Amad. Mozart
+    - Mozart
+- canonical: Johann Sebastian Bach
+  confidence: 0.90
+  aliases:
+    - Johann Sebastian Bach
+    - J. S. Bach
+    - J.S. Bach
+    - JS Bach
