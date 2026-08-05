@@ -3,7 +3,7 @@
 > **Status: core · frozen en V2.0**
 >
 > Especificación definitiva del contrato de proveedores de OSAP. Tercer documento
-> fundamental del proyecto, junto a `docs/architecture-audit.md` y `ROADMAP.md`.
+> fundamental del proyecto, junto a `docs/osap/v2/architecture-audit.md` y `ROADMAP.md`.
 >
 > Este documento **no se adapta a los proveedores**: los proveedores se adaptan a
 > este contrato.

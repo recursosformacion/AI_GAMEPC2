@@ -1,6 +1,6 @@
 # Normalización explicable (V2.1.1)
 
-> **Status: draft** (parte del diseño de V2.1 — `docs/search-engine-design.md`).
+> **Status: draft** (parte del diseño de V2.1 — `docs/osap/v2/search-engine-design.md`).
 >
 > Complemento del Search Intelligence. Define **cómo** normaliza OSAP y exige que
 > cada transformación sea **justificable, auditable y reproducible**, igual que el

@@ -3,9 +3,9 @@
 > **Status: draft** (se congelará antes de la implementación de V2.1).
 >
 > Cuarto documento fundamental del proyecto, junto a:
-> 1. `docs/architecture-audit.md` (Auditoría arquitectónica)
+> 1. `docs/osap/v2/architecture-audit.md` (Auditoría arquitectónica)
 > 2. `ROADMAP.md`
-> 3. `docs/provider-contract.md`
+> 3. `docs/osap/v2/provider-contract.md`
 >
 > La V2.1 **no empieza implementando**: empieza con este diseño estable. Solo cuando
 > este documento esté estable se escribe código. El núcleo (V2.0) queda **congelado**;

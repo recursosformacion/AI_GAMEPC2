@@ -33,6 +33,12 @@ src/
 └── shared/
 tests/
 docs/
+├── osap/                    # Documentación de OSAP (por versión)
+│   ├── v1/                  # Base / pre-V2 (arquitectura, API, frontend, ...)
+│   ├── v2/                  # V2: contratos y diseños (auditoría, provider, search intelligence, ...)
+│   ├── adr/                 # Architecture Decision Records
+│   └── old/                 # Documentos obsoletos (histórico)
+└── chorus-vision.md         # Visión de Chorus (proyecto aparte)
 ```
 
 ### CLI
@@ -87,23 +93,26 @@ osap resource list
 
 ### Documentación
 
-- [Arquitectura](docs/architecture.md)
-- [Contrato de proveedores (V2)](docs/provider-contract.md)
-- [Search Intelligence (diseño V2.1)](docs/search-engine-design.md)
-- [Normalización explicable (V2.1.1)](docs/normalization-explorable.md)
-- [WorkMatcher (diseño V2.1.2)](docs/work-matcher-design.md)
-- [Ranking de obras (diseño V2.1.3)](docs/ranking-design.md)
-- [Auditoría arquitectónica 2026 (congelada)](docs/architecture-audit.md)
-- [Pipeline](docs/pipeline.md)
-- [Subsistema de datasets](docs/datasets.md)
-- [Modelo de calidad](docs/quality.md)
-- [Knowledge Base](docs/knowledge_base.md)
-- [Jobs (procesamiento asíncrono)](docs/jobs.md)
-- [API REST (contrato)](docs/api.md)
-- [Frontend React (contrato)](docs/frontend.md)
-- [Responsabilidades](docs/responsibilities.md)
-- [ADRs](docs/adr/)
-- [Documentos obsoletos (histórico)](docs/old/)
+> Índice y estructura: [docs/osap/README.md](docs/osap/README.md)
+
+- [Arquitectura](docs/osap/v1/architecture.md)
+- [Contrato de proveedores (V2)](docs/osap/v2/provider-contract.md)
+- [Search Intelligence (diseño V2.1)](docs/osap/v2/search-engine-design.md)
+- [Normalización explicable (V2.1.1)](docs/osap/v2/normalization-explorable.md)
+- [WorkMatcher (diseño V2.1.2)](docs/osap/v2/work-matcher-design.md)
+- [Ranking de obras (diseño V2.1.3)](docs/osap/v2/ranking-design.md)
+- [Evidence definitivo (diseño V2.2.a)](docs/osap/v2/evidence-design.md)
+- [Auditoría arquitectónica 2026 (congelada)](docs/osap/v2/architecture-audit.md)
+- [Pipeline](docs/osap/v1/pipeline.md)
+- [Subsistema de datasets](docs/osap/v1/datasets.md)
+- [Modelo de calidad](docs/osap/v1/quality.md)
+- [Knowledge Base](docs/osap/v1/knowledge_base.md)
+- [Jobs (procesamiento asíncrono)](docs/osap/v1/jobs.md)
+- [API REST (contrato)](docs/osap/v1/api.md)
+- [Frontend React (contrato)](docs/osap/v1/frontend.md)
+- [Responsabilidades](docs/osap/v1/responsibilities.md)
+- [ADRs](docs/osap/adr/)
+- [Documentos obsoletos (histórico)](docs/osap/old/)
 
 ### Desarrollo
 

@@ -1,10 +1,10 @@
 # ROADMAP OSAP — V2
 
 > Reinicio de OSAP. El punto de partida es la **Architecture Audit 2026**
-> (`docs/architecture-audit.md`, congelada). Los hitos aquí son **versiones de
+> (`docs/osap/v2/architecture-audit.md`, congelada). Los hitos aquí son **versiones de
 > plataforma**, no sprints; cada versión tiene criterios de salida verificables.
 >
-> El contrato de proveedores se define en `docs/provider-contract.md` y es el
+> El contrato de proveedores se define en `docs/osap/v2/provider-contract.md` y es el
 > documento más importante de la V2: todos los proveedores obedecen el mismo contrato.
 
 Principios de V2:
@@ -34,9 +34,9 @@ Leyenda de impacto (de la auditoría):
 ## V2.0.0 — Auditoría + limpieza + contratos públicos
 
 **Alcance**
-- Architecture Audit 2026 (`docs/architecture-audit.md`), congelada.
-- Limpieza del árbol (código muerto fuera, OMR separado, `docs/old/`).
-- `docs/provider-contract.md` como especificación de contratos públicos.
+- Architecture Audit 2026 (`docs/osap/v2/architecture-audit.md`), congelada.
+- Limpieza del árbol (código muerto fuera, OMR separado, `docs/osap/old/`).
+- `docs/osap/v2/provider-contract.md` como especificación de contratos públicos.
 - ADR-0018 (todos los proveedores son iguales), ADR-0019 (búsqueda en dos fases).
 
 **Estado:** ✅ **Hecho**
@@ -91,7 +91,7 @@ antes de conectar cualquier proveedor real. Responde de forma definitiva:
 - ¿Cuándo se ejecuta en paralelo?
 - ¿Qué significa que una búsqueda está "satisfecha"?
 
-No cambia código: congela el comportamiento. `docs/adr/0020-provider-search-strategy.md`.
+No cambia código: congela el comportamiento. `docs/osap/adr/0020-provider-search-strategy.md`.
 
 ---
 
@@ -148,7 +148,7 @@ rediseñar arquitectura y se empieza a construir producto.
 ## V2.1 — Search Intelligence (Nuevo Search Engine)
 
 > **Diseño antes que código.** La V2.1 no empieza implementando: empieza con un
-> documento de diseño (`docs/search-engine-design.md`, el **4º documento fundamental**,
+> documento de diseño (`docs/osap/v2/search-engine-design.md`, el **4º documento fundamental**,
 > junto a la Auditoría, el ROADMAP y el Provider Contract) que responda, de forma estable:
 
 - ¿Qué significa **buscar una obra**?
@@ -165,14 +165,14 @@ rediseñar arquitectura y se empieza a construir producto.
 |-----|--------|-----------|
 | **V2.1.1** | Normalización | `Lexicon` creciente, catálogos (BWV/KV), nombres, acentos, transliteraciones |
 
-> **Normalización explicable** (`docs/normalization-explorable.md`) + **ADR-0021**
+> **Normalización explicable** (`docs/osap/v2/normalization-explorable.md`) + **ADR-0021**
 > (Separation of Classification and Canonicalization): el `Lexicon` clasifica (se
 > mantiene igual); un **Canonicalizer** transforma alias → canónico con reglas
 > declarativas (`catalogue_aliases.yaml`, ...); el `WorkMatcher` compara solo formas
 > ya normalizadas. Es la **única incorporación antes de escribir código de V2.1.1**.
 | **V2.1.2** | Matching | `WorkMatcher` real, `WorkMerge`, coincidencias, puntuación explicable |
 
-> **V2.1.2 ✅ Hecho.** Contrato congelado en `docs/work-matcher-design.md` e
+> **V2.1.2 ✅ Hecho.** Contrato congelado en `docs/osap/v2/work-matcher-design.md` e
 > implementado: `MatchLevel` (SAME/POSSIBLE/DIFFERENT), `field_score` continuo
 > (título parcial 0.6), `MatchReason` tipado sin `matched`, `FieldComparison.SKIPPED`,
 > el matcher itera `config.weights` (campos desactivables sin código) y las reglas de
@@ -181,7 +181,7 @@ rediseñar arquitectura y se empieza a construir producto.
 > `WorkGroupingMatcher` para eliminar la colisión.
 | **V2.1.3** | Ranking | pesos **medidos** (no decididos), ranking de obras, paginación, filtros |
 
-> **V2.1.3 ✅ Hecho.** Contrato en `docs/ranking-design.md` (ADR-0023 cierra V2.1).
+> **V2.1.3 ✅ Hecho.** Contrato en `docs/osap/v2/ranking-design.md` (ADR-0023 cierra V2.1).
 > Principio: **el Ranking nunca cambia la identidad de una obra; solo ordena las
 > alternativas**. Se rankean **obras** (`WorkGroup`); criterios por familia
 > (`RELEVANCE_*`, `QUALITY_*`, `PREFERENCE_*`, `COVERAGE`), sin ejes fijos; contrato
@@ -223,8 +223,16 @@ después la **infraestructura** (Jobs).
   `metrics`, `provider`, `checksum`, `ranking_score`. Asociado al `ResolveResult`.
 - El propio ranking es explicable (`RankingReason`); un renderer los convierte a texto.
 
-**Estado:** núcleo ✅ **Hecho** (modelo estructurado + `EvidenceEngine`); queda pulir la
-integración con `RankingReason`.
+> **Diseño**: `docs/osap/v2/evidence-design.md`. **Evidence genera hechos, no frases.**
+> `EvidenceCollector` recibe `MatchResult` + `RankingResult` + `SelectionResult` →
+> `EvidenceResult(items, summary, confidence)` con `EvidenceItem(source, code, score,
+> payload)` tipados (`EvidenceSource`: MATCHER/RANKER/SELECTION; `EvidenceCode` estable).
+> El renderer (texto/JSON/HTML) es trabajo posterior.
+
+**Estado:** ✅ **Hecho** (V2.2.a): `EvidenceCollector` + `IEvidenceContributor`
+implementados. `Evidence` se produce como hechos estructurados, sin renderer en el
+dominio (ADR-0025). Pendiente V2.2.x: ampliar `EvidenceCode` para cobertura 1:1
+`Reason → EvidenceItem` (decisión ADR-0025, opción A).
 
 ### V2.2.b — Dedup / Merge (dominio)
 

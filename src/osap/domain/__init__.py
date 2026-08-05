@@ -14,7 +14,19 @@ from .document_type import DocumentType
 from .edition import Edition
 from .errors import DomainError, ScoreResolutionError
 from .event import Event
-from .evidence import Evidence, EvidenceMetrics, EvidenceReason, EvidenceReasonKind
+from .evidence import (
+    Evidence,
+    EvidenceCode,
+    EvidenceField,
+    EvidenceItem,
+    EvidenceMetrics,
+    EvidenceReason,
+    EvidenceReasonKind,
+    EvidenceResult,
+    EvidenceSource,
+    EvidenceStrength,
+    EvidenceSummary,
+)
 from .job import Job, JobResult, JobState, JobSubmission
 from .knowledge_base_entry import KnowledgeBaseEntry
 from .matching import (
@@ -103,6 +115,13 @@ __all__ = [
     "DomainError",
     "ScoreResolutionError",
     "Evidence",
+    "EvidenceCode",
+    "EvidenceField",
+    "EvidenceItem",
+    "EvidenceSource",
+    "EvidenceStrength",
+    "EvidenceSummary",
+    "EvidenceResult",
     "EvidenceMetrics",
     "EvidenceReason",
     "EvidenceReasonKind",

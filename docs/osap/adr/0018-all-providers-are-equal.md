@@ -35,4 +35,4 @@ capabilities()            -> CatalogCapabilities
   publica nada en OMR; OMR ya contiene sus propios recursos.
 - La lógica de negocio (ranking, fusión, elección) permanece en el núcleo de OSAP.
 - Refuerza el principio de **Provider autonomy** definido en
-  `docs/provider-contract.md`.
+  `docs/osap/v2/provider-contract.md`.

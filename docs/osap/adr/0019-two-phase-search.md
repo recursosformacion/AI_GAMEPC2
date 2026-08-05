@@ -43,4 +43,4 @@ No se vuelve a la idea de preguntar cosas complejas directamente a OMR.
 - La lógica de búsqueda musical (normalización, matcher, ranking, evidencia) vive
   exclusivamente en OSAP.
 - Refuerza ADR-0018 (todos los proveedores son iguales) y el principio de
-  **Provider autonomy** de `docs/provider-contract.md`.
+  **Provider autonomy** de `docs/osap/v2/provider-contract.md`.
