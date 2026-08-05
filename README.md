@@ -88,6 +88,8 @@ osap resource list
 ### Documentación
 
 - [Arquitectura](docs/architecture.md)
+- [Contrato de proveedores (V2)](docs/provider-contract.md)
+- [Auditoría arquitectónica 2026 (congelada)](docs/architecture-audit.md)
 - [Pipeline](docs/pipeline.md)
 - [Subsistema de datasets](docs/datasets.md)
 - [Modelo de calidad](docs/quality.md)
@@ -97,6 +99,7 @@ osap resource list
 - [Frontend React (contrato)](docs/frontend.md)
 - [Responsabilidades](docs/responsibilities.md)
 - [ADRs](docs/adr/)
+- [Documentos obsoletos (histórico)](docs/old/)
 
 ### Desarrollo
 
