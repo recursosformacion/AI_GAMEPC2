@@ -26,4 +26,9 @@ class CandidateRepresentation:
     size_bytes: int | None = None
     checksum: str | None = None
     date_added: datetime | None = None
+    downloadable: bool = True
+    manual_download: bool = False
+    remote_id: str | None = None
+    rating: float | None = None
+    notes: str | None = None
     metadata: dict[str, object] = field(default_factory=dict)

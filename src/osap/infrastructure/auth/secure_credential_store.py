@@ -1,5 +1,7 @@
+import contextlib
 import hashlib
 import sqlite3
+from collections.abc import Iterator
 from pathlib import Path
 from typing import cast
 
@@ -22,7 +24,7 @@ class SecureCredentialStore:
 
     def save(self, provider_id: str, auth_type: AuthType, secret: str, permissions: tuple[str, ...]) -> Credential:
         encrypted = self._encrypt(secret.encode("utf-8"))
-        with self._conn() as conn:
+        with self._connect() as conn:
             conn.execute(
                 "INSERT OR REPLACE INTO credentials(provider_id, auth_type, secret, permissions) VALUES (?,?,?,?)",
                 (provider_id, auth_type.value, encrypted, "\n".join(permissions)),
@@ -41,11 +43,11 @@ class SecureCredentialStore:
         )
 
     def delete(self, provider_id: str) -> None:
-        with self._conn() as conn:
+        with self._connect() as conn:
             conn.execute("DELETE FROM credentials WHERE provider_id=?", (provider_id,))
 
     def list(self) -> tuple[Credential, ...]:
-        with self._conn() as conn:
+        with self._connect() as conn:
             rows = conn.execute(
                 "SELECT provider_id, auth_type, permissions FROM credentials ORDER BY provider_id"
             ).fetchall()
@@ -71,7 +73,7 @@ class SecureCredentialStore:
             return None
 
     def _row(self, provider_id: str) -> sqlite3.Row | None:
-        with self._conn() as conn:
+        with self._connect() as conn:
             row = conn.execute(
                 "SELECT provider_id, auth_type, secret, permissions FROM credentials WHERE provider_id=?",
                 (provider_id,),
@@ -83,8 +85,18 @@ class SecureCredentialStore:
         conn.row_factory = sqlite3.Row
         return conn
 
+    @contextlib.contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
+        """Yield a connection that is committed (on success) and closed."""
+        conn = self._conn()
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
+
     def _init_db(self) -> None:
-        with self._conn() as conn:
+        with self._connect() as conn:
             conn.execute(
                 "CREATE TABLE IF NOT EXISTS credentials ("
                 "provider_id TEXT PRIMARY KEY, auth_type TEXT, secret BLOB, permissions TEXT)"

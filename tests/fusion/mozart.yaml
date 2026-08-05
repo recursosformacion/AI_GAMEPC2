@@ -1,0 +1,30 @@
+# Volcado crudo de representaciones de una consulta, p. ej.:
+#   osap resolve --composer "Mozart"
+# Cada elemento es lo que llega tal cual del proveedor (guardado UNA sola vez).
+- title: "Ave Verum Corpus"
+  composer: "Wolfgang Amadeus Mozart"
+  provider: pdmx
+- title: "Ave Verum Corpus K618"
+  composer: "Mozart"
+  provider: pdmx
+- title: "Ave verum corpus, K.618"
+  composer: "Mozart"
+  provider: imslp
+- title: "Ave verum corpus KV 618"
+  composer: "Mozart"
+  provider: imslp
+- title: "Symphony No.40 in G minor, K.550"
+  composer: "Mozart"
+  provider: pdmx
+- title: "Symphony No.40"
+  composer: "Wolfgang Amadeus Mozart"
+  provider: openscore
+- title: "Symphony No.41 in C, K.551"
+  composer: "Mozart"
+  provider: pdmx
+- title: "Requiem"
+  composer: "Mozart"
+  provider: openscore
+- title: "Requiem in D minor, K.626"
+  composer: "Mozart"
+  provider: imslp

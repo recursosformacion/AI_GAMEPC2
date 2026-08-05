@@ -1,0 +1,30 @@
+movements:
+  - allegro
+  - allegretto
+  - andante
+  - andantino
+  - largo
+  - larghetto
+  - adagio
+  - presto
+  - prestissimo
+  - vivace
+  - molto vivace
+  - moderato
+  - grave
+  - maestoso
+  - rondo
+  - rondò
+  - scherzo
+  - menuetto
+  - minuet
+  - finale
+  - introduction
+  - ouverture
+  - overture
+  - intermezzo
+  - aria
+  - recitative
+  - recitativo
+  - cadenza
+  - grazioso

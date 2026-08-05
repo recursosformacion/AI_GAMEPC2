@@ -44,8 +44,17 @@ class WorkDTO:
 class RepresentationDTO:
     provider: str
     format: str
-    quality: str
     downloadable: bool
+    manual_download: bool = False
+    download_url: str | None = None
+    license: str | None = None
+    confidence: float | None = None
+    rating: float | None = None
+    local_path: str | None = None
+    remote_id: str | None = None
+    notes: str | None = None
+    reason: str | None = None
+    quality: str = "UNREADABLE"
 
 
 @dataclass(frozen=True)

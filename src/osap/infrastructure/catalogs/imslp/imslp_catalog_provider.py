@@ -123,7 +123,19 @@ class IMSLPCatalogProvider(ICatalogProvider):
     def _to_candidate(self, title: str, result: dict[str, object]) -> CandidateRepresentation:
         snippet = str(result.get("snippet") or "")
         composer = _extract_composer(title)
-        public_domain = None if not snippet else "public domain" in snippet.lower()
+        public_domain: bool | None
+        if not snippet:
+            public_domain = None  # unknown: never deduce "No" from absence of info
+        else:
+            low = snippet.lower()
+            if "public domain" in low:
+                public_domain = True
+            elif any(w in low for w in ("copyright", "©", "all rights reserved", "non-commercial")):
+                public_domain = False
+            else:
+                public_domain = None
+        page_url = str(result.get("descriptionurl") or f"https://imslp.org/wiki/{title.replace(' ', '_')}")
+        remote_id = str(result.get("pageid") or _hash(title))
         return CandidateRepresentation(
             candidate_id=CandidateId(f"imslp-{_hash(title)}"),
             work_descriptor=WorkDescriptor(
@@ -137,7 +149,12 @@ class IMSLPCatalogProvider(ICatalogProvider):
             public_domain=public_domain,
             license="public domain" if public_domain is True else None,
             origin="imslp.org",
-            metadata={"page_title": title, "snippet": snippet, "downloadable": False},
+            download_url=page_url,
+            downloadable=False,
+            manual_download=True,
+            remote_id=remote_id,
+            notes="IMSLP anti-bot: abre la página en tu navegador",
+            metadata={"page_title": title, "snippet": snippet},
         )
 
 

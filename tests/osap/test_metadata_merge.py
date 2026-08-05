@@ -1,4 +1,8 @@
 from src.osap.application.metadata_normalizer import MetadataNormalizer
+from src.osap.application.work_matcher import (
+    CatalogEquivalent,
+    WorkMatcher,
+)
 from src.osap.application.work_merge_service import WorkMergeService
 from src.osap.domain.candidate_representation import CandidateRepresentation
 from src.osap.domain.output_format import OutputFormat
@@ -11,26 +15,15 @@ class TestMetadataNormalizer:
         assert MetadataNormalizer.canonical_composer("W.A. Mozart") == "Wolfgang Amadeus Mozart"
         assert MetadataNormalizer.canonical_composer("Mozart (1756-1791)") == "Wolfgang Amadeus Mozart"
 
-    def test_split_roles(self) -> None:
-        roles = MetadataNormalizer.split_roles("Wolfgang Amadeus Mozart Arr. Henry Miller")
-        assert roles.get("composer") == "Wolfgang Amadeus Mozart"
-        assert "Henry Miller" in roles.get("arranger", "")
+    def test_normalize_is_comparison_only(self) -> None:
+        nm = MetadataNormalizer.normalize("Ave verum corpus, K.618 (Mozart)", "Wolfgang Amadeus Mozart")
+        assert nm.normalized_title == "ave verum corpus"
+        assert nm.normalized_composer == "wolfgang amadeus mozart"
+        assert nm.normalized_catalog == "k 618"
 
-    def test_clean_title(self) -> None:
-        clean, meta = MetadataNormalizer.clean_title("Ave Verum Corpus (WIP)")
-        assert "WIP" not in clean
-        clean2, meta2 = MetadataNormalizer.clean_title("Clarinet Concerto in A for Piano")
-        assert meta2.get("instrumentation") == "Piano"
-        assert "for Piano" not in clean2
-
-    def test_catalogue_extraction(self) -> None:
-        clean, meta = MetadataNormalizer.clean_title("Requiem KV626")
-        assert meta.get("catalogue") == "KV 626"
-
-    def test_work_key(self) -> None:
-        a = MetadataNormalizer.work_key("Ave Verum Corpus", "W.A. Mozart")
-        b = MetadataNormalizer.work_key("Ave verum corpus (WIP)", "Mozart")
-        assert a == b
+    def test_work_key_is_removed(self) -> None:
+        assert not hasattr(MetadataNormalizer, "work_key")
+        assert not hasattr(MetadataNormalizer, "clean_title")
 
 
 def _candidate(cid: str, title: str, composer: str, provider: str) -> CandidateRepresentation:
@@ -40,6 +33,60 @@ def _candidate(cid: str, title: str, composer: str, provider: str) -> CandidateR
         provider_id=ProviderId(provider),
         format=OutputFormat.MUSICXML,
     )
+
+
+class TestWorkMatcher:
+    def test_same_work_variants_merge(self) -> None:
+        matcher = WorkMatcher()
+        decision = matcher.compare(
+            _candidate("c1", "Ave Verum Corpus", "W.A. Mozart", "pdmx"),
+            _candidate("c2", "Ave verum corpus, K.618", "Wolfgang Amadeus Mozart", "imslp"),
+        )
+        assert decision.merged
+        assert decision.decision.value == "MERGED"
+        assert decision.score >= 0.5
+        labels = decision.evidence_labels()
+        assert {"composer", "title_similarity"} <= set(labels)
+
+    def test_catalog_equivalent_evidence(self) -> None:
+        matcher = WorkMatcher()
+        decision = matcher.compare(
+            _candidate("c1", "Ave Verum Corpus K.618", "Mozart", "pdmx"),
+            _candidate("c2", "Ave verum corpus KV 618", "Mozart", "imslp"),
+        )
+        assert decision.merged
+        catalogs = [e for e in decision.evidence if isinstance(e, CatalogEquivalent)]
+        assert catalogs
+        assert catalogs[0].normalized == "k 618"
+        assert catalogs[0].weight == 0.2
+
+    def test_distinct_sonatas_do_not_merge(self) -> None:
+        matcher = WorkMatcher()
+        decision = matcher.compare(
+            _candidate("c1", "Piano Sonata No.11 in A, K.331", "Mozart", "pdmx"),
+            _candidate("c2", "Piano Sonata No.12 in F, K.332", "Mozart", "pdmx"),
+        )
+        assert not decision.merged
+        assert decision.decision.value == "NOT_MERGED"
+        assert "catalog" not in decision.reason_labels()  # disagreeing catalog is a discriminator
+
+    def test_different_composers_do_not_merge(self) -> None:
+        matcher = WorkMatcher()
+        decision = matcher.compare(
+            _candidate("c1", "Ave Maria", "Gounod", "pdmx"),
+            _candidate("c2", "Ave Maria", "Franz Schubert", "pdmx"),
+        )
+        assert not decision.merged
+
+    def test_decision_has_work_key_and_id(self) -> None:
+        matcher = WorkMatcher()
+        decision = matcher.compare(
+            _candidate("c1", "Ave Verum Corpus", "W.A. Mozart", "pdmx"),
+            _candidate("c2", "Ave verum corpus, K.618", "Wolfgang Amadeus Mozart", "imslp"),
+        )
+        assert decision.work_key
+        assert decision.work_id
+        assert decision.work_id.startswith("work-")
 
 
 class TestWorkMergeService:
@@ -57,8 +104,6 @@ class TestWorkMergeService:
         assert {r.provider_id.value for r in ave.representations} == {"pdmx", "imslp"}
 
     def test_display_title_is_never_normalized(self) -> None:
-        # The normalizer never touches the visible title: it only produces the
-        # internal canonical_title / canonical_key used for comparison.
         service = WorkMergeService()
         candidates = (_candidate("c1", "Ave Verum Corpus (WIP)", "Mozart", "pdmx"),)
         groups = service.group(candidates)
@@ -66,3 +111,14 @@ class TestWorkMergeService:
         assert "WIP" not in (groups[0].work.canonical_title or "")
         assert groups[0].work.canonical_key is not None
         assert groups[0].work.composer == "Wolfgang Amadeus Mozart"
+
+    def test_catalogue_kept_separate(self) -> None:
+        service = WorkMergeService()
+        groups = service.group(
+            (
+                _candidate("c1", "Ave Verum Corpus", "Mozart", "pdmx"),
+                _candidate("c2", "Ave verum corpus K.618", "Mozart", "pdmx"),
+            )
+        )
+        assert len(groups) == 1
+        assert groups[0].work.catalogue_number == "K 618"

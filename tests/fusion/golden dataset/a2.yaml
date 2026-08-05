@@ -1,0 +1,5 @@
+- id: mozart_002
+  expected_groups: 2
+  representations:
+    - title: Symphony No.1
+    - title: Symphony No.10

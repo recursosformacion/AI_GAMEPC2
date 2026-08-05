@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from src.osap.bootstrap.configuration import Configuration
+from src.osap.bootstrap.configuration import Configuration, load_configuration
 from src.osap.bootstrap.container import Container
 from src.osap.domain.dataset_descriptor import DatasetDescriptor
 from src.osap.domain.output_format import OutputFormat
@@ -42,7 +42,7 @@ DEFAULT_PROVIDER_ORDER = (
 
 
 def wire(container: Container, configuration: Configuration | None = None) -> Container:
-    config = configuration or Configuration()
+    config = configuration or load_configuration()
 
     github = GitHubClient(
         token=config.github_token,

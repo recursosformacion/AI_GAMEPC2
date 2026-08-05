@@ -1,8 +1,11 @@
 import argparse
+import os
 import sys
+from dataclasses import replace
+from pathlib import Path
 
 from src.osap.application.work_resolution_engine import ProviderReport
-from src.osap.bootstrap.configuration import Configuration
+from src.osap.bootstrap.configuration import load_configuration
 from src.osap.bootstrap.container import Container
 from src.osap.bootstrap.wiring import wire
 from src.osap.domain.candidate_representation import CandidateRepresentation
@@ -65,6 +68,19 @@ def _build_parser() -> argparse.ArgumentParser:
     update_ds = datasets_sub.add_parser("update", help="Construye/actualiza el índice de un catálogo.")
     update_ds.add_argument("name")
 
+    mirror_ds = datasets_sub.add_parser("mirror", help="Configura/valida el mirror de descarga de PDMX.")
+    mirror_sub = mirror_ds.add_subparsers(dest="mirror_command", required=True)
+    mirror_set = mirror_sub.add_parser("set", help="Define la URL base del mirror.")
+    mirror_set.add_argument("url")
+    mirror_set.add_argument(
+        "--file", default=None, help="Fichero de configuración (TOML). Por defecto: OSAP_CONFIG u osap.toml."
+    )
+    mirror_sub.add_parser("status", help="Muestra y valida el mirror configurado.")
+    mirror_unset = mirror_sub.add_parser("unset", help="Elimina el mirror configurado del fichero.")
+    mirror_unset.add_argument(
+        "--file", default=None, help="Fichero de configuración (TOML). Por defecto: OSAP_CONFIG u osap.toml."
+    )
+
     search = subparsers.add_parser("search", help="Busca obras musicales (tolerante).")
     search.add_argument("query", nargs="?", default=None)
     search.add_argument(
@@ -125,12 +141,12 @@ def _run_resolve(args: argparse.Namespace, container: Container) -> int:
     engine = container.work_resolution_engine()
     print("Searching providers...")
     print("-" * 40)
-    reports = engine.provider_status(request)
+    reports = engine.provider_status(request, on_progress=_progress)
     for report in reports:
         print(f"{report.provider_id.value:<16} {_outcome(report)}")
     print("-" * 40)
     try:
-        ranked = engine.rank(request)
+        ranked = engine.rank(request, on_progress=_progress)
     except ScoreResolutionError as exc:
         print(f"Error: {exc}")
         return 1
@@ -153,7 +169,12 @@ def _run_resolve(args: argparse.Namespace, container: Container) -> int:
             return 1
 
     print("Seleccionando representación...")
-    result = engine.resolve(request, download=True, index=_index_of(ranked, best))
+    result = engine.resolve(
+        request,
+        download=True,
+        representations=_representations_for(ranked, groups, best),
+        on_progress=_progress,
+    )
     if result.chosen is None:
         print("No se pudo descargar la representación elegida.")
         for diag in result.diagnostics:
@@ -237,7 +258,6 @@ def _status_note(report: ProviderReport) -> str:
 
 
 def _work_list_line(index: int, group: object) -> str:
-    from src.osap.application.metadata_normalizer import MetadataNormalizer
     from src.osap.application.work_merge_service import WorkGroup
 
     if not isinstance(group, WorkGroup):
@@ -246,8 +266,7 @@ def _work_list_line(index: int, group: object) -> str:
     formats = "/".join(sorted({c.format.value for c in group.representations}))
     providers = "+".join(sorted({c.provider_id.value for c in group.representations}))
     pd = "PD" if any(c.public_domain is True for c in group.representations) else ""
-    clean, meta = MetadataNormalizer.clean_title(group.work.title, group.work.composer)
-    catalogue = f" [{_safe(meta['catalogue'])}]" if "catalogue" in meta else ""
+    catalogue = f" [{_safe(group.work.catalogue_number)}]" if group.work.catalogue_number else ""
     line = f"  [{index}] {_safe(group.work.title)}"
     if composer:
         line += f" -- {_safe(composer)}"
@@ -286,7 +305,13 @@ def _print_work_detail(group: object) -> None:
     print("     Representaciones:")
     for r in cw.representations:
         status = "✓" if r.downloadable else "⚠"
-        print(f"        {status} {r.provider:<10} {r.format}")
+        line = f"        {status} {r.provider:<10} {r.format}"
+        if r.manual_download or not r.downloadable:
+            if r.download_url:
+                line += f"  → Abrir: {r.download_url}"
+            else:
+                line += "  → descarga manual requerida"
+        print(line)
 
 
 def _prompt_index(count: int, label: str) -> int | None:
@@ -312,23 +337,54 @@ def _index_of(ranked: tuple[CandidateRepresentation, ...], target: CandidateRepr
     return 0
 
 
+def _representations_for(
+    ranked: tuple[CandidateRepresentation, ...], groups: tuple[object, ...], target: CandidateRepresentation
+) -> tuple[CandidateRepresentation, ...]:
+    """Return the representations of the work the user selected.
+
+    Resolution is scoped to the selected work only, so it never re-scans
+    unrelated providers/works for download.
+    """
+    from src.osap.application.work_merge_service import WorkGroup
+
+    for group in groups:
+        if not isinstance(group, WorkGroup):
+            continue
+        if any(r.candidate_id == target.candidate_id for r in group.representations):
+            return group.representations
+    return tuple(c for c in ranked if c.candidate_id == target.candidate_id)
+
+
 def _print_result(result: ResolveResult) -> None:
     chosen = result.chosen
     if chosen is None:
         print("No se pudo resolver.")
         return
-    print(f"\nDescargando {chosen.format.value.upper()} desde {chosen.provider_id.value}...")
-    for diag in result.diagnostics:
-        print(f"  - {diag}")
     if result.local_path and result.score_id:
+        print(f"\nDescargado {chosen.format.value.upper()} desde {chosen.provider_id.value}.")
+        for diag in result.diagnostics:
+            print(f"  - {diag}")
         print("\nParsing MusicXML...")
         print("Validando...")
         print("Score creado.")
         print(f"Score Id: {result.score_id}")
         print(f"Guardado en biblioteca: {result.local_path}")
     elif result.local_path:
+        print(f"\nDescargado {chosen.format.value.upper()} desde {chosen.provider_id.value}.")
+        for diag in result.diagnostics:
+            print(f"  - {diag}")
         print(f"\nGuardado en biblioteca (sin Score estructurado): {result.local_path}")
+    elif chosen.manual_download or not chosen.downloadable:
+        print(f"\n⚠ Descarga manual requerida: {chosen.provider_id.value}")
+        if chosen.download_url:
+            print(f"   Abrir: {chosen.download_url}")
+        if chosen.notes:
+            print(f"   Motivo: {chosen.notes}")
+        for diag in result.diagnostics:
+            print(f"  - {diag}")
     else:
+        for diag in result.diagnostics:
+            print(f"  - {diag}")
         print("\nNo se pudo descargar ninguna representación automáticamente.")
     print("Resolución terminada.")
 
@@ -343,6 +399,10 @@ def _outcome(report: ProviderReport) -> str:
     text = labels.get(report.outcome, report.outcome.upper())
     detail = report.detail
     return f"{text} {detail}".strip()
+
+
+def _progress(message: str) -> None:
+    print(f"  · {message}", flush=True)
 
 
 def _public_domain_label(value: bool | None) -> str:
@@ -401,8 +461,9 @@ def _run_download(args: argparse.Namespace, container: Container) -> int:
         return 2
     request = _build_request(args, args.query)
     engine = container.work_resolution_engine()
+    print("Searching providers...")
     try:
-        ranked = engine.rank(request)
+        ranked = engine.rank(request, on_progress=_progress)
     except ScoreResolutionError as exc:
         print(f"Error: {exc}")
         return 1
@@ -410,8 +471,14 @@ def _run_download(args: argparse.Namespace, container: Container) -> int:
         print(f"No se encontraron representaciones para '{request.query or request.title or request.composer}'.")
         return 1
     chosen_index = _choose_candidate(ranked, args.index)
+    best = ranked[chosen_index]
     print("Seleccionando representación...")
-    result = engine.resolve(request, download=True, index=chosen_index)
+    result = engine.resolve(
+        request,
+        download=True,
+        representations=_representations_for(ranked, container.work_merge_service().group(ranked), best),
+        on_progress=_progress,
+    )
     if result.chosen is None or result.local_path is None:
         print("No se pudo descargar el candidato.")
         for diag in result.diagnostics:
@@ -485,8 +552,73 @@ def _run_auth(args: argparse.Namespace, container: Container) -> int:
     return 2
 
 
-def _run_datasets(args: argparse.Namespace, container: Container) -> int:
+def _config_path(args: argparse.Namespace) -> Path:
+    explicit = getattr(args, "file", None)
+    return Path(explicit or os.environ.get("OSAP_CONFIG", "osap.toml"))
 
+
+def _run_mirror(args: argparse.Namespace) -> int:
+    import tomllib
+
+    from src.osap.bootstrap.configuration import _dump_toml, load_configuration
+
+    cmd = args.mirror_command
+    if cmd == "set":
+        path = _config_path(args)
+        data: dict[str, object] = {}
+        if path.exists():
+            with path.open("rb") as handle:
+                data = tomllib.load(handle)
+        pdmx = data.setdefault("pdmx", {})
+        assert isinstance(pdmx, dict)
+        pdmx["download_base"] = args.url
+        path.write_text(_dump_toml(data), encoding="utf-8")
+        print(f"Mirror PDMX configurado en {path}: {args.url}")
+        return _check_mirror(args.url)
+    if cmd == "status":
+        base = load_configuration().pdmx_download_base
+        if not base:
+            print("Mirror PDMX NO configurado.")
+            print("Configúralo con:  osap datasets mirror set <URL>")
+            print("  o con la variable de entorno OSAP_PDMX_DOWNLOAD_BASE")
+            return 0
+        print(f"Mirror PDMX: {base}")
+        return _check_mirror(base)
+    if cmd == "unset":
+        path = _config_path(args)
+        data = {}
+        if path.exists():
+            with path.open("rb") as handle:
+                data = tomllib.load(handle)
+        pdmx = data.get("pdmx")
+        if isinstance(pdmx, dict):
+            pdmx.pop("download_base", None)
+            path.write_text(_dump_toml(data), encoding="utf-8")
+        print("Mirror PDMX eliminado del fichero de configuración.")
+        return 0
+    return 2
+
+
+def _check_mirror(base: str) -> int:
+    import urllib.error
+    import urllib.request
+
+    url = base.rstrip("/") + "/"
+    try:
+        with urllib.request.urlopen(url, timeout=10) as resp:  # noqa: S310
+            print(f"Mirror accesible: HTTP {resp.status}")
+    except urllib.error.HTTPError as exc:
+        print(f"Mirror accesible (HTTP {exc.code}) — comprueba que sirva la estructura /mxl/...")
+    except Exception as exc:  # noqa: BLE001
+        print(f"Mirror NO accesible: {exc}")
+        return 1
+    print(f"Estructura esperada del mirror: {base}/mxl/0/0/0/...")
+    return 0
+
+
+def _run_datasets(args: argparse.Namespace, container: Container) -> int:
+    if args.datasets_command == "mirror":
+        return _run_mirror(args)
     try:
         if args.datasets_command == "update":
             provider = next(
@@ -550,10 +682,9 @@ def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
 
-    config = Configuration(
-        library_root=getattr(args, "library", None) or Configuration().library_root,
-        imslp_base_url=Configuration().imslp_base_url,
-    )
+    config = load_configuration()
+    if getattr(args, "library", None):
+        config = replace(config, library_root=args.library)
     container = wire(Container(), config)
 
     if args.command == "resolve":

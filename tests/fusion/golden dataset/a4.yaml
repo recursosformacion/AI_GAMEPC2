@@ -1,0 +1,5 @@
+- id: ave-maria-schubert-vs-gounod
+  expected_groups: 2
+  representations:
+    - title: Ave Maria (Schubert)
+    - title: Ave Maria (Gounod)

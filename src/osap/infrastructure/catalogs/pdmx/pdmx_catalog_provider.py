@@ -1,7 +1,10 @@
+import contextlib
 import csv
 import enum
 import sqlite3
+import sys
 import urllib.request
+from collections.abc import Iterator
 from pathlib import Path
 from typing import Any, cast
 
@@ -27,19 +30,38 @@ from src.osap.domain.value_objects import (
 from src.osap.domain.work_descriptor import WorkDescriptor
 from src.osap.ports.catalog_provider import ICatalogProvider
 
+
+def _log(message: str) -> None:
+    """Feedback de progreso a stderr, para que el usuario vea que no se cuelga."""
+    print(message, file=sys.stderr, flush=True)
+
+
 ZENODO_CSV_URL = "https://zenodo.org/records/15571083/files/PDMX.csv?download=1"
 
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS works (
     id INTEGER PRIMARY KEY,
-    title TEXT, subtitle TEXT, composer_name TEXT, artist_name TEXT,
-    license TEXT, license_conflict INTEGER, rating REAL, genres TEXT,
-    seconds REAL, bars REAL, has_lyrics INTEGER, n_notes INTEGER, notes_per_bar REAL,
-    no_license_conflict INTEGER, mxl TEXT, pdf TEXT, mid TEXT
-);
-CREATE VIRTUAL TABLE works_fts USING fts5(title, composer_name, content=);
+    title TEXT,
+    subtitle TEXT,
+    composer_name TEXT,
+    artist_name TEXT,
+    license TEXT,
+    license_conflict INTEGER,
+    rating REAL,
+    genres TEXT,
+    seconds REAL,
+    bars REAL,
+    has_lyrics INTEGER,
+    n_notes INTEGER,
+    notes_per_bar REAL,
+    no_license_conflict INTEGER,
+    mxl TEXT,
+    pdf TEXT,
+    mid TEXT
+)"""
+
 """
-_INDEXES = ()
+_INDEXES = (
     id INTEGER PRIMARY KEY,
     title TEXT, subtitle TEXT, composer_name TEXT, artist_name TEXT,
     license TEXT, license_conflict INTEGER, rating REAL, genres TEXT,
@@ -144,21 +166,53 @@ class PdmxCatalogProvider(ICatalogProvider):
         )
 
     def search(self, request: ResolveRequest) -> tuple[CandidateRepresentation, ...]:
+        self._ensure_index()
         if not self._index_path.exists():
             raise ResourceUnavailableError(
-                "PDMX index not built. Run 'osap datasets update pdmx' to build it from PDMX.csv.",
+                "PDMX index not built and no CSV source available.",
                 code=self.availability().value,
             )
         rows = self._query(request)
         return tuple(
-            _to_candidate(row, self._provider_id, downloadable=self._download_base is not None) for row in rows[:50]
+            _to_candidate(
+                row,
+                self._provider_id,
+                downloadable=self._download_base is not None,
+                download_base=self._download_base,
+            )
+            for row in rows[:50]
         )
 
     def resolve(self, request: ResolveRequest) -> CandidateRepresentation | None:
+        self._ensure_index()
         if not self._index_path.exists():
             return None
         rows = self._query(request)
-        return _to_candidate(rows[0], self._provider_id, downloadable=self._download_base is not None) if rows else None
+        if rows:
+            return _to_candidate(
+                rows[0],
+                self._provider_id,
+                downloadable=self._download_base is not None,
+                download_base=self._download_base,
+            )
+        return None
+
+    def _ensure_index(self) -> None:
+        """Build the local index on demand if it is missing and a source exists.
+
+        Auto-builds from a local CSV or by downloading PDMX.csv so the provider
+        works without a manual ``osap datasets update pdmx`` step. If no source
+        is available the index stays missing and callers report it.
+        """
+        if self._index_path.exists():
+            return
+        if self._local_csv and self._local_csv.exists():
+            _log("PDMX: construyendo índice desde CSV local...")
+            self._build_from_csv(self._local_csv)
+            return
+        if self._csv_url:
+            _log("PDMX: índice no existe; descargando PDMX.csv (primera vez, puede tardar)...")
+            self._download_csv_and_build()
 
     def sync(self) -> None:
         """Build or refresh the local index from the official PDMX.csv."""
@@ -210,8 +264,8 @@ class PdmxCatalogProvider(ICatalogProvider):
         if request.title or request.query:
             token = (request.title or request.query or "").strip()
             if token:
-                clauses.append("content MATCH ?")
-                params.append(token)
+                clauses.append("(title LIKE ? OR subtitle LIKE ?)")
+                params.extend([f"%{token}%", f"%{token}%"])
         if request.composer:
             clauses.append("composer_name LIKE ?")
             params.append(f"%{request.composer}%")
@@ -220,29 +274,40 @@ class PdmxCatalogProvider(ICatalogProvider):
         elif request.desired_format is OutputFormat.PDF:
             clauses.append("pdf IS NOT NULL AND pdf != ''")
         where = " AND ".join(clauses) if clauses else "1=1"
-        with self._conn() as conn:
+        with self._connect() as conn:
             rows = conn.execute(f"SELECT * FROM works WHERE {where} ORDER BY rating DESC LIMIT 50", params).fetchall()
         return [dict(row) for row in rows]
 
     def _download_csv_and_build(self) -> None:
         import tempfile
 
-        with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
-            tmp.write(urllib.request.urlopen(self._csv_url, timeout=120).read())  # noqa: S310
-            tmp_path = Path(tmp.name)
+        tmp_path: Path | None = None
         try:
+            with tempfile.NamedTemporaryFile(suffix=".csv", delete=False) as tmp:
+                tmp_path = Path(tmp.name)
+                total = 0
+                with urllib.request.urlopen(self._csv_url, timeout=120) as resp:  # noqa: S310
+                    while chunk := resp.read(1024 * 1024):
+                        tmp.write(chunk)
+                        total += len(chunk)
+                        if total % (20 * 1024 * 1024) < 1024 * 1024:
+                            _log(f"PDMX: descargado {total // (1024 * 1024)} MB de PDMX.csv...")
+            _log("PDMX.csv descargado; construyendo índice...")
+            assert tmp_path is not None
             self._build_from_csv(tmp_path)
         finally:
-            tmp_path.unlink(missing_ok=True)
+            if tmp_path is not None:
+                tmp_path.unlink(missing_ok=True)
 
     def _build_from_csv(self, csv_path: Path) -> None:
-        with self._conn() as conn:
-                    conn.execute("DROP TABLE IF EXISTS works")
-                    conn.execute(_SCHEMA)
+        with self._connect() as conn:
+            conn.execute("DROP TABLE IF EXISTS works")
+            conn.execute(_SCHEMA)
             for index_sql in _INDEXES:
                 conn.execute(index_sql)
             with csv_path.open("r", encoding="utf-8", errors="replace") as fh:
                 reader = csv.DictReader(fh)
+                count = 0
                 for row in reader:
                     conn.execute(
                         "INSERT OR IGNORE INTO works ("
@@ -269,12 +334,26 @@ class PdmxCatalogProvider(ICatalogProvider):
                             _s(row, "mid"),
                         ),
                     )
+                    count += 1
+                    if count % 50_000 == 0:
+                        _log(f"PDMX: indexadas {count} obras...")
+            _log(f"PDMX: índice listo ({count} obras).")
 
     def _conn(self) -> sqlite3.Connection:
         self._index_path.parent.mkdir(parents=True, exist_ok=True)
         conn = sqlite3.connect(self._index_path)
         conn.row_factory = sqlite3.Row
         return conn
+
+    @contextlib.contextmanager
+    def _connect(self) -> Iterator[sqlite3.Connection]:
+        """Yield a connection that is committed (on success) and closed."""
+        conn = self._conn()
+        try:
+            with conn:
+                yield conn
+        finally:
+            conn.close()
 
 
 def _s(row: dict[str, str], key: str) -> str:
@@ -300,11 +379,25 @@ def _b(row: dict[str, str], key: str) -> int:
     return 1 if str(row.get(key, "")).lower() in ("true", "1", "yes") else 0
 
 
-def _to_candidate(row: dict[str, Any], provider_id: ProviderId, downloadable: bool = True) -> CandidateRepresentation:
+def _to_candidate(
+    row: dict[str, Any],
+    provider_id: ProviderId,
+    downloadable: bool = True,
+    download_base: str | None = None,
+) -> CandidateRepresentation:
     title = str(row.get("title") or "Untitled")
     file_path = str(row.get("mxl") or row.get("pdf") or row.get("mid") or "")
     fmt = _format_for(row)
     public_domain = not bool(row.get("license_conflict"))
+    rating = _f(row, "rating")
+    download_url: str | None = None
+    notes: str | None = None
+    reason: str | None = None
+    if downloadable and file_path and download_base:
+        download_url = _mirror_url(download_base, file_path)
+    if not downloadable:
+        reason = PdmxUnavailableReason.MIRROR_NOT_CONFIGURED.value
+        notes = "Descarga individual no disponible en la distribución oficial (configura un mirror)."
     return CandidateRepresentation(
         candidate_id=CandidateId(f"pdmx-{row.get('id')}"),
         work_descriptor=WorkDescriptor(
@@ -319,15 +412,20 @@ def _to_candidate(row: dict[str, Any], provider_id: ProviderId, downloadable: bo
         origin="pdmx",
         license=_opt(row, "license"),
         quality=QualityLevel.BASIC_MELODY,
-        confidence=Confidence(min(float(row.get("rating") or 0) / 5.0, 1.0)),
+        confidence=Confidence(max(0.0, min(rating / 5.0, 1.0))),
         public_domain=public_domain,
         local_path=None,
+        download_url=download_url,
+        downloadable=downloadable,
+        remote_id=str(row.get("id") or ""),
+        rating=rating,
+        notes=notes,
         metadata={
             "path": file_path,
             "composer": row.get("composer_name"),
             "genres": row.get("genres"),
             "duration_seconds": row.get("seconds"),
-            "downloadable": downloadable,
+            **({"acquisition_reason": reason} if reason else {}),
         },
     )
 

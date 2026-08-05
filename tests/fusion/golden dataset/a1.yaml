@@ -1,0 +1,14 @@
+- id: mozart_001
+  expected_groups: 1
+  representations:
+    - provider: pdmx
+      title: Ave Verum Corpus
+      composer: Wolfgang Amadeus Mozart
+    - provider: imslp
+      title: Ave verum corpus, K.618
+      composer: Mozart
+    - provider: openscore
+      title: Ave Verum Corpus KV618
+      composer: Mozart
+    - provider: youtube
+      title: Mozart - Ave Verum Corpus

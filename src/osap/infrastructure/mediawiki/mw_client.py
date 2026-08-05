@@ -149,10 +149,19 @@ class MediaWikiClient:
     def download(self, url: str) -> bytes:
         if url.startswith("//"):
             url = f"https:{url}"
+        elif url.startswith("http://"):
+            url = f"https:{url[len('http:') :]}"
         req = urllib.request.Request(url, headers=self._headers())
         req.add_header("Cookie", "imslpdisclaimeraccepted=yes")
-        with urllib.request.urlopen(req, timeout=30, context=self._context) as response:  # noqa: S310
-            return cast("bytes", response.read())
+        try:
+            with urllib.request.urlopen(req, timeout=30, context=self._context) as response:  # noqa: S310
+                return cast("bytes", response.read())
+        except urllib.error.HTTPError as exc:
+            raise MediaWikiError(f"MediaWiki download error ({exc.code}) for {url}") from exc
+        except urllib.error.URLError as exc:
+            raise MediaWikiError(f"MediaWiki download connection error for {url}: {exc.reason}") from exc
+        except (TimeoutError, OSError) as exc:
+            raise MediaWikiError(f"MediaWiki download failed for {url}: {exc}") from exc
 
     def _get(self, params: dict[str, str]) -> Any:
         query = urllib.parse.urlencode(params)
@@ -167,6 +176,10 @@ class MediaWikiClient:
                 raw = resp.read()
         except urllib.error.HTTPError as exc:
             raise MediaWikiError(f"MediaWiki API error ({exc.code}) for {url}") from exc
+        except urllib.error.URLError as exc:
+            raise MediaWikiError(f"MediaWiki API connection error for {url}: {exc.reason}") from exc
+        except (TimeoutError, OSError) as exc:
+            raise MediaWikiError(f"MediaWiki API request failed for {url}: {exc}") from exc
         import json
 
         payload = cast("dict[str, object]", json.loads(raw.decode("utf-8")))

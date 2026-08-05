@@ -29,6 +29,7 @@ class WorkDescriptor:
     movement_number: int | None = None
     creation_year: int | None = None
     language: str | None = None
+    key: str | None = None
     genres: tuple[str, ...] = field(default_factory=tuple)
     instrumentation: tuple[str, ...] = field(default_factory=tuple)
     voices: tuple[str, ...] = field(default_factory=tuple)

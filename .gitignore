@@ -15,3 +15,7 @@ build/
 # OSAP runtime artifacts
 *.db
 osap_library/
+.coverage
+htmlcov/
+.tox/
+.nox/

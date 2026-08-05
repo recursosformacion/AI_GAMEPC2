@@ -1,10 +1,12 @@
 import hashlib
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
 from typing import cast
 
 from src.osap.application.catalog_manager import CatalogManager
 from src.osap.application.library_manager import LibraryManager
+from src.osap.application.work_merge_service import _sort_key
 from src.osap.application.work_resolver import WorkResolver
 from src.osap.domain.acquisition_result import AcquisitionResult
 from src.osap.domain.candidate_representation import CandidateRepresentation
@@ -25,6 +27,8 @@ STATUS_ERROR = "error"
 
 _STRUCTURED_FORMATS = ("musicxml", "mei")
 
+ProgressCallback = Callable[[str], None]
+
 
 @dataclass(frozen=True)
 class ProviderReport:
@@ -33,6 +37,11 @@ class ProviderReport:
     provider_id: ProviderId
     outcome: str  # ok | no_result | unavailable | error
     detail: str = ""
+
+
+def _notify(on_progress: ProgressCallback | None, message: str) -> None:
+    if on_progress is not None:
+        on_progress(message)
 
 
 class WorkResolutionEngine:
@@ -58,15 +67,33 @@ class WorkResolutionEngine:
         self._config = config
         self._library_manager = library_manager
 
-    def resolve(self, request: ResolveRequest, download: bool = False, index: int | None = None) -> ResolveResult:
+    def resolve(
+        self,
+        request: ResolveRequest,
+        download: bool = False,
+        index: int | None = None,
+        representations: tuple[CandidateRepresentation, ...] | None = None,
+        on_progress: ProgressCallback | None = None,
+    ) -> ResolveResult:
         started = time.monotonic()
         try:
             requested_work = self._work_resolver.resolve(request)
         except ScoreResolutionError:
             requested_work = None
-        candidates, providers, diagnostics = self._collect(request)
-        ranking = self._ranking_engine.rank(candidates, request, self._config)
-        chosen = self._pick(ranking, index)
+
+        if representations is not None:
+            # Resolution limited to a chosen work's representations: order them
+            # by acquisition preference and pick there, never re-scanning other
+            # providers/works.
+            candidates = tuple(representations)
+            ranking = tuple(sorted(candidates, key=_sort_key))
+            providers: list[ProviderId] = [c.provider_id for c in candidates]
+            diagnostics: list[str] = []
+            chosen = self._pick(ranking, index)
+        else:
+            candidates, providers, diagnostics = self._collect(request, on_progress)
+            ranking = self._ranking_engine.rank(candidates, request, self._config)
+            chosen = self._pick(ranking, index)
         duration = Duration(time.monotonic() - started)
 
         work = chosen.work_descriptor if chosen is not None else (requested_work or self._fallback_work(request))
@@ -86,22 +113,32 @@ class WorkResolutionEngine:
         local_path: str | None = None
         downloaded: tuple[str, ...] = ()
         score_id: str | None = None
+        manual_fallback: CandidateRepresentation | None = None
         if download:
             attempted: set[str] = set()
             for candidate in ranking:
-                if candidate.metadata.get("downloadable") is False:
-                    pid = candidate.provider_id.value
+                pid = candidate.provider_id.value
+                if not candidate.downloadable or candidate.manual_download:
+                    if manual_fallback is None:
+                        manual_fallback = candidate
                     if pid not in attempted:
                         attempted.add(pid)
-                        diagnostics.append(f"{pid}: requiere descarga manual")
+                        diag = f"{pid}: descarga manual requerida"
+                        if candidate.download_url:
+                            diag += f" ({candidate.download_url})"
+                        diagnostics.append(diag)
+                        _notify(on_progress, diag)
                     continue
+                _notify(on_progress, f"Descargando {pid}...")
                 try:
                     acquisition = self.download(candidate, request)
                 except (ResourceUnavailableError, ScoreResolutionError):
-                    pid = candidate.provider_id.value
                     if pid not in attempted:
                         attempted.add(pid)
                         diagnostics.append(f"{pid}: download unavailable")
+                        _notify(on_progress, f"{pid}: descarga no disponible")
+                    if manual_fallback is None and candidate.download_url:
+                        manual_fallback = candidate
                     continue
                 if _is_structured(acquisition.source.format):
                     score_id = hashlib.sha256(cast("bytes", acquisition.source.content)).hexdigest()[:12]  # noqa: S324
@@ -119,6 +156,9 @@ class WorkResolutionEngine:
                     downloaded = (identifier,)
                 chosen = candidate
                 break
+
+        if chosen is not None and chosen.downloadable is False and manual_fallback is not None:
+            chosen = manual_fallback
 
         return ResolveResult(
             request=request,
@@ -138,29 +178,40 @@ class WorkResolutionEngine:
         provider = self._find(candidate.provider_id)
         return provider.download(candidate, request.desired_format)
 
-    def rank(self, request: ResolveRequest) -> tuple[CandidateRepresentation, ...]:
-        candidates, _, _ = self._collect(request)
+    def rank(
+        self, request: ResolveRequest, on_progress: ProgressCallback | None = None
+    ) -> tuple[CandidateRepresentation, ...]:
+        candidates, _, _ = self._collect(request, on_progress)
         return self._ranking_engine.rank(candidates, request, self._config)
 
-    def provider_status(self, request: ResolveRequest) -> tuple[ProviderReport, ...]:
+    def provider_status(
+        self, request: ResolveRequest, on_progress: ProgressCallback | None = None
+    ) -> tuple[ProviderReport, ...]:
         reports: list[ProviderReport] = []
         for provider in self._catalog_manager.providers():
+            pid = provider.provider_id.value
             if not self._eligible(provider, request):
                 reports.append(ProviderReport(provider.provider_id, STATUS_UNAVAILABLE, ""))
+                _notify(on_progress, f"{pid}: omitido")
                 continue
+            _notify(on_progress, f"Consultando {pid}...")
             try:
                 candidates = provider.search(request)
             except ResourceUnavailableError as exc:
                 reports.append(ProviderReport(provider.provider_id, STATUS_UNAVAILABLE, exc.code or str(exc)))
+                _notify(on_progress, f"{pid}: no disponible")
                 continue
             except (ScoreResolutionError, NotImplementedError) as exc:
                 reports.append(ProviderReport(provider.provider_id, STATUS_ERROR, str(exc)))
+                _notify(on_progress, f"{pid}: error")
                 continue
             if candidates:
                 formats = ", ".join(sorted({c.format.value for c in candidates}))
                 reports.append(ProviderReport(provider.provider_id, STATUS_OK, formats))
+                _notify(on_progress, f"{pid}: {len(candidates)} candidato(s)")
             else:
                 reports.append(ProviderReport(provider.provider_id, STATUS_NO_RESULT, ""))
+                _notify(on_progress, f"{pid}: sin resultados")
         return tuple(reports)
 
     @staticmethod
@@ -181,7 +232,7 @@ class WorkResolutionEngine:
         )
 
     def _collect(
-        self, request: ResolveRequest
+        self, request: ResolveRequest, on_progress: ProgressCallback | None = None
     ) -> tuple[tuple[CandidateRepresentation, ...], list[ProviderId], list[str]]:
         results: list[CandidateRepresentation] = []
         used: list[ProviderId] = []
@@ -190,10 +241,16 @@ class WorkResolutionEngine:
             if not self._eligible(provider, request):
                 continue
             used.append(provider.provider_id)
+            pid = provider.provider_id.value
+            _notify(on_progress, f"Consultando {pid}...")
             try:
-                results.extend(provider.search(request))
+                found = provider.search(request)
             except (ResourceUnavailableError, ScoreResolutionError, NotImplementedError):
-                diagnostics.append(f"{provider.provider_id.value}: unavailable")
+                diagnostics.append(f"{pid}: unavailable")
+                _notify(on_progress, f"{pid}: no disponible")
+                continue
+            _notify(on_progress, f"{pid}: {len(found)} candidato(s)")
+            results.extend(found)
         return tuple(results), used, diagnostics
 
     @staticmethod

@@ -5,6 +5,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING
 
 from src.osap.application.metadata_normalizer import MetadataNormalizer
+from src.osap.application.metadata_parser import extract_metadata
 
 if TYPE_CHECKING:
     from src.osap.application.work_merge_service import WorkGroup
@@ -56,7 +57,15 @@ class CanonicalRepresentation:
     provider: str
     format: str
     downloadable: bool
-    quality: str
+    manual_download: bool = False
+    download_url: str | None = None
+    license: str | None = None
+    confidence: float | None = None
+    rating: float | None = None
+    local_path: str | None = None
+    remote_id: str | None = None
+    notes: str | None = None
+    quality: str = "UNREADABLE"
 
 
 @dataclass(frozen=True)
@@ -96,7 +105,6 @@ class MetadataEnricher:
     def enrich(self, group: WorkGroup) -> CanonicalWork:
         work = group.work
         reps = group.representations
-        _, meta = MetadataNormalizer.clean_title(work.title, work.composer)
 
         composer = _canonical_composer(work.composer) if work.composer else None
         genres = {g for c in reps for g in _genres(c)}
@@ -109,7 +117,7 @@ class MetadataEnricher:
             display_title=work.title,
             canonical_title=work.canonical_title,
             canonical_key=work.canonical_key or group.key,
-            catalog=meta.get("catalogue") or _catalog_from_reps(reps),
+            catalog=work.catalogue_number or _catalog_from_reps(reps),
             composer=composer,
             creation_year=_first_int(reps, "creation_year"),
             genre=next((g for g in sorted(genres) if g), None),
@@ -186,9 +194,9 @@ def _catalog_from_reps(candidates: tuple[CandidateRepresentation, ...]) -> str |
         raw = str(candidate.metadata.get("catalogue") or "")
         if raw:
             return raw
-        _, meta = MetadataNormalizer.clean_title(candidate.work_descriptor.title, candidate.work_descriptor.composer)
-        if meta.get("catalogue"):
-            return str(meta["catalogue"])
+        me = extract_metadata(candidate.work_descriptor.title)
+        if me.catalogue:
+            return me.catalogue
     return None
 
 
@@ -219,6 +227,14 @@ def _canonical_representation(candidate: CandidateRepresentation) -> CanonicalRe
     return CanonicalRepresentation(
         provider=candidate.provider_id.value,
         format=candidate.format.value,
-        downloadable=bool(candidate.metadata.get("downloadable", True)),
+        downloadable=candidate.downloadable,
+        manual_download=candidate.manual_download,
+        download_url=candidate.download_url,
+        license=candidate.license,
+        confidence=candidate.confidence.value if candidate.confidence else None,
+        rating=candidate.rating,
+        local_path=candidate.local_path,
+        remote_id=candidate.remote_id,
+        notes=candidate.notes,
         quality=candidate.quality.name,
     )

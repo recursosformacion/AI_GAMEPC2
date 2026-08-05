@@ -1,0 +1,173 @@
+# Golden dataset de fusión de obras (OSAP).
+#
+# REGLA DE REGRESIÓN: cada vez que una fusión falle en producción, NO se
+# corrige el algoritmo directamente: primero se añade un caso nuevo aquí
+# (con la salida real esperada) y después se arregla el motor. Así cada error
+# real se convierte en una prueba permanente.
+#
+# Formato por caso:
+#   - id: identificador único
+#     works_expected: número de obras que deben resultar de agrupar
+#     note: (opcional) explicación
+#     representations:
+#       - {title, composer, provider?}
+# `provider` es opcional (por defecto "pdmx"); solo identifica la candidata.
+
+cases:
+  # ── Mozart ────────────────────────────────────────────────────────────────
+  - id: mozart-ave-verum-corpus-variants
+    works_expected: 1
+    representations:
+      - {title: "Ave Verum Corpus", composer: "Wolfgang Amadeus Mozart", provider: pdmx}
+      - {title: "Ave Verum Corpus K618", composer: "Mozart", provider: pdmx}
+      - {title: "Ave verum corpus KV 618", composer: "Mozart", provider: imslp}
+      - {title: "Ave verum corpus, K.618", composer: "Mozart", provider: imslp}
+
+  - id: mozart-requiem
+    works_expected: 1
+    representations:
+      - {title: "Requiem", composer: "Wolfgang Amadeus Mozart", provider: openscore}
+      - {title: "Requiem in D minor, K.626", composer: "Mozart", provider: imslp}
+      - {title: "Requiem KV 626", composer: "Mozart", provider: pdmx}
+
+  - id: mozart-symphony-40
+    works_expected: 1
+    representations:
+      - {title: "Symphony No.40 in G minor, K.550", composer: "Mozart", provider: pdmx}
+      - {title: "Symphony No.40 in G minor", composer: "Wolfgang Amadeus Mozart", provider: openscore}
+      - {title: "Symphony No.40", composer: "Mozart", provider: imslp}
+
+  - id: mozart-eine-kleine-nachtmusik
+    works_expected: 1
+    representations:
+      - {title: "Eine kleine Nachtmusik", composer: "Mozart", provider: openscore}
+      - {title: "Eine Kleine Nachtmusik K.525", composer: "Wolfgang Amadeus Mozart", provider: pdmx}
+
+  - id: mozart-piano-sonata-11
+    works_expected: 1
+    representations:
+      - {title: "Piano Sonata No.11 in A, K.331", composer: "Mozart", provider: pdmx}
+      - {title: "Piano Sonata No.11 in A major", composer: "Wolfgang Amadeus Mozart", provider: openscore}
+
+  - id: mozart-clarinet-concerto
+    works_expected: 1
+    representations:
+      - {title: "Clarinet Concerto in A, K.622", composer: "Mozart", provider: pdmx}
+      - {title: "Clarinet Concerto in A Major K.622", composer: "Wolfgang Amadeus Mozart", provider: imslp}
+
+  # Dos sonatas distintas NO deben fusionarse.
+  - id: mozart-piano-sonatas-11-vs-12
+    works_expected: 2
+    representations:
+      - {title: "Piano Sonata No.11 in A, K.331", composer: "Mozart", provider: pdmx}
+      - {title: "Piano Sonata No.12 in F, K.332", composer: "Mozart", provider: pdmx}
+
+  # Dos sinfonías distintas NO deben fusionarse.
+  - id: mozart-symphonies-40-vs-41
+    works_expected: 2
+    representations:
+      - {title: "Symphony No.40 in G minor, K.550", composer: "Mozart", provider: pdmx}
+      - {title: "Symphony No.41 in C, K.551", composer: "Mozart", provider: pdmx}
+
+  # ── Bach ──────────────────────────────────────────────────────────────────
+  - id: bach-mass-b-minor
+    works_expected: 1
+    representations:
+      - {title: "Mass in B minor, BWV 232", composer: "Johann Sebastian Bach", provider: pdmx}
+      - {title: "Mass in B Minor BWV232", composer: "Bach", provider: imslp}
+
+  - id: bach-st-matthew-passion
+    works_expected: 1
+    representations:
+      - {title: "St Matthew Passion, BWV 244", composer: "Johann Sebastian Bach", provider: pdmx}
+      - {title: "Matthäus-Passion BWV 244", composer: "Bach", provider: imslp}
+
+  # ── Beethoven ─────────────────────────────────────────────────────────────
+  - id: beethoven-symphony-5
+    works_expected: 1
+    representations:
+      - {title: "Symphony No.5 in C minor, Op.67", composer: "Ludwig van Beethoven", provider: pdmx}
+      - {title: "Symphony No.5", composer: "Beethoven", provider: openscore}
+
+  - id: beethoven-symphony-9
+    works_expected: 1
+    representations:
+      - {title: "Symphony No.9 in D minor, Op.125", composer: "Beethoven", provider: pdmx}
+      - {title: "Symphony No.9 (Choral)", composer: "Ludwig van Beethoven", provider: openscore}
+
+  - id: beethoven-symphonies-5-vs-9
+    works_expected: 2
+    representations:
+      - {title: "Symphony No.5 in C minor, Op.67", composer: "Beethoven", provider: pdmx}
+      - {title: "Symphony No.9 in D minor, Op.125", composer: "Beethoven", provider: pdmx}
+
+  # ── Schubert ──────────────────────────────────────────────────────────────
+  - id: schubert-ave-maria
+    works_expected: 1
+    representations:
+      - {title: "Ave Maria", composer: "Franz Schubert", provider: openscore}
+      - {title: "Ave Maria, D.839", composer: "Schubert", provider: pdmx}
+
+  - id: schubert-erlkonig
+    works_expected: 1
+    representations:
+      - {title: "Erlkönig", composer: "Franz Schubert", provider: openscore}
+      - {title: "Der Erlkönig D.328", composer: "Schubert", provider: pdmx}
+
+  - id: schubert-unfinished-symphony
+    works_expected: 1
+    representations:
+      - {title: "Symphony No.8 in B minor", composer: "Franz Schubert", provider: openscore}
+      - {title: "Symphony No.8 (Unfinished)", composer: "Schubert", provider: imslp}
+
+  # Ave Maria de Schubert vs de Gounod son obras distintas.
+  - id: ave-maria-schubert-vs-gounod
+    works_expected: 2
+    representations:
+      - {title: "Ave Maria", composer: "Franz Schubert", provider: pdmx}
+      - {title: "Ave Maria", composer: "Charles Gounod", provider: pdmx}
+
+  # ── Palestrina ────────────────────────────────────────────────────────────
+  - id: palestrina-sicut-cervus
+    works_expected: 1
+    representations:
+      - {title: "Sicut cervus", composer: "Giovanni Pierluigi da Palestrina", provider: pdmx}
+      - {title: "Sicut cervus desiderat", composer: "Palestrina", provider: imslp}
+
+  # Nota: la fusión por alias/traducción (p.ej. "Missa Papae Marcelli" =
+  # "Pope Marcellus Mass", "Für Elise" = "Bagatelle WoO 59") requiere soporte
+  # de alias explícito; se añadirá como mejora futura del WorkMatcher.
+
+  # ── Victoria ──────────────────────────────────────────────────────────────
+  - id: victoria-o-magnum-mysterium
+    works_expected: 1
+    representations:
+      - {title: "O magnum mysterium", composer: "Tomás Luis de Victoria", provider: pdmx}
+      - {title: "O Magnum Mysterium", composer: "Victoria", provider: openscore}
+
+  - id: victoria-requiem
+    works_expected: 1
+    representations:
+      - {title: "Requiem", composer: "Tomás Luis de Victoria", provider: pdmx}
+      - {title: "Requiem (Officium defunctorum)", composer: "Victoria", provider: imslp}
+
+  # Requiem de Mozart y de Victoria son obras distintas.
+  - id: requiem-mozart-vs-victoria
+    works_expected: 2
+    representations:
+      - {title: "Requiem, K.626", composer: "Mozart", provider: pdmx}
+      - {title: "Requiem", composer: "Tomás Luis de Victoria", provider: pdmx}
+
+  # ── Casos de regresión ────────────────────────────────────────────────────
+  # El título mostrado no debe contener fragmentos rotos del normalizador.
+  - id: regression-no-broken-title
+    works_expected: 1
+    representations:
+      - {title: "Dances", composer: "Beethoven", provider: pdmx}
+      - {title: "Dances", composer: "Ludwig van Beethoven", provider: openscore}
+
+  # Un único título no debe fragmentarse en varias obras.
+  - id: single-title-single-work
+    works_expected: 1
+    representations:
+      - {title: "Per Questa Bella Mano", composer: "Mozart", provider: pdmx}

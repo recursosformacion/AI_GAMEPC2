@@ -1,26 +1,9 @@
 import re
 import unicodedata
 
+from src.osap.application.metadata_parser import extract_metadata
+from src.osap.application.normalized_metadata import NormalizedMetadata
 from src.osap.domain.music_query_normalizer import MusicQueryNormalizer
-
-_ROLE_MARKERS = {
-    "arr": "arranger",
-    "arranged by": "arranger",
-    "arr.": "arranger",
-    "arranger": "arranger",
-    "transcr.": "transcriber",
-    "transcribed by": "transcriber",
-    "transcriber": "transcriber",
-    "ed.": "editor",
-    "edited by": "editor",
-    "editor": "editor",
-    "rev.": "editor",
-    "revision": "editor",
-    "copy": "copier",
-    "copier": "copier",
-    "orch.": "orchestrator",
-    "orchestrated by": "orchestrator",
-}
 
 _TITLE_NOISE = re.compile(
     r"\b(WIP|Draft|Version\s*\d*|Rev\.?|Copy|Reduction|Preliminary|Unfinished|Fragment)\b",
@@ -28,14 +11,19 @@ _TITLE_NOISE = re.compile(
 )
 _ARRANGEMENT_MARKER = re.compile(r"\b(Arr\.?|Transcribed by)\b", re.IGNORECASE)
 _YEAR_RANGE = re.compile(r"\(?\d{4}-?\d{4}?\)?")
-_CATALOGUE_MARKER = re.compile(
-    r"\b(KV|Köchel|Koechel|BWV|Hob\.?|Op\.?|K\.?|D\.?|No\.?)\s*\.?\s*([A-Za-z0-9]+)\b", re.IGNORECASE
-)
-_TRAILING_CATALOGUE = re.compile(
-    r"[,\s]*(KV|Köchel|Koechel|BWV|K\.?|Hob\.?|Op\.?|D\.?|No\.?)\s*\.?\s*([A-Za-z0-9]+)\s*$", re.IGNORECASE
-)
 _MOJIBAKE = re.compile(r"[\uFFFD]|\\x[0-9a-fA-F]{2}|\\u[0-9a-fA-F]{4}")
-_STRAY_PARENS = re.compile(r"\(([^)]*)\)")
+
+_REMOVE_CATALOGUE = re.compile(
+    r"\b(?:KV|Köchel|Koechel|K\.?|BWV|Hob\.?|D\.?|Op\.?)\s*\.?\s*[0-9]+[A-Za-z]?\b", re.IGNORECASE
+)
+_REMOVE_NUMBER = re.compile(r"\b(?:No\.?|Number|Nº)\s*[0-9]+[A-Za-z]?\b", re.IGNORECASE)
+_REMOVE_KEY = re.compile(r"\bin\s+[A-H](?:-?flat|b|#|sharp)?(?:\s+(?:major|minor|maj|min))?\b", re.IGNORECASE)
+_REMOVE_TRAILING_VOICES = re.compile(r"\s+(?:SATB|SSAATTBB|TTBB|SSA|TTB|SAB)\s*$", re.IGNORECASE)
+_REMOVE_TRAILING_SUBTITLE = re.compile(
+    r"\s+(?:for\s+[\w'’/-]+(?:\s+[\w'’/-]+)*|a cappella|accompanied)\s*$", re.IGNORECASE
+)
+
+_DISPLAY_STOPWORDS = {"in", "the", "of", "and", "for", "an", "on", "to", "op", "et", "da", "di", "de"}
 
 # Known composers for initial expansion: normalized key -> canonical name.
 _KNOWN_COMPOSERS: dict[str, str] = {
@@ -43,10 +31,21 @@ _KNOWN_COMPOSERS: dict[str, str] = {
     "wa mozart": "Wolfgang Amadeus Mozart",
     "w a mozart": "Wolfgang Amadeus Mozart",
     "mozart": "Wolfgang Amadeus Mozart",
-    "franz schubert": "Franz Schubert",
-    "schubert": "Franz Schubert",
+    "johann sebastian bach": "Johann Sebastian Bach",
+    "js bach": "Johann Sebastian Bach",
+    "j s bach": "Johann Sebastian Bach",
+    "bach": "Johann Sebastian Bach",
     "ludwig van beethoven": "Ludwig van Beethoven",
     "beethoven": "Ludwig van Beethoven",
+    "franz schubert": "Franz Schubert",
+    "schubert": "Franz Schubert",
+    "giovanni pierluigi da palestrina": "Giovanni Pierluigi da Palestrina",
+    "palestrina": "Giovanni Pierluigi da Palestrina",
+    "tomas luis de victoria": "Tomás Luis de Victoria",
+    "tomás luis de victoria": "Tomás Luis de Victoria",
+    "victoria": "Tomás Luis de Victoria",
+    "charles gounod": "Charles Gounod",
+    "gounod": "Charles Gounod",
     "eduard toldra": "Eduard Toldrà",
     "toldra": "Eduard Toldrà",
     "franz liszt": "Franz Liszt",
@@ -55,8 +54,17 @@ _KNOWN_COMPOSERS: dict[str, str] = {
 
 
 class MetadataNormalizer:
-    """Cleans raw metadata (composer names, titles) for fuzzy matching and
-    groups works. Pure application logic; no domain knowledge of providers."""
+    """Produces normalized, comparison-only metadata from a raw title/composer.
+
+    Responsibilities (kept separate by design):
+      - `extract_metadata`  -> parser (never modifies the title)
+      - `normalize`         -> NormalizedMetadata used ONLY for matching
+      - `clean_display_title` / `canonical_composer` -> display helpers
+
+    There is intentionally NO `work_key`/`clean_title`: merging is done by the
+    `WorkMatcher` using a scored `MergeDecision`, never by comparing an exact
+    concatenated string.
+    """
 
     @staticmethod
     def _clean_text(raw: str) -> str:
@@ -65,76 +73,100 @@ class MetadataNormalizer:
         return text
 
     @staticmethod
-    def split_roles(raw: str) -> dict[str, str]:
-        parts = re.split(
-            r"\s+(?:Arr\.?|arr\.?|transcr\.?|ed\.?|edited by|arranged by|transcribed by|orch\.?)\s+",
-            raw,
-            flags=re.IGNORECASE,
-        )
-        roles: dict[str, str] = {}
-        if not parts:
-            return roles
-        roles["composer"] = parts[0].strip()
-        if len(parts) > 1:
-            rest = " ".join(parts[1:])
-            marker = next((m for m in _ROLE_MARKERS if m in rest.lower()), None)
-            role = _ROLE_MARKERS.get(marker or "arr.", "arranger")
-            roles[role] = rest.strip()
-        return roles
-
-    @staticmethod
     def canonical_composer(raw: str) -> str:
         text = MetadataNormalizer._clean_text(raw)
-        text = _YEAR_RANGE.sub("", text).strip()
-        text = re.sub(r"\s+", " ", text)
+        # Quitar contenido entre paréntesis (años, notas, "alleged").
+        text = re.sub(r"\([^)]*\)", " ", text)
+        # Quitar prefijos de catálogo incrustados en el campo compositor ("KV 618 - ...").
+        text = _REMOVE_CATALOGUE.sub("", text)
+        # Quitar "Composed by" / "by".
+        text = re.sub(r"\b(?:composed\s+by|by)\b", " ", text, flags=re.IGNORECASE)
+        text = _YEAR_RANGE.sub("", text)
+        text = re.sub(r"\s+", " ", text).strip(" ,.-")
         key = _collapse_initials(MusicQueryNormalizer.normalize(text))
-        return _KNOWN_COMPOSERS.get(key, text)
+        if key in _KNOWN_COMPOSERS:
+            return _KNOWN_COMPOSERS[key]
+        # Fallback: si el texto limpio contiene un compositor conocido (p. ej.
+        # "Wolfgang Amadé Mozart" -> "mozart"), usar el canónico.
+        for canonical in _KNOWN_COMPOSERS.values():
+            if canonical.split()[-1].lower() in key:
+                return canonical
+        return text
 
     @staticmethod
-    def catalogue(text: str) -> str | None:
-        m = _CATALOGUE_MARKER.search(text)
-        if not m:
-            return None
-        marker = m.group(1).rstrip(".").upper()
-        if marker in ("KÖCHEL", "KOECHEL"):
-            marker = "K"
-        return f"{marker} {m.group(2)}"
+    def comparison_title(title: str, composer: str | None = None) -> str:
+        """Normalized title used ONLY for comparison.
 
-    @staticmethod
-    def clean_title(raw: str, composer: str | None = None) -> tuple[str, dict[str, str]]:
-        text = MetadataNormalizer._clean_text(raw)
-        meta: dict[str, str] = {}
-
-        m = re.search(r"\bfor\s+([A-Za-z0-9 ,]+)$", text, re.IGNORECASE)
-        if m:
-            meta["instrumentation"] = m.group(1).strip()
-            text = text[: m.start()].strip()
-
-        cat = MetadataNormalizer.catalogue(text)
-        if cat:
-            meta["catalogue"] = cat
-
-        # Remove catalogue markers anywhere (not just trailing) so variants like
-        # "... KV 618 ..." collapse to the base title.
-        text = _CATALOGUE_MARKER.sub("", text)
-        text = _TRAILING_CATALOGUE.sub("", text)
+        Factors out the structured elements (catalogue, number, key, opus) that
+        are tracked separately in `NormalizedMetadata`, strips any trailing
+        composer, then lowercases and collapses punctuation/whitespace. It never
+        destroys meaningful words ("Symphony", "Dances", "Requiem" are kept).
+        """
+        text = MetadataNormalizer._clean_text(title)
+        text = _REMOVE_CATALOGUE.sub("", text)
+        text = _REMOVE_NUMBER.sub("", text)
+        text = _REMOVE_KEY.sub("", text)
         if composer:
-            text = _strip_trailing_composer(text, composer)
-
+            canonical = MetadataNormalizer.canonical_composer(composer)
+            last = canonical.split()[-1].strip(" .,")
+            text = re.sub(rf"\s*\([^)]*{re.escape(last)}[^)]*\)", "", text, flags=re.IGNORECASE)
+            text = re.sub(rf"[,\s-]+{re.escape(last)}\s*$", "", text, flags=re.IGNORECASE)
+            text = _strip_trailing_composer(text, canonical)
+        # Drop parenthetical subtitles/comments ("Requiem (Officium defunctorum)")
+        # for comparison; they are not part of the core identity.
+        text = re.sub(r"\([^)]*\)", " ", text)
+        # Drop trailing voice markers and subtitle phrases ("SATB", "for choir").
+        text = _REMOVE_TRAILING_VOICES.sub("", text)
+        text = _REMOVE_TRAILING_SUBTITLE.sub("", text)
+        # Strip non-meaningful status/role markers (WIP, Draft, arr., ...) so
+        # "Ave Verum Corpus" and "Ave Verum Corpus (WIP)" compare as the same.
         text = _TITLE_NOISE.sub("", text)
         text = _ARRANGEMENT_MARKER.sub("", text)
-        text = _STRAY_PARENS.sub(lambda m: m.group(1).strip() if m.group(1).strip() else "", text)
-        text = re.sub(r"\s{2,}", " ", text).strip(" .-")
-        return text or raw.strip(), meta
+        text = text.lower()
+        text = re.sub(r"[^a-z0-9 ]+", " ", text)
+        return re.sub(r"\s+", " ", text).strip()
 
     @staticmethod
-    def work_key(title: str, composer: str | None) -> str:
-        parts = []
+    def normalize(title: str, composer: str | None) -> NormalizedMetadata:
+        """Build comparison-only metadata from a raw title + composer."""
+        meta = extract_metadata(title)
+        return NormalizedMetadata(
+            normalized_title=MetadataNormalizer.comparison_title(title, composer),
+            normalized_composer=(
+                MusicQueryNormalizer.normalize(MetadataNormalizer.canonical_composer(composer)) if composer else None
+            ),
+            normalized_catalog=meta.catalogue.lower() if meta.catalogue else None,
+            normalized_number=meta.work_number,
+            normalized_key=meta.key,
+        )
+
+    @staticmethod
+    def clean_display_title(title: str, composer: str | None = None) -> str:
+        """Best-effort display title: removes the catalogue marker (shown
+        separately) and any trailing composer clause, then title-cases it. The
+        work number and key are preserved. Never returns a broken fragment."""
+        text = MetadataNormalizer._clean_text(title)
+        text = _REMOVE_CATALOGUE.sub("", text)
         if composer:
-            parts.append(MusicQueryNormalizer.normalize(MetadataNormalizer.canonical_composer(composer)))
-        clean_title, _meta = MetadataNormalizer.clean_title(title, composer)
-        parts.append(MusicQueryNormalizer.normalize(clean_title))
-        return "|".join(parts)
+            last = composer.split()[-1].strip(" .,")
+            text = re.sub(rf"\s*\([^)]*{re.escape(last)}[^)]*\)\s*$", "", text, flags=re.IGNORECASE)
+            text = re.sub(rf"[,\s-]+{re.escape(last)}\s*$", "", text, flags=re.IGNORECASE)
+            text = _strip_trailing_composer(text, composer)
+        text = re.sub(r"\s{2,}", " ", text).strip(" ,;:.-")
+        cleaned = MetadataNormalizer._title_case(text)
+        return cleaned or title.strip()
+
+    @staticmethod
+    def _title_case(value: str) -> str:
+        words = value.split()
+        out: list[str] = []
+        for index, word in enumerate(words):
+            low = word.lower()
+            if index != 0 and low in _DISPLAY_STOPWORDS:
+                out.append(low)
+            else:
+                out.append(word[:1].upper() + word[1:])
+        return " ".join(out)
 
 
 def _collapse_initials(s: str) -> str:

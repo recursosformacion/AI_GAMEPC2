@@ -1,4 +1,8 @@
+import os
+import tomllib
 from dataclasses import dataclass
+from pathlib import Path
+from typing import Any
 
 
 @dataclass(frozen=True)
@@ -30,3 +34,63 @@ class Configuration:
     datasets_auto_update: bool = False
     credentials_path: str = "osap_credentials.db"
     credentials_key: str | None = None
+
+
+# Campo -> (sección TOML, clave TOML, variable de entorno)
+_CONFIG_FIELDS: dict[str, tuple[str, str, str]] = {
+    "pdmx_download_base": ("pdmx", "download_base", "OSAP_PDMX_DOWNLOAD_BASE"),
+    "pdmx_csv_url": ("pdmx", "csv_url", "OSAP_PDMX_CSV_URL"),
+    "pdmx_index_path": ("pdmx", "index_path", "OSAP_PDMX_INDEX_PATH"),
+    "library_root": ("osap", "library_root", "OSAP_LIBRARY_ROOT"),
+    "imslp_base_url": ("osap", "imslp_base_url", "OSAP_IMSLP_BASE_URL"),
+    "datasets_cache_dir": ("osap", "datasets_cache_dir", "OSAP_DATASETS_CACHE_DIR"),
+}
+
+
+def load_configuration(path: str | Path | None = None) -> Configuration:
+    """Carga la configuración combinando defaults + fichero TOML + variables de entorno.
+
+    Precedencia: variable de entorno > fichero (osap.toml o el indicado) > defaults.
+    """
+    config_path = Path(path) if path else Path(os.environ.get("OSAP_CONFIG", "osap.toml"))
+    data: dict[str, Any] = {}
+    if config_path.exists():
+        with config_path.open("rb") as handle:
+            data = tomllib.load(handle)
+    kwargs: dict[str, Any] = {}
+    for field, (section, key, env) in _CONFIG_FIELDS.items():
+        value = os.environ.get(env)
+        if value is None:
+            block = data.get(section)
+            if isinstance(block, dict):
+                value = block.get(key)
+        if value is not None:
+            kwargs[field] = value
+    return Configuration(**kwargs)
+
+
+def _dump_toml(data: dict[str, Any]) -> str:
+    """Serializa un dict (secciones + escalares) a TOML, para configs simples."""
+    lines: list[str] = []
+    for key, value in data.items():
+        if not isinstance(value, dict):
+            lines.append(f"{key} = {_toml_repr(value)}")
+    for section, block in data.items():
+        if not isinstance(block, dict):
+            continue
+        lines.append(f"\n[{section}]")
+        for key, value in block.items():
+            lines.append(f"{key} = {_toml_repr(value)}")
+    return "\n".join(lines) + "\n"
+
+
+def _toml_repr(value: Any) -> str:
+    if isinstance(value, bool):
+        return "true" if value else "false"
+    if isinstance(value, (int, float)):
+        return str(value)
+    if isinstance(value, str):
+        return '"' + value.replace("\\", "\\\\").replace('"', '\\"') + '"'
+    if isinstance(value, (list, tuple)):
+        return "[" + ", ".join(_toml_repr(item) for item in value) + "]"
+    return '""'

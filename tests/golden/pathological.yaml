@@ -1,0 +1,59 @@
+# Casos patológicos de fusión (Fusion Laboratory).
+#
+# Son casos "frontera" que un motor real debe resolver. Si uno falla, es el
+# disparador para mejorar el algoritmo; NO se corrige el matcher hasta añadir
+# aquí el caso que falle (regla de regresión).
+#
+# Medir:  python tests/fusion/fusion_test.py tests/golden/pathological.yaml --measure
+
+cases:
+  # Todas estas variantes de Ave Verum pertenecen a UNA misma obra y DEBEN fusionarse.
+  # La etiqueta `work` marca la obra de destino, para calcular TP/FP/FN por parejas.
+  - id: ave-verum-deben-fusionarse
+    works_expected: 1
+    representations:
+      - {title: Ave Verum, work: ave-verum}
+      - {title: Ave Verum Corpus, work: ave-verum}
+      - {title: Ave Verum Corpus K618, work: ave-verum}
+      - {title: Ave verum corpus KV618, work: ave-verum}
+      - {title: AVE VERUM CORPUS, work: ave-verum}
+      - {title: Ave Verum (Mozart), work: ave-verum}
+      - {title: Ave Verum W. A. Mozart, work: ave-verum}
+      - {title: Mozart - Ave Verum Corpus, work: ave-verum}
+      - {title: KV618 Ave Verum, work: ave-verum}
+      - {title: Ave Verum Corpus, K.618, work: ave-verum}
+      - {title: Ave Verum Corpus KV 618, work: ave-verum}
+      - {title: Ave verum corpus in F major, work: ave-verum}
+      - {title: Ave Verum Corpus - Wolfgang Amadeus Mozart, work: ave-verum}
+      - {title: Ave Verum Corpus (arr.), work: ave-verum}
+      - {title: Ave Verum Corpus SATB, work: ave-verum}
+      - {title: Ave Verum Corpus K.618 (Mozart), work: ave-verum}
+      - {title: W. A. Mozart - Ave Verum Corpus, work: ave-verum}
+      - {title: Ave Verum Corpus for choir, work: ave-verum}
+      - {title: Ave Verum Corpus a cappella, work: ave-verum}
+      - {title: Ave Verum Corpus, K 618, work: ave-verum}
+      - {title: Ave Verum Corpus KV.618, work: ave-verum}
+      - {title: Ave Verum Corpus Köchel 618, work: ave-verum}
+      - {title: Ave Verum Corpus (K618), work: ave-verum}
+
+  # Tres sinfonías distintas NO deben fusionarse (el número las separa).
+  - id: symphonies-1-10-11-no-fusionar
+    works_expected: 3
+    representations:
+      - Symphony No1
+      - Symphony No10
+      - Symphony No11
+
+  # Ave Maria de compositores distintos NO deben fusionarse.
+  - id: ave-maria-schubert-vs-gounod
+    works_expected: 2
+    representations:
+      - {title: Ave Maria, composer: Franz Schubert}
+      - {title: Ave Maria, composer: Charles Gounod}
+
+  # Obras homónimas de Bach y Beethoven (Missa vs Mass) NO deben fusionarse.
+  - id: bach-vs-beethoven-mass
+    works_expected: 2
+    representations:
+      - {title: Mass in B minor, BWV 232, composer: Johann Sebastian Bach}
+      - {title: Mass in C major, Op. 86, composer: Ludwig van Beethoven}

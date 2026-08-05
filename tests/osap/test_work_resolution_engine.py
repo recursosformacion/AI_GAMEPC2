@@ -213,6 +213,48 @@ class TestWorkResolutionEngine:
         assert catalog.downloaded is True
         assert result.chosen is not None
 
+    def test_progress_callback_reports_provider_activity(self) -> None:
+        catalog = FakeCatalog("imslp", _candidate("c1", 0.9))
+        messages: list[str] = []
+        engine = _engine(catalog)
+        engine.rank(ResolveRequest(title="Canço de Comiat"), on_progress=messages.append)
+        assert any("Consultando imslp" in m for m in messages)
+        assert any("candidato" in m for m in messages)
+
+    def test_resolve_progress_reports_download(self) -> None:
+        catalog = FakeCatalog("imslp", _candidate("c1", 0.9))
+        messages: list[str] = []
+        engine = _engine(catalog)
+        engine.resolve(ResolveRequest(title="Canço de Comiat"), download=True, on_progress=messages.append)
+        assert any("Descargando imslp" in m for m in messages)
+
+    def test_resolve_scoped_to_given_representations(self) -> None:
+        # When representations are supplied, resolution only considers them: it
+        # must NOT re-scan other providers (even if they would return more).
+        manual = CandidateRepresentation(
+            candidate_id=CandidateId("m1"),
+            work_descriptor=WorkDescriptor(work_id=WorkId("w"), title="Ave Verum Corpus", composer="Mozart"),
+            provider_id=ProviderId("imslp"),
+            format=OutputFormat.PDF,
+            downloadable=False,
+            manual_download=True,
+            download_url="https://imslp.org/wiki/Ave_Verum_Corpus",
+            notes="anti-bot",
+        )
+        messages: list[str] = []
+        result = _engine(FakeCatalog("imslp", None)).resolve(
+            ResolveRequest(title="Ave Verum Corpus"),
+            download=True,
+            representations=(manual,),
+            on_progress=messages.append,
+        )
+        assert result.chosen is not None
+        assert result.chosen.manual_download is True
+        assert result.chosen.download_url == "https://imslp.org/wiki/Ave_Verum_Corpus"
+        assert result.local_path is None
+        assert all("pdmx" not in m and "openscore" not in m for m in messages)
+        assert any("descarga manual" in m for m in messages)
+
     def test_resource_diagnostics_when_required(self) -> None:
         catalog = FakeCatalog("pdmx", _candidate("c1", 0.9))
         result = _engine(catalog).resolve(ResolveRequest(title="Canço de Comiat"))

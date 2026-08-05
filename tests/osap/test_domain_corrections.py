@@ -2,6 +2,7 @@ import tempfile
 import urllib.request
 from dataclasses import replace
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -38,9 +39,14 @@ class TestDisplayVsCanonical:
                 _candidate("c2", "Symphony No. 5 in C minor, Op. 67", "Beethoven", "openscore"),
             )
         )
+        # The catalogue is shown separately; the display title keeps the work
+        # number and key but not the catalogue marker.
         titles = {g.work.title for g in groups}
-        assert "Piano Sonata No. 11 in A, K. 331" in titles
-        assert "Symphony No. 5 in C minor, Op. 67" in titles
+        assert "Piano Sonata No. 11 in A" in titles
+        assert "Symphony No. 5 in C Minor" in titles
+        cats = {g.work.catalogue_number for g in groups}
+        assert "K 331" in cats
+        assert "Op. 67" in cats
 
     def test_display_title_is_never_normalized(self) -> None:
         service = WorkMergeService()
@@ -48,11 +54,12 @@ class TestDisplayVsCanonical:
         work = groups[0].work
         assert "WIP" in work.title
         assert "WIP" not in (work.canonical_title or "")
-        assert work.canonical_key == MetadataNormalizer.work_key(work.title, work.composer)
+        assert work.canonical_key == MetadataNormalizer.normalize(work.title, work.composer).signature()
 
     def test_best_title_wins_across_providers(self) -> None:
-        # Two representations of the same work: the longer/more complete raw
-        # title is chosen for display; never the normalized one.
+        # Two representations of the same work merge into ONE work; the display
+        # title is the clean best-preference title and the catalogue is shown
+        # separately (never embedded in the title).
         service = WorkMergeService()
         candidates = (
             _candidate("c1", "Ave Verum Corpus", "Mozart", "pdmx"),
@@ -60,7 +67,8 @@ class TestDisplayVsCanonical:
         )
         groups = service.group(candidates)
         assert len(groups) == 1
-        assert groups[0].work.title == "Ave Verum Corpus, K. 618"
+        assert groups[0].work.title == "Ave Verum Corpus"
+        assert groups[0].work.catalogue_number == "K 618"
 
 
 class TestPublicDomainTriState:
@@ -150,6 +158,99 @@ class TestPdmxSpecificStatus:
             assert provider.availability().value == "index_available"
             caps = provider.capabilities()
             assert caps.metadata.get("index_available") is True
+
+
+class TestPdmxAutoBuild:
+    """PDMX auto-builds its index on first search when a source is available."""
+
+    def test_search_builds_index_from_local_csv(self, tmp_path: Path) -> None:
+        csv_file = tmp_path / "pdmx.csv"
+        csv_file.write_text(
+            "title,composer_name,license_conflict,rating,mxl,pdf,mid\n"
+            "Ave Verum Corpus,Wolfgang Amadeus Mozart,False,4.5,./mxl/a.mxl,,\n",
+            encoding="utf-8",
+        )
+        index = tmp_path / "index.db"
+        provider = PdmxCatalogProvider(csv_url="", index_path=index, local_csv=csv_file)
+        assert not index.exists()
+        candidates = provider.search(_request())
+        assert index.exists()
+        assert any(c.work_descriptor.title == "Ave Verum Corpus" for c in candidates)
+
+    def test_search_without_source_stays_missing(self, tmp_path: Path) -> None:
+        provider = PdmxCatalogProvider(csv_url="", index_path=Path(tmp_path) / "missing.db", local_csv=None)
+        with pytest.raises(ResourceUnavailableError) as exc:
+            provider.search(_request())
+        assert exc.value.code == "index_missing"
+
+
+class TestMediaWikiNetworkErrors:
+    """IMSLP network failures become MediaWikiError (ScoreResolutionError) so
+    the engine marks the provider unavailable instead of aborting resolution."""
+
+    def test_get_network_error_raises_mediawiki_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import urllib.error
+
+        from src.osap.infrastructure.mediawiki import MediaWikiClient
+        from src.osap.infrastructure.mediawiki.mw_client import MediaWikiError
+
+        def boom(*args: object, **kwargs: object) -> None:  # noqa: ARG001, ARG002
+            raise urllib.error.URLError("network down")
+
+        client = MediaWikiClient()
+        monkeypatch.setattr(urllib.request, "urlopen", boom)
+        with pytest.raises(MediaWikiError):
+            client._get({"action": "query"})
+
+    def test_download_network_error_raises_mediawiki_error(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import urllib.error
+
+        from src.osap.infrastructure.mediawiki import MediaWikiClient
+        from src.osap.infrastructure.mediawiki.mw_client import MediaWikiError
+
+        def boom(*args: object, **kwargs: object) -> None:  # noqa: ARG001, ARG002
+            raise TimeoutError("timed out")
+
+        client = MediaWikiClient()
+        monkeypatch.setattr(urllib.request, "urlopen", boom)
+        with pytest.raises(MediaWikiError):
+            client.download("https://imslp.org/example.pdf")
+
+
+class TestRepresentationInfoPreserved:
+    """Correction 5: representations keep ALL their info through the merge."""
+
+    def _candidate(self, **overrides: Any) -> CandidateRepresentation:
+        base = CandidateRepresentation(
+            candidate_id=CandidateId("c1"),
+            work_descriptor=WorkDescriptor(work_id=WorkId("w"), title="Ave Verum Corpus", composer="Mozart"),
+            provider_id=ProviderId("imslp"),
+            format=OutputFormat.PDF,
+        )
+        return replace(base, **overrides)
+
+    def test_merge_preserves_download_url_and_manual_info(self) -> None:
+        from src.osap.application.canonical_metadata import MetadataEnricher
+
+        c = self._candidate(
+            downloadable=False,
+            manual_download=True,
+            download_url="https://imslp.org/wiki/Ave_Verum_Corpus",
+            remote_id="page42",
+            rating=3.5,
+            notes="anti-bot",
+            license="public domain",
+        )
+        group = WorkMergeService().group((c,))[0]
+        cw = MetadataEnricher().enrich(group)
+        rep = cw.representations[0]
+        assert rep.downloadable is False
+        assert rep.manual_download is True
+        assert rep.download_url == "https://imslp.org/wiki/Ave_Verum_Corpus"
+        assert rep.remote_id == "page42"
+        assert rep.rating == 3.5
+        assert rep.notes == "anti-bot"
+        assert rep.license == "public domain"
 
 
 def _request() -> ResolveRequest:

@@ -282,7 +282,21 @@ def _preview_dto(group: WorkGroup, enricher: MetadataEnricher) -> dict[str, obje
         "composer": cw.composer.display_name if cw.composer else None,
         "catalog": cw.catalog,
         "representations": [
-            RepresentationDTO(provider=r.provider, format=r.format, quality=r.quality, downloadable=r.downloadable)
+            RepresentationDTO(
+                provider=r.provider,
+                format=r.format,
+                downloadable=r.downloadable,
+                manual_download=r.manual_download,
+                download_url=r.download_url,
+                license=r.license,
+                confidence=r.confidence,
+                rating=r.rating,
+                local_path=r.local_path,
+                remote_id=r.remote_id,
+                notes=r.notes,
+                reason=r.notes,
+                quality=r.quality,
+            )
             for r in cw.representations
         ],
     }

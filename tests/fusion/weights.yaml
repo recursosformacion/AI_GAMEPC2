@@ -1,0 +1,36 @@
+# Pesos del matcher de fusión (Fusion Laboratory).
+#
+# Se editan AQUÍ y se recargan con --weights <fichero>, sin recompilar Python.
+# El matcher normaliza por la suma de los pesos, así que el score siempre está
+# en [0,1] y el umbral es estable: puedes escribir enteros (40/45) o fracciones.
+#
+# Campos y tipos de coincidencia:
+#   composer  exact | alias
+#   catalog   exact | normalized | conflict
+#   title     exact | similar
+#   number    exact | conflict
+#   key       exact | conflict
+#   movement  exact | conflict
+
+threshold: 0.5
+
+weights:
+  composer:
+    exact: 40
+    alias: 35
+  catalog:
+    exact: 45
+    normalized: 40
+    conflict: 45
+  title:
+    exact: 20
+    similar: 15
+  number:
+    exact: 15
+    conflict: 15
+  key:
+    exact: 5
+    conflict: 5
+  movement:
+    exact: 10
+    conflict: 10
