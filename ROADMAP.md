@@ -267,6 +267,59 @@ dominio (ADR-0025). Pendiente V2.2.x: ampliar `EvidenceCode` para cobertura 1:1
 - Observar el funcionamiento de OSAP y generar **propuestas** (`knowledge/proposals/`).
 - Puente natural hacia V3 (conocimiento declarativo, sin IA).
 
+> **Diseño congelado**: `docs/osap/v2/knowledge-mining-design.md`. Knowledge Mining
+> **nunca modifica el sistema; solo transforma observaciones repetidas en sugerencias
+> verificables**; siempre decide un humano (ADR-0027).
+
+**Estado:** ✅ **Hecho** (V2.2.d): `IKnowledgeCollector` / `IKnowledgeMiner`,
+`KnowledgeObservation` / `KnowledgeFact` / `KnowledgeSuggestion` / `KnowledgeBase`
+(Value Objects inmutables), deterministas, reproducibles y con monotonicidad. Los
+componentes del dominio no conocen Knowledge Mining; no se modificó el núcleo.
+
+---
+
+## V2.2.5 — Cierre del dominio (V2.2)
+
+- Commit de cierre.
+- Tag `v2.2.0`.
+- ADR-0027 (cierre del dominio).
+- ROADMAP actualizado.
+
+> **V2.2 completa el dominio funcional de OSAP.**
+> A partir de V3 el trabajo se centra en **exponer** el dominio mediante API, interfaz
+> web y herramientas de administración, manteniendo el núcleo estable.
+
+**Estado:** ✅ **Hecho**
+
+---
+
+## V3 — Productización
+
+El dominio ya responde prácticamente todo. V3 no implementa lógica nueva: **expone** la
+existente. La web no tendrá que pensar, solo preguntar.
+
+### V3.0 — API (FastAPI)
+
+- **FastAPI** aparece por primera vez, no para implementar lógica sino para exponer la
+  existente.
+- `POST /search → SearchRequest → ProviderOrchestrator → SearchResponse` y poco más.
+
+### V3.1 — Web
+
+- La parte visible: escribir `Ave Verum KV618` y ver Obra encontrada, Representaciones,
+  Evidence, Merge, Ranking, Proveedor, Formato.
+- Sin inventar nada: mostrar el trabajo que ya hace el dominio.
+
+### V3.2 — Administración
+
+- Panel interno: Jobs, Knowledge Mining, Sugerencias, Estadísticas, Evidencias,
+  Conflictos, Merge, Catálogos.
+
+### V3.3 — Knowledge Review
+
+- Pantalla para aceptar o rechazar sugerencias humanamente:
+  `✓ Añadir alias "Ave Verum K618" → "Ave Verum Corpus KV 618"` o `✗ Rechazar`.
+
 ---
 
 ## V2.3 — MuseScore
@@ -293,7 +346,7 @@ dominio (ADR-0025). Pendiente V2.2.x: ampliar `EvidenceCode` para cobertura 1:1
 
 ---
 
-## V3 — Inteligencia musical
+## V4 — Inteligencia musical
 
 **Alcance** (todo lo ⏳ de la auditoría)
 - Knowledge Base (`knowledge_base/*`) y aprendizaje de la plataforma.
@@ -310,7 +363,7 @@ dominio (ADR-0025). Pendiente V2.2.x: ampliar `EvidenceCode` para cobertura 1:1
 ## Qué NO está en el roadmap
 
 - No se reinventa la arquitectura (dominio/puertos/aplicación/infraestructura).
-- No se construye IA (embeddings, ML, armónico profundo) antes de V3.
+- No se construye IA (embeddings, ML, armónico profundo) antes de V4.
 - No se tocan `knowledge_base`, `pipeline` definitivo ni `user_profile` hasta su versión.
 - No se implementa exportación/CDN dentro de OSAP: eso es OMR.
 - No hay camino especial para OMR: es un `ICatalogProvider` más.

@@ -17,9 +17,10 @@ osap/
 │           · evidence-design.md      (Evidence definitivo V2.2.a)
 │           · dedup-merge-design.md   (Dedup/Merge V2.2.b)
 │           · jobs-design.md          (Jobs V2.2.c)
+│           · knowledge-mining-design.md (Knowledge Mining V2.2.d)
 │           · web-docs.md             (documentación web)
 │           · presentation-v22.md     (presentación 20 diapositivas)
-├── adr/    Architecture Decision Records (0001–0026)
+├── adr/    Architecture Decision Records (0001–0027)
 └── old/    Documentos obsoletos (histórico, no se editan)
 ```
 

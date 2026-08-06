@@ -1,9 +1,9 @@
 # Knowledge Mining — Diseño (V2.2.d)
 
-> **Status: draft** (iteración 3 — se congelará antes de la implementación de V2.2.d).
+> **Status: frozen** — congelado antes de la implementación de V2.2.d (ADR-0027).
 >
 > Parte de V2.2. Define cómo OSAP convierte la información que **ya produce** en
-> **conocimiento reutilizable**. No se escribe código hasta congelar este diseño.
+> **conocimiento reutilizable**. Implementado.
 > No es minería de datos en el sentido de IA.
 
 ## Principio rector
