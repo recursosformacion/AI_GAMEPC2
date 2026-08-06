@@ -178,6 +178,10 @@ Si existe `KnowledgeObservation` en el dominio, debe poder consultarse.
 **Nunca** `POST /knowledge`: el conocimiento **no se modifica manualmente desde la API**.
 (La aplicación de sugerencias es humana, vía V3.5 / Knowledge Review.)
 
+> **Nota de evolución (V3.2)**: en V3.1 el conocimiento usa un `KnowledgeStore` en
+> memoria. En V3.2 se introducirá un **`IKnowledgeRepository`** para desacoplar
+> `API → Knowledge Service → Repository → SQLite/Postgres`, sin cambiar este contrato.
+
 ## 8. Providers
 
 Solo **estado**: capacidades y última sincronización.

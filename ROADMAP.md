@@ -321,39 +321,48 @@ componentes del dominio no conocen Knowledge Mining; no se modificó el núcleo.
 El dominio ya responde prácticamente todo. V3 no implementa lógica nueva: **expone** la
 existente. La web no tendrá que pensar, solo preguntar.
 
-### V3.0 — API (FastAPI)
+### V3.1 — API REST ✅
 
-- **FastAPI** aparece por primera vez, no para implementar lógica sino para exponer la
-  existente.
-- `POST /search → SearchRequest → ProviderOrchestrator → SearchResponse` y poco más.
-- **OpenAPI** generado por FastAPI como contrato de la API.
+- FastAPI expone el dominio; **DTOs públicos** independientes del modelo de dominio.
+- `POST /api/v1/searches` (búsqueda como recurso) · `/jobs` · `/providers` ·
+  `/knowledge` (solo lectura) · `/system`.
+- Envelope uniforme (`success` + `request_id` + `data`/`error`), versionado `/api/v1/`.
+- **Contrato congelado** (ADR-0028): `docs/osap/v3/api-design.md`.
+- **Estado:** ✅ Implementado (V3.1.b).
 
-> **V3.1.a ✅ Hecho (contrato congelado, ADR-0028).** Diseño en
-> `docs/osap/v3/api-design.md`. Búsqueda como **recurso** (`/searches`), DTO públicos
-> independientes del dominio, `request_id` obligatorio, versionado `/api/v1/`,
-> OpenAPI como contrato oficial.
->
-> **V3.1.b — Implementación** (en curso): DTO públicos → FastAPI para serializarlos →
-> endpoints `/searches`, `/jobs`, `/providers`, `/knowledge`, `/system` → tests
-> (OpenAPI, integración, serialización, errores).
+### V3.2 — OpenAPI ✅
 
-### V3.1 — Web
+- **OpenAPI 3.1.x** generado automáticamente; constituye el **contrato oficial** de la API.
+- `/openapi.json`, `/docs` (Swagger UI), `/redoc`; tags Searches/Jobs/Providers/Knowledge/System.
+- **ADR-0029**: OpenAPI es un artefacto derivado, nunca fuente de verdad.
+- `docs/osap/v3/openapi-design.md`.
+- **Estado:** ✅ Implementado.
 
-- La parte visible: escribir `Ave Verum KV618` y ver Obra encontrada, Representaciones,
-  Evidence, Merge, Ranking, Proveedor, Formato.
-- Sin inventar nada: mostrar el trabajo que ya hace el dominio.
+### V3.3 — Cliente Web ✅
 
-### V3.2 — Dashboard / Administración
+- React 19 + TypeScript + Vite + React Router + Zustand + Tailwind.
+- **`ApiClient`** como único punto HTTP (interpreta el envelope; páginas sin `fetch`/`axios`).
+- 5 áreas simétricas con REST: Dashboard, Searches, Jobs, Knowledge, Administration.
+- Estados Loading / Ready / Empty / Error; Design System centralizado.
+- `docs/osap/v3/web-client-design.md`.
+- **Estado:** ✅ Implementado y **desplegado**.
 
-- **Dashboard**: vistas generales del sistema.
-- **Auth**: autenticación y control de acceso a administración.
-- Panel de **Administración**: Jobs, Knowledge Mining, Sugerencias, Estadísticas,
-  Evidencias, Conflictos, Merge, Catálogos.
+> **Despliegue**: `https://app.openmusicrepository.com` (producción, servidor `remotoIA`
+> 91.134.255.134). SPA estática en `~/openmusicrepository.com/app`; API OSAP V3.1 como
+> servicio `osap-api` (uvicorn, `127.0.0.1:8001`); nginx proxya `/api/` y
+> `/docs|/openapi.json|/redoc` a la API. Local (dev Apache): vhosts `osap-app`
+> (SPA `web/dist`) y `osap-api` (→ uvicorn `127.0.0.1:8001`); `osap-storage` ya existía.
 
-### V3.3 — Knowledge Review
+### V3.4 — Autenticación
 
-- Pantalla para aceptar o rechazar sugerencias humanamente:
-  `✓ Añadir alias "Ave Verum K618" → "Ave Verum Corpus KV 618"` o `✗ Rechazar`.
+- Auth preparada (`Authorization: Bearer ...`) y deshabilitada en V3.1; se activa aquí.
+
+### V3.5 — Administración / Knowledge Review
+
+- Dashboard, Jobs, Knowledge, Sugerencias, Proveedores.
+- Pantalla para aceptar/rechazar sugerencias (`✓` / `✗`).
+- `IKnowledgeRepository` (V3.2 nota) para persistir el conocimiento
+  (`API → Knowledge Service → Repository → SQLite/Postgres`).
 
 ---
 

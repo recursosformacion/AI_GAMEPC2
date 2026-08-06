@@ -6,7 +6,11 @@ model: they never reuse internal domain Value Objects, so a change to, e.g.,
 FastAPI only serializes/validates them; they do not depend on the domain.
 """
 
+from typing import Generic, TypeVar
+
 from pydantic import BaseModel, ConfigDict
+
+T = TypeVar("T")
 
 
 class _Frozen(BaseModel):
@@ -14,6 +18,10 @@ class _Frozen(BaseModel):
 
 
 class SearchRequest(_Frozen):
+    model_config = ConfigDict(
+        frozen=True,
+        json_schema_extra={"examples": [{"query": "Ave Verum KV 618", "limit": 10}]},
+    )
     query: str
     limit: int = 10
 
@@ -50,6 +58,10 @@ class SearchResponse(_Frozen):
 
 
 class JobCreateRequest(_Frozen):
+    model_config = ConfigDict(
+        frozen=True,
+        json_schema_extra={"examples": [{"type": "provider-sync"}]},
+    )
     type: str
 
 
@@ -121,10 +133,10 @@ class ErrorBody(_Frozen):
     details: dict[str, object] = {}
 
 
-class SuccessEnvelope(_Frozen):
+class SuccessEnvelope(_Frozen, Generic[T]):  # noqa: UP046
     success: bool
     request_id: str
-    data: object
+    data: T
 
 
 class ErrorEnvelope(_Frozen):

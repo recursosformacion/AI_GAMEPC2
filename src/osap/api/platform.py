@@ -27,7 +27,7 @@ from src.osap.domain.jobs import JobContext, JobTrigger
 from src.osap.domain.knowledge import KnowledgeBase
 from src.osap.domain.resolve_request import ResolveRequestBuilder
 
-VERSION = "1.0.0"
+VERSION = "3.1"
 
 
 class KnowledgeStore:

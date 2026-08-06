@@ -292,4 +292,4 @@ def test_openapi_generated_automatically() -> None:
     assert "/api/v1/jobs" in paths
     assert "/api/v1/knowledge/observations" in paths
     assert "/api/v1/system/health" in paths
-    assert spec["info"]["title"] == "OSAP Platform API"
+    assert spec["info"]["title"] == "OSAP REST API"

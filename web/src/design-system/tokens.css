@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@theme {
+  --color-osap-bg: #faf9f7;
+  --color-osap-surface: #ffffff;
+  --color-osap-ink: #1c1c1e;
+  --color-osap-muted: #6b7280;
+  --color-osap-accent: #5b2d90;
+  --color-osap-accent-soft: #f0eaf7;
+  --color-osap-border: #e5e5ea;
+  --color-osap-danger: #b42318;
+  --color-osap-success: #067647;
+}
