@@ -241,6 +241,14 @@ dominio (ADR-0025). Pendiente V2.2.x: ampliar `EvidenceCode` para cobertura 1:1
 - Aplicar dedup/fusión de forma **verificable** (sin romper la identidad decidida por
   el WorkMatcher).
 
+> **Diseño**: `docs/osap/v2/dedup-merge-design.md`. Principio: **"Merge nunca decide
+> identidad; solo consolida conocimiento."** Merge recibe un `WorkGroup` (identidad ya
+> decidida), enriquece **solo campos descriptivos**, confirma o expone como conflicto
+> los de identidad, y produce un descriptor consolidado con `MergeProvenance` +
+> `MergeConflicts` (inmutable, determinista, independiente del orden). La estrategia
+> (qué fuente gana) es **política** (`MergePolicy`), no contrato. Contribuye hechos a
+> Evidence.
+
 ### V2.2.c — Jobs (infraestructura)
 
 **Alcance**

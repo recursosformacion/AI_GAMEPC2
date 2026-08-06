@@ -102,6 +102,7 @@ osap resource list
 - [WorkMatcher (diseño V2.1.2)](docs/osap/v2/work-matcher-design.md)
 - [Ranking de obras (diseño V2.1.3)](docs/osap/v2/ranking-design.md)
 - [Evidence definitivo (diseño V2.2.a)](docs/osap/v2/evidence-design.md)
+- [Dedup/Merge (diseño V2.2.b)](docs/osap/v2/dedup-merge-design.md)
 - [Auditoría arquitectónica 2026 (congelada)](docs/osap/v2/architecture-audit.md)
 - [Pipeline](docs/osap/v1/pipeline.md)
 - [Subsistema de datasets](docs/osap/v1/datasets.md)

@@ -28,6 +28,16 @@ from .evidence import (
     EvidenceSummary,
 )
 from .job import Job, JobResult, JobState, JobSubmission
+from .jobs import (
+    JobContext,
+    JobError,
+    JobErrorCode,
+    JobEvent,
+    JobEventType,
+    JobOption,
+    JobStatus,
+    JobTrigger,
+)
 from .knowledge_base_entry import KnowledgeBaseEntry
 from .matching import (
     Authority,
@@ -38,6 +48,15 @@ from .matching import (
     MatchLevel,
     MatchReason,
     MatchResult,
+)
+from .merge import (
+    MergeConflict,
+    MergeConflictType,
+    MergeCriterion,
+    MergedWorkDescriptor,
+    MergePolicy,
+    MergeProvenance,
+    MergeResult,
 )
 from .metrics import MetricRecord
 from .music_query_normalizer import MusicQueryNormalizer
@@ -141,6 +160,13 @@ __all__ = [
     "MatchingConfig",
     "Authority",
     "AuthorityIdentifier",
+    "MergeCriterion",
+    "MergeConflict",
+    "MergeConflictType",
+    "MergePolicy",
+    "MergeProvenance",
+    "MergeResult",
+    "MergedWorkDescriptor",
     "WorkDescriptor",
     "Edition",
     "Arrangement",
@@ -155,6 +181,14 @@ __all__ = [
     "JobState",
     "JobResult",
     "JobSubmission",
+    "JobStatus",
+    "JobTrigger",
+    "JobOption",
+    "JobContext",
+    "JobErrorCode",
+    "JobError",
+    "JobEventType",
+    "JobEvent",
     "Event",
     "MetricRecord",
     "UserProfile",

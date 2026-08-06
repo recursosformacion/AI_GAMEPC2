@@ -49,6 +49,7 @@ class EvidenceSource(Enum):
     MATCHER = "matcher"
     RANKER = "ranker"
     SELECTION = "selection"
+    MERGE = "merge"
 
 
 class EvidenceCode(Enum):
@@ -67,6 +68,9 @@ class EvidenceCode(Enum):
     COVERAGE = "coverage"
     # selection
     SELECTED_REPRESENTATION = "selected_representation"
+    # merge
+    MERGE_FIELD = "merge_field"
+    MERGE_CONFLICT = "merge_conflict"
 
 
 class EvidenceStrength(Enum):

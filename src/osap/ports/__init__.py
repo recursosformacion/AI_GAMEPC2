@@ -3,6 +3,7 @@ from .catalog_provider import ICatalogProvider
 from .credential_store import ICredentialStore
 from .duplicate_resolver import IDuplicateResolver
 from .event_bus import IEventBus
+from .job import IJob
 from .job_runner import IJobRunner
 from .knowledge_base import IKnowledgeBase
 from .library_provider import ILibraryProvider
@@ -30,6 +31,7 @@ __all__ = [
     "ICache",
     "IUserProfileStore",
     "IJobRunner",
+    "IJob",
     "IDuplicateResolver",
     "IMergeEngine",
     "IPipelineStage",
