@@ -20,7 +20,9 @@ osap/
 │           · knowledge-mining-design.md (Knowledge Mining V2.2.d)
 │           · web-docs.md             (documentación web)
 │           · presentation-v22.md     (presentación 20 diapositivas)
-├── adr/    Architecture Decision Records (0001–0027)
+├── v3/     V3: plataforma
+│           · api-design.md           (API REST, contrato congelado V3.1.a)
+├── adr/    Architecture Decision Records (0001–0028)
 └── old/    Documentos obsoletos (histórico, no se editan)
 ```
 

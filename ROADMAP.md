@@ -31,6 +31,29 @@ Leyenda de impacto (de la auditoría):
 
 ---
 
+## Resumen de la hoja de ruta
+
+```
+V2  Dominio          V3  Plataforma          V4  Inteligencia Musical
+─────────────────    ─────────────────      ─────────────────────────
+✔ Núcleo             ✔ API REST             ✔ Relaciones entre obras
+✔ Search             ✔ OpenAPI              ✔ Versiones
+✔ Evidence           ✔ Web                  ✔ Movimientos
+✔ Merge              ✔ Dashboard            ✔ Familias
+✔ Jobs               ✔ Auth                 ✔ Recomendaciones
+✔ Knowledge Mining   ✔ Administración       ✔ Inferencias
+                                              ✔ Knowledge Graph
+```
+
+- **V2 — Dominio**: núcleo funcional completo (cerrado con `v2.2.0`).
+- **V3 — Plataforma**: exponer el dominio (API, web, herramientas de administración),
+  manteniendo el núcleo estable.
+- **V4 — Inteligencia Musical**: relaciones, versiones, movimientos, familias,
+  recomendaciones, inferencias y Knowledge Graph (conocimiento declarativo, sin IA para
+  identidad).
+
+---
+
 ## V2.0.0 — Auditoría + limpieza + contratos públicos
 
 **Alcance**
@@ -303,6 +326,16 @@ existente. La web no tendrá que pensar, solo preguntar.
 - **FastAPI** aparece por primera vez, no para implementar lógica sino para exponer la
   existente.
 - `POST /search → SearchRequest → ProviderOrchestrator → SearchResponse` y poco más.
+- **OpenAPI** generado por FastAPI como contrato de la API.
+
+> **V3.1.a ✅ Hecho (contrato congelado, ADR-0028).** Diseño en
+> `docs/osap/v3/api-design.md`. Búsqueda como **recurso** (`/searches`), DTO públicos
+> independientes del dominio, `request_id` obligatorio, versionado `/api/v1/`,
+> OpenAPI como contrato oficial.
+>
+> **V3.1.b — Implementación** (en curso): DTO públicos → FastAPI para serializarlos →
+> endpoints `/searches`, `/jobs`, `/providers`, `/knowledge`, `/system` → tests
+> (OpenAPI, integración, serialización, errores).
 
 ### V3.1 — Web
 
@@ -310,10 +343,12 @@ existente. La web no tendrá que pensar, solo preguntar.
   Evidence, Merge, Ranking, Proveedor, Formato.
 - Sin inventar nada: mostrar el trabajo que ya hace el dominio.
 
-### V3.2 — Administración
+### V3.2 — Dashboard / Administración
 
-- Panel interno: Jobs, Knowledge Mining, Sugerencias, Estadísticas, Evidencias,
-  Conflictos, Merge, Catálogos.
+- **Dashboard**: vistas generales del sistema.
+- **Auth**: autenticación y control de acceso a administración.
+- Panel de **Administración**: Jobs, Knowledge Mining, Sugerencias, Estadísticas,
+  Evidencias, Conflictos, Merge, Catálogos.
 
 ### V3.3 — Knowledge Review
 
@@ -350,6 +385,9 @@ existente. La web no tendrá que pensar, solo preguntar.
 
 **Alcance** (todo lo ⏳ de la auditoría)
 - Knowledge Base (`knowledge_base/*`) y aprendizaje de la plataforma.
+- **Relaciones entre obras**, **Versiones**, **Movimientos** y **Familias**.
+- **Knowledge Graph**: relaciones declarativas entre obras y recursos.
+- **Recomendaciones** e **Inferencias** derivadas del conocimiento acumulado.
 - IA avanzada: embeddings, aprendizaje automático, análisis armónico profundo,
   OMR/IA asistida (Audiveris ya presente como adaptador).
 - Personalización con `user_profile/*`.
