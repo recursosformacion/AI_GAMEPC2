@@ -6,6 +6,8 @@ from .event_bus import IEventBus
 from .job import IJob
 from .job_runner import IJobRunner
 from .knowledge_base import IKnowledgeBase
+from .knowledge_collector import IKnowledgeCollector
+from .knowledge_miner import IKnowledgeMiner
 from .library_provider import ILibraryProvider
 from .merge_engine import IMergeEngine
 from .metrics import IMetricsCollector
@@ -32,6 +34,9 @@ __all__ = [
     "IUserProfileStore",
     "IJobRunner",
     "IJob",
+    "IKnowledgeBase",
+    "IKnowledgeCollector",
+    "IKnowledgeMiner",
     "IDuplicateResolver",
     "IMergeEngine",
     "IPipelineStage",

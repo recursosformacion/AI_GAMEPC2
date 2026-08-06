@@ -38,6 +38,15 @@ from .jobs import (
     JobStatus,
     JobTrigger,
 )
+from .knowledge import (
+    KnowledgeBase,
+    KnowledgeFact,
+    KnowledgeFactType,
+    KnowledgeObservation,
+    KnowledgeSource,
+    KnowledgeSuggestion,
+    KnowledgeSuggestionType,
+)
 from .knowledge_base_entry import KnowledgeBaseEntry
 from .matching import (
     Authority,
@@ -191,6 +200,13 @@ __all__ = [
     "JobEvent",
     "Event",
     "MetricRecord",
+    "KnowledgeObservation",
+    "KnowledgeSource",
+    "KnowledgeFact",
+    "KnowledgeFactType",
+    "KnowledgeSuggestion",
+    "KnowledgeSuggestionType",
+    "KnowledgeBase",
     "UserProfile",
     "MusicalRequest",
     "CandidateRepresentation",

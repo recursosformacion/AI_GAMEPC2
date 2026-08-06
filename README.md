@@ -4,11 +4,25 @@ Generador de materiales de estudio para coros, construido sobre OSAP.
 
 ## OSAP — Open Score Acquisition Platform
 
+> **OSAP no busca partituras. Construye conocimiento fiable sobre las obras musicales.**
+
 OSAP es una plataforma de **resolución de recursos musicales**. El usuario
 indica qué obra necesita; OSAP localiza, evalúa, selecciona y obtiene la mejor
 representación disponible, gestionando automáticamente los recursos que
 necesita. El usuario nunca piensa en PDMX, OpenScore, IMSLP, Hugging Face o
 GitHub.
+
+> Referencia técnica completa (fuente de verdad): **[OSAP Architecture Book](docs/osap/v2/osap-architecture-book.md)** ·
+> Documentación web: [web-docs.md](docs/osap/v2/web-docs.md) ·
+> Presentación V2.2 (20 diapositivas): [presentation-v22.md](docs/osap/v2/presentation-v22.md)
+
+### Estado actual
+
+| Versión | Estado |
+|---------|--------|
+| V2.0 · V2.1 · V2.2.a · V2.2.b · V2.2.c | ✅ Implementado |
+| V2.2.d — Knowledge Mining | ⏳ Pendiente |
+| V3 — Motor inteligente | 🔮 Futuro |
 
 Principios clave:
 
@@ -16,6 +30,8 @@ Principios clave:
 - **Metadata-first** (ADR-0011): nunca se busca leyendo MusicXML.
 - **Dataset-first** (ADR-0012): los datos estructurados tienen prioridad sobre OMR/IA.
 - **Resource management transparente**: OSAP decide e instala lo que necesita.
+- **Identity ≠ Similarity**: OSAP decide identidad, no solo parecido textual.
+- **Explicable y determinista**: cada decisión deja Evidence estructurado; **nunca IA para decidir identidad**.
 - El dominio solo conoce `WorkDescriptor`, `CandidateRepresentation`, `ResolveRequest`, `ResolveResult` y `Resource`.
 
 ### Estructura
@@ -103,6 +119,10 @@ osap resource list
 - [Ranking de obras (diseño V2.1.3)](docs/osap/v2/ranking-design.md)
 - [Evidence definitivo (diseño V2.2.a)](docs/osap/v2/evidence-design.md)
 - [Dedup/Merge (diseño V2.2.b)](docs/osap/v2/dedup-merge-design.md)
+- [Jobs (diseño V2.2.c)](docs/osap/v2/jobs-design.md)
+- [OSAP Architecture Book (fuente de verdad)](docs/osap/v2/osap-architecture-book.md)
+- [Documentación web](docs/osap/v2/web-docs.md)
+- [Presentación V2.2 (20 diapositivas)](docs/osap/v2/presentation-v22.md)
 - [Auditoría arquitectónica 2026 (congelada)](docs/osap/v2/architecture-audit.md)
 - [Pipeline](docs/osap/v1/pipeline.md)
 - [Subsistema de datasets](docs/osap/v1/datasets.md)
