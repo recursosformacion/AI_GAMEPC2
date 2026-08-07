@@ -158,19 +158,6 @@ def create_app(container: Container | None = None) -> FastAPI:
             result.append({"library_id": lib_id.value, "scores": list(manager.list(lib_id))})
         return result
 
-    @app.get("/api/v1/datasets")
-    def datasets() -> list[dict[str, object]]:
-        return [
-            {
-                "dataset_id": d.dataset_id.value,
-                "name": d.name,
-                "status": d.status.value,
-                "expected_size_bytes": d.expected_size_bytes,
-                "license": d.license,
-            }
-            for d in container.dataset_manager().list()
-        ]
-
     @app.get("/api/v1/settings")
     def settings() -> dict[str, object]:
         from src.osap.bootstrap.configuration import Configuration

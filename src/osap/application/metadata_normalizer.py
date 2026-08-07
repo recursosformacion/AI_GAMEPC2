@@ -1,6 +1,8 @@
 import re
 import unicodedata
+from pathlib import Path
 
+from src.osap.application.canonicalizer import Canonicalizer
 from src.osap.application.metadata_parser import extract_metadata
 from src.osap.application.normalized_metadata import NormalizedMetadata
 from src.osap.domain.music_query_normalizer import MusicQueryNormalizer
@@ -52,6 +54,15 @@ _KNOWN_COMPOSERS: dict[str, str] = {
     "liszt": "Franz Liszt",
 }
 
+_KNOWN_LAST_NAMES = {canonical.split()[-1].lower() for canonical in _KNOWN_COMPOSERS.values()}
+
+# Central composer alias table (resources/canonical), loaded lazily.
+_CANONICALIZER: Canonicalizer | None
+try:
+    _CANONICALIZER = Canonicalizer(Path(__file__).resolve().parents[3] / "resources" / "canonical")
+except Exception:
+    _CANONICALIZER = None
+
 
 class MetadataNormalizer:
     """Produces normalized, comparison-only metadata from a raw title/composer.
@@ -83,6 +94,11 @@ class MetadataNormalizer:
         text = re.sub(r"\b(?:composed\s+by|by)\b", " ", text, flags=re.IGNORECASE)
         text = _YEAR_RANGE.sub("", text)
         text = re.sub(r"\s+", " ", text).strip(" ,.-")
+        # Normalización central: la tabla de aliases de compositor de resources/canonical.
+        if _CANONICALIZER is not None:
+            central = _CANONICALIZER.canonicalize(text).output
+            if central != text and central.split()[-1].lower() in _KNOWN_LAST_NAMES:
+                return central
         key = _collapse_initials(MusicQueryNormalizer.normalize(text))
         if key in _KNOWN_COMPOSERS:
             return _KNOWN_COMPOSERS[key]

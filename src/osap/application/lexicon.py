@@ -285,7 +285,6 @@ _PROPER_NAMES = {
 # Palabras de proveedor: nunca a la lista.
 _PROVIDER_WORDS = {
     "imslp",
-    "pdmx",
     "openscore",
     "open-score",
     "open_score",

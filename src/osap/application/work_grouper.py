@@ -28,8 +28,6 @@ def _preference_key(candidate: CandidateRepresentation) -> tuple[int, ...]:
         if fmt is OutputFormat.SCORE:
             return (2,)
         return (3,)
-    if provider == "pdmx" and fmt is OutputFormat.MUSICXML and downloadable:
-        return (4,)
     if provider == "openscore" and fmt is OutputFormat.MUSICXML:
         return (5,)
     if fmt is OutputFormat.MUSICXML and downloadable:

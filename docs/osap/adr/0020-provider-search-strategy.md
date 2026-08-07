@@ -1,80 +1,153 @@
-# ADR-0020 – Provider Search Strategy
+# ADR-0020 – Work Resolution Strategy
 
 ## Estado
 
-Aceptado.
+Aceptado. **Revisado** para alinearse con V3.4 (Work Resolution, ADR-0030).
 
 ## Contexto
 
+*(El fichero conserva su nombre `0020-provider-search-strategy.md` por continuidad de
+referencias; el título refleja el contenido actual: resolución y enriquecimiento.)*
+
 OSAP orquesta varios proveedores (`ProviderOrchestrator` → `ProviderExecutionPlan`
-→ `ProviderResultAggregator`). Antes de conectar proveedores reales (OMR, IMSLP)
-hay que **congelar el comportamiento** de la orquestación para que no se rediscuta
-en cada versión. Este documento define, de una vez, cómo se comporta el orquestador.
-No cambia código: congela el comportamiento.
+→ `ProviderResultAggregator`). La versión original congelaba una orquestación
+**secuencial con early-stop** (detenerse al primer proveedor "suficiente").
+
+Ese modelo es correcto para un **buscador de documentos**, pero entra en conflicto con la
+filosofía de V3.4:
+
+> **"El objetivo de OpenMusicRepository no es devolver una lista de archivos, sino
+> identificar una obra musical con el mayor grado de confianza posible y ofrecer al
+> usuario todas sus representaciones disponibles."**
+
+La resolución de una obra **no puede depender de que un proveedor "barato" haya contestado
+antes**. Si IMSLP responde un PDF y paramos, nunca descubrimos que OMR tenía MusicXML,
+MIDI, MEI, versiones críticas, aliases, relaciones o metadata. Habríamos "resuelto" una
+obra sin conocer todas sus representaciones.
 
 ## Decisión
 
-### 1. ¿Cuándo se detiene el Orchestrator?
+La resolución se divide en **dos fases**:
 
-La búsqueda se detiene cuando se cumplen **las dos** condiciones:
+### Fase 1 — Resolver la obra
 
-1. Al menos un proveedor devolvió resultados, **y**
-2. La búsqueda está **satisfecha** (ver §5).
+La Fase 1 finaliza cuando el motor ha obtenido **la mejor resolución posible con la
+información disponible**. El resultado puede ser:
 
-Si no se satisfacen, se continúa con el siguiente paso del plan hasta agotarlo.
+- una **única obra** (Work Resolution), o
+- un **conjunto ordenado de Matching Works** cuando persiste la ambigüedad.
 
-### 2. ¿Cuándo merece la pena consultar un proveedor caro?
+```
+Query
+  ↓
+Entity Resolution
+  ↓
+Matching Works  (si persiste la ambigüedad)
+  ↓
+Work Resolution (identificada)
+```
 
-Los proveedores se ordenan por **coste de consulta** (`FREE → CHEAP → NORMAL →
-EXPENSIVE`). Un proveedor más caro **solo se consulta** si ninguno más barato
-satisfizo la búsqueda (por formato o dominio público requerido).
+No se busca un único formato: se busca **la obra**. No siempre hay una "identificación
+inequívoca" (Ave Verum, Requiem, Missa Brevis, Sonata No. 1, obras sin catálogo...); en
+esos casos se presenta un conjunto ordenado de Matching Works y el usuario elige.
 
-Regla: el coste nunca decide por sí solo; la **suficiencia** (§5) decide. Un
-proveedor `EXPENSIVE` se consulta cuando la necesidad (p. ej. MusicXML editable) no
-la cubren los `FREE`/`CHEAP`.
+### Fase 2 — Enriquecer la resolución
 
-### 3. ¿Cuándo se reutiliza la caché?
+**Todos los proveedores compatibles con la obra identificada pueden consultarse** para
+incorporar representaciones, metadatos, relaciones y evidencias adicionales.
 
-- Se reutiliza una búsqueda **idéntica** (`SearchRequest` igual) ejecutada hace menos
-  del TTL (por defecto **180 s**).
-- Una respuesta de caché marca el resultado como `cached = true`; no se vuelve a
-  consultar ningún proveedor.
-- La caché **no** se usa para `provider_status` (debe reflejar el estado vivo).
+El enriquecimiento puede realizarse en **segundo plano** (paralelo) y **actualizar la Work
+Resolution progresivamente** (Progressive Disclosure):
 
-### 4. ¿Cuándo se ejecuta en paralelo?
+```
+0.6 s  usuario ve  Ave Verum
+2 s    aparece     MusicXML
+3 s    aparece     MIDI
+4 s    aparece     Relationships
+5 s    aparece     Evidence ampliada
+```
 
-- **V2: secuencial.** El plan se ejecuta en orden, sin paralelismo.
-- El paralelismo **se aplaza** hasta que la secuencialidad sea un cuello de botella
-  medido. Solo se activará con un criterio explícito (p. ej. N proveedores de coste
-  `FREE` y tiempo de búsqueda > umbral). No se añade paralelismo especulativo.
+### ¿Cuándo termina la Fase 2?
 
-### 5. ¿Qué significa que una búsqueda está "satisfecha"?
+> **La Fase 2 finaliza cuando todos los proveedores planificados han respondido, han
+> agotado su tiempo máximo de espera o han fallado. La ausencia o fallo de un proveedor
+> no invalida la Work Resolution ya obtenida.**
 
-Un proveedor es **suficiente** (satisface la búsqueda) cuando:
+Ninguna resolución queda en "Loading" indefinidamente por un proveedor lento o que no
+responde.
 
-- **Formato**: no se pidió un formato concreto, **o** el formato pedido está entre
-  los `formats` del proveedor (`CatalogCapabilities`).
-- **Dominio público**: no se pidió `public_domain_only`, **o** el proveedor es
-  `public_domain_only`.
+### ¿Cuándo se detiene?
 
-Con resultados de un proveedor suficiente, la búsqueda termina: no se consultan
-proveedores más caros.
+- **Fase 1**: se detiene al identificar la obra.
+- **Fase 2**: se consultan **todos** los proveedores relevantes; no se detiene porque un
+  proveedor "satisfaga" un formato.
+
+### ¿Cuándo se ejecuta en paralelo?
+
+- **Fase 2 (enriquecimiento)**: paralelo, en segundo plano. El plan se ejecuta sobre todos
+  los proveedores compatibles con la obra.
+- La caché se reutiliza para búsquedas idénticas (TTL 180 s); no se usa para
+  `provider_status`.
+
+### Ordenación del plan (estrategia configurable)
+
+> **El `ProviderExecutionPlan` ordena los proveedores según una estrategia configurable
+> (coste, prioridad, capacidades, disponibilidad o una combinación). La implementación por
+> defecto usa el coste como criterio de planificación para minimizar latencia, pero el
+> **algoritmo de resolución no depende de ese criterio**.**
+
+Así, el ADR no obliga para siempre al coste; si mañana un proveedor local debe ejecutarse
+antes por latencia, no se rompe el ADR; el algoritmo permanece estable.
+
+### OMR / OpenMusicRepository — un proveedor con capacidades adicionales
+
+Algunos proveedores pueden **declarar capacidades adicionales** (metadata, relationships,
+aliases, evidence, etc.). Durante la **Fase 2** el orquestador consulta **todos los
+proveedores compatibles** y **fusiona toda la información disponible**. OMR es actualmente
+uno de esos proveedores, pero **el comportamiento no depende de un proveedor concreto**:
+
+- hoy funciona con OMR;
+- mañana podría existir otro proveedor con las mismas capacidades;
+- el algoritmo sigue siendo **genérico** (sin excepciones por proveedor).
 
 ### Regla general
 
 ```
-plan = proveedores elegibles, ordenados por coste ascendente
+# Fase 1 — Resolver
+plan = proveedores elegibles, ordenados por la estrategia configurable del plan
 para cada paso del plan:
     resultados = proveedor.search()
-    si hay resultados y el proveedor es suficiente:
+    si se logra la mejor resolución posible con la información disponible:
         DETENER
-si no: CONTINUAR al siguiente paso
+        → única obra (Work Resolution) o conjunto ordenado de Matching Works
+
+# Fase 2 — Enriquecer (paralelo, segundo plano)
+para cada proveedor compatible con la obra identificada:
+    resultados = proveedor.search()
+    merge + representaciones + metadata + relaciones + evidence
+actualizar la Work Resolution progresivamente
 ```
+
+### La Work Resolution es un recurso vivo
+
+> **La incorporación de nueva información durante la Fase 2 puede actualizar
+> representaciones, metadatos, relaciones, evidencias y el nivel de confianza, sin
+> alterar la identidad de la obra ya resuelta.**
+
+No se crea una nueva resolución cada vez que aparece un proveedor nuevo: la misma
+Work Resolution se **enriquece** (Work Resolution as Knowledge Hub).
 
 ## Consecuencias
 
-- El contrato (no el proveedor) decide cuándo basta: sin excepciones por proveedor.
-- OMR (`EXPENSIVE`) solo se consulta cuando un proveedor más barato no satisface.
-- El comportamiento queda congelado; cambios futuros requieren revisar este ADR,
-  no parches puntuales en el orquestador.
-- El paralelismo, la caché y la suficiencia tienen criterios definidos y verificables.
+- La resolución **no depende** de que un proveedor barato conteste antes.
+- Una Work Resolution **reúne todas las representaciones** disponibles (no solo la primera).
+- La Fase 1 puede terminar en una **única obra** o en un **conjunto ordenado de Matching
+  Works** cuando persiste la ambigüedad (alineado con la UX `Search → Matching Works →
+  Work Resolution`).
+- El **enriquecimiento en segundo plano** (Fase 2) preserva el rendimiento (Progressive
+  Disclosure) y **actualiza la resolución viva** sin cambiar su identidad.
+- El comportamiento es **genérico** (proveedores con capacidades adicionales de metadata,
+  relationships, aliases, evidence); **sin excepciones por proveedor concreto**.
+- La Fase 1 sigue usando orden por coste para una resolución rápida.
+- Este ADR queda alineado con ADR-0030 (Work Resolution); cambios futuros requieren
+  revisar este ADR, no parches puntuales en el orquestador.

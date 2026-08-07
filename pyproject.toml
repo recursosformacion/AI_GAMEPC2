@@ -16,7 +16,6 @@ authors = [
 osap = "src.osap.cli.main:entrypoint"
 
 [project.optional-dependencies]
-datasets = ["datasets>=3.0"]
 api = ["fastapi>=0.115", "uvicorn[standard]>=0.30"]
 
 [tool.setuptools.packages.find]
@@ -36,14 +35,6 @@ warn_unused_ignores = true
 warn_redundant_casts = true
 warn_unreachable = true
 explicit_package_bases = true
-
-[[tool.mypy.overrides]]
-# The Hugging Face adapter is the dynamic boundary with the `datasets` library.
-module = "src.osap.infrastructure.hf.*"
-disallow_any_expr = false
-disallow_any_explicit = false
-warn_return_any = false
-ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
 # MediaWiki and JSON APIs are dynamic boundaries.

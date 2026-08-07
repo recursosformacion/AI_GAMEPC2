@@ -1,0 +1,14 @@
+id: omr
+name: Open Music Repository
+version: 1.3
+enabled: true
+priority: 100
+base_url: https://storage.openmusicrepository.com
+authentication:
+  type: none
+contract:
+  version: 1.3
+search_endpoint: search
+lookup_endpoint: lookup
+resource_endpoint: resource
+download_endpoint: download

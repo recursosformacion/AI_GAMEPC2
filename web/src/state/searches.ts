@@ -5,14 +5,19 @@ import type { SearchRequest, SearchResponse } from "../api/types";
 import { initialAsync, type AsyncSlice } from "./async";
 
 interface SearchesState extends AsyncSlice<SearchResponse> {
+  selectedWorkId: string | null;
+  lastRequest: SearchRequest | null;
   create: (req: SearchRequest) => Promise<void>;
   get: (id: string) => Promise<void>;
+  selectWork: (workId: string) => void;
 }
 
 export const useSearches = create<SearchesState>((set) => ({
   ...initialAsync,
+  selectedWorkId: null,
+  lastRequest: null,
   create: async (req) => {
-    set({ loading: true, error: null });
+    set({ loading: true, error: null, selectedWorkId: null, lastRequest: req });
     try {
       const data = await apiClient.post<SearchResponse>("/searches", req);
       set({ data, loading: false, error: null });
@@ -29,4 +34,5 @@ export const useSearches = create<SearchesState>((set) => ({
       set({ loading: false, error: e instanceof ApiError ? e : new ApiError("UNKNOWN", String(e)) });
     }
   },
+  selectWork: (workId) => set({ selectedWorkId: workId }),
 }));

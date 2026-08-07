@@ -1,3 +1,6 @@
+import concurrent.futures
+import logging
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -9,6 +12,7 @@ from src.osap.application.execution_plan import (
     cost_rank,
 )
 from src.osap.application.provider_result_aggregator import ProviderResultAggregator
+from src.osap.domain.candidate_representation import CandidateRepresentation
 from src.osap.domain.errors import ResourceUnavailableError, ScoreResolutionError
 from src.osap.domain.search_request import SearchRequest
 from src.osap.domain.value_objects import ProviderId
@@ -17,6 +21,12 @@ from src.osap.ports.catalog_provider import ICatalogProvider
 
 # Normalized provider statuses (the only values visible to the user/UI).
 STATUS_OK = "ok"
+
+logger = logging.getLogger("osap.api.orchestrator")
+
+# Phase 2 bound: the search waits at most this long for providers; slower ones are
+# marked unavailable and the Work Resolution is returned with what arrived (ADR-0020).
+SEARCH_TIMEOUT_SECONDS = 5.0
 STATUS_NO_RESULT = "no_result"
 STATUS_UNAVAILABLE = "unavailable"
 STATUS_ERROR = "error"
@@ -109,22 +119,54 @@ class ProviderOrchestrator:
     def _execute(
         self, plan: ProviderExecutionPlan, search: SearchRequest, on_progress: ProgressCallback | None
     ) -> AggregatedProviderResult:
+        """Phase 2 (enrich): consult ALL eligible providers and merge everything.
+
+        Per ADR-0020 (revised), the search does not stop at the first "sufficient"
+        provider: all compatible providers are queried (in parallel) so the Work
+        Resolution gathers every representation, metadata and relationship.
+        """
         aggregator = ProviderResultAggregator()
-        for step in plan.steps:
+
+        def run(step: ProviderStep) -> tuple[str, tuple[CandidateRepresentation, ...] | None]:
             provider = self.provider(step.provider_id)
             pid = provider.provider_id.value
             if on_progress is not None:
                 on_progress(f"Consultando {pid}...")
+            start = time.monotonic()
             try:
                 found = provider.search(search)
-            except (ResourceUnavailableError, ScoreResolutionError, NotImplementedError):
+                elapsed = time.monotonic() - start
+                logger.info("provider %s: %d candidato(s) en %.3fs", pid, len(found), elapsed)
+                if on_progress is not None:
+                    on_progress(f"{pid}: {len(found)} candidato(s)")
+                return pid, found
+            except (ResourceUnavailableError, ScoreResolutionError, NotImplementedError) as exc:
+                elapsed = time.monotonic() - start
+                logger.info("provider %s: unavailable en %.3fs (%s)", pid, elapsed, exc)
+                return pid, None
+
+        found_by_pid: dict[str, tuple[CandidateRepresentation, ...] | None] = {}
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, min(len(plan.steps), 8))) as executor:
+            futures = {executor.submit(run, step): step for step in plan.steps}
+            done, not_done = concurrent.futures.wait(
+                futures, timeout=SEARCH_TIMEOUT_SECONDS, return_when=concurrent.futures.ALL_COMPLETED
+            )
+            for future in done:
+                pid, found = future.result()
+                found_by_pid[pid] = found
+            for future in not_done:
+                step = futures[future]
+                logger.info("provider %s: timeout (>{:.0f}s), skipped", step.provider_id.value, SEARCH_TIMEOUT_SECONDS)
+                found_by_pid[step.provider_id.value] = None
+
+        # Aggregate in plan order so `providers_used` stays deterministic.
+        for step in plan.steps:
+            pid = step.provider_id.value
+            found = found_by_pid.get(pid)
+            if found:
+                aggregator.add_candidates(step.provider_id, found)
+            else:
                 aggregator.add_diagnostic(f"{pid}: unavailable")
-                continue
-            aggregator.add_candidates(provider.provider_id, found)
-            if on_progress is not None:
-                on_progress(f"{pid}: {len(found)} candidato(s)")
-            if found and step.stop_if_found and self._sufficient(provider, search):
-                break
         return aggregator.result()
 
     def _cached(self, search: SearchRequest) -> AggregatedProviderResult | None:
@@ -171,11 +213,3 @@ class ProviderOrchestrator:
         return all(
             not wants or bool(getattr(caps, f"supports_{field}")) for field, wants in requested.items()
         )
-
-    @staticmethod
-    def _sufficient(provider: ICatalogProvider, search: SearchRequest) -> bool:
-        """Whether a provider's results can satisfy the search needs on their own."""
-        caps = provider.capabilities()
-        format_unsatisfied = search.desired_format is not None and search.desired_format not in caps.formats
-        pd_unsatisfied = search.public_domain_only and not caps.public_domain_only
-        return not (format_unsatisfied or pd_unsatisfied)

@@ -57,26 +57,28 @@ def _orchestrator() -> tuple[ProviderOrchestrator, _Fake, _Fake]:
     return ProviderOrchestrator(manager, cache=InMemoryCache()), free, expensive
 
 
-def test_plain_query_only_queries_free_providers() -> None:
+def test_plain_query_queries_all_providers() -> None:
     orchestrator, free, expensive = _orchestrator()
     result = orchestrator.search(SearchRequest(composer="Mozart"))
-    assert [p.value for p in result.providers_used] == ["filesystem"]
-    assert expensive.hits == 0
+    # ADR-0020 (revised): all providers are consulted (no early-stop on the first).
+    assert [p.value for p in result.providers_used] == ["filesystem", "omr"]
+    assert expensive.hits == 1
     assert free.hits == 1
 
 
-def test_format_request_continues_to_expensive_provider_when_needed() -> None:
+def test_format_request_queries_all_providers() -> None:
     orchestrator, free, expensive = _orchestrator()
     result = orchestrator.search(SearchRequest(composer="Mozart", desired_format=OutputFormat.MUSICXML))
     assert [p.value for p in result.providers_used] == ["filesystem", "omr"]
     assert expensive.hits == 1
+    assert free.hits == 1
 
 
-def test_expensive_provider_is_never_queried_when_free_is_sufficient() -> None:
+def test_expensive_provider_is_queried_even_when_free_is_sufficient() -> None:
     orchestrator, _, expensive = _orchestrator()
     orchestrator.search(SearchRequest(title="Ave Verum"))
     orchestrator.search(SearchRequest(title="Ave Verum", desired_format=OutputFormat.PDF))
-    assert expensive.hits == 0
+    assert expensive.hits == 2
 
 
 def test_search_results_are_cached() -> None:

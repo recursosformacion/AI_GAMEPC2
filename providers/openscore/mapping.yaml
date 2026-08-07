@@ -1,0 +1,20 @@
+work:
+  id: id
+  title: title
+  composer: composer
+  catalogue: catalogue
+
+  license: license
+  public_domain: public_domain
+
+  array: resources
+  fields:
+    id: id
+    format: format
+    mime_type: mime_type
+    available: available
+    license: license
+  links:
+    download: download_url
+    view: view_url
+    thumbnail: thumbnail_url

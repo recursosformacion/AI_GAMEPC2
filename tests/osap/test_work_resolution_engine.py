@@ -6,8 +6,6 @@ from src.osap.domain.candidate_representation import CandidateRepresentation
 from src.osap.domain.catalog_capabilities import CatalogCapabilities
 from src.osap.domain.catalog_info import CatalogInfo
 from src.osap.domain.catalog_status import CatalogStatus
-from src.osap.domain.dataset_descriptor import DatasetDescriptor
-from src.osap.domain.dataset_status import DatasetStatus
 from src.osap.domain.musical_source import MusicalSource
 from src.osap.domain.output_format import OutputFormat
 from src.osap.domain.ranking_config import RankingConfig
@@ -19,7 +17,6 @@ from src.osap.domain.value_objects import (
     CandidateId,
     CatalogId,
     Confidence,
-    DatasetId,
     Duration,
     ProviderId,
     ResourceId,
@@ -27,51 +24,9 @@ from src.osap.domain.value_objects import (
     WorkId,
 )
 from src.osap.domain.work_descriptor import WorkDescriptor
-from src.osap.infrastructure.datasets.dataset_installer import IDatasetInstaller, ProgressCallback
-from src.osap.infrastructure.datasets.dataset_registry import IDatasetRegistry
 from src.osap.infrastructure.resources.resource_provider import IResourceProvider
 from src.osap.ports.catalog_provider import ICatalogProvider
 from src.osap.ports.ranking_engine import IRankingEngine
-
-
-def _not_present_pdmx() -> DatasetDescriptor:
-    return DatasetDescriptor(
-        dataset_id=DatasetId("pdmx"),
-        name="PDMX",
-        hf_path="pnlong/PDMX",
-        status=DatasetStatus.NOT_PRESENT,
-    )
-
-
-class _FakeInstaller(IDatasetInstaller):
-    def install(self, descriptor: DatasetDescriptor, settings: object, on_progress: ProgressCallback) -> None:
-        pass
-
-    def update(self, descriptor: DatasetDescriptor, settings: object, on_progress: ProgressCallback) -> None:
-        pass
-
-    def remove(self, dataset_id: DatasetId, settings: object) -> None:
-        pass
-
-    def verify(self, descriptor: DatasetDescriptor, settings: object) -> bool:
-        return True
-
-    def location(self, dataset_id: DatasetId, settings: object) -> str | None:
-        return None
-
-
-class FakeDatasetRegistry(IDatasetRegistry):
-    def all(self) -> tuple[DatasetDescriptor, ...]:
-        return ()
-
-    def find(self, dataset_id: DatasetId) -> DatasetDescriptor | None:
-        return _not_present_pdmx()
-
-    def update_status(self, dataset_id: DatasetId, status: DatasetStatus) -> None:
-        pass
-
-    def register(self, descriptor: DatasetDescriptor) -> None:
-        pass
 
 
 class FakeResourceProvider(IResourceProvider):

@@ -1,17 +1,11 @@
 from .cpdl import CPDLCatalogProvider
 from .filesystem import FilesystemCatalogProvider
-from .imslp import IMSLPCatalogProvider
 from .local import LocalCatalogProvider
-from .omr import OmrCatalogProvider
-from .openscore import OpenScoreCatalogProvider
-from .pdmx import PdmxCatalogProvider
+from .remote.remote_catalog_provider import RemoteCatalogProvider
 
 __all__ = [
-    "IMSLPCatalogProvider",
-    "OpenScoreCatalogProvider",
+    "RemoteCatalogProvider",
     "CPDLCatalogProvider",
     "LocalCatalogProvider",
     "FilesystemCatalogProvider",
-    "PdmxCatalogProvider",
-    "OmrCatalogProvider",
 ]

@@ -1,0 +1,21 @@
+lookup:
+  method: GET
+  path: /api/lookup
+  query:
+    q: "{query}"
+
+search:
+  method: GET
+  path: /api/search
+  query:
+    q: "{query}"
+    page: "{page}"
+    limit: "{limit}"
+
+resource:
+  method: GET
+  path: /api/resource/{id}
+
+download:
+  method: GET
+  path: /api/download/{resource_id}

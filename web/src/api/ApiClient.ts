@@ -15,27 +15,34 @@ export const API_PREFIX = "/api/v1";
 
 export class ApiClient {
   private readonly baseUrl: string;
-  private readonly fetcher: typeof fetch;
+  private readonly fetcher: typeof fetch | undefined;
 
-  constructor(baseUrl: string = API_PREFIX, fetcher: typeof fetch = fetch) {
+  constructor(baseUrl: string = API_PREFIX, fetcher?: typeof fetch) {
     this.baseUrl = baseUrl;
-    // `fetch` must be invoked with `this` bound to globalThis/window, otherwise it
-    // throws "Illegal invocation". Binding here keeps pages free of fetch details.
-    this.fetcher = fetcher.bind(globalThis);
+    // If no fetcher is provided, `globalThis.fetch` is resolved at call time. This keeps
+    // the client testable (tests can stub `globalThis.fetch`) and works in the browser.
+    this.fetcher = fetcher;
   }
 
   async get<T>(path: string): Promise<T> {
     return this.request<T>("GET", path);
   }
 
-  async post<T>(path: string, body: unknown): Promise<T> {
+  async post<T>(path: string, body?: unknown): Promise<T> {
     return this.request<T>("POST", path, body);
   }
 
+  async delete<T>(path: string): Promise<T> {
+    return this.request<T>("DELETE", path);
+  }
+
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+    const fetchImpl = this.fetcher ?? globalThis.fetch;
     let response: Response;
     try {
-      response = await this.fetcher(`${this.baseUrl}${path}`, {
+      // `fetch` must be invoked with `this` bound to globalThis/window, otherwise it
+      // throws "Illegal invocation". Pages never touch this detail.
+      response = await fetchImpl.call(globalThis, `${this.baseUrl}${path}`, {
         method,
         headers: body !== undefined ? { "Content-Type": "application/json" } : undefined,
         body: body !== undefined ? JSON.stringify(body) : undefined,

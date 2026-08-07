@@ -7,9 +7,6 @@ from .catalog_capabilities import CatalogCapabilities
 from .catalog_info import CatalogInfo
 from .catalog_status import CatalogStatus
 from .cost_level import CostLevel
-from .dataset_descriptor import DatasetDescriptor, DatasetVersion
-from .dataset_mode import DatasetMode
-from .dataset_status import DatasetStatus
 from .document_type import DocumentType
 from .edition import Edition
 from .errors import DomainError, ScoreResolutionError
@@ -102,7 +99,6 @@ from .value_objects import (
     CandidateId,
     CatalogId,
     Confidence,
-    DatasetId,
     DiagnosticMessage,
     DocumentId,
     Duration,
@@ -128,7 +124,6 @@ __all__ = [
     "ProviderId",
     "WorkId",
     "CatalogId",
-    "DatasetId",
     "CandidateId",
     "ResourceId",
     "EditionId",
@@ -228,10 +223,6 @@ __all__ = [
     "Resource",
     "ResourceKind",
     "ResourceStatus",
-    "DatasetDescriptor",
-    "DatasetVersion",
-    "DatasetStatus",
-    "DatasetMode",
     "MusicQueryNormalizer",
     "CatalogCapabilities",
     "CatalogInfo",

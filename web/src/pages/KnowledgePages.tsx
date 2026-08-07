@@ -1,17 +1,19 @@
 import { useEffect } from "react";
 import { Envelope } from "../components/Envelope";
 import { ResultList } from "../components/ResultList";
+import { useI18n } from "../i18n/I18n";
 import { useObservations, useFacts, useSuggestions } from "../state/knowledge";
 
 export function ObservationsPage() {
+  const { t } = useI18n();
   const { data, loading, error, load } = useObservations();
   useEffect(() => {
     void load();
   }, [load]);
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Knowledge — Observations</h1>
-      <Envelope loading={loading} error={error} data={data} emptyMessage="No observations">
+      <h1 className="text-xl font-semibold">{t("knowledge.observedAliases")}</h1>
+      <Envelope loading={loading} error={error} data={data} emptyMessage={t("states.empty")}>
         {(items) => (
           <ResultList
             items={items}
@@ -30,14 +32,15 @@ export function ObservationsPage() {
 }
 
 export function FactsPage() {
+  const { t } = useI18n();
   const { data, loading, error, load } = useFacts();
   useEffect(() => {
     void load();
   }, [load]);
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Knowledge — Facts</h1>
-      <Envelope loading={loading} error={error} data={data} emptyMessage="No facts">
+      <h1 className="text-xl font-semibold">{t("knowledge.providerConsistency")}</h1>
+      <Envelope loading={loading} error={error} data={data} emptyMessage={t("states.empty")}>
         {(items) => (
           <ResultList
             items={items}
@@ -55,14 +58,15 @@ export function FactsPage() {
 }
 
 export function SuggestionsPage() {
+  const { t } = useI18n();
   const { data, loading, error, load } = useSuggestions();
   useEffect(() => {
     void load();
   }, [load]);
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Knowledge — Suggestions</h1>
-      <Envelope loading={loading} error={error} data={data} emptyMessage="No suggestions">
+      <h1 className="text-xl font-semibold">{t("knowledge.suggestedAliases")}</h1>
+      <Envelope loading={loading} error={error} data={data} emptyMessage={t("states.empty")}>
         {(items) => (
           <ResultList
             items={items}

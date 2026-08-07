@@ -30,7 +30,7 @@ class CapabilitiesDto:
 
 def _quality_label(provider_id: str) -> str:
     # Heuristic label; providers with structured formats are 'excellent'.
-    if provider_id in ("openscore", "pdmx"):
+    if provider_id in ("openscore",):
         return "excellent"
     if provider_id == "imslp":
         return "good"
@@ -45,7 +45,6 @@ def _priority(provider_id: str) -> int:
     order = {
         "local": 90,
         "openscore": 85,
-        "pdmx": 80,
         "cpdl": 70,
         "imslp": 50,
     }

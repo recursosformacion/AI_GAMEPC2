@@ -1,4 +1,5 @@
 import re
+import unicodedata
 from pathlib import Path
 
 import yaml  # type: ignore[import-untyped]
@@ -13,6 +14,13 @@ def _words(text: str) -> list[str]:
     return _WORD_RE.findall(text)
 
 
+def _strip(word: str) -> str:
+    """Accent-stripped, lowercased matching key (consistent with normalize_name)."""
+    decomposed = unicodedata.normalize("NFKD", word)
+    ascii_text = decomposed.encode("ascii", "ignore").decode("ascii")
+    return ascii_text.lower()
+
+
 def _slug(value: str) -> str:
     """Lowercase alphanumeric slug used to build a stable rule_id."""
     return re.sub(r"[^A-Za-z0-9]+", "-", value.lower()).strip("-")
@@ -23,16 +31,26 @@ class Canonicalizer:
 
     It is deterministic, does not learn, does not use AI and does not generate
     rules. It only rewrites aliases to their canonical form and reports exactly
-    which rule (and from which file) was applied, for traceability.
+    which rule (and from which file) was applied, for traceability. Matching is
+    accent-insensitive and case-insensitive (like the matcher's normalize_name).
     """
 
     def __init__(self, directory: Path) -> None:
         self._single: dict[str, AppliedRule] = {}
         self._multi: dict[tuple[str, ...], AppliedRule] = {}
+        self._reverse: dict[str, set[str]] = {}
         self._load(directory)
+
+    def aliases_for(self, canonical: str) -> tuple[str, ...]:
+        """Reverse lookup: the aliases (and the canonical) that map to `canonical`."""
+        values = self._reverse.get(canonical)
+        if not values:
+            return ()
+        return tuple(sorted(values))
 
     def canonicalize(self, text: str) -> CanonicalResult:
         words = _words(text)
+        stripped = [_strip(word) for word in words]
         count = len(words)
         replacement: dict[int, tuple[AppliedRule, int]] = {}
         used = [False] * count
@@ -43,7 +61,7 @@ class Canonicalizer:
             for start in range(count - span + 1):
                 if any(used[start + offset] for offset in range(span)):
                     continue
-                if all(words[start + offset].lower() == key[offset] for offset in range(span)):
+                if all(stripped[start + offset] == key[offset] for offset in range(span)):
                     for offset in range(span):
                         used[start + offset] = True
                     replacement[start] = (rule, span)
@@ -59,13 +77,12 @@ class Canonicalizer:
                 applied.append(rule)
                 index += span
             else:
-                word = words[index]
-                single = self._single.get(word.lower())
+                single = self._single.get(stripped[index])
                 if single is not None:
                     out.append(single.canonical)
                     applied.append(single)
                 else:
-                    out.append(word)
+                    out.append(words[index])
                 index += 1
         confidence = min((applied_rule.confidence for applied_rule in applied), default=0.0)
         return CanonicalResult(input=text, output=" ".join(out), applied=tuple(applied), confidence=confidence)
@@ -101,13 +118,14 @@ class Canonicalizer:
                 self._register(canonical, rule)
 
     def _register(self, value: str, rule: AppliedRule) -> None:
-        words = _words(value)
+        self._reverse.setdefault(rule.canonical, set()).add(value)
+        words = [_strip(word) for word in _words(value)]
         if not words:
             return
         if len(words) == 1:
-            self._single.setdefault(words[0].lower(), rule)
+            self._single.setdefault(words[0], rule)
         else:
-            self._multi.setdefault(tuple(word.lower() for word in words), rule)
+            self._multi.setdefault(tuple(words), rule)
 
 
 def _rule_id(yaml_file: Path, canonical: str) -> str:

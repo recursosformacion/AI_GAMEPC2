@@ -121,14 +121,14 @@ class TestResolveResult:
 class TestResource:
     def test_create(self) -> None:
         resource = Resource(
-            resource_id=ResourceId("pdmx"),
-            name="PDMX",
-            kind=ResourceKind.DATASET,
-            provider=ProviderId("huggingface"),
+            resource_id=ResourceId("omr"),
+            name="OMR",
+            kind=ResourceKind.CATALOG,
+            provider=ProviderId("omr"),
             status=ResourceStatus.NOT_INSTALLED,
             size=100,
         )
-        assert resource.kind == ResourceKind.DATASET
+        assert resource.kind == ResourceKind.CATALOG
         assert resource.status == ResourceStatus.NOT_INSTALLED
 
     def test_kind_and_status_enums(self) -> None:

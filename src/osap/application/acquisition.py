@@ -10,8 +10,7 @@ Estados de adquisición:
   DIRECT     existe una URL de descarga directa (mirror propio, web, Drive...).
   EXTERNAL   OSAP solo conoce la página del proveedor (ej. IMSLP); no scrapea,
              la aplicación entrega la URL para descarga manual del cliente.
-  MANUAL     el proveedor no ofrece descarga individual (ej. PDMX sin mirror);
-             OSAP informa del motivo.
+  MANUAL     el proveedor no ofrece descarga individual; OSAP informa del motivo.
   UNAVAILABLE no existe forma conocida de obtener el recurso.
 """
 

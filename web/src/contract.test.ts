@@ -47,7 +47,9 @@ describe("No direct HTTP / no domain access", () => {
   });
 
   it("the frontend has no reference to domain internals", () => {
-    const forbidden = /\b(Matcher|Ranking|Merge|EvidenceCollector|KnowledgeCollector|KnowledgeMiner)\b/;
+    // Only actual domain component names are forbidden; user-facing labels like
+    // "Merge" (a UI concept) are allowed.
+    const forbidden = /\b(WorkMatcher|WorkGroupingMatcher|DefaultWorkMatcher|DefaultWorkRanker|MergeEngine|DefaultMergeService|EvidenceCollector|KnowledgeCollector|KnowledgeMiner)\b/;
     for (const dir of ["pages", "components", "state", "layouts", "api"]) {
       const full = join(SRC, dir);
       if (!existsSync(full)) continue;

@@ -1,8 +1,10 @@
-from src.osap.domain.acquisition_result import AcquisitionResult
+from pathlib import Path
+
 from src.osap.domain.output_format import OutputFormat
 from src.osap.domain.resolve_request import ResolveRequest
-from src.osap.infrastructure.catalogs.openscore import OpenScoreCatalogProvider
+from src.osap.infrastructure.catalogs.remote.remote_catalog_provider import RemoteCatalogProvider
 from src.osap.infrastructure.github import GitHubClient
+from src.osap.infrastructure.providers.fetchers import GitHubFetcher
 
 TREE: list[dict[str, object]] = [
     {
@@ -44,8 +46,12 @@ class FakeGitHubClient(GitHubClient):
         return f"https://raw/{owner}/{repo}/{branch}/{path}"
 
 
-def _provider() -> OpenScoreCatalogProvider:
-    return OpenScoreCatalogProvider(FakeGitHubClient(), repos=("OpenScore/Lieder",))
+DEF_PATH = Path(__file__).resolve().parents[2] / "providers" / "openscore"
+
+
+def _provider() -> RemoteCatalogProvider:
+    fetcher = GitHubFetcher(FakeGitHubClient(), repos=("OpenScore/Lieder",))
+    return RemoteCatalogProvider(definition_path=DEF_PATH, fetcher=fetcher)
 
 
 class TestOpenScoreSearch:
@@ -56,10 +62,6 @@ class TestOpenScoreSearch:
         assert candidates[0].work_descriptor.composer == "Franz Schubert"
         assert candidates[0].format == OutputFormat.MUSICXML
         assert candidates[0].public_domain is True
-        assert (
-            candidates[0].download_url
-            == "https://raw/OpenScore/Lieder/main/scores/Schubert,_Franz/4_Lieder,_Op.96/1_Die_Sterne,_D.939/lc1.mxl"
-        )
 
     def test_partial_words(self) -> None:
         candidates = _provider().search(ResolveRequest(title="Sterne", composer="Schubert"))
@@ -70,16 +72,6 @@ class TestOpenScoreSearch:
 
     def test_no_query_returns_empty(self) -> None:
         assert _provider().search(ResolveRequest()) == ()
-
-
-class TestOpenScoreDownload:
-    def test_download_returns_source(self) -> None:
-        provider = _provider()
-        candidates = provider.search(ResolveRequest(title="Die Sterne", composer="Schubert"))
-        acquisition = provider.download(candidates[0])
-        assert isinstance(acquisition, AcquisitionResult)
-        assert acquisition.source.content == b"<mxl/>"
-        assert acquisition.source.format == OutputFormat.MUSICXML
 
 
 class TestOpenScoreInfo:

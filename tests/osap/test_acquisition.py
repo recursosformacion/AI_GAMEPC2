@@ -46,7 +46,7 @@ class TestAcquisitionResolver:
         assert info.local_path == str(local)
 
     def test_direct(self) -> None:
-        info = AcquisitionResolver().resolve(_rep("pdmx", url="https://mirror.example.com/mxl/a.mxl"))
+        info = AcquisitionResolver().resolve(_rep("omr", url="https://mirror.example.com/mxl/a.mxl"))
         assert info.method is AcquisitionMethod.DIRECT
         assert info.url == "https://mirror.example.com/mxl/a.mxl"
 
@@ -57,8 +57,8 @@ class TestAcquisitionResolver:
         assert info.method is AcquisitionMethod.EXTERNAL
         assert info.url == "https://imslp.org/wiki/Ave"
 
-    def test_manual_pdmx_sin_mirror(self) -> None:
-        info = AcquisitionResolver().resolve(_rep("pdmx", downloadable=False, reason="mirror_not_configured"))
+    def test_manual_sin_mirror(self) -> None:
+        info = AcquisitionResolver().resolve(_rep("omr", downloadable=False, reason="mirror_not_configured"))
         assert info.method is AcquisitionMethod.MANUAL
         assert info.reason == "mirror_not_configured"
 

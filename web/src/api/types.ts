@@ -23,6 +23,12 @@ export type Envelope<T> = SuccessEnvelope<T> | ErrorEnvelope;
 export interface SearchRequest {
   query: string;
   limit: number;
+  page?: number;
+  composer?: string | null;
+  title?: string | null;
+  catalogue?: string | null;
+  instrumentation?: string | null;
+  language?: string | null;
 }
 
 export interface WorkInfo {
@@ -33,9 +39,12 @@ export interface WorkInfo {
 }
 
 export interface RepresentationInfo {
+  id: string;
   provider: string;
   format: string;
   confidence: number;
+  url?: string | null;
+  title?: string | null;
 }
 
 export interface EvidenceInfo {
@@ -44,16 +53,29 @@ export interface EvidenceInfo {
   score: number;
 }
 
+export interface WorkRelationships {
+  aliases?: string[];
+  related_catalogues?: string[];
+  editions?: string[];
+  parent_work?: string | null;
+  movements?: string[];
+}
+
 export interface SearchResultItem {
   work: WorkInfo;
   representation: RepresentationInfo;
+  representations?: RepresentationInfo[];
   score: number;
   evidence: EvidenceInfo[];
+  relationships?: WorkRelationships | null;
 }
 
 export interface SearchResponse {
   search_id: string;
   results: SearchResultItem[];
+  total?: number;
+  page?: number;
+  per_page?: number;
 }
 
 export interface JobCreateRequest {
@@ -114,4 +136,102 @@ export interface SystemStatistics {
   knowledge_observations: number;
   knowledge_facts: number;
   knowledge_suggestions: number;
+}
+
+export interface RepositorySourceSummary {
+  source_id: string;
+  name: string;
+  type: string;
+  origin: string;
+  trust: string;
+  status: string;
+  quality: number;
+  quality_label: string;
+  updated_at: string;
+}
+
+export interface SourceObservation {
+  date: string;
+  text: string;
+}
+
+export interface RepositorySource {
+  source_id: string;
+  name: string;
+  type: string;
+  origin: string;
+  trust: string;
+  status: string;
+  quality: number;
+  quality_label: string;
+  updated_at: string;
+  representations: number;
+  works: number;
+  composers: number;
+  formats: string[];
+  catalogues: string[];
+  duplicate_percent: number;
+  coverage: string[];
+  capabilities: string[];
+  description: string;
+  license: string;
+  website: string;
+  contact: string;
+  notes: string;
+  observations: SourceObservation[];
+  tags: string[];
+  community_rating: number;
+  reviews: number;
+  searches: number;
+  downloads: number;
+  contributions: number;
+  availability: number;
+}
+
+export interface SessionSource {
+  source_id: string;
+  name: string;
+  type: string;
+  location: string;
+  status: string;
+  analysis: Record<string, unknown>;
+  created_at: string;
+}
+
+export interface SessionSourceCreate {
+  name: string;
+  type: string;
+  location: string;
+}
+
+export interface DiscoverSource {
+  source_id: string;
+  name: string;
+  type: string;
+  origin: string;
+  trust: string;
+  quality: number;
+  url: string;
+}
+
+export interface SearchModelCriteria {
+  key: string;
+  label: string;
+}
+
+export interface SearchModelBlock {
+  id: string;
+  label: string;
+  kind: string;
+  criteria: SearchModelCriteria[];
+  options: string[];
+}
+
+export interface SearchModel {
+  blocks: SearchModelBlock[];
+}
+
+export interface IntentResponse {
+  type: string;
+  label: string;
 }

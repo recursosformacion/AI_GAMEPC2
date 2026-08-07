@@ -19,8 +19,8 @@ from dataclasses import dataclass
 
 # Catalogue markers -> canonical marker key. Markers are case-insensitive.
 _CATALOGUE_RE = re.compile(
-    r"\b(?P<marker>KV|Köchel|Koechel|K\.|K|BWV|Hob\.|Hob|Op\.|Op|D\.|D)"
-    r"\s*\.?\s*(?P<num>[0-9]+[A-Za-z]?(?:/[0-9]+[A-Za-z]?)?)\b",
+    r"\b(?P<marker>KV|Köch|Köchel|Koechel|K\.|K|BWV|Hob\.|Hob|Op\.|Op|D\.|D)"
+    r"\s*\.?\s*(?:Ver\.?\s*No\.?)?\s*(?P<num>[0-9]+[A-Za-z]?(?:/[0-9]+[A-Za-z]?)?)\b",
     re.IGNORECASE,
 )
 
@@ -39,6 +39,7 @@ _OPUS_RE = re.compile(r"\b(?:Op\.?|Opus)\s*\.?\s*(?P<num>[0-9]+[A-Za-z]?)\b", re
 _CATALOGUE_NORMALIZE = {
     "kv": "k",
     "k": "k",
+    "köch": "k",
     "köchel": "k",
     "koechel": "k",
     "bwv": "bwv",

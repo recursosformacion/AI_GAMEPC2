@@ -2,35 +2,23 @@ from pathlib import Path
 
 from src.osap.bootstrap.configuration import Configuration, load_configuration
 from src.osap.bootstrap.container import Container
-from src.osap.domain.dataset_descriptor import DatasetDescriptor
-from src.osap.domain.output_format import OutputFormat
 from src.osap.domain.ranking_config import RankingConfig
-from src.osap.domain.value_objects import DatasetId
 from src.osap.infrastructure.adapters.export.musicxml import MusicXmlExporter
 from src.osap.infrastructure.adapters.library.local import LocalLibrary
 from src.osap.infrastructure.adapters.validation import BasicValidator
 from src.osap.infrastructure.auth import AuthenticationManager, SecureCredentialStore
 from src.osap.infrastructure.cache import InMemoryCache
-from src.osap.infrastructure.catalogs import (
-    IMSLPCatalogProvider,
-    LocalCatalogProvider,
-    OmrCatalogProvider,
-    OpenScoreCatalogProvider,
-    PdmxCatalogProvider,
-)
-from src.osap.infrastructure.datasets import InMemoryDatasetRegistry
-from src.osap.infrastructure.datasets.dataset_manager import DatasetManager
-from src.osap.infrastructure.datasets.dataset_settings import DatasetSettings
+from src.osap.infrastructure.catalogs import LocalCatalogProvider
+from src.osap.infrastructure.catalogs.remote.remote_catalog_provider import RemoteCatalogProvider
 from src.osap.infrastructure.dedup import DuplicateResolver
 from src.osap.infrastructure.events import InMemoryEventBus
 from src.osap.infrastructure.github import GitHubClient
-from src.osap.infrastructure.hf.hf_dataset_installer import HuggingFaceDatasetInstaller
-from src.osap.infrastructure.http import HttpClient
 from src.osap.infrastructure.jobs import InMemoryJobEngine
 from src.osap.infrastructure.mediawiki import MediaWikiClient
 from src.osap.infrastructure.merge import MergeEngine
 from src.osap.infrastructure.metrics import InMemoryMetricsCollector
 from src.osap.infrastructure.pipeline import PipelineEngine
+from src.osap.infrastructure.providers.fetchers import GitHubFetcher, MediaWikiFetcher
 from src.osap.infrastructure.rankings import DefaultRankingEngine
 from src.osap.infrastructure.user_profile import InMemoryUserProfileStore
 
@@ -39,7 +27,7 @@ DEFAULT_PROVIDER_ORDER = (
     "openscore",
     "cpdl",
     "imslp",
-    "pdmx",
+    "openmusicrepository",
 )
 
 
@@ -53,22 +41,24 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
         cache=InMemoryCache() if config.github_cache else None,
     )
 
-    # All sources are plain ICatalogProvider implementations. Adding a new
-    # catalog only requires registering another implementation here.
-    container.register_catalog_provider(IMSLPCatalogProvider(MediaWikiClient(verify=config.imslp_verify_ssl)))
-    container.register_catalog_provider(OpenScoreCatalogProvider(github, config.openscore_repos))
+    # All sources are plain ICatalogProvider implementations. Level 1 providers are
+    # fully described by their YAML definition. Level 2 providers add a light fetcher
+    # (MediaWiki, GitHub) that returns normalized contract JSON through the same mapping.
+    providers_root = Path(__file__).resolve().parents[3] / "providers"
     container.register_catalog_provider(
-        PdmxCatalogProvider(
-            csv_url=config.pdmx_csv_url,
-            index_path=Path(config.pdmx_index_path),
-            download_base=config.pdmx_download_base,
+        RemoteCatalogProvider(
+            definition_path=providers_root / "imslp",
+            fetcher=MediaWikiFetcher(MediaWikiClient(verify=config.imslp_verify_ssl)),
         )
     )
-    container.register_catalog_provider(LocalCatalogProvider(Path(config.library_root)))
-    if config.omr_base_url:
-        container.register_catalog_provider(
-            OmrCatalogProvider(HttpClient(), config.omr_base_url, api_key=config.omr_api_key)
+    container.register_catalog_provider(
+        RemoteCatalogProvider(
+            definition_path=providers_root / "openscore",
+            fetcher=GitHubFetcher(github, config.openscore_repos),
         )
+    )
+    container.register_catalog_provider(RemoteCatalogProvider(definition_path=providers_root / "omr"))
+    container.register_catalog_provider(LocalCatalogProvider(Path(config.library_root)))
 
     container.register_library(LocalLibrary(Path(config.library_root)))
     container.register_exporter(MusicXmlExporter())
@@ -90,19 +80,4 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     master_key = config.credentials_key or "osap-local-dev-key"
     auth_store = SecureCredentialStore(Path(config.credentials_path), master_key)
     container.set_authentication_manager(AuthenticationManager(auth_store))
-
-    registry = InMemoryDatasetRegistry()
-    registry.register(
-        DatasetDescriptor(
-            dataset_id=DatasetId("pdmx"),
-            name="PDMX",
-            hf_path="openmusic/pdmx",
-            expected_size_bytes=40_000_000_000,
-            license="Public Domain",
-            formats=(OutputFormat.MUSICXML,),
-        )
-    )
-    dataset_settings = DatasetSettings(cache_dir=config.datasets_cache_dir)
-    dataset_manager = DatasetManager(registry, HuggingFaceDatasetInstaller(), dataset_settings)
-    container.set_dataset_manager(dataset_manager)
     return container

@@ -9,7 +9,6 @@ from src.osap.application.work_resolver import WorkResolver
 from src.osap.domain.ranking_config import RankingConfig
 from src.osap.infrastructure.auth import AuthenticationManager
 from src.osap.infrastructure.cache import InMemoryCache
-from src.osap.infrastructure.datasets.dataset_manager import DatasetManager
 from src.osap.infrastructure.dedup import DuplicateResolver
 from src.osap.infrastructure.events import InMemoryEventBus
 from src.osap.infrastructure.jobs import InMemoryJobEngine
@@ -48,7 +47,6 @@ class Container:
         self._duplicate_resolver: DuplicateResolver | None = None
         self._merge_engine: MergeEngine | None = None
         self._auth_manager: AuthenticationManager | None = None
-        self._dataset_manager: DatasetManager | None = None
 
     def register_catalog_provider(self, provider: ICatalogProvider) -> None:
         self._catalog_providers.append(provider)
@@ -92,9 +90,6 @@ class Container:
 
     def set_authentication_manager(self, manager: AuthenticationManager) -> None:
         self._auth_manager = manager
-
-    def set_dataset_manager(self, manager: DatasetManager) -> None:
-        self._dataset_manager = manager
 
     def event_bus(self) -> IEventBus:
         if self._event_bus is None:
@@ -140,11 +135,6 @@ class Container:
         if self._auth_manager is None:
             raise RuntimeError("Authentication manager not wired")
         return self._auth_manager
-
-    def dataset_manager(self) -> DatasetManager:
-        if self._dataset_manager is None:
-            raise RuntimeError("Dataset manager not wired")
-        return self._dataset_manager
 
     def export_manager(self) -> ExportManager:
         return ExportManager(tuple(self._exporters))

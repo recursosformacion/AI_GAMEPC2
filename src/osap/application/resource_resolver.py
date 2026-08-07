@@ -7,7 +7,7 @@ Modelo:
 
     Work
       └─ Resource (kind + format + role)      MusicXML · PDF · audio soprano ...
-           └─ Representation (provider)        PDMX (manual) · OpenScore (directa)
+           └─ Representation (provider)        OMR · OpenScore (directa)
 
 La selección se hace POR RECURSO: entre las representaciones de un recurso se
 elige la descargable (directa) aunque otra tenga mejor metadata.

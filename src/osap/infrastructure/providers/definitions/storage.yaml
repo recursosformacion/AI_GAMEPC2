@@ -1,0 +1,60 @@
+name: openmusicrepository
+base_url: https://storage.openmusicrepository.com
+authentication: none
+
+endpoints:
+  search:
+    method: GET
+    path: /api/search
+  resource:
+    method: GET
+    path: /api/resource/{id}
+
+# OSAP request field -> provider query parameter
+request_mapping:
+  query: q
+  composer: composer
+  catalogue: catalog
+  title: q
+  page: page
+  limit: per_page
+
+# provider response path -> ProviderWork target (dotted)
+response_mapping:
+  identity.id: work.id
+  identity.title: work.title
+  identity.composer: work.composer
+  identity.catalogue: work.catalogue
+  identity.confidence: work.confidence
+  metadata.subtitle: metadata.subtitle
+  metadata.opus: metadata.opus
+  metadata.musical_key: metadata.musical_key
+  metadata.duration: metadata.duration
+  metadata.measures: metadata.measures
+  metadata.pages: metadata.pages
+  metadata.parts: metadata.parts
+  metadata.license: metadata.license
+  metadata.public_domain: metadata.public_domain
+  metadata.description: metadata.description
+  metadata.genres: metadata.genres
+  metadata.tags: metadata.tags
+  metadata.instruments: metadata.instruments
+  metadata.parts_names: metadata.parts_names
+  statistics.favorites: statistics.favorites
+  statistics.downloads: statistics.downloads
+  statistics.views: statistics.views
+  statistics.rating: statistics.rating
+
+# where the list of resources lives in the resource response
+resource_list: representations
+
+# per-resource mapping (dotted, relative to each resource)
+resource_mapping:
+  id: id
+  format: format
+  mime_type: mime_type
+  available: available
+  license: license
+  links.download: links.download
+  links.view: links.view
+  links.thumbnail: links.thumbnail

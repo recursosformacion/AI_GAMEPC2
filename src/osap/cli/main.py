@@ -63,24 +63,6 @@ def _build_parser() -> argparse.ArgumentParser:
     auth_sub.add_parser("status", help="Estado de autenticación de un proveedor.").add_argument("provider")
     auth_sub.add_parser("list", help="Lista credenciales guardadas.")
 
-    datasets = subparsers.add_parser("datasets", help="Gestiona índices de catálogos de datos (ej. PDMX).")
-    datasets_sub = datasets.add_subparsers(dest="datasets_command", required=True)
-    update_ds = datasets_sub.add_parser("update", help="Construye/actualiza el índice de un catálogo.")
-    update_ds.add_argument("name")
-
-    mirror_ds = datasets_sub.add_parser("mirror", help="Configura/valida el mirror de descarga de PDMX.")
-    mirror_sub = mirror_ds.add_subparsers(dest="mirror_command", required=True)
-    mirror_set = mirror_sub.add_parser("set", help="Define la URL base del mirror.")
-    mirror_set.add_argument("url")
-    mirror_set.add_argument(
-        "--file", default=None, help="Fichero de configuración (TOML). Por defecto: OSAP_CONFIG u osap.toml."
-    )
-    mirror_sub.add_parser("status", help="Muestra y valida el mirror configurado.")
-    mirror_unset = mirror_sub.add_parser("unset", help="Elimina el mirror configurado del fichero.")
-    mirror_unset.add_argument(
-        "--file", default=None, help="Fichero de configuración (TOML). Por defecto: OSAP_CONFIG u osap.toml."
-    )
-
     search = subparsers.add_parser("search", help="Busca obras musicales (tolerante).")
     search.add_argument("query", nargs="?", default=None)
     search.add_argument(
@@ -557,91 +539,6 @@ def _config_path(args: argparse.Namespace) -> Path:
     return Path(explicit or os.environ.get("OSAP_CONFIG", "osap.toml"))
 
 
-def _run_mirror(args: argparse.Namespace) -> int:
-    import tomllib
-
-    from src.osap.bootstrap.configuration import _dump_toml, load_configuration
-
-    cmd = args.mirror_command
-    if cmd == "set":
-        path = _config_path(args)
-        data: dict[str, object] = {}
-        if path.exists():
-            with path.open("rb") as handle:
-                data = tomllib.load(handle)
-        pdmx = data.setdefault("pdmx", {})
-        assert isinstance(pdmx, dict)
-        pdmx["download_base"] = args.url
-        path.write_text(_dump_toml(data), encoding="utf-8")
-        print(f"Mirror PDMX configurado en {path}: {args.url}")
-        return _check_mirror(args.url)
-    if cmd == "status":
-        base = load_configuration().pdmx_download_base
-        if not base:
-            print("Mirror PDMX NO configurado.")
-            print("Configúralo con:  osap datasets mirror set <URL>")
-            print("  o con la variable de entorno OSAP_PDMX_DOWNLOAD_BASE")
-            return 0
-        print(f"Mirror PDMX: {base}")
-        return _check_mirror(base)
-    if cmd == "unset":
-        path = _config_path(args)
-        data = {}
-        if path.exists():
-            with path.open("rb") as handle:
-                data = tomllib.load(handle)
-        pdmx = data.get("pdmx")
-        if isinstance(pdmx, dict):
-            pdmx.pop("download_base", None)
-            path.write_text(_dump_toml(data), encoding="utf-8")
-        print("Mirror PDMX eliminado del fichero de configuración.")
-        return 0
-    return 2
-
-
-def _check_mirror(base: str) -> int:
-    import urllib.error
-    import urllib.request
-
-    url = base.rstrip("/") + "/"
-    try:
-        with urllib.request.urlopen(url, timeout=10) as resp:  # noqa: S310
-            print(f"Mirror accesible: HTTP {resp.status}")
-    except urllib.error.HTTPError as exc:
-        print(f"Mirror accesible (HTTP {exc.code}) — comprueba que sirva la estructura /mxl/...")
-    except Exception as exc:  # noqa: BLE001
-        print(f"Mirror NO accesible: {exc}")
-        return 1
-    print(f"Estructura esperada del mirror: {base}/mxl/0/0/0/...")
-    return 0
-
-
-def _run_datasets(args: argparse.Namespace, container: Container) -> int:
-    if args.datasets_command == "mirror":
-        return _run_mirror(args)
-    try:
-        if args.datasets_command == "update":
-            provider = next(
-                (p for p in container.catalog_manager().providers() if p.provider_id.value == args.name),
-                None,
-            )
-            if provider is None:
-                print(f"Catálogo de datos desconocido: {args.name}")
-                return 1
-            sync = getattr(provider, "sync", None)
-            if sync is None:
-                print(f"{args.name} no requiere índice local.")
-                return 0
-            print(f"Construyendo índice de {args.name}...")
-            sync()
-            print("Índice actualizado.")
-            return 0
-    except Exception as exc:  # noqa: BLE001
-        print(f"Error: {exc}")
-        return 1
-    return 2
-
-
 def _run_search(args: argparse.Namespace, container: Container) -> int:
     query = args.query
     composer = args.composer
@@ -695,8 +592,6 @@ def main(argv: list[str] | None = None) -> int:
         return _run_catalog(args, container)
     if args.command == "auth":
         return _run_auth(args, container)
-    if args.command == "datasets":
-        return _run_datasets(args, container)
     if args.command == "search":
         return _run_search(args, container)
     raise SystemExit(f"comando desconocido: {args.command}")

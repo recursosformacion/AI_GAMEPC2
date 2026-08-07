@@ -22,22 +22,21 @@ function renderAt(path: string) {
   );
 }
 
-describe("Routing and navigation", () => {
+describe("Routing and navigation (V3.4)", () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it("renders Dashboard at /", () => {
-    stubFetch();
+  it("renders Home with the brand at /", () => {
     renderAt("/");
-    expect(screen.getByRole("heading", { name: "Dashboard" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "OpenMusicRepository" })).toBeInTheDocument();
+    expect(screen.getByLabelText("search")).toBeInTheDocument();
   });
 
-  it("renders Searches page at /searches", () => {
+  it("renders Discover at /discover", () => {
     stubFetch();
-    renderAt("/searches");
-    expect(screen.getByRole("heading", { name: "Searches" })).toBeInTheDocument();
-    expect(screen.getByLabelText("query")).toBeInTheDocument();
+    renderAt("/discover");
+    expect(screen.getByRole("heading", { name: "Discover" })).toBeInTheDocument();
   });
 
   it("renders Jobs page at /jobs", () => {
@@ -46,25 +45,27 @@ describe("Routing and navigation", () => {
     expect(screen.getByRole("heading", { name: "Jobs" })).toBeInTheDocument();
   });
 
-  it("redirects /knowledge to /knowledge/observations", () => {
+  it("redirects /knowledge to /knowledge/observations (Observed aliases)", () => {
     stubFetch();
     renderAt("/knowledge/observations");
-    expect(screen.getByRole("heading", { name: /Knowledge.*Observations/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Observed aliases" })).toBeInTheDocument();
   });
 
-  it("renders Administration/Providers at /providers", () => {
+  it("renders Providers under Administration at /providers", () => {
     stubFetch();
     renderAt("/providers");
-    expect(screen.getByRole("heading", { name: /Administration.*Providers/ })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: /Administration — Providers/ })).toBeInTheDocument();
   });
 
-  it("shows the layout (header, navigation, breadcrumb, footer)", () => {
-    stubFetch();
+  it("shows the brand header, global search, semantic breadcrumb and footer", () => {
     renderAt("/jobs");
-    expect(screen.getByText("OSAP")).toBeInTheDocument();
+    expect(screen.getAllByText("OpenMusicRepository").length).toBeGreaterThan(0);
+    expect(screen.getByLabelText("search")).toBeInTheDocument();
     expect(screen.getByRole("navigation", { name: /breadcrumb/ })).toBeInTheDocument();
-    expect(screen.getByText(/Open Sheet Music Aggregation Platform/)).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Searches" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Jobs" })).toBeInTheDocument();
+    expect(screen.getAllByText(/powered by OSAP/).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: "Home" }).length).toBeGreaterThan(0);
+    expect(screen.getByRole("link", { name: "Discover" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Sources" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Knowledge" })).toBeInTheDocument();
   });
 });

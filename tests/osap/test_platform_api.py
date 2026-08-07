@@ -280,6 +280,75 @@ def test_system_endpoints() -> None:
     assert stats["searches"] == 0
 
 
+# --- repository sources (Source Catalog) -------------------------------------
+
+
+def test_repository_sources_list() -> None:
+    client = _client()
+    body = client.get("/api/v1/repository-sources").json()
+    assert body["success"] is True
+    sources = body["data"]
+    assert any(s["source_id"] == "imslp" for s in sources)
+    first = sources[0]
+    assert {"source_id", "name", "type", "origin", "trust", "status", "quality"} <= set(first)
+
+
+def test_repository_source_ficha() -> None:
+    client = _client()
+    body = client.get("/api/v1/repository-sources/imslp").json()
+    assert body["success"] is True
+    source = body["data"]
+    assert source["quality"] == 96
+    assert "MusicXML" in source["formats"]
+    assert source["representations"] > 0
+    assert "Baroque" in source["coverage"]
+
+
+def test_repository_source_missing_returns_404() -> None:
+    client = _client()
+    resp = client.get("/api/v1/repository-sources/nope")
+    assert resp.status_code == 404
+    assert resp.json()["error"]["code"] == "NOT_FOUND"
+
+
+# --- session sources (user can add sources) ---------------------------------
+
+
+def test_add_analyze_use_forget_source() -> None:
+    client = _client()
+    created = client.post("/api/v1/sources", json={"name": "Mi carpeta", "type": "Local", "location": "/x"})
+    assert created.status_code == 201
+    source_id = created.json()["data"]["source_id"]
+
+    analyzed = client.post(f"/api/v1/sources/{source_id}/analyze")
+    assert analyzed.json()["data"]["status"] == "ANALYZED"
+
+    used = client.post(f"/api/v1/sources/{source_id}/use")
+    assert used.json()["data"]["status"] == "USED"
+
+    listed = client.get("/api/v1/sources").json()["data"]
+    assert source_id in [s["source_id"] for s in listed]
+
+    deleted = client.delete(f"/api/v1/sources/{source_id}")
+    assert deleted.status_code == 200
+    assert client.get("/api/v1/sources").json()["data"] == []
+
+
+def test_session_source_missing_returns_404() -> None:
+    client = _client()
+    assert client.get("/api/v1/sources/nope").status_code == 404
+    assert client.delete("/api/v1/sources/nope").status_code == 404
+    assert client.post("/api/v1/sources/nope/analyze").status_code == 404
+
+
+def test_discover_sources() -> None:
+    client = _client()
+    body = client.get("/api/v1/discover/sources").json()
+    assert body["success"] is True
+    ids = [d["source_id"] for d in body["data"]]
+    assert "imslp" in ids
+
+
 # --- OpenAPI ----------------------------------------------------------------
 
 

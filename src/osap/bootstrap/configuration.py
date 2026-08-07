@@ -15,9 +15,6 @@ class Configuration:
     connectivity_available: bool = True
     library_root: str = "osap_library"
     imslp_base_url: str = "https://api.imslp.org"
-    pdmx_csv_url: str = "https://zenodo.org/records/15571083/files/PDMX.csv?download=1"
-    pdmx_index_path: str = "pdmx_index.db"
-    pdmx_download_base: str | None = None
     resource_auto_install: bool = True
     resource_auto_install_size_threshold: int | None = 1_000_000_000  # 1 GB
     github_token: str | None = None
@@ -28,26 +25,16 @@ class Configuration:
     imslp_verify_ssl: bool = True
     omr_base_url: str | None = None
     omr_api_key: str | None = None
-    datasets_cache_dir: str | None = None
-    datasets_mode: str = "auto"
-    datasets_num_proc: int | None = None
-    datasets_download_mode: str = "reuse_dataset_if_exists"
-    datasets_max_disk_usage: int | None = None
-    datasets_auto_update: bool = False
     credentials_path: str = "osap_credentials.db"
     credentials_key: str | None = None
 
 
 # Campo -> (sección TOML, clave TOML, variable de entorno)
 _CONFIG_FIELDS: dict[str, tuple[str, str, str]] = {
-    "pdmx_download_base": ("pdmx", "download_base", "OSAP_PDMX_DOWNLOAD_BASE"),
-    "pdmx_csv_url": ("pdmx", "csv_url", "OSAP_PDMX_CSV_URL"),
-    "pdmx_index_path": ("pdmx", "index_path", "OSAP_PDMX_INDEX_PATH"),
     "library_root": ("osap", "library_root", "OSAP_LIBRARY_ROOT"),
     "imslp_base_url": ("osap", "imslp_base_url", "OSAP_IMSLP_BASE_URL"),
     "omr_base_url": ("omr", "base_url", "OSAP_OMR_BASE_URL"),
     "omr_api_key": ("omr", "api_key", "OSAP_OMR_API_KEY"),
-    "datasets_cache_dir": ("osap", "datasets_cache_dir", "OSAP_DATASETS_CACHE_DIR"),
 }
 
 

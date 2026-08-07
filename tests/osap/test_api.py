@@ -87,32 +87,10 @@ class FakeRanking(IRankingEngine):
 
 
 def _container() -> Container:
-    from src.osap.domain.dataset_descriptor import DatasetDescriptor
-    from src.osap.domain.value_objects import DatasetId
-    from src.osap.infrastructure.datasets import InMemoryDatasetRegistry
-    from src.osap.infrastructure.datasets.dataset_installer import IDatasetInstaller, ProgressCallback
-    from src.osap.infrastructure.datasets.dataset_manager import DatasetManager
-    from src.osap.infrastructure.datasets.dataset_settings import DatasetSettings
     from src.osap.infrastructure.events import InMemoryEventBus
     from src.osap.infrastructure.jobs import InMemoryJobEngine
     from src.osap.infrastructure.metrics import InMemoryMetricsCollector
     from src.osap.infrastructure.user_profile import InMemoryUserProfileStore
-
-    class _FakeInstaller(IDatasetInstaller):
-        def install(self, d: DatasetDescriptor, s: DatasetSettings, p: ProgressCallback) -> None:  # noqa: ARG002
-            pass
-
-        def update(self, d: DatasetDescriptor, s: DatasetSettings, p: ProgressCallback) -> None:  # noqa: ARG002
-            pass
-
-        def remove(self, did: DatasetId, s: DatasetSettings) -> None:  # noqa: ARG002
-            pass
-
-        def verify(self, d: DatasetDescriptor, s: DatasetSettings) -> bool:  # noqa: ARG002
-            return False
-
-        def location(self, did: DatasetId, s: DatasetSettings) -> str | None:  # noqa: ARG002
-            return None
 
     container = Container()
     container.register_catalog_provider(FakeCatalog())
@@ -122,17 +100,6 @@ def _container() -> Container:
     container.set_platform(bus, InMemoryMetricsCollector())
     container.set_job_engine(InMemoryJobEngine(bus))
     container.set_user_profile_store(InMemoryUserProfileStore())
-    registry = InMemoryDatasetRegistry()
-    registry.register(
-        DatasetDescriptor(
-            dataset_id=DatasetId("pdmx"),
-            name="PDMX",
-            hf_path="openmusic/pdmx",
-            expected_size_bytes=1,
-            license="Public Domain",
-        )
-    )
-    container.set_dataset_manager(DatasetManager(registry, _FakeInstaller(), DatasetSettings(cache_dir=None)))
     return container
 
 
@@ -189,13 +156,6 @@ class TestApi:
         resp = client.get("/api/v1/library")
         assert resp.status_code == 200
         assert resp.json() == []
-
-    def test_datasets_lists_pdmx(self, client: TestClient) -> None:
-        resp = client.get("/api/v1/datasets")
-        assert resp.status_code == 200
-        data = resp.json()
-        assert any(d["dataset_id"] == "pdmx" for d in data)
-        assert data[0]["status"] in ("not_present", "ready", "downloading", "streaming", "error")
 
     def test_settings(self, client: TestClient) -> None:
         resp = client.get("/api/v1/settings")

@@ -1,0 +1,11 @@
+search:
+  method: GET
+  path: /repos/{owner}/{repo}/git/trees/{tree_sha}?recursive=1
+
+resource:
+  method: GET
+  path: /repos/{owner}/{repo}/contents/{path}
+
+download:
+  method: GET
+  path: /raw/{owner}/{repo}/{branch}/{path}

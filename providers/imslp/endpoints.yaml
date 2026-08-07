@@ -1,0 +1,23 @@
+lookup:
+  method: GET
+  path: /imslpscripts/API.ISCR.php
+  query:
+    q: "{query}"
+
+search:
+  method: GET
+  path: /imslpscripts/API.ISCR.php
+  query:
+    q: "{query}"
+    account: worklist/disclaimer=1
+    sortby: alphabetically
+
+resource:
+  method: GET
+  path: /imslpscripts/API.ISCR.php
+  query:
+    id: "{id}"
+
+download:
+  method: GET
+  path: /wiki/Special:ImagefromIndex/{resource_id}

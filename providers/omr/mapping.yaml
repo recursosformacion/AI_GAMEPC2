@@ -1,0 +1,47 @@
+works:
+  id: id
+  title: title
+  composer: composer
+  catalogue: catalogue
+
+  subtitle: metadata.subtitle
+  artist: metadata.artist
+  song_name: metadata.song_name
+  opus: metadata.opus
+
+  musical_key: metadata.musical_key
+  duration: metadata.duration
+  measures: metadata.measures
+  pages: metadata.pages
+  parts: metadata.parts
+  complexity: metadata.complexity
+
+  license: metadata.license
+  public_domain: metadata.public_domain
+
+  description: metadata.description
+  thumbnails: metadata.thumbnails
+
+  genres: metadata.genres
+  tags: metadata.tags
+  instruments: metadata.instruments
+  parts_names: metadata.parts_names
+
+  favorites: statistics.favorites
+  downloads: statistics.downloads
+  views: statistics.views
+  rating: statistics.rating
+
+  array: resources
+
+  fields:
+    id: id
+    format: format
+    mime_type: mime_type
+    available: available
+    license: license
+
+  links:
+    download: links.download
+    view: links.view
+    thumbnail: links.thumbnail
