@@ -27,7 +27,10 @@ class MediaWikiClient:
         *,
         cache: ICache | None = None,
         rate_limit: float = 1.0,
-        user_agent: str = "osap/1.0",
+        user_agent: str = (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+            "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+        ),
         verify: bool = True,
     ) -> None:
         self._base_url = base_url.rstrip("/")
@@ -188,7 +191,12 @@ class MediaWikiClient:
         return payload
 
     def _headers(self) -> dict[str, str]:
-        return {"User-Agent": self._ua}
+        return {
+            "User-Agent": self._ua,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9,es;q=0.8",
+            "Connection": "keep-alive",
+        }
 
     def _wait(self) -> None:
         elapsed = time.monotonic() - self._last_call

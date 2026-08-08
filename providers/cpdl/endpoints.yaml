@@ -1,0 +1,8 @@
+search:
+  method: GET
+  path: /api.php
+  query:
+    action: query
+    list: search
+    srsearch: "{query}"
+    format: json

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { RepresentationInfo, SearchResultItem } from "../api/types";
 import { EmptyState } from "../components/EmptyState";
+import { WorkDetailTabs } from "../components/WorkDetailTabs";
 import { useI18n } from "../i18n/I18n";
 import { useSearches } from "../state/searches";
 
@@ -109,37 +110,13 @@ export function CandidatesPage() {
               </div>
               {isOpen ? (
                 <div className="overflow-hidden rounded-b-lg border border-t-0 border-osap-border bg-osap-surface">
-                  <div className="grid grid-cols-[1fr_auto_auto] items-center gap-3 border-b border-osap-border px-3 py-1.5 text-xs font-medium uppercase tracking-wide text-osap-muted">
-                    <span>Title</span>
-                    <span className="w-24">Author</span>
-                    <span className="w-20 text-right">Action</span>
-                  </div>
-                  <ul className="divide-y divide-osap-border">
-                    {reps.map((rep, i) => {
-                      const href = `/api/v1/representations/${rep.id}/download`;
-                      return (
-                        <li
-                          key={`${rep.provider}-${rep.format}-${i}`}
-                          className="grid grid-cols-[1fr_auto_auto] items-center gap-3 px-3 py-2 text-sm"
-                        >
-                          <span>
-                            <span className="font-medium">{rep.title || rep.format}</span>
-                            <span className="ml-2 text-xs text-osap-muted">
-                              {rep.provider} · {rep.format}
-                            </span>
-                          </span>
-                          <span className="w-24 text-osap-muted">
-                            {c.work.composer ? c.work.composer : "—"}
-                          </span>
-                          <span className="w-20 text-right">
-                            <a href={href} target="_blank" rel="noopener noreferrer" className="text-osap-accent">
-                              View
-                            </a>
-                          </span>
-                        </li>
-                      );
-                    })}
-                  </ul>
+                  <WorkDetailTabs
+                    work={c.work}
+                    representations={reps}
+                    score={c.score}
+                    evidence={c.items[0]?.evidence}
+                    relationships={c.items[0]?.relationships}
+                  />
                 </div>
               ) : null}
             </li>

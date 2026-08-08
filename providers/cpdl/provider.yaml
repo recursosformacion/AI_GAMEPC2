@@ -1,0 +1,14 @@
+id: cpdl
+name: CPDL
+version: 1.3
+enabled: true
+priority: 100
+base_url: https://www.cpdl.org/wiki
+authentication:
+  type: none
+contract:
+  version: 1.3
+  search_endpoint: search
+  lookup_endpoint: lookup
+  resource_endpoint: resource
+  download_endpoint: download

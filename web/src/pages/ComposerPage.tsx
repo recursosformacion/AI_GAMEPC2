@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { RepresentationInfo, SearchResultItem } from "../api/types";
 import { Card } from "../components/Card";
 import { EmptyState } from "../components/EmptyState";
+import { WorkDetailTabs } from "../components/WorkDetailTabs";
 import { useI18n } from "../i18n/I18n";
 import { useSearches } from "../state/searches";
 
@@ -66,10 +67,10 @@ export function ComposerPage() {
     if (last) void useSearches.getState().create({ ...last, page: next });
   };
 
-  const openWork = (workId: string) => {
-    // Open the Work Resolution in a NEW tab (keeps the works list clickable).
-    const searchId = useSearches.getState().data?.search_id ?? "";
-    window.open(`/resolution?search_id=${searchId}&work=${workId}`, "_blank", "noopener,noreferrer");
+  // Toggle the inline expandable panel in the same window. Opening one work
+  // closes any other that was open, and pushes the rest of the list down.
+  const toggleWork = (workId: string) => {
+    setOpen(open === workId ? null : workId);
   };
 
   return (
@@ -91,55 +92,38 @@ export function ComposerPage() {
         <ul className="divide-y divide-osap-border">
           {works.map((w) => {
             const reps = allRepresentations(w);
+            const providers = new Set(reps.map((r) => r.provider));
+            const isOpen = open === w.work.work_id;
             return (
               <li key={w.work.work_id} className="py-1">
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    onClick={() => openWork(w.work.work_id)}
-                    className="flex flex-1 items-center justify-between rounded px-1 py-2 text-left hover:bg-osap-accent-soft"
-                  >
-                    <span>
-                      <span className="text-osap-accent">{stars(w.score)}</span>{" "}
-                      <span className="font-medium">
-                        {w.work.composer ? `${w.work.composer} — ` : ""}
-                        {w.work.title}
-                      </span>
+                <button
+                  type="button"
+                  onClick={() => toggleWork(w.work.work_id)}
+                  className="flex w-full items-center justify-between rounded px-1 py-2 text-left hover:bg-osap-accent-soft"
+                >
+                  <span>
+                    <span className="text-osap-accent">{stars(w.score)}</span>{" "}
+                    <span className="font-medium">
+                      {w.work.composer ? `${w.work.composer} — ` : ""}
+                      {w.work.title}
                     </span>
+                  </span>
+                  <span className="flex items-center gap-2">
                     <span className="text-xs text-osap-muted">
-                      {reps.length} reps · {new Set(reps.map((r) => r.provider)).size} providers
+                      {reps.length} reps · {providers.size} providers
                     </span>
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="expand"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setOpen(open === w.work.work_id ? null : w.work.work_id);
-                    }}
-                    className="px-2 text-osap-muted"
-                  >
-                    {open === w.work.work_id ? "▼" : "▶"}
-                  </button>
-                </div>
-                {open === w.work.work_id ? (
-                  <div className="mb-2 rounded bg-osap-surface p-3">
-                    <ul className="space-y-1">
-                      {reps.map((rep, i) => {
-                        const href = `/api/v1/representations/${rep.id}/download`;
-                        return (
-                          <li key={`${w.work.work_id}-${rep.provider}-${rep.format}-${i}`} className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                            <span>
-                              <span className="text-osap-muted">{rep.provider}</span> · {rep.title || rep.format} ·{" "}
-                              {rep.confidence.toFixed(2)}
-                            </span>
-                            <a href={href} target="_blank" rel="noopener noreferrer" className="text-osap-accent">
-                              View
-                            </a>
-                          </li>
-                        );
-                      })}
-                    </ul>
+                    <span className="text-osap-muted">{isOpen ? "▲" : "▼"}</span>
+                  </span>
+                </button>
+                {isOpen ? (
+                  <div className="mb-2 overflow-hidden rounded bg-osap-surface">
+                    <WorkDetailTabs
+                      work={w.work}
+                      representations={reps}
+                      score={w.score}
+                      evidence={w.items[0]?.evidence}
+                      relationships={w.items[0]?.relationships}
+                    />
                   </div>
                 ) : null}
               </li>

@@ -26,6 +26,12 @@ osap/
 └── old/    Documentos obsoletos (histórico, no se editan)
 ```
 
+## Para empezar a trabajar
+
+- **`dev-environment.md`** — **LEER PRIMERO**: cómo levantar el entorno (Apache `osap-app`
+  sirve `web/dist` y proxya `/api` a uvicorn 8001). Cómo hacer cambios de frontend
+  (rebuild `web/dist`) y de backend (reiniciar uvicorn). Evita errores conocidos.
+
 ## Documentos fundamentales
 
 1. `v2/osap-architecture-book.md` — **fuente de verdad técnica** de OSAP V2.2.

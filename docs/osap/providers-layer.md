@@ -184,6 +184,37 @@ a objetos internos. La descarga la hace OSAP-API a través de `links.download` (
 Los antiguos `IMSLPProvider.download()`, `OMRProvider.download()` y
 `OpenScoreProvider.download()` desaparecen: esa lógica pertenece ahora al proveedor REST.
 
+## Estado de los proveedores
+
+| Proveedor | Nivel | Tipo | Estado |
+|---|---|---|---|
+| `omr` | 1 | REST (`storage.openmusicrepository.com`) | **Activo** (wiring) |
+| `imslp` | 2 | MediaWiki (`MediaWikiFetcher`) | **Activo** (wiring) |
+| `openscore` | 2 | GitHub (`GitHubFetcher`) | **Activo** (wiring) |
+| `local` | 3 | Ficheros | **Activo** (wiring) |
+| `cpdl` | 2 | MediaWiki (`MediaWikiFetcher`) | **Definido, NO cableado** |
+
+### CPDL (Choral Public Domain Library)
+
+- Misma tecnología que IMSLP (MediaWiki), por lo que **reutiliza `MediaWikiFetcher`**
+  con `base_url = https://www.cpdl.org/wiki`. Solo hay que añadir `providers/cpdl/` y
+  registrarlo en `wiring.py`:
+  ```python
+  container.register_catalog_provider(
+      RemoteCatalogProvider(
+          definition_path=providers_root / "cpdl",
+          fetcher=MediaWikiFetcher(MediaWikiClient(base_url="https://www.cpdl.org/wiki")),
+      )
+  )
+  ```
+- **Bloqueado**: el sitio responde **HTTP 403 Cloudflare** (`Server: cloudflare`, con
+  `cf-ray`) incluso desde la página principal. Es un bloqueo por huella TLS/IP + JS
+  challenge, **no** lo resuelve el User-Agent. Desde `urllib` puro no es accesible.
+- **Pendiente**: desbloquear el acceso (proxy, navegador real con challenge, o mirror)
+  antes de activar. La definición declarativa ya existe en `providers/cpdl/`.
+- Nota: `MediaWikiClient` usa por defecto un **User-Agent de navegador real**
+  (Mozilla/Chrome completo) para reducir bloqueos basados en UA.
+
 ## Objetivo de diseño
 
 > El primer proveedor funcional sigue siendo **osap-storage**. La generalización surge de
