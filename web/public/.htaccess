@@ -1,0 +1,9 @@
+# Evitar cacheo de las páginas HTML mientras la app está en desarrollo activo.
+# Los assets con hash (JS/CSS) sí se pueden cachear: cambian de nombre en cada build.
+<IfModule mod_headers.c>
+    <FilesMatch "\.(html)$">
+        Header set Cache-Control "no-store, no-cache, must-revalidate, max-age=0"
+        Header set Pragma "no-cache"
+        Header set Expires "0"
+    </FilesMatch>
+</IfModule>
