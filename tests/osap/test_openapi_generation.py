@@ -132,7 +132,7 @@ _PATHS = {
     "/api/v1/system/statistics",
 }
 
-_FORBIDDEN = ("matcher", "ranking", "merge", "evidence", "knowledgecollector", "knowledgemin")
+_FORBIDDEN = ("matcher", "ranking", "mergeengine", "evidence", "knowledgecollector", "knowledgemin")
 
 
 def test_openapi_json_exists() -> None:
@@ -189,7 +189,7 @@ def test_five_tags_grouped() -> None:
         for operation in path.values()
         if isinstance(operation, dict)
     }
-    assert tags == {"Searches", "Jobs", "Providers", "Knowledge", "Votes", "System", "Sources"}
+    assert tags == {"Searches", "Jobs", "Providers", "Knowledge", "Votes", "Composers", "System", "Sources"}
 
 
 def test_examples_in_all_endpoints() -> None:

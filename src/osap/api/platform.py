@@ -38,6 +38,7 @@ from src.osap.api.contracts import (
     WorkRelationships,
 )
 from src.osap.application.canonicalizer import Canonicalizer
+from src.osap.application.composers_service import ComposersService
 from src.osap.application.jobs import DefaultJob
 from src.osap.application.votes_service import VotesService
 from src.osap.bootstrap.container import Container
@@ -608,6 +609,23 @@ class PlatformApi:
 
     def votes_overview(self) -> dict[str, object]:
         return self.votes().overview()
+
+    # --- compositores (consulta pública + fusión admin) ----------------------
+
+    def composers(self) -> ComposersService:
+        return self._container.composers_service()
+
+    def list_composers(self, q: str | None, limit: int, offset: int) -> dict[str, object]:
+        return self.composers().list_composers(q, limit, offset)
+
+    def get_composer(self, composer_id: str) -> dict[str, object] | None:
+        return self.composers().get_composer(composer_id)
+
+    def composer_works(self, composer_id: str, limit: int, offset: int) -> dict[str, object]:
+        return self.composers().composer_works(composer_id, limit, offset)
+
+    def merge_composers(self, token: str | None, target_id: str, source_ids: list[str]) -> dict[str, object]:
+        return self.composers().merge_composers(token, target_id, source_ids)
 
     # --- knowledge (read-only) ----------------------------------------------
 

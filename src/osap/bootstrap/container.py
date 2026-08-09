@@ -1,4 +1,5 @@
 from src.osap.application.catalog_manager import CatalogManager
+from src.osap.application.composers_service import ComposersService
 from src.osap.application.evidence_engine import EvidenceEngine
 from src.osap.application.export_manager import ExportManager
 from src.osap.application.library_manager import LibraryManager
@@ -54,6 +55,7 @@ class Container:
         self._work_store: IWorkStore | None = None
         self._authenticator: IAuthenticator | None = None
         self._votes_service: VotesService | None = None
+        self._composers_service: ComposersService | None = None
 
     def register_catalog_provider(self, provider: ICatalogProvider) -> None:
         self._catalog_providers.append(provider)
@@ -74,6 +76,14 @@ class Container:
         if self._votes_service is None:
             raise RuntimeError("VotesService not wired")
         return self._votes_service
+
+    def set_composers(self, service: ComposersService) -> None:
+        self._composers_service = service
+
+    def composers_service(self) -> ComposersService:
+        if self._composers_service is None:
+            raise RuntimeError("ComposersService not wired")
+        return self._composers_service
 
     def vote_store(self) -> IVoteStore:
         if self._vote_store is None:

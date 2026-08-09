@@ -13,11 +13,16 @@ import urllib.request
 import uuid
 from typing import TYPE_CHECKING, Any, cast
 
-from fastapi import FastAPI, Header, Response
+from fastapi import FastAPI, Header, Query, Response
 from fastapi.responses import StreamingResponse
 
 from src.osap.api.contracts import (
+    ComposerDetailResponse,
+    ComposerListResponse,
     ComposerStatisticsResponse,
+    ComposerSummaryResponse,
+    ComposerWorkRefResponse,
+    ComposerWorksResponse,
     DiscoverSource,
     ErrorBody,
     ErrorEnvelope,
@@ -27,6 +32,8 @@ from src.osap.api.contracts import (
     KnowledgeFactDTO,
     KnowledgeObservationDTO,
     KnowledgeSuggestionDTO,
+    MergeComposersRequest,
+    MergeComposersResultResponse,
     ProviderResponse,
     RepositorySource,
     RepositorySourceSummary,
@@ -328,6 +335,74 @@ def _composer_stats_dto(d: dict[str, object]) -> ComposerStatisticsResponse:
         vote_count=cast("int", d["vote_count"]),
         vote_average=cast("float | None", d["vote_average"]),
     )
+
+
+def _composer_summary_dto(d: dict[str, object]) -> ComposerSummaryResponse:
+    return ComposerSummaryResponse(
+        id=cast("str", d.get("id") or ""),
+        name=cast("str", d.get("name") or ""),
+        status=cast("str", d.get("status") or "active"),
+        aliases_count=cast("int", d.get("aliases_count") or 0),
+        works_count=cast("int", d.get("works_count") or 0),
+    )
+
+
+def _composer_list_dto(d: dict[str, object]) -> ComposerListResponse:
+    items = d.get("items")
+    raw_items = items if isinstance(items, list) else []
+    return ComposerListResponse(
+        items=[_composer_summary_dto(dict(i)) for i in raw_items if isinstance(i, dict)],
+        total=cast("int", d.get("total") or 0),
+    )
+
+
+def _composer_detail_dto(d: dict[str, object]) -> ComposerDetailResponse:
+    aliases = d.get("aliases")
+    raw_aliases = aliases if isinstance(aliases, list) else []
+    return ComposerDetailResponse(
+        id=cast("str", d.get("id") or ""),
+        name=cast("str", d.get("name") or ""),
+        status=cast("str", d.get("status") or "active"),
+        aliases=[str(a) for a in raw_aliases if isinstance(a, str)],
+        works_count=cast("int", d.get("works_count") or 0),
+        merged_into=cast("str | None", d.get("merged_into")),
+        merged_at=_iso_or_none(d.get("merged_at")),
+    )
+
+
+def _composer_works_dto(d: dict[str, object]) -> ComposerWorksResponse:
+    items = d.get("items")
+    raw_items = items if isinstance(items, list) else []
+    return ComposerWorksResponse(
+        items=[_composer_work_ref(dict(i)) for i in raw_items if isinstance(i, dict)],
+        total=cast("int", d.get("total") or 0),
+    )
+
+
+def _composer_work_ref(d: dict[str, object]) -> ComposerWorkRefResponse:
+    return ComposerWorkRefResponse(
+        work_id=cast("int", d.get("work_id") or 0),
+        title=cast("str | None", d.get("title")),
+        composer_id=cast("str | None", d.get("composer_id")),
+    )
+
+
+def _merge_result_dto(d: dict[str, object]) -> MergeComposersResultResponse:
+    sources = d.get("sources_merged")
+    raw_sources = sources if isinstance(sources, list) else []
+    return MergeComposersResultResponse(
+        target_id=cast("str", d.get("target_id") or ""),
+        sources_merged=[str(s) for s in raw_sources if isinstance(s, str)],
+        aliases_transferred=cast("int", d.get("aliases_transferred") or 0),
+        works_moved=cast("int", d.get("works_moved") or 0),
+        merge_operation_id=cast("str | None", d.get("merge_operation_id")),
+    )
+
+
+def _iso_or_none(value: object) -> str | None:
+    if value is None:
+        return None
+    return str(value)
 
 
 def _standard_errors(*codes: int) -> dict[int | str, dict[str, Any]]:
@@ -887,5 +962,83 @@ def create_platform_app(
                 last_execution=cast("dict[str, object] | None", overview["last_execution"]),
             )
         )
+
+    # --- compositores (consulta pública + fusión admin) ----------------------
+
+    @app.get(
+        "/api/v1/composers",
+        tags=["Composers"],
+        summary="List composers",
+        description="Consulta pública de compositores (listado, q, paginado). Backend: osap-storage con storage:read.",
+        response_model=SuccessEnvelope[ComposerListResponse],
+        responses={200: _resp("Composers list", _example({})), **_standard_errors()},
+    )
+    def list_composers(
+        q: str | None = Query(default=None),
+        limit: int = Query(50, ge=1, le=500),
+        offset: int = Query(0, ge=0),
+    ) -> SuccessEnvelope[object]:
+        return ok(_composer_list_dto(api.list_composers(q, limit, offset)))
+
+    @app.get(
+        "/api/v1/composers/{composer_id}",
+        tags=["Composers"],
+        summary="Composer detail",
+        description="Detalle de un compositor. Backend: osap-storage con storage:read.",
+        response_model=SuccessEnvelope[ComposerDetailResponse] | ErrorEnvelope,
+        responses={200: _resp("Composer detail", _example({})), 404: _NOT_FOUND_404, **_standard_errors()},
+    )
+    def get_composer(composer_id: str, response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
+        detail = api.get_composer(composer_id)
+        if detail is None:
+            return fail(404, response, "NOT_FOUND", "Composer not found")
+        return ok(_composer_detail_dto(detail))
+
+    @app.get(
+        "/api/v1/composers/{composer_id}/works",
+        tags=["Composers"],
+        summary="Composer works",
+        description="Obras de un compositor. Backend: osap-storage con storage:read.",
+        response_model=SuccessEnvelope[ComposerWorksResponse],
+        responses={200: _resp("Composer works", _example({})), **_standard_errors()},
+    )
+    def composer_works(
+        composer_id: str,
+        limit: int = Query(50, ge=1, le=500),
+        offset: int = Query(0, ge=0),
+    ) -> SuccessEnvelope[object]:
+        return ok(_composer_works_dto(api.composer_works(composer_id, limit, offset)))
+
+    @app.post(
+        "/api/v1/admin/composers/{target_id}/merge",
+        status_code=200,
+        tags=["Composers"],
+        summary="Merge composers (admin)",
+        description="Fusiona source_ids dentro de target_id. Exige role=admin; "
+        "backend: osap-storage con storage:admin.",
+        response_model=SuccessEnvelope[MergeComposersResultResponse] | ErrorEnvelope,
+        responses={
+            200: _resp("Merge result", _example({})),
+            401: _UNAUTHORIZED_401,
+            403: _FORBIDDEN_403,
+            404: _NOT_FOUND_404,
+            **_standard_errors(422),
+        },
+    )
+    def merge_composers(
+        target_id: str,
+        payload: MergeComposersRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            result = api.merge_composers(authorization, target_id, payload.source_ids)
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return fail(404, response, "NOT_FOUND", "Composer not found")
+        return ok(_merge_result_dto(result))
 
     return app

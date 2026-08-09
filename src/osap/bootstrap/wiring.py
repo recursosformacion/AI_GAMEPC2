@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from src.osap.application.composers_service import ComposersService
 from src.osap.application.votes_service import VotesService
 from src.osap.bootstrap.configuration import Configuration, load_configuration
 from src.osap.bootstrap.container import Container
@@ -32,6 +33,7 @@ from src.osap.infrastructure.providers.fetchers import (
     OmrStorageFetcher,
 )
 from src.osap.infrastructure.rankings import DefaultRankingEngine
+from src.osap.infrastructure.storage.storage_composer_client import StorageComposerClient
 from src.osap.infrastructure.storage.work_store import StorageWorkStore
 from src.osap.infrastructure.user_profile import InMemoryUserProfileStore
 
@@ -144,6 +146,14 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     container.set_work_store(work_store)
     container.set_authenticator(authenticator)
     container.set_votes(votes_service)
+
+    # --- compositores (consulta pública + fusión admin) ----------------------
+    composer_client = StorageComposerClient(
+        base_url=storage_base,
+        token_provider=service_token_provider,
+    )
+    composers_service = ComposersService(composer_client, authenticator)
+    container.set_composers(composers_service)
 
     # Consumir user.deleted (osap-auth): anonimiza votos y conserva el agregado.
     def _on_user_deleted(event: Event) -> None:

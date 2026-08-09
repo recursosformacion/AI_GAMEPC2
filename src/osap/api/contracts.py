@@ -304,6 +304,55 @@ class VotesOverviewResponse(_Frozen):
     last_execution: dict[str, object] | None = None
 
 
+# --- compositores (consulta pública + fusión admin) --------------------------
+
+
+class ComposerSummaryResponse(_Frozen):
+    id: str
+    name: str
+    status: str
+    aliases_count: int = 0
+    works_count: int = 0
+
+
+class ComposerListResponse(_Frozen):
+    items: list[ComposerSummaryResponse] = []
+    total: int = 0
+
+
+class ComposerDetailResponse(_Frozen):
+    id: str
+    name: str
+    status: str
+    aliases: list[str] = []
+    works_count: int = 0
+    merged_into: str | None = None
+    merged_at: str | None = None
+
+
+class ComposerWorkRefResponse(_Frozen):
+    work_id: int
+    title: str | None = None
+    composer_id: str | None = None
+
+
+class ComposerWorksResponse(_Frozen):
+    items: list[ComposerWorkRefResponse] = []
+    total: int = 0
+
+
+class MergeComposersRequest(_Frozen):
+    source_ids: list[str]
+
+
+class MergeComposersResultResponse(_Frozen):
+    target_id: str
+    sources_merged: list[str] = []
+    aliases_transferred: int = 0
+    works_moved: int = 0
+    merge_operation_id: str | None = None
+
+
 class SuccessEnvelope(_Frozen, Generic[T]):  # noqa: UP046
     success: bool
     request_id: str
