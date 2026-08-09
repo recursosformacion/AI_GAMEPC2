@@ -1,15 +1,13 @@
 id: cpdl
-name: CPDL (resuelto vía OMR/osap-storage)
+name: CPDL
 version: 1.3
 enabled: true
 priority: 100
-# NO es un conector directo: no se conecta a cpdl.org. El contenido CPDL se sirve a través
-# del proveedor `omr` (osap-storage). osap-api actúa como API; el usuario no conecta con CPDL.
-base_url: https://storage.openmusicrepository.com
+base_url: https://www.cpdl.org/wiki
 native_formats: [pdf]
 authentication:
   type: none
-protocol: via-omr        # resuelto por el proveedor omr; NO cablear conector directo
+protocol: mediawiki      # definido; NO cableado como conector directo en esta fase
 contract:
   version: 1.3
   search_endpoint: search

@@ -6,7 +6,6 @@ Nunca representan un usuario.
 """
 
 import json
-import urllib.parse
 import urllib.request
 
 from src.osap.ports.service_token import IServiceTokenProvider
@@ -33,7 +32,7 @@ class ClientCredentialsServiceTokenProvider(IServiceTokenProvider):
         self._timeout = timeout
 
     def token(self, scopes: tuple[str, ...]) -> str:
-        data = urllib.parse.urlencode(
+        payload = json.dumps(
             {
                 "grant_type": "client_credentials",
                 "client_id": self._client_id,
@@ -43,8 +42,8 @@ class ClientCredentialsServiceTokenProvider(IServiceTokenProvider):
         ).encode("utf-8")
         request = urllib.request.Request(
             self._token_url,
-            data=data,
-            headers={"User-Agent": _USER_AGENT, "Content-Type": "application/x-www-form-urlencoded"},
+            data=payload,
+            headers={"User-Agent": _USER_AGENT, "Content-Type": "application/json"},
             method="POST",
         )
         with urllib.request.urlopen(request, timeout=self._timeout) as response:  # noqa: S310 (auth token endpoint)
