@@ -1,0 +1,20 @@
+lookup:
+  method: GET
+  path: /ws/2/work/
+  query:
+    query: "{query}"
+    fmt: json
+
+search:
+  method: GET
+  path: /ws/2/work/
+  query:
+    query: "{query}"
+    fmt: json
+    limit: "{limit}"
+
+resource:
+  method: GET
+  path: /ws/2/work/{id}
+  query:
+    fmt: json

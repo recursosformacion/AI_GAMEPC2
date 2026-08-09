@@ -27,6 +27,7 @@ from src.osap.infrastructure.providers.adapters.generic_provider_adapter import 
 from src.osap.infrastructure.providers.fetchers import (
     GitHubFetcher,
     MediaWikiFetcher,
+    MusicBrainzFetcher,
     MutopiaFetcher,
     OmrStorageFetcher,
 )
@@ -82,6 +83,12 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
         RemoteCatalogProvider(
             definition_path=providers_root / "mutopia",
             fetcher=MutopiaFetcher(),
+        )
+    )
+    container.register_catalog_provider(
+        RemoteCatalogProvider(
+            definition_path=providers_root / "musicbrainz",
+            fetcher=MusicBrainzFetcher(),
         )
     )
     container.register_catalog_provider(LocalCatalogProvider(Path(config.library_root)))

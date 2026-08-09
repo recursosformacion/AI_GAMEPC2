@@ -1,0 +1,17 @@
+id: musicbrainz
+name: MusicBrainz
+version: 1.3
+enabled: true
+priority: 100
+base_url: https://musicbrainz.org
+native_formats: [json]
+conversion: ninguno (metadata + enlace; sin fichero de partitura)
+authentication:
+  type: none
+protocol: rest           # MusicBrainz WS/2 (work search) -> MusicBrainzFetcher, Nivel 2
+contract:
+  version: 1.3
+  search_endpoint: search
+  lookup_endpoint: lookup
+  resource_endpoint: resource
+  download_endpoint: download
