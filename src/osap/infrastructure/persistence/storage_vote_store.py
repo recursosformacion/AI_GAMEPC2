@@ -16,6 +16,7 @@ from src.osap.domain.votes import (
     WorkStats,
     WorkVote,
 )
+from src.osap.ports.service_token import IServiceTokenProvider
 from src.osap.ports.votes import IVoteStore
 
 _USER_AGENT = (
@@ -35,9 +36,11 @@ class StorageVoteStore(IVoteStore):
         self,
         base_url: str = "https://storage.openmusicrepository.com",
         timeout: int = 15,
+        token_provider: IServiceTokenProvider | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._timeout = timeout
+        self._token_provider = token_provider
 
     def insert_vote(self, vote: WorkVote) -> WorkVote:
         payload: dict[str, object] = {
@@ -48,7 +51,7 @@ class StorageVoteStore(IVoteStore):
             "voted_at": vote.voted_at.isoformat() if vote.voted_at else None,
             "vote_day": vote.vote_day,
         }
-        status, doc = self._call("POST", "/api/v1/votes", payload)
+        status, doc = self._call("POST", "/api/v1/votes", payload, scope="storage:write")
         if status == 409:
             raise DuplicateVoteError("Already voted for this work today")
         if not 200 <= status < 300:
@@ -56,19 +59,19 @@ class StorageVoteStore(IVoteStore):
         return vote
 
     def work_statistics(self, work_id: str) -> WorkStats | None:
-        status, doc = self._call("GET", f"/api/v1/works/{_q(work_id)}/statistics")
+        status, doc = self._call("GET", f"/api/v1/works/{_q(work_id)}/statistics", scope="storage:read")
         if not 200 <= status < 300 or not isinstance(doc, dict):
             return None
         return _work_stats(work_id, doc)
 
     def composer_statistics(self, composer_id: str) -> ComposerStats | None:
-        status, doc = self._call("GET", f"/api/v1/composers/{_q(composer_id)}/statistics")
+        status, doc = self._call("GET", f"/api/v1/composers/{_q(composer_id)}/statistics", scope="storage:read")
         if not 200 <= status < 300 or not isinstance(doc, dict):
             return None
         return _composer_stats(composer_id, doc)
 
     def anonymize_user(self, user_id: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
-        status, doc = self._call("POST", "/api/v1/votes/anonymize", {"user_id": user_id})
+        status, doc = self._call("POST", "/api/v1/votes/anonymize", {"user_id": user_id}, scope="storage:write")
         if not 200 <= status < 300 or not isinstance(doc, dict):
             return (), ()
         works = doc.get("work_ids") or []
@@ -76,13 +79,13 @@ class StorageVoteStore(IVoteStore):
         return tuple(str(w) for w in works), tuple(str(c) for c in composers)
 
     def total_votes(self) -> int:
-        status, doc = self._call("GET", "/api/v1/votes/overview")
+        status, doc = self._call("GET", "/api/v1/votes/overview", scope="storage:read")
         if not 200 <= status < 300 or not isinstance(doc, dict):
             return 0
         return int(doc.get("total_votes") or 0)
 
     def top_works(self, limit: int = 20) -> list[WorkStats]:
-        status, doc = self._call("GET", f"/api/v1/votes/top-works?limit={limit}")
+        status, doc = self._call("GET", f"/api/v1/votes/top-works?limit={limit}", scope="storage:read")
         out: list[WorkStats] = []
         for item in doc if isinstance(doc, list) else []:
             if isinstance(item, dict):
@@ -90,7 +93,7 @@ class StorageVoteStore(IVoteStore):
         return out
 
     def top_composers(self, limit: int = 20) -> list[ComposerStats]:
-        status, doc = self._call("GET", f"/api/v1/votes/top-composers?limit={limit}")
+        status, doc = self._call("GET", f"/api/v1/votes/top-composers?limit={limit}", scope="storage:read")
         out: list[ComposerStats] = []
         for item in doc if isinstance(doc, list) else []:
             if isinstance(item, dict):
@@ -98,24 +101,28 @@ class StorageVoteStore(IVoteStore):
         return out
 
     def last_execution(self) -> dict[str, object] | None:
-        status, doc = self._call("GET", "/api/v1/votes/executions/last")
+        status, doc = self._call("GET", "/api/v1/votes/executions/last", scope="storage:read")
         return doc if isinstance(doc, dict) else None
 
     # -- helpers -------------------------------------------------------------
 
-    def _call(self, method: str, path: str, payload: dict[str, object] | None = None) -> tuple[int, object]:
+    def _call(
+        self,
+        method: str,
+        path: str,
+        payload: dict[str, object] | None = None,
+        scope: str = "storage:read",
+    ) -> tuple[int, object]:
         url = self._base_url + path
         data = json.dumps(payload).encode("utf-8") if payload is not None else None
-        request = urllib.request.Request(
-            url,
-            data=data,
-            method=method,
-            headers={
-                "User-Agent": _USER_AGENT,
-                "Accept": "application/json",
-                "Content-Type": "application/json",
-            },
-        )
+        headers: dict[str, str] = {
+            "User-Agent": _USER_AGENT,
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+        }
+        if self._token_provider is not None:
+            headers["Authorization"] = f"Bearer {self._token_provider.token((scope,))}"
+        request = urllib.request.Request(url, data=data, method=method, headers=headers)
         try:
             with urllib.request.urlopen(request, timeout=self._timeout) as response:  # noqa: S310 (storage contract)
                 raw = response.read()

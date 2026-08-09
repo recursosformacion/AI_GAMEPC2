@@ -5,11 +5,13 @@ y delegación de la persistencia/agregación a **osap-storage** (``IVoteStore``)
 resuelve compositores, usuarios ni normaliza nada: eso pertenece a Storage / Auth.
 """
 
+from src.osap.domain.principal import Principal, UserPrincipal
 from src.osap.domain.votes import (
     MAX_VOTE,
     MIN_VOTE,
     ComposerStats,
     DuplicateVoteError,
+    ForbiddenError,
     InvalidVoteError,
     UnauthenticatedError,
     WorkNotFoundError,
@@ -33,21 +35,33 @@ class VotesService:
         self._works = works
         self._authenticator = authenticator
 
-    # -- autenticación -------------------------------------------------------
+    # -- autenticación / autorización ----------------------------------------
 
-    def user_id_for(self, token: str | None) -> str | None:
-        return self._authenticator.user_id_for(token)
+    def principal_for(self, token: str | None) -> Principal | None:
+        return self._authenticator.resolve(token)
 
-    def require_user(self, token: str | None) -> str:
-        user_id = self._authenticator.user_id_for(token)
-        if not user_id:
+    def require_user(self, token: str | None) -> UserPrincipal:
+        principal = self._authenticator.resolve(token)
+        if not isinstance(principal, UserPrincipal):
             raise UnauthenticatedError("Missing or invalid access token")
-        return user_id
+        return principal
+
+    def require_can_vote(self, token: str | None) -> UserPrincipal:
+        user = self.require_user(token)
+        if not user.email_verified or not user.has_role("user"):
+            raise ForbiddenError("A verified user role is required to vote")
+        return user
+
+    def require_admin(self, token: str | None) -> UserPrincipal:
+        user = self.require_user(token)
+        if not user.has_role("admin"):
+            raise ForbiddenError("Admin role required")
+        return user
 
     # -- votación ------------------------------------------------------------
 
     def cast_vote(self, token: str | None, work_id: str, vote: int) -> WorkVote:
-        user_id = self.require_user(token)
+        user = self.require_can_vote(token)
         if not isinstance(vote, int) or isinstance(vote, bool) or not (MIN_VOTE <= vote <= MAX_VOTE):
             raise InvalidVoteError(f"Vote must be between {MIN_VOTE} and {MAX_VOTE}")
 
@@ -59,7 +73,7 @@ class VotesService:
         new_vote = WorkVote(
             vote=vote,
             work_id=work_id,
-            user_id=user_id,
+            user_id=user.user_id,
             composer_id=composer_id,
             voted_at=voted_at,
         )

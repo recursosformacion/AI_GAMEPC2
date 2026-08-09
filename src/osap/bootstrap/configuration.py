@@ -25,6 +25,9 @@ class Configuration:
     imslp_verify_ssl: bool = True
     omr_base_url: str | None = None
     omr_api_key: str | None = None
+    service_client_id: str | None = None
+    service_client_secret: str | None = None
+    osap_auth_token_url: str | None = None
     credentials_path: str = "osap_credentials.db"
     credentials_key: str | None = None
 
@@ -35,6 +38,9 @@ _CONFIG_FIELDS: dict[str, tuple[str, str, str]] = {
     "imslp_base_url": ("osap", "imslp_base_url", "OSAP_IMSLP_BASE_URL"),
     "omr_base_url": ("omr", "base_url", "OSAP_OMR_BASE_URL"),
     "omr_api_key": ("omr", "api_key", "OSAP_OMR_API_KEY"),
+    "service_client_id": ("service", "client_id", "OSAP_SERVICE_CLIENT_ID"),
+    "service_client_secret": ("service", "client_secret", "OSAP_SERVICE_CLIENT_SECRET"),
+    "osap_auth_token_url": ("auth", "token_url", "OSAP_AUTH_TOKEN_URL"),
 }
 
 

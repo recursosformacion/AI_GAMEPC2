@@ -29,6 +29,10 @@ class UnauthenticatedError(Exception):
     """No se pudo autenticar la identidad del usuario."""
 
 
+class ForbiddenError(Exception):
+    """El principal no tiene permiso para realizar la operación."""
+
+
 def _validate_vote(vote: int) -> int:
     if isinstance(vote, bool) or not isinstance(vote, int) or not (MIN_VOTE <= vote <= MAX_VOTE):
         raise InvalidVoteError(f"Vote must be between {MIN_VOTE} and {MAX_VOTE}")

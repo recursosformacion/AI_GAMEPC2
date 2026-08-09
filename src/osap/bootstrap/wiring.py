@@ -9,6 +9,7 @@ from src.osap.infrastructure.adapters.export.musicxml import MusicXmlExporter
 from src.osap.infrastructure.adapters.library.local import LocalLibrary
 from src.osap.infrastructure.adapters.validation import BasicValidator
 from src.osap.infrastructure.auth import AuthenticationManager, SecureCredentialStore
+from src.osap.infrastructure.auth.service_token_provider import ClientCredentialsServiceTokenProvider
 from src.osap.infrastructure.auth.token_authenticator import JwtAuthenticator
 from src.osap.infrastructure.cache import InMemoryCache
 from src.osap.infrastructure.catalogs import LocalCatalogProvider
@@ -121,9 +122,15 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
 
     # --- votes & statistics (v1) --------------------------------------------
     # Los votos y las estadísticas viven en osap-storage (no en una BD de osap-api).
+    # osap-api se autentica frente a storage con identidad de servicio (least privilege).
     storage_base = config.omr_base_url or "https://storage.openmusicrepository.com"
-    vote_store = StorageVoteStore(base_url=storage_base)
-    work_store = StorageWorkStore(base_url=storage_base)
+    service_token_provider = ClientCredentialsServiceTokenProvider(
+        client_id=config.service_client_id or "osap-api",
+        client_secret=config.service_client_secret or "",
+        token_url=config.osap_auth_token_url or "https://auth.osap/oauth/token",
+    )
+    vote_store = StorageVoteStore(base_url=storage_base, token_provider=service_token_provider)
+    work_store = StorageWorkStore(base_url=storage_base, token_provider=service_token_provider)
     authenticator = JwtAuthenticator()
     votes_service = VotesService(vote_store, work_store, authenticator)
     container.set_vote_store(vote_store)

@@ -8,14 +8,19 @@ Work/compositor (``IWorkStore``) usa el contrato de Storage.
 
 from abc import ABC, abstractmethod
 
+from src.osap.domain.principal import Principal
 from src.osap.domain.votes import ComposerStats, WorkStats, WorkVote
 
 
 class IAuthenticator(ABC):
-    """Resuelve el ``user_id`` (UUID) a partir de un access token válido."""
+    """Resuelve el ``Principal`` a partir de un access token válido.
+
+    Determina el tipo por el claim ``token_use`` (``user`` / ``service``). Devuelve ``None``
+    si el token es inválido, caducado o ausente.
+    """
 
     @abstractmethod
-    def user_id_for(self, token: str | None) -> str | None:
+    def resolve(self, token: str | None) -> Principal | None:
         raise NotImplementedError
 
 

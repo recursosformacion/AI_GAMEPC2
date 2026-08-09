@@ -43,6 +43,7 @@ from src.osap.application.votes_service import VotesService
 from src.osap.bootstrap.container import Container
 from src.osap.domain.jobs import JobContext, JobTrigger
 from src.osap.domain.knowledge import KnowledgeBase
+from src.osap.domain.principal import Principal
 from src.osap.domain.resolve_request import ResolveRequestBuilder
 from src.osap.domain.votes import ComposerStats, WorkStats, WorkVote
 
@@ -562,8 +563,17 @@ class PlatformApi:
     def votes(self) -> VotesService:
         return self._container.votes_service()
 
-    def current_user(self, token: str | None) -> str | None:
-        return self.votes().user_id_for(token)
+    def principal_for(self, token: str | None) -> Principal | None:
+        return self.votes().principal_for(token)
+
+    def current_user(self, token: str | None) -> Principal | None:
+        return self.principal_for(token)
+
+    def require_can_vote(self, token: str | None) -> Principal:
+        return self.votes().require_can_vote(token)
+
+    def require_admin(self, token: str | None) -> Principal:
+        return self.votes().require_admin(token)
 
     def cast_vote(self, token: str | None, work_id: str, vote: int) -> WorkVote:
         return self.votes().cast_vote(token, work_id, vote)

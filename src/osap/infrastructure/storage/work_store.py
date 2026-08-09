@@ -12,6 +12,7 @@ import json
 import urllib.parse
 import urllib.request
 
+from src.osap.ports.service_token import IServiceTokenProvider
 from src.osap.ports.votes import IWorkStore
 
 _USER_AGENT = (
@@ -23,15 +24,22 @@ _USER_AGENT = (
 class StorageWorkStore(IWorkStore):
     """Resuelve ``composer_id`` vía el contrato HTTP de Storage."""
 
-    def __init__(self, base_url: str = "https://storage.openmusicrepository.com", timeout: int = 15) -> None:
+    def __init__(
+        self,
+        base_url: str = "https://storage.openmusicrepository.com",
+        timeout: int = 15,
+        token_provider: IServiceTokenProvider | None = None,
+    ) -> None:
         self._base_url = base_url.rstrip("/")
         self._timeout = timeout
+        self._token_provider = token_provider
 
     def composer_id_for(self, work_id: str) -> str | None:
         url = f"{self._base_url}/api/v1/works/{urllib.parse.quote(work_id)}"
-        request = urllib.request.Request(
-            url, headers={"User-Agent": _USER_AGENT, "Accept": "application/json"}
-        )
+        headers: dict[str, str] = {"User-Agent": _USER_AGENT, "Accept": "application/json"}
+        if self._token_provider is not None:
+            headers["Authorization"] = f"Bearer {self._token_provider.token(('storage:read',))}"
+        request = urllib.request.Request(url, headers=headers)
         try:
             with urllib.request.urlopen(request, timeout=self._timeout) as response:  # noqa: S310 (storage contract)
                 doc: object = json.loads(response.read())

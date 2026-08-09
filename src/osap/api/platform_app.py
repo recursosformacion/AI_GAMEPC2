@@ -49,7 +49,9 @@ from src.osap.bootstrap.container import Container
 from src.osap.bootstrap.wiring import wire
 from src.osap.domain.votes import (
     DuplicateVoteError,
+    ForbiddenError,
     InvalidVoteError,
+    UnauthenticatedError,
     WorkNotFoundError,
 )
 
@@ -285,6 +287,10 @@ _SOURCE_GET_200 = _resp(
 _UNAUTHORIZED_401 = _resp(
     "Unauthorized",
     _error("UNAUTHORIZED", "Missing or invalid access token"),
+)
+_FORBIDDEN_403 = _resp(
+    "Forbidden",
+    _error("FORBIDDEN", "Insufficient permissions"),
 )
 _VOTE_201 = _resp(
     "Vote recorded",
@@ -787,6 +793,7 @@ def create_platform_app(
         responses={
             201: _VOTE_201,
             401: _UNAUTHORIZED_401,
+            403: _FORBIDDEN_403,
             404: _NOT_FOUND_404,
             409: _DUPLICATE_VOTE_409,
             **_standard_errors(422),
@@ -798,10 +805,13 @@ def create_platform_app(
         response: Response,
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
-        if api.current_user(authorization) is None:
-            return fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
         try:
+            api.require_can_vote(authorization)
             vote = api.cast_vote(authorization, work_id, payload.vote)
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "A verified user role is required to vote")
         except InvalidVoteError:
             return fail(422, response, "INVALID_VOTE", "Vote must be between 1 and 5")
         except WorkNotFoundError:
@@ -855,13 +865,17 @@ def create_platform_app(
         summary="Votes overview (admin)",
         description="Admin overview: total votes, top works, top composers and last execution.",
         response_model=SuccessEnvelope[VotesOverviewResponse] | ErrorEnvelope,
-        responses={200: _resp("Votes overview", _example({})), 401: _UNAUTHORIZED_401},
+        responses={200: _resp("Votes overview", _example({})), 401: _UNAUTHORIZED_401, 403: _FORBIDDEN_403},
     )
     def admin_votes(
         response: Response, authorization: str | None = Header(default=None)
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
-        if api.current_user(authorization) is None:
+        try:
+            api.require_admin(authorization)
+        except UnauthenticatedError:
             return fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
         overview = api.votes_overview()
         top_works = cast("list[dict[str, object]]", overview["top_works"])
         top_composers = cast("list[dict[str, object]]", overview["top_composers"])
