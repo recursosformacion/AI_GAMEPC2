@@ -975,11 +975,15 @@ def create_platform_app(
         responses={200: _resp("Composers list", _example({})), **_standard_errors()},
     )
     def list_composers(
+        response: Response,
         q: str | None = Query(default=None),
         limit: int = Query(50, ge=1, le=500),
         offset: int = Query(0, ge=0),
-    ) -> SuccessEnvelope[object]:
-        return ok(_composer_list_dto(api.list_composers(q, limit, offset)))
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            return ok(_composer_list_dto(api.list_composers(q, limit, offset)))
+        except StorageComposerError:
+            return fail(503, response, "SERVICE_UNAVAILABLE", "Composer service is not configured")
 
     @app.get(
         "/api/v1/composers/{composer_id}",
@@ -990,7 +994,10 @@ def create_platform_app(
         responses={200: _resp("Composer detail", _example({})), 404: _NOT_FOUND_404, **_standard_errors()},
     )
     def get_composer(composer_id: str, response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
-        detail = api.get_composer(composer_id)
+        try:
+            detail = api.get_composer(composer_id)
+        except StorageComposerError:
+            return fail(503, response, "SERVICE_UNAVAILABLE", "Composer service is not configured")
         if detail is None:
             return fail(404, response, "NOT_FOUND", "Composer not found")
         return ok(_composer_detail_dto(detail))
@@ -1004,11 +1011,15 @@ def create_platform_app(
         responses={200: _resp("Composer works", _example({})), **_standard_errors()},
     )
     def composer_works(
+        response: Response,
         composer_id: str,
         limit: int = Query(50, ge=1, le=500),
         offset: int = Query(0, ge=0),
-    ) -> SuccessEnvelope[object]:
-        return ok(_composer_works_dto(api.composer_works(composer_id, limit, offset)))
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            return ok(_composer_works_dto(api.composer_works(composer_id, limit, offset)))
+        except StorageComposerError:
+            return fail(503, response, "SERVICE_UNAVAILABLE", "Composer service is not configured")
 
     @app.post(
         "/api/v1/admin/composers/{target_id}/merge",
