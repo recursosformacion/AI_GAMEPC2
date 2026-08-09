@@ -1,0 +1,17 @@
+id: musescore
+name: MuseScore.com
+version: 1.3
+enabled: true
+priority: 100
+base_url: https://musescore.com
+native_formats: [mscz, mscx, pdf]
+conversion: mscz/mscx -> MusicXML (unzip mscz; mscx is MusicXML-compatible source)
+authentication:
+  type: oauth            # requiere API key / OAuth; con rate limits
+protocol: web            # sin endpoint REST público estable; necesita fetcher propio
+contract:
+  version: 1.3
+  search_endpoint: search
+  lookup_endpoint: lookup
+  resource_endpoint: resource
+  download_endpoint: download

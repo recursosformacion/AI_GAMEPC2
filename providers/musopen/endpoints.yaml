@@ -1,0 +1,21 @@
+lookup:
+  method: GET
+  path: /music
+  query:
+    query: "{query}"
+
+search:
+  method: GET
+  path: /music
+  query:
+    query: "{query}"
+    page: "{page}"
+    limit: "{limit}"
+
+resource:
+  method: GET
+  path: /music/{id}
+
+download:
+  method: GET
+  path: /music/{id}/download

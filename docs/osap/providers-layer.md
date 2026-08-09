@@ -66,7 +66,8 @@ src/osap/infrastructure/providers/
     ├── provider.yaml          # id, name, base_url, authentication, protocol
     ├── endpoints.yaml         # bloques endpoint: lookup, search, resource, download
     ├── mapping.yaml           # bloque `work:` (target plano -> ruta del proveedor)
-    └── resources.yaml         # bloque `work:` con array/fields/links de recursos
+    ├── resources.yaml         # bloque `work:` con array/fields/links de recursos
+    └── transforms.yaml        # (opcional) transformaciones de campos durante el mapping
 ```
 
 ## Definición declarativa
@@ -109,6 +110,30 @@ resource:
 
 Añadir un proveedor nuevo = crear un directorio de definición con: URL, endpoints,
 request mapping y response mapping. **Sin modificar el núcleo.**
+
+## Transformaciones de campos (`transforms.yaml`)
+
+Si durante el mapping hay que **modificar el contenido de un campo** (limpiar un
+compositor, normalizar un formato, aplicar una regex…), no hace falta código: se crea
+un fichero `transforms.yaml` en la carpeta del proveedor. Se aplica a los campos **ya
+mapeados**, en el orden declarado, con dos secciones: `fields` (Work) y `resources`
+(recurso).
+
+```yaml
+fields:
+  composer:
+    - type: strip_parenthetical   # "W.A. Mozart (1756-1791)" -> "W.A. Mozart"
+    - type: trim
+  title:
+    - type: trim
+resources:
+  format:
+    - type: lower
+```
+
+Ops disponibles: `trim`, `lower`, `upper`, `empty_to_null` (""/"None" -> null),
+`strip_parenthetical`, y `{type: regex, pattern: ..., replace: ...}`. El fichero es
+opcional; si no existe, el mapping se aplica tal cual.
 
 ## Contrato v1.3: search devuelve Works completas
 
@@ -186,13 +211,75 @@ Los antiguos `IMSLPProvider.download()`, `OMRProvider.download()` y
 
 ## Estado de los proveedores
 
-| Proveedor | Nivel | Tipo | Estado |
+| Proveedor | Nivel | Tipo | Formato nativo | Estado |
+|---|---|---|---|---|
+| `omr` | 2 | REST storage (`OmrStorageFetcher`, `/api/v1/search`) | MusicXML | **Activo** (wiring) |
+| `imslp` | 2 | MediaWiki (`MediaWikiFetcher`) | PDF | **Activo** (wiring) |
+| `openscore` | 2 | GitHub (`GitHubFetcher`) | MusicXML | **Activo** (wiring) |
+| `local` | 3 | Ficheros | — | **Activo** (wiring) |
+| `cpdl` | 2 | MediaWiki (`MediaWikiFetcher`) | PDF | **Definido, NO cableado** |
+| `musescore` | 2/3 | Web + OAuth (fetcher propio) | MSCZ/MSCX/PDF | **Definido, NO cableado** |
+| `mutopia` | 2 | Ficheros LilyPond (fetcher propio) | LY/PDF | **Definido, NO cableado** |
+| `kernscores` | 2 | Ficheros Humdrum (fetcher propio) | kern | **Definido, NO cableado** |
+| `freescores` | 2/3 | Web/HTML (fetcher propio) | PDF/MusicXML | **Definido, NO cableado** |
+| `musopen` | 2 | REST key-gated (fetcher propio) | PDF/MusicXML | **Definido, NO cableado** |
+
+> Los 5 nuevos siguen el precedente de `cpdl`: su definición declarativa (misma
+> estructura YAML que `omr`/`imslp`/`openscore`) ya existe en `providers/{id}/`, pero
+> **no se registran en `wiring.py`** porque ninguno expone un endpoint del contrato v1.3
+> consultable sin trabajo previo (auth, scraping o conversión de formato).
+
+## Proveedores adicionales (definidos, pendientes de cablear)
+
+Los proveedores se añaden igual que los activos: directorio YAML + (si aplica) un
+`ProviderFetcher` de Nivel 2 que normalice el JSON. Ninguno se registra hasta que esté
+resuelto su bloqueo (acceso o conversión).
+
+### MuseScore.com (`musescore`)
+
+- Gran repositorio de partituras subidas por usuarios. Formato nativo **MSCZ** (zip que
+  contiene el fuente **MSCX**, compatible con MusicXML) y PDF.
+- **Bloqueado**: no hay endpoint REST público estable para buscar sin **OAuth / API key**
+  y hay **rate limits**. Requiere un fetcher propio con autenticación.
+- **Conversión**: para obtener MusicXML hay que descomprimir el `.mscz` y usar el `.mscx`
+  (o extraerlo vía API). El formato nativo no es PDF/MusicXML directo.
+
+### Mutopia Project (`mutopia`)
+
+- Partituras en **PDF** y **LilyPond (LY)** de dominio público. No ofrece MusicXML directo.
+- **Bloqueado**: sin API JSON consultable; los ficheros están en rutas `ftp/`. Requiere un
+  fetcher que indexe y localice los `.ly`.
+- **Conversión**: `LY → MusicXML` vía LilyPond + `musicxml2ly` (o conversor propio).
+
+### KernScores (`kernscores`)
+
+- Partituras en formato **Humdrum kern**. No ofrece MusicXML directo.
+- **Bloqueado**: sin API JSON consultable; ficheros `.kern`. Requiere un fetcher propio.
+- **Conversión**: `kern → MusicXML` vía `humdrum2xml` / `musicxml-converter`.
+
+### FreeScores.com (`freescores`)
+
+- Plataforma con varios formatos, incluidos **PDF y MusicXML**.
+- **Bloqueado**: sin API pública; solo HTML. Requiere un fetcher de scraping que respete
+  términos de uso y rate limits.
+
+### Musopen (`musopen`)
+
+- Foco en música de dominio público: grabaciones y partituras en **PDF** y a veces
+  **MusicXML**.
+- **Bloqueado**: su API REST (`api.musopen.org/v1`) está **deprecada** y requiere **API
+  key**; el acceso actual no es fiable. Requiere reactivar/renovar la integración o un
+  mirror.
+
+## Tabla de conversión de formatos (resumen)
+
+| Proveedor | Fuente | Conversión a MusicXML | Esfuerzo |
 |---|---|---|---|
-| `omr` | 1 | REST (`storage.openmusicrepository.com`) | **Activo** (wiring) |
-| `imslp` | 2 | MediaWiki (`MediaWikiFetcher`) | **Activo** (wiring) |
-| `openscore` | 2 | GitHub (`GitHubFetcher`) | **Activo** (wiring) |
-| `local` | 3 | Ficheros | **Activo** (wiring) |
-| `cpdl` | 2 | MediaWiki (`MediaWikiFetcher`) | **Definido, NO cableado** |
+| `musescore` | MSCZ/MSCX | Descomprimir `.mscz` → usar `.mscx` | Bajo |
+| `mutopia` | LY (LilyPond) | LilyPond + `musicxml2ly` | Medio |
+| `kernscores` | kern (Humdrum) | `humdrum2xml` / `musicxml-converter` | Medio |
+| `freescores` | PDF/MusicXML | Ninguna (ya lo incluye) | Ninguno |
+| `musopen` | PDF/MusicXML | Ninguna (a veces directo) | Ninguno |
 
 ### CPDL (Choral Public Domain Library)
 

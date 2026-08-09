@@ -15,8 +15,10 @@ and is also outside the resolution pipeline.
 """
 
 import json
+import re
 import urllib.parse
 import urllib.request
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -50,6 +52,9 @@ class ProviderDefinition:
     resource_list: str = "resources"
     request_mapping: dict[str, str] = field(default_factory=dict)
     authentication: str | None = None
+    # Optional field transformations (from transforms.yaml) applied during mapping.
+    # Shape: {"fields": {field: [ops]}, "resources": {field: [ops]}}
+    transforms: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass
@@ -313,6 +318,7 @@ class GenericProviderAdapter:
         return tuple(result)
 
     def _build_work(self, doc: dict[str, object], values: dict[str, object]) -> ProviderWork:
+        values = self._apply_transforms(values, "fields")
         identity = ProviderIdentity(
             id=str(values.get("id") or "unknown"),
             title=str(values.get("title") or "Unknown"),
@@ -337,8 +343,20 @@ class GenericProviderAdapter:
         for item in raw:
             if isinstance(item, dict):
                 mapped = _apply_mapping(item, self._definition.resource_mapping)
+                mapped = self._apply_transforms(mapped, "resources")
                 out.append(_build_resource(mapped, self._definition.base_url))
         return tuple(out)
+
+    def _apply_transforms(self, values: dict[str, object], section: str) -> dict[str, object]:
+        """Apply the declared `transforms.yaml` operations to mapped fields."""
+        transforms = self._definition.transforms.get(section)
+        if not isinstance(transforms, dict):
+            return values
+        out = dict(values)
+        for key, ops in transforms.items():
+            if key in out:
+                out[key] = _apply_transform(out[key], ops)
+        return out
 
 
 def _resolve_query(template: dict[str, str], query: ProviderQuery) -> dict[str, object]:
@@ -366,6 +384,41 @@ def _first_list(doc: dict[str, object], *keys: str) -> object:
         if isinstance(value, list):
             return value
     return None
+
+
+def _strip_parenthetical(value: object) -> object:
+    if not isinstance(value, str):
+        return value
+    return re.sub(r"\s*\([^)]*\)", "", value).strip()
+
+
+_SIMPLE_TRANSFORMS: dict[str, Callable[[object], object]] = {
+    "trim": lambda v: v.strip() if isinstance(v, str) else v,
+    "lower": lambda v: v.lower() if isinstance(v, str) else v,
+    "upper": lambda v: v.upper() if isinstance(v, str) else v,
+    "empty_to_null": lambda v: (None if v in ("", "None", "null") else v),
+    "strip_parenthetical": _strip_parenthetical,
+}
+
+
+def _apply_transform(value: object, ops: object) -> object:
+    """Apply a single transform op or a list of ops (in order) to a mapped value."""
+    if not isinstance(ops, list):
+        ops = [ops]
+    for op in ops:
+        if isinstance(op, str):
+            fn = _SIMPLE_TRANSFORMS.get(op)
+            if fn is not None:
+                value = fn(value)
+        elif isinstance(op, dict):
+            kind = op.get("type")
+            if kind == "regex" and isinstance(value, str):
+                value = re.sub(str(op.get("pattern", "")), str(op.get("replace", "")), value)
+            else:
+                fn = _SIMPLE_TRANSFORMS.get(str(kind))
+                if fn is not None:
+                    value = fn(value)
+    return value
 
 
 def load_definition(path: Path) -> ProviderDefinition:
@@ -407,6 +460,7 @@ def _load_definition_dir(path: Path) -> ProviderDefinition:
         resource_list=resource_list,
         resource_mapping=resource_mapping,
         authentication=_auth_type(provider.get("authentication")),
+        transforms=_load_transforms(path / "transforms.yaml"),
     )
 
 
@@ -425,7 +479,27 @@ def _load_definition_file(path: Path) -> ProviderDefinition:
         resource_mapping=dict(doc.get("resource_mapping") or {}),
         request_mapping=dict(doc.get("request_mapping") or {}),
         authentication=_auth_type(doc.get("authentication")),
+        transforms=_normalize_transforms(doc.get("transforms")),
     )
+
+
+def _load_transforms(path: Path) -> dict[str, object]:
+    if not path.exists():
+        return {}
+    doc = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    return _normalize_transforms(doc)
+
+
+def _normalize_transforms(doc: object) -> dict[str, object]:
+    """Keep only the `fields:` / `resources:` transform sections (ignore comments/keys)."""
+    if not isinstance(doc, dict):
+        return {}
+    out: dict[str, object] = {}
+    for section in ("fields", "resources"):
+        block = doc.get(section)
+        if isinstance(block, dict):
+            out[section] = {str(k): v for k, v in block.items()}
+    return out
 
 
 def _parse_endpoints(endpoints_doc: dict[str, object]) -> dict[str, Endpoint]:

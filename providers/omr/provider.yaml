@@ -4,8 +4,11 @@ version: 1.3
 enabled: true
 priority: 100
 base_url: https://storage.openmusicrepository.com
+native_formats: [musicxml, pdf, midi]
+conversion: ninguno
 authentication:
   type: none
+protocol: storage        # /api/v1/search -> array JSON (OmrStorageFetcher, Nivel 2)
 contract:
   version: 1.3
 search_endpoint: search

@@ -18,7 +18,7 @@ from src.osap.infrastructure.mediawiki import MediaWikiClient
 from src.osap.infrastructure.merge import MergeEngine
 from src.osap.infrastructure.metrics import InMemoryMetricsCollector
 from src.osap.infrastructure.pipeline import PipelineEngine
-from src.osap.infrastructure.providers.fetchers import GitHubFetcher, MediaWikiFetcher
+from src.osap.infrastructure.providers.fetchers import GitHubFetcher, MediaWikiFetcher, OmrStorageFetcher
 from src.osap.infrastructure.rankings import DefaultRankingEngine
 from src.osap.infrastructure.user_profile import InMemoryUserProfileStore
 
@@ -57,7 +57,15 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
             fetcher=GitHubFetcher(github, config.openscore_repos),
         )
     )
-    container.register_catalog_provider(RemoteCatalogProvider(definition_path=providers_root / "omr"))
+    container.register_catalog_provider(
+        RemoteCatalogProvider(
+            definition_path=providers_root / "omr",
+            base_url=config.omr_base_url,
+            fetcher=OmrStorageFetcher(
+                base_url=config.omr_base_url or "https://storage.openmusicrepository.com"
+            ),
+        )
+    )
     container.register_catalog_provider(LocalCatalogProvider(Path(config.library_root)))
 
     container.register_library(LocalLibrary(Path(config.library_root)))

@@ -1,0 +1,17 @@
+id: freescores
+name: FreeScores.com
+version: 1.3
+enabled: true
+priority: 100
+base_url: https://www.freescores.com
+native_formats: [pdf, musicxml, midi]
+conversion: ninguno (ya incluye MusicXML)
+authentication:
+  type: none
+protocol: web            # sin API JSON pública; HTML; necesita fetcher propio (scraping)
+contract:
+  version: 1.3
+  search_endpoint: search
+  lookup_endpoint: lookup
+  resource_endpoint: resource
+  download_endpoint: download

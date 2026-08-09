@@ -7,6 +7,7 @@ downloads files: it only maps provider JSON into OSAP internal objects. Download
 handled by OSAP-API via the resource links.
 """
 
+from dataclasses import replace
 from pathlib import Path
 
 from src.osap.domain.acquisition_result import AcquisitionResult
@@ -56,8 +57,13 @@ class RemoteCatalogProvider(ICatalogProvider):
         definition: ProviderDefinition | None = None,
         definition_path: Path | None = None,
         fetcher: ProviderFetcher | None = None,
+        base_url: str | None = None,
     ) -> None:
         self._definition = definition or load_definition(definition_path or _PROVIDERS_ROOT / "omr")
+        if base_url:
+            # Allow switching the operator endpoint without touching the YAML definition
+            # (e.g. a local osap-storage in dev vs. the remote storage.openmusicrepository.com).
+            self._definition = replace(self._definition, base_url=base_url.rstrip("/"))
         self._fetcher = fetcher
         self._adapter = GenericProviderAdapter(self._definition, fetcher=fetcher)
 

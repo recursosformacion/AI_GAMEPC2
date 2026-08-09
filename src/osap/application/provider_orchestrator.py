@@ -26,7 +26,9 @@ logger = logging.getLogger("osap.api.orchestrator")
 
 # Phase 2 bound: the search waits at most this long for providers; slower ones are
 # marked unavailable and the Work Resolution is returned with what arrived (ADR-0020).
-SEARCH_TIMEOUT_SECONDS = 5.0
+# Kept above the providers' own HTTP timeouts (e.g. OMR allows up to 10s) so that slow
+# but valid providers are NOT dropped and their representations still reach the result.
+SEARCH_TIMEOUT_SECONDS = 12.0
 STATUS_NO_RESULT = "no_result"
 STATUS_UNAVAILABLE = "unavailable"
 STATUS_ERROR = "error"

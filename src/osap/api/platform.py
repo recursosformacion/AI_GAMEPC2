@@ -343,7 +343,9 @@ class PlatformApi:
             return IntentResponse(type="catalogue", label=query.strip())
         for composer in self._COMPOSERS:
             if composer in q:
-                return IntentResponse(type="composer", label=query.strip())
+                # Return the canonical composer name (not the raw query), so the composer
+                # search can filter by composer alone instead of a free-text phrase.
+                return IntentResponse(type="composer", label=composer.title())
         if "collection" in q or "edition" in q:
             return IntentResponse(type="collection", label=query.strip())
         return IntentResponse(type="work", label=query.strip())

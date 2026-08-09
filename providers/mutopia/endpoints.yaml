@@ -1,21 +1,19 @@
 lookup:
   method: GET
-  path: /api/v1/search
+  path: /search
   query:
     q: "{query}"
 
 search:
   method: GET
-  path: /api/v1/search
+  path: /search
   query:
     q: "{query}"
 
 resource:
   method: GET
-  path: /api/v1/search
-  query:
-    q: "{query}"
+  path: /ftp/{path}
 
 download:
   method: GET
-  path: /api/v1/download/{resource_id}
+  path: /ftp/{path}

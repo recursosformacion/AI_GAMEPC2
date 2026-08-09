@@ -1,0 +1,17 @@
+id: mutopia
+name: Mutopia Project
+version: 1.3
+enabled: true
+priority: 100
+base_url: https://www.mutopiaproject.org
+native_formats: [ly, pdf]
+conversion: ly (LilyPond) -> MusicXML (lilypond + musicxml2ly / internal)
+authentication:
+  type: none
+protocol: files          # sin API JSON; ficheros LilyPond en rutas ftp/; necesita fetcher propio
+contract:
+  version: 1.3
+  search_endpoint: search
+  lookup_endpoint: lookup
+  resource_endpoint: resource
+  download_endpoint: download

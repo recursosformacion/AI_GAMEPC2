@@ -1,0 +1,17 @@
+id: kernscores
+name: KernScores (Center for Computer Assisted Research)
+version: 1.3
+enabled: true
+priority: 100
+base_url: https://kern.humdrum.org
+native_formats: [kern]
+conversion: kern (Humdrum) -> MusicXML (humdrum2xml / musicxml-converter)
+authentication:
+  type: none
+protocol: files          # sin API JSON; ficheros .kern; necesita fetcher propio
+contract:
+  version: 1.3
+  search_endpoint: search
+  lookup_endpoint: lookup
+  resource_endpoint: resource
+  download_endpoint: download

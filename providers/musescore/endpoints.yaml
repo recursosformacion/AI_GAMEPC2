@@ -1,0 +1,21 @@
+lookup:
+  method: GET
+  path: /api/v1/scores/search
+  query:
+    q: "{query}"
+
+search:
+  method: GET
+  path: /api/v1/scores/search
+  query:
+    q: "{query}"
+    page: "{page}"
+    per_page: "{limit}"
+
+resource:
+  method: GET
+  path: /api/v1/scores/{id}
+
+download:
+  method: GET
+  path: /score/{id}/download
