@@ -300,6 +300,10 @@ _FORBIDDEN_403 = _resp(
     "Forbidden",
     _error("FORBIDDEN", "Insufficient permissions"),
 )
+_SERVICE_UNAVAILABLE_503 = _resp(
+    "Service unavailable",
+    _error("SERVICE_UNAVAILABLE", "Service identity is not configured"),
+)
 _VOTE_201 = _resp(
     "Vote recorded",
     _example({"work_id": "w1", "vote": 5, "voted_at": "2026-08-06T10:00:00Z", "vote_day": "2026-08-06"}),
@@ -971,8 +975,8 @@ def create_platform_app(
         tags=["Composers"],
         summary="List composers",
         description="Consulta pública de compositores (listado, q, paginado). Backend: osap-storage con storage:read.",
-        response_model=SuccessEnvelope[ComposerListResponse],
-        responses={200: _resp("Composers list", _example({})), **_standard_errors()},
+        response_model=SuccessEnvelope[ComposerListResponse] | ErrorEnvelope,
+        responses={200: _resp("Composers list", _example({})), 503: _SERVICE_UNAVAILABLE_503, **_standard_errors()},
     )
     def list_composers(
         response: Response,
@@ -1007,8 +1011,8 @@ def create_platform_app(
         tags=["Composers"],
         summary="Composer works",
         description="Obras de un compositor. Backend: osap-storage con storage:read.",
-        response_model=SuccessEnvelope[ComposerWorksResponse],
-        responses={200: _resp("Composer works", _example({})), **_standard_errors()},
+        response_model=SuccessEnvelope[ComposerWorksResponse] | ErrorEnvelope,
+        responses={200: _resp("Composer works", _example({})), 503: _SERVICE_UNAVAILABLE_503, **_standard_errors()},
     )
     def composer_works(
         response: Response,
