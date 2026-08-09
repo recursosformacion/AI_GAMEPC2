@@ -72,6 +72,28 @@ def _summary(source: RepositorySource) -> RepositorySourceSummary:
     )
 
 
+def _repository_source_from_defined(pid: str, name: str, base_url: str, wired: bool) -> RepositorySource:
+    """Ficha completa de un proveedor definido en `providers/` (para el detalle)."""
+    status = "Online" if wired else "Defined"
+    return RepositorySource(
+        source_id=pid,
+        name=name,
+        type="Provider",
+        origin=_host_of(base_url),
+        trust="Verified" if wired else "Community",
+        status=status,
+        quality=90 if wired else 50,
+        quality_label="Excellent" if wired else "Pending",
+        updated_at="",
+        website=base_url,
+        description=f"Proveedor {name} (definido en providers/{pid}).",
+        notes="Definido, NO cableado como conector directo." if not wired else "Proveedor activo.",
+        representations=0,
+        works=0,
+        composers=0,
+    )
+
+
 def _host_of(url: str) -> str:
     """Extract the host from a provider base URL (fallback to the raw URL)."""
     try:
@@ -651,7 +673,13 @@ class PlatformApi:
         return summaries
 
     def get_repository_source(self, source_id: str) -> RepositorySource | None:
-        return self._catalog.get(source_id)
+        seeded = self._catalog.get(source_id)
+        if seeded is not None:
+            return seeded
+        for pid, name, base_url, wired in self._container.defined_providers():
+            if pid == source_id and pid != "local":
+                return _repository_source_from_defined(pid, name, base_url, wired)
+        return None
 
     # --- session sources (user's temporary sources) -------------------------
 
