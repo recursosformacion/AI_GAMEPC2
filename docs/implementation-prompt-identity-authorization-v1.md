@@ -63,8 +63,11 @@ Introducir en osap-api:
 7. Usar **identidad de servicio** para llamar a osap-storage, obteniendo y gestionando el
    service token mediante `client_credentials`, con **scopes mínimos** según la operación.
 8. `user_id` como **dato de negocio** al registrar el voto.
-9. Eliminar cualquier persistencia local de votos.
-10. Dejar `/api/v1/jobs*` **fuera** hasta decidir su clasificación.
+9. Eliminar cualquier persistencia local de votos. La UI de **Compositores** tampoco debe
+   acceder directamente a osap-storage: siempre debe pasar por osap-api.
+10. Exponer consulta pública de **Compositores** (listado/detalle/obras) y la **fusión** para
+    `role=admin`, usando los endpoints existentes de osap-storage.
+11. Dejar `/api/v1/jobs*` **fuera** hasta decidir su clasificación.
 
 ---
 
@@ -305,7 +308,155 @@ osap-api y osap-storage para identificar los endpoints existentes de **consulta*
 - Cada acción administrativa de la pantalla de Compositores debe corresponder a un endpoint
   existente y documentado de osap-storage.
 
-## 11. `/api/v1/jobs*`
+## 11. Compositores — consulta pública y administración
+
+La funcionalidad de Compositores forma parte de esta fase de osap-api.
+
+La inspección de osap-storage ha confirmado que existen actualmente:
+
+- `GET /api/admin/composers`
+- `GET /api/admin/composers/{composer_id}`
+- `GET /api/admin/composers/{composer_id}/works`
+- `GET /api/admin/composers/candidates`
+- `POST /api/admin/composers/{target}/merge`
+
+Los endpoints GET existentes son suficientes para implementar la consulta pública **sin crear
+nuevos endpoints en osap-storage**.
+
+### 11.1 Consulta de compositores
+
+Crear en osap-api:
+
+- `GET /api/v1/composers?q=&limit=&offset=`
+- `GET /api/v1/composers/{composer_id}`
+- `GET /api/v1/composers/{composer_id}/works`
+
+Mapeo:
+
+```
+osap-api
+    │
+    │ SERVICE JWT + storage:read
+    ▼
+osap-storage
+    ├── GET /api/admin/composers
+    ├── GET /api/admin/composers/{composer_id}
+    └── GET /api/admin/composers/{composer_id}/works
+```
+
+Estas operaciones admiten `AnonymousPrincipal` y `UserPrincipal`. **No requieren autenticación
+de usuario.** El `ServicePrincipal` se utiliza únicamente en la llamada interna de
+osap-api → osap-storage.
+
+Los DTOs de osap-api deben reproducir los shapes existentes de osap-storage **sin inventar
+campos** (`id`, `name`, `status`, `aliases_count`, `works_count`; `aliases`, `merged_into`,
+`merged_at`; `work_id`, `title`, `composer_id`).
+
+### 11.2 Lista de compositores
+
+El frontend debe proporcionar una pantalla/ruta de **Compositores** accesible desde la
+navegación principal. La pantalla debe permitir:
+
+- consultar el listado;
+- utilizar búsqueda `q`;
+- paginar mediante `limit`/`offset`;
+- seleccionar un compositor para acceder a su detalle.
+
+**No implementar en v1 creación ni edición de compositores.**
+
+### 11.3 Detalle de compositor
+
+La pantalla de detalle debe mostrar la información proporcionada por
+`GET /api/v1/composers/{composer_id}` y, cuando corresponda, sus obras mediante
+`GET /api/v1/composers/{composer_id}/works`. **No añadir información que no exista en el DTO
+recibido.**
+
+### 11.4 Administración de compositores
+
+- Un usuario **no administrador** puede consultar compositores, pero no puede realizar
+  mantenimiento ni fusiones.
+- Un usuario con `role=admin` puede acceder a las acciones administrativas previstas en v1.
+- **La única operación administrativa de compositores incluida en esta fase es la fusión.**
+
+Crear:
+
+```
+POST /api/v1/admin/composers/{target}/merge
+```
+
+Mapeo:
+
+```
+USER + role=admin
+        │
+        │ SERVICE JWT + storage:admin
+        ▼
+osap-storage
+POST /api/admin/composers/{target}/merge
+```
+
+Reglas:
+
+- sin token → **401**;
+- usuario autenticado sin `admin` → **403**;
+- usuario con `role=admin` → puede ejecutar la operación;
+- la llamada de osap-api a osap-storage utiliza identidad SERVICE;
+- **nunca se reenvía el JWT del usuario a osap-storage**;
+- **no se utiliza `user_id` como sustituto del service token**;
+- la operación administrativa requiere `storage:admin`.
+
+### 11.5 Separación de consulta y administración
+
+Es importante que la UI no trate la pantalla completa como "solo admin". La navegación debe
+funcionar así:
+
+```
+Compositores
+├── Usuario anónimo
+│   ├── listar
+│   ├── buscar
+│   └── consultar detalle/obras
+├── Usuario autenticado normal
+│   ├── listar
+│   ├── buscar
+│   └── consultar detalle/obras
+└── Usuario autenticado + role=admin
+    ├── listar
+    ├── buscar
+    ├── consultar detalle/obras
+    └── acciones administrativas
+        └── fusionar
+```
+
+No mostrar acciones de mantenimiento/fusión a usuarios sin `role=admin`.
+
+### 11.6 Login / logout y navegación
+
+La aplicación debe incorporar el estado de autenticación en la navegación.
+
+- Usuario no autenticado: `[Compositores] ... [Login]`
+- Usuario autenticado: `[Compositores] ... [Logout]`
+- Administrador: `[Compositores] ... [Admin / acciones administrativas] [Logout]`
+
+- La UI **no** debe determinar que un usuario es administrador por su `tier`. La condición
+  administrativa es exclusivamente `role=admin`.
+- La integración de login/logout debe respetar el contrato existente de osap-auth. **No crear
+  un mecanismo de autenticación paralelo en osap-api.**
+
+### 11.7 Alcance fuera de v1
+
+No implementar:
+
+- creación de compositores;
+- edición de compositores;
+- eliminación de compositores;
+- nuevos endpoints en osap-storage para esas operaciones;
+- nuevos claims `tier`;
+- autorización administrativa basada en `tier`.
+
+**La fusión es la única operación de mantenimiento incluida en esta versión.**
+
+## 12. `/api/v1/jobs*`
 
 - **No** tocar la clasificación de `POST /api/v1/jobs*` en esta fase. Dejarlo fuera y
   documentarlo como pendiente de decisión.
