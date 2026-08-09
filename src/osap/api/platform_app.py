@@ -61,6 +61,7 @@ from src.osap.domain.votes import (
     UnauthenticatedError,
     WorkNotFoundError,
 )
+from src.osap.infrastructure.storage.storage_composer_client import StorageComposerError
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -1039,6 +1040,10 @@ def create_platform_app(
             return fail(403, response, "FORBIDDEN", "Admin role required")
         except WorkNotFoundError:
             return fail(404, response, "NOT_FOUND", "Composer not found")
+        except StorageComposerError:
+            return fail(
+                503, response, "ADMIN_SERVICE_UNAVAILABLE", "Composer admin service is not configured"
+            )
         return ok(_merge_result_dto(result))
 
     return app

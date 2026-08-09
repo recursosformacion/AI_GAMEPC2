@@ -148,9 +148,16 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     container.set_votes(votes_service)
 
     # --- compositores (consulta pública + fusión admin) ----------------------
+    # Consulta usa el service client normal (storage:read). La fusión usa un service client
+    # administrativo separado (storage:admin) — osap-api NO recibe storage:admin por defecto.
     composer_client = StorageComposerClient(
         base_url=storage_base,
         token_provider=service_token_provider,
+        admin_token_provider=ClientCredentialsServiceTokenProvider(
+            client_id=config.admin_client_id or "osap-composer-admin-service",
+            client_secret=config.admin_client_secret or "",
+            token_url=config.osap_auth_token_url or "https://auth.osap/oauth/token",
+        ),
     )
     composers_service = ComposersService(composer_client, authenticator)
     container.set_composers(composers_service)

@@ -24,17 +24,24 @@ class StorageComposerError(Exception):
 
 
 class StorageComposerClient:
-    """Cliente de los endpoints de compositores de osap-storage (HTTP)."""
+    """Cliente de los endpoints de compositores de osap-storage (HTTP).
+
+    Consulta usa el token de servicio normal (``storage:read``). La fusión usa un
+    proveedor de token **administrativo** separado (``storage:admin``); nunca se concede
+    ``storage:admin`` al cliente normal de osap-api.
+    """
 
     def __init__(
         self,
         base_url: str = "https://storage.openmusicrepository.com",
         timeout: int = 15,
         token_provider: IServiceTokenProvider | None = None,
+        admin_token_provider: IServiceTokenProvider | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._timeout = timeout
         self._token_provider = token_provider
+        self._admin_token_provider = admin_token_provider
 
     def list_composers(self, q: str | None, limit: int, offset: int) -> dict[str, object]:
         query = {"limit": str(limit), "offset": str(offset)}
@@ -62,7 +69,11 @@ class StorageComposerClient:
     def merge_composers(self, target_id: str, source_ids: list[str]) -> tuple[int, dict[str, object]]:
         payload: dict[str, object] = {"source_ids": source_ids}
         status, doc = self._call(
-            "POST", f"/api/admin/composers/{_q(target_id)}/merge", payload=payload, scope="storage:admin"
+            "POST",
+            f"/api/admin/composers/{_q(target_id)}/merge",
+            payload=payload,
+            scope="storage:admin",
+            provider=self._admin_token_provider,
         )
         if 200 <= status < 300 and isinstance(doc, dict):
             return status, doc
@@ -76,6 +87,7 @@ class StorageComposerClient:
         path: str,
         payload: dict[str, object] | None = None,
         scope: str = "storage:read",
+        provider: IServiceTokenProvider | None = None,
     ) -> tuple[int, object]:
         url = self._base_url + path
         data = json.dumps(payload).encode("utf-8") if payload is not None else None
@@ -84,10 +96,11 @@ class StorageComposerClient:
             "Accept": "application/json",
             "Content-Type": "application/json",
         }
-        if self._token_provider is not None:
-            headers["Authorization"] = f"Bearer {self._token_provider.token((scope,))}"
-        request = urllib.request.Request(url, data=data, method=method, headers=headers)
+        effective = provider if provider is not None else self._token_provider
         try:
+            if effective is not None:
+                headers["Authorization"] = f"Bearer {effective.token((scope,))}"
+            request = urllib.request.Request(url, data=data, method=method, headers=headers)
             with urllib.request.urlopen(request, timeout=self._timeout) as response:  # noqa: S310 (storage contract)
                 raw = response.read()
                 try:
