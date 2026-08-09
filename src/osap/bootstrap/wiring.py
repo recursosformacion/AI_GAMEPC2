@@ -18,7 +18,13 @@ from src.osap.infrastructure.mediawiki import MediaWikiClient
 from src.osap.infrastructure.merge import MergeEngine
 from src.osap.infrastructure.metrics import InMemoryMetricsCollector
 from src.osap.infrastructure.pipeline import PipelineEngine
-from src.osap.infrastructure.providers.fetchers import GitHubFetcher, MediaWikiFetcher, OmrStorageFetcher
+from src.osap.infrastructure.providers.adapters.generic_provider_adapter import load_definition
+from src.osap.infrastructure.providers.fetchers import (
+    GitHubFetcher,
+    MediaWikiFetcher,
+    MutopiaFetcher,
+    OmrStorageFetcher,
+)
 from src.osap.infrastructure.rankings import DefaultRankingEngine
 from src.osap.infrastructure.user_profile import InMemoryUserProfileStore
 
@@ -66,7 +72,26 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
             ),
         )
     )
+    container.register_catalog_provider(
+        RemoteCatalogProvider(
+            definition_path=providers_root / "mutopia",
+            fetcher=MutopiaFetcher(),
+        )
+    )
     container.register_catalog_provider(LocalCatalogProvider(Path(config.library_root)))
+
+    # Register metadata of EVERY declared provider (wired or not) so Discover/Sources
+    # can list them all. `wired` tells whether the provider is registered as active.
+    active_ids = {p.provider_id.value for p in container.catalog_manager().providers()}
+    defined: list[tuple[str, str, str, bool]] = []
+    for child in sorted(providers_root.iterdir()):
+        if child.is_dir() and (child / "provider.yaml").exists():
+            try:
+                d = load_definition(child)
+            except Exception:
+                continue
+            defined.append((d.id, d.name, d.base_url, d.id in active_ids))
+    container.set_defined_providers(tuple(defined))
 
     container.register_library(LocalLibrary(Path(config.library_root)))
     container.register_exporter(MusicXmlExporter())

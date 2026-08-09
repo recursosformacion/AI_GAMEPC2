@@ -6,6 +6,7 @@ internals directly) and produces the public contract DTOs. Pure orchestration; n
 
 import logging
 import re
+import urllib.parse
 import urllib.request
 import uuid
 from datetime import UTC, datetime
@@ -66,6 +67,14 @@ def _summary(source: RepositorySource) -> RepositorySourceSummary:
         quality_label=source.quality_label,
         updated_at=source.updated_at,
     )
+
+
+def _host_of(url: str) -> str:
+    """Extract the host from a provider base URL (fallback to the raw URL)."""
+    try:
+        return urllib.parse.urlsplit(url).netloc or url
+    except Exception:
+        return url
 
 
 def _remote_online(url: str) -> bool:
@@ -510,7 +519,15 @@ class PlatformApi:
     # --- providers ----------------------------------------------------------
 
     def list_providers(self) -> list[ProviderResponse]:
-        return [self._provider_response(provider) for provider in self._container.catalog_manager().providers()]
+        responses = [self._provider_response(provider) for provider in self._container.catalog_manager().providers()]
+        active_ids = {r.provider_id for r in responses}
+        for pid, name, _base_url, wired in self._container.defined_providers():
+            if pid in active_ids or pid == "local":
+                continue
+            responses.append(
+                ProviderResponse(provider_id=pid, name=name, available=wired, formats=[], last_sync=None)
+            )
+        return responses
 
     def get_provider(self, provider_id: str) -> ProviderResponse | None:
         for provider in self._container.catalog_manager().providers():
@@ -580,7 +597,26 @@ class PlatformApi:
     # --- repository sources (Source Catalog) --------------------------------
 
     def list_repository_sources(self) -> list[RepositorySourceSummary]:
-        return [_summary(s) for s in self._catalog.list()]
+        summaries = [_summary(s) for s in self._catalog.list()]
+        seen = {s.source_id for s in summaries}
+        for pid, name, base_url, wired in self._container.defined_providers():
+            if pid in seen or pid == "local":
+                continue
+            summaries.append(
+                RepositorySourceSummary(
+                    source_id=pid,
+                    name=name,
+                    type="Provider",
+                    origin=_host_of(base_url),
+                    trust="Verified" if wired else "Community",
+                    status="Online" if wired else "Defined",
+                    quality=90 if wired else 50,
+                    quality_label="Excellent" if wired else "Pending",
+                    updated_at="",
+                )
+            )
+            seen.add(pid)
+        return summaries
 
     def get_repository_source(self, source_id: str) -> RepositorySource | None:
         return self._catalog.get(source_id)
@@ -608,7 +644,7 @@ class PlatformApi:
     # --- discovery ----------------------------------------------------------
 
     def discover_sources(self) -> list[DiscoverSource]:
-        return [
+        sources = [
             DiscoverSource(
                 source_id=s.source_id,
                 name=s.name,
@@ -620,6 +656,23 @@ class PlatformApi:
             )
             for s in self._catalog.list()
         ]
+        seen = {s.source_id for s in sources}
+        for pid, name, base_url, wired in self._container.defined_providers():
+            if pid in seen:
+                continue
+            sources.append(
+                DiscoverSource(
+                    source_id=pid,
+                    name=name,
+                    type="Provider",
+                    origin=_host_of(base_url),
+                    trust="Verified" if wired else "Community",
+                    quality=90 if wired else 50,
+                    url=base_url,
+                )
+            )
+            seen.add(pid)
+        return sources
 
     def statistics(self) -> SystemStatisticsResponse:
         base = self._knowledge.base()

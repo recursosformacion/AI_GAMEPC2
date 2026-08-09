@@ -219,10 +219,21 @@ Los antiguos `IMSLPProvider.download()`, `OMRProvider.download()` y
 | `local` | 3 | Ficheros | — | **Activo** (wiring) |
 | `cpdl` | 2 | MediaWiki (`MediaWikiFetcher`) | PDF | **Definido, NO cableado** |
 | `musescore` | 2/3 | Web + OAuth (fetcher propio) | MSCZ/MSCX/PDF | **Definido, NO cableado** |
-| `mutopia` | 2 | Ficheros LilyPond (fetcher propio) | LY/PDF | **Definido, NO cableado** |
+| `mutopia` | 2 | HTML CGI (`MutopiaFetcher`, `make-table.cgi`) | LY/PDF/MIDI | **Activo** (wiring) |
 | `kernscores` | 2 | Ficheros Humdrum (fetcher propio) | kern | **Definido, NO cableado** |
 | `freescores` | 2/3 | Web/HTML (fetcher propio) | PDF/MusicXML | **Definido, NO cableado** |
 | `musopen` | 2 | REST key-gated (fetcher propio) | PDF/MusicXML | **Definido, NO cableado** |
+
+> **Sondeo de accesibilidad (2026-08-09):** de los proveedores adicionales solo **Mutopia** es
+> alcanzable (búsqueda vía `cgibin/make-table.cgi`) y está **cableado**. El resto está
+> **bloqueado o caído** y no se puede cablear de momento: `cpdl`, `musescore` y `musopen`
+> responden **HTTP 403 Cloudflare**; `kernscores` devuelve **503 / timeout**; `freescores.com`
+> es una landing page de dominio, no un catálogo.
+>
+> **Descarga protegida:** no es un bloqueo. OSAP-API **facilita el `links.download`** del
+> proveedor (y avisa al usuario). Si el usuario tiene cuenta en el destino, descarga; si no,
+> no. Nunca se implementa un downloader propio: se usan las clases de descarga estándar
+> (link → redirect/proxy), igual que en los proveedores activos.
 
 > Los 5 nuevos siguen el precedente de `cpdl`: su definición declarativa (misma
 > estructura YAML que `omr`/`imslp`/`openscore`) ya existe en `providers/{id}/`, pero

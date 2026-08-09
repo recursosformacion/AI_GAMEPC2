@@ -47,9 +47,17 @@ class Container:
         self._duplicate_resolver: DuplicateResolver | None = None
         self._merge_engine: MergeEngine | None = None
         self._auth_manager: AuthenticationManager | None = None
+        self._defined_providers: tuple[tuple[str, str, str, bool], ...] = ()
 
     def register_catalog_provider(self, provider: ICatalogProvider) -> None:
         self._catalog_providers.append(provider)
+
+    def set_defined_providers(self, providers: tuple[tuple[str, str, str, bool], ...]) -> None:
+        """Metadata (id, name, base_url, wired) of every declared provider, wired or not."""
+        self._defined_providers = providers
+
+    def defined_providers(self) -> tuple[tuple[str, str, str, bool], ...]:
+        return self._defined_providers
 
     def register_exporter(self, exporter: IScoreExporter) -> None:
         self._exporters.append(exporter)

@@ -1,18 +1,20 @@
 lookup:
   method: GET
-  path: /search
+  path: /cgibin/make-table.cgi
   query:
-    q: "{query}"
+    searchingfor: "{query}"
 
 search:
   method: GET
-  path: /search
+  path: /cgibin/make-table.cgi
   query:
-    q: "{query}"
+    searchingfor: "{query}"
 
 resource:
   method: GET
-  path: /ftp/{path}
+  path: /cgibin/piece-info.cgi
+  query:
+    id: "{id}"
 
 download:
   method: GET
