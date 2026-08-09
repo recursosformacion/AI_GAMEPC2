@@ -169,6 +169,11 @@ ServicePrincipal     type = service,    user_id = null,  service_id = client_id,
   - El cliente de servicio puede tener varios scopes permitidos por configuración, pero **cada
     token/llamada utiliza únicamente los scopes necesarios** para esa operación. No crear un
     único token permanente con `storage:read storage:write storage:admin` reutilizado para todo.
+- **Scopes mínimos para Compositores:**
+  - Consulta de compositores → `storage:read`;
+  - Mantenimiento administrativo de compositores → `storage:admin`;
+  - Fusión de compositores → `storage:admin`.
+  - `storage:admin` **no** se utiliza para las consultas normales.
 - **Si osap-api no realiza actualmente ninguna llamada administrativa a osap-storage, no
   configurar ni solicitar `storage:admin` en esta fase** (existencia del scope ≠ necesidad de
   concedérselo a osap-api).
@@ -194,7 +199,113 @@ osap-api ──(SERVICE JWT)──► osap-storage
 - osap-api **no** mantiene BD de votos propia. Confirmar que `IVoteStore` en producción es
   `StorageVoteStore` y que no queda ningún store SQLite/local de votos.
 
-## 10. `/api/v1/jobs*`
+## 10. Pantalla de Compositores y navegación de autenticación
+
+La aplicación osap-api debe incluir la pantalla/sección **Compositores** y el acceso a
+autenticación en la navegación principal.
+
+### 10.1 Compositores — consulta
+
+La pantalla de Compositores permite consultar el catálogo de compositores.
+
+- La consulta/listado de compositores es accesible para usuarios no administradores.
+- Un usuario autenticado sin `role=admin` puede ver los compositores, pero no puede realizar
+  operaciones de mantenimiento.
+- La autorización de mantenimiento NO depende de `tier`.
+
+### 10.2 Compositores — administración
+
+Cuando el principal sea un `UserPrincipal` con `role=admin`, la pantalla debe habilitar las
+operaciones administrativas de compositores que soporte el contrato de osap-storage:
+
+- crear/modificar compositores;
+- mantenimiento de compositores;
+- fusionar compositores.
+
+La autorización administrativa debe comprobar explícitamente:
+
+```text
+principal.type == user
+AND "admin" in principal.roles
+```
+
+No debe utilizarse `tier` para conceder permisos administrativos.
+
+### 10.3 Usuario no administrador
+
+Para un `UserPrincipal` sin `admin`:
+
+```
+Compositores
+  └── Ver/listar/detalle
+```
+
+No debe mostrar ni permitir acciones de: Editar, Crear, Eliminar, Fusionar, Mantenimiento.
+
+Además, aunque un usuario manipule la UI o invoque directamente el endpoint, osap-api debe
+rechazar la operación administrativa con **403**. **La UI NO es el mecanismo de seguridad; la
+autorización debe existir también en el backend.**
+
+### 10.4 Usuario anónimo
+
+- El comportamiento de consulta de Compositores debe mantenerse **público** si así lo
+  establece el endpoint de lectura correspondiente.
+- Un usuario anónimo no puede realizar ninguna operación administrativa.
+
+### 10.5 Navegación de autenticación
+
+- La aplicación debe mostrar un enlace/acción de **Login** cuando no exista un usuario
+  autenticado.
+- Cuando exista un `UserPrincipal` autenticado, la navegación debe reflejar el estado de
+  sesión y proporcionar la acción correspondiente de **logout/salida** si esta forma parte del
+  flujo actual de osap-api.
+- El estado de autenticación de la UI debe proceder del mecanismo de autenticación existente;
+  **no crear un sistema de sesión paralelo**.
+
+### 10.6 Regla de visibilidad
+
+- La navegación de Compositores puede ser visible para todos si la consulta es pública.
+- Las acciones administrativas deben mostrarse únicamente para `UserPrincipal + role=admin`.
+- Independientemente de que se oculten o no en la UI, **el backend debe aplicar la misma
+  autorización**.
+
+### 10.7 Integración con osap-storage
+
+Las operaciones de **consulta** utilizan:
+
+```
+osap-api ── SERVICE JWT + storage:read ──► osap-storage
+```
+
+Las operaciones **administrativas** utilizan:
+
+```
+USER + role=admin
+        │
+        ▼
+    osap-api
+        │
+        └── SERVICE JWT + storage:admin ──► osap-storage
+```
+
+- Nunca se envía el JWT del usuario a osap-storage.
+- El `user_id` del usuario no se utiliza como sustituto de la identidad de servicio.
+
+### 10.8 Inspección previa (no inventar endpoints)
+
+**No inventar endpoints ni funcionalidades de compositores.** Antes de implementar la pantalla
+y las acciones administrativas, inspeccionar el contrato/documentación y el código actual de
+osap-api y osap-storage para identificar los endpoints existentes de **consulta**, de
+**mantenimiento** y de **fusión** de compositores.
+
+- Si algún endpoint no existe, o el contrato no permite determinarlo, **detenerse e informar de
+  la discrepancia** antes de crear una API nueva.
+- Aplicar la misma regla de inspección previa del prompt: si el estado real difiere del
+  descrito, no inventar una solución ni modificar silenciosamente la arquitectura.
+- Cada acción administrativa de la pantalla de Compositores debe corresponder a un endpoint
+  existente y documentado de osap-storage.
+
+## 11. `/api/v1/jobs*`
 
 - **No** tocar la clasificación de `POST /api/v1/jobs*` en esta fase. Dejarlo fuera y
   documentarlo como pendiente de decisión.
@@ -216,6 +327,20 @@ osap-api ──(SERVICE JWT)──► osap-storage
 - osap-api no persiste votos localmente.
 - **Los tests de osap-api verifican el contrato de salida hacia storage mediante mock/fake del
   cliente de storage. No se modifica ni adapta osap-storage para hacer pasar los tests.**
+- Usuario anónimo puede acceder a la consulta pública de compositores.
+- Usuario autenticado sin `admin` puede listar/ver compositores.
+- Usuario autenticado sin `admin` recibe **403** al intentar una operación administrativa.
+- Usuario con `role=admin` puede realizar mantenimiento de compositores.
+- Usuario con `role=admin` puede solicitar una fusión de compositores.
+- Un usuario `premium` sin `role=admin` **NO** obtiene permisos administrativos.
+- Las operaciones de lectura utilizan `storage:read`.
+- Las operaciones administrativas utilizan `storage:admin`.
+- Nunca se envía el JWT del usuario a osap-storage.
+- La UI muestra las acciones administrativas únicamente a un usuario con `role=admin`.
+- Ocultar una acción administrativa en la UI no sustituye la comprobación backend.
+- La navegación muestra **Login** cuando no hay usuario autenticado.
+- La pantalla de Compositores **no debe inventar operaciones administrativas**: cada acción debe
+  corresponder a un endpoint existente y documentado de osap-storage.
 
 ---
 
