@@ -4,12 +4,14 @@ import { DarkModeToggle } from "../components/DarkModeToggle";
 import { GlobalSearch } from "../components/GlobalSearch";
 import { LanguageSelect } from "../components/LanguageSelect";
 import { useI18n } from "../i18n/I18n";
+import { useAuth } from "../state/auth";
 
 const MAIN_NAV = [
   { to: "/", key: "nav.home" },
   { to: "/studio", key: "nav.studio" },
   { to: "/discover", key: "nav.discover" },
   { to: "/catalog", key: "nav.sources" },
+  { to: "/composers", key: "nav.composers" },
   { to: "/knowledge/observations", key: "nav.knowledge" },
 ] as const;
 
@@ -55,6 +57,15 @@ function Breadcrumb() {
 
 export function Header() {
   const { t } = useI18n();
+  const { user, login, logout, isAdmin } = useAuth();
+  const onLogin = () => {
+    // Dev: pega un JWT (user token) para probar la navegación/acciones. La integración real
+    // de login sigue el contrato de osap-auth.
+    const token = window.prompt(t("auth.pasteToken"));
+    if (token) {
+      login(token);
+    }
+  };
   return (
     <header className="border-b border-osap-border bg-osap-surface">
       <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-3 px-4 py-3">
@@ -68,7 +79,26 @@ export function Header() {
         <div className="flex items-center gap-2">
           <LanguageSelect />
           <DarkModeToggle />
-          <span className="rounded-full border border-osap-border px-3 py-1 text-sm">👤</span>
+          {user === null ? (
+            <button
+              onClick={onLogin}
+              className="rounded-full border border-osap-border px-3 py-1 text-sm hover:bg-osap-surface"
+            >
+              {t("auth.login")}
+            </button>
+          ) : (
+            <>
+              <span className="rounded-full border border-osap-border px-3 py-1 text-sm">
+                {isAdmin() ? t("auth.admin") : "👤"}
+              </span>
+              <button
+                onClick={logout}
+                className="rounded-full border border-osap-border px-3 py-1 text-sm hover:bg-osap-surface"
+              >
+                {t("auth.logout")}
+              </button>
+            </>
+          )}
         </div>
       </div>
     </header>

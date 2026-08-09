@@ -235,3 +235,54 @@ export interface IntentResponse {
   type: string;
   label: string;
 }
+
+// --- compositores (consulta pública + fusión admin) -------------------------
+
+export interface ComposerSummary {
+  id: string;
+  name: string;
+  status: string;
+  aliases_count: number;
+  works_count: number;
+}
+
+export interface ComposerList {
+  items: ComposerSummary[];
+  total: number;
+}
+
+export interface ComposerDetail {
+  id: string;
+  name: string;
+  status: string;
+  aliases: string[];
+  works_count: number;
+  merged_into: string | null;
+  merged_at: string | null;
+}
+
+export interface ComposerWorkRef {
+  work_id: number;
+  title: string | null;
+  composer_id: string | null;
+}
+
+export interface ComposerWorks {
+  items: ComposerWorkRef[];
+  total: number;
+}
+
+export interface MergeComposersResult {
+  target_id: string;
+  sources_merged: string[];
+  aliases_transferred: number;
+  works_moved: number;
+  merge_operation_id: string | null;
+}
+
+// --- identidad (navegación de autenticación) --------------------------------
+
+export interface FrontendUser {
+  user_id: string;
+  roles: string[];
+}
