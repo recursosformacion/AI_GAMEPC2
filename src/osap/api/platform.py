@@ -39,10 +39,12 @@ from src.osap.api.contracts import (
 )
 from src.osap.application.canonicalizer import Canonicalizer
 from src.osap.application.jobs import DefaultJob
+from src.osap.application.votes_service import VotesService
 from src.osap.bootstrap.container import Container
 from src.osap.domain.jobs import JobContext, JobTrigger
 from src.osap.domain.knowledge import KnowledgeBase
 from src.osap.domain.resolve_request import ResolveRequestBuilder
+from src.osap.domain.votes import ComposerStats, WorkStats, WorkVote
 
 VERSION = "3.1"
 
@@ -554,6 +556,26 @@ class PlatformApi:
             formats=[f.value for f in capabilities.formats],
             last_sync=None,
         )
+
+    # --- votes & statistics (v1) --------------------------------------------
+
+    def votes(self) -> VotesService:
+        return self._container.votes_service()
+
+    def current_user(self, token: str | None) -> str | None:
+        return self.votes().user_id_for(token)
+
+    def cast_vote(self, token: str | None, work_id: str, vote: int) -> WorkVote:
+        return self.votes().cast_vote(token, work_id, vote)
+
+    def work_statistics(self, work_id: str) -> WorkStats:
+        return self.votes().work_statistics(work_id)
+
+    def composer_statistics(self, composer_id: str) -> ComposerStats:
+        return self.votes().composer_statistics(composer_id)
+
+    def votes_overview(self) -> dict[str, object]:
+        return self.votes().overview()
 
     # --- knowledge (read-only) ----------------------------------------------
 

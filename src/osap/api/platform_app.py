@@ -11,12 +11,13 @@ import logging
 import re
 import urllib.request
 import uuid
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, cast
 
 from fastapi import FastAPI, Header, Response
 from fastapi.responses import StreamingResponse
 
 from src.osap.api.contracts import (
+    ComposerStatisticsResponse,
     DiscoverSource,
     ErrorBody,
     ErrorEnvelope,
@@ -38,10 +39,19 @@ from src.osap.api.contracts import (
     SystemHealthResponse,
     SystemStatisticsResponse,
     SystemVersionResponse,
+    VoteRequest,
+    VoteResponse,
+    VotesOverviewResponse,
+    WorkStatisticsResponse,
 )
 from src.osap.api.platform import VERSION, PlatformApi
 from src.osap.bootstrap.container import Container
 from src.osap.bootstrap.wiring import wire
+from src.osap.domain.votes import (
+    DuplicateVoteError,
+    InvalidVoteError,
+    WorkNotFoundError,
+)
 
 if TYPE_CHECKING:
     from collections.abc import Iterator
@@ -78,6 +88,7 @@ _TAGS = [
     {"name": "Jobs", "description": "Orchestrate long-running tasks."},
     {"name": "Providers", "description": "Provider state and capabilities."},
     {"name": "Knowledge", "description": "Learned knowledge (read-only)."},
+    {"name": "Votes", "description": "Votación de obras y estadísticas agregadas."},
     {"name": "System", "description": "Health, version and statistics."},
 ]
 
@@ -269,6 +280,48 @@ _SOURCE_GET_200 = _resp(
         }
     ),
 )
+
+
+_UNAUTHORIZED_401 = _resp(
+    "Unauthorized",
+    _error("UNAUTHORIZED", "Missing or invalid access token"),
+)
+_VOTE_201 = _resp(
+    "Vote recorded",
+    _example({"work_id": "w1", "vote": 5, "voted_at": "2026-08-06T10:00:00Z", "vote_day": "2026-08-06"}),
+)
+_DUPLICATE_VOTE_409 = _resp(
+    "Duplicate vote",
+    _error("DUPLICATE_VOTE", "Already voted for this work today"),
+)
+_INVALID_VOTE_422 = _resp(
+    "Invalid vote",
+    _error("INVALID_VOTE", "Vote must be between 1 and 5"),
+)
+_WORK_STATS_200 = _resp(
+    "Work statistics",
+    _example({"work_id": "w1", "vote_count": 37, "vote_average": 4.32}),
+)
+_COMPOSER_STATS_200 = _resp(
+    "Composer statistics",
+    _example({"composer_id": "mozart", "vote_count": 1523, "vote_average": 4.41}),
+)
+
+
+def _work_stats_dto(d: dict[str, object]) -> WorkStatisticsResponse:
+    return WorkStatisticsResponse(
+        work_id=cast("str", d["work_id"]),
+        vote_count=cast("int", d["vote_count"]),
+        vote_average=cast("float | None", d["vote_average"]),
+    )
+
+
+def _composer_stats_dto(d: dict[str, object]) -> ComposerStatisticsResponse:
+    return ComposerStatisticsResponse(
+        composer_id=cast("str", d["composer_id"]),
+        vote_count=cast("int", d["vote_count"]),
+        vote_average=cast("float | None", d["vote_average"]),
+    )
 
 
 def _standard_errors(*codes: int) -> dict[int | str, dict[str, Any]]:
@@ -721,5 +774,104 @@ def create_platform_app(
     )
     def system_statistics() -> SuccessEnvelope[object]:
         return ok(api.statistics())
+
+    # --- votes & statistics (v1) --------------------------------------------
+
+    @app.post(
+        "/api/v1/works/{work_id}/vote",
+        status_code=201,
+        tags=["Votes"],
+        summary="Vote a work",
+        description="Registers a 1..5 vote for a work. Requires authentication; one vote per work and UTC day.",
+        response_model=SuccessEnvelope[VoteResponse] | ErrorEnvelope,
+        responses={
+            201: _VOTE_201,
+            401: _UNAUTHORIZED_401,
+            404: _NOT_FOUND_404,
+            409: _DUPLICATE_VOTE_409,
+            **_standard_errors(422),
+        },
+    )
+    def cast_work_vote(
+        work_id: str,
+        payload: VoteRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        if api.current_user(authorization) is None:
+            return fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        try:
+            vote = api.cast_vote(authorization, work_id, payload.vote)
+        except InvalidVoteError:
+            return fail(422, response, "INVALID_VOTE", "Vote must be between 1 and 5")
+        except WorkNotFoundError:
+            return fail(404, response, "NOT_FOUND", "Work not found")
+        except DuplicateVoteError:
+            return fail(409, response, "DUPLICATE_VOTE", "Already voted for this work today")
+        return ok(
+            VoteResponse(
+                work_id=vote.work_id,
+                vote=vote.vote,
+                voted_at=vote.voted_at.isoformat() if vote.voted_at else "",
+                vote_day=vote.vote_day or "",
+            )
+        )
+
+    @app.get(
+        "/api/v1/works/{work_id}/statistics",
+        tags=["Votes"],
+        summary="Work statistics",
+        description="Aggregated statistics of a work (vote_count, vote_average).",
+        response_model=SuccessEnvelope[WorkStatisticsResponse],
+        responses={200: _WORK_STATS_200, **_standard_errors()},
+    )
+    def work_statistics(work_id: str) -> SuccessEnvelope[object]:
+        stats = api.work_statistics(work_id)
+        return ok(
+            WorkStatisticsResponse(work_id=stats.work_id, vote_count=stats.vote_count, vote_average=stats.vote_average)
+        )
+
+    @app.get(
+        "/api/v1/composers/{composer_id}/statistics",
+        tags=["Votes"],
+        summary="Composer statistics",
+        description="Aggregated statistics of a composer (by composer_id, provided by Storage).",
+        response_model=SuccessEnvelope[ComposerStatisticsResponse],
+        responses={200: _COMPOSER_STATS_200, **_standard_errors()},
+    )
+    def composer_statistics(composer_id: str) -> SuccessEnvelope[object]:
+        stats = api.composer_statistics(composer_id)
+        return ok(
+            ComposerStatisticsResponse(
+                composer_id=stats.composer_id,
+                vote_count=stats.vote_count,
+                vote_average=stats.vote_average,
+            )
+        )
+
+    @app.get(
+        "/api/v1/admin/votes",
+        tags=["Votes"],
+        summary="Votes overview (admin)",
+        description="Admin overview: total votes, top works, top composers and last execution.",
+        response_model=SuccessEnvelope[VotesOverviewResponse] | ErrorEnvelope,
+        responses={200: _resp("Votes overview", _example({})), 401: _UNAUTHORIZED_401},
+    )
+    def admin_votes(
+        response: Response, authorization: str | None = Header(default=None)
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        if api.current_user(authorization) is None:
+            return fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        overview = api.votes_overview()
+        top_works = cast("list[dict[str, object]]", overview["top_works"])
+        top_composers = cast("list[dict[str, object]]", overview["top_composers"])
+        return ok(
+            VotesOverviewResponse(
+                total_votes=int(cast("int", overview["total_votes"])),
+                top_works=[_work_stats_dto(w) for w in top_works],
+                top_composers=[_composer_stats_dto(c) for c in top_composers],
+                last_execution=cast("dict[str, object] | None", overview["last_execution"]),
+            )
+        )
 
     return app

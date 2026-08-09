@@ -1,12 +1,15 @@
 from pathlib import Path
 
+from src.osap.application.votes_service import VotesService
 from src.osap.bootstrap.configuration import Configuration, load_configuration
 from src.osap.bootstrap.container import Container
+from src.osap.domain.event import Event
 from src.osap.domain.ranking_config import RankingConfig
 from src.osap.infrastructure.adapters.export.musicxml import MusicXmlExporter
 from src.osap.infrastructure.adapters.library.local import LocalLibrary
 from src.osap.infrastructure.adapters.validation import BasicValidator
 from src.osap.infrastructure.auth import AuthenticationManager, SecureCredentialStore
+from src.osap.infrastructure.auth.token_authenticator import JwtAuthenticator
 from src.osap.infrastructure.cache import InMemoryCache
 from src.osap.infrastructure.catalogs import LocalCatalogProvider
 from src.osap.infrastructure.catalogs.remote.remote_catalog_provider import RemoteCatalogProvider
@@ -17,6 +20,7 @@ from src.osap.infrastructure.jobs import InMemoryJobEngine
 from src.osap.infrastructure.mediawiki import MediaWikiClient
 from src.osap.infrastructure.merge import MergeEngine
 from src.osap.infrastructure.metrics import InMemoryMetricsCollector
+from src.osap.infrastructure.persistence.storage_vote_store import StorageVoteStore
 from src.osap.infrastructure.pipeline import PipelineEngine
 from src.osap.infrastructure.providers.adapters.generic_provider_adapter import load_definition
 from src.osap.infrastructure.providers.fetchers import (
@@ -26,6 +30,7 @@ from src.osap.infrastructure.providers.fetchers import (
     OmrStorageFetcher,
 )
 from src.osap.infrastructure.rankings import DefaultRankingEngine
+from src.osap.infrastructure.storage.work_store import StorageWorkStore
 from src.osap.infrastructure.user_profile import InMemoryUserProfileStore
 
 DEFAULT_PROVIDER_ORDER = (
@@ -113,4 +118,22 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     master_key = config.credentials_key or "osap-local-dev-key"
     auth_store = SecureCredentialStore(Path(config.credentials_path), master_key)
     container.set_authentication_manager(AuthenticationManager(auth_store))
+
+    # --- votes & statistics (v1) --------------------------------------------
+    # Los votos y las estadísticas viven en osap-storage (no en una BD de osap-api).
+    storage_base = config.omr_base_url or "https://storage.openmusicrepository.com"
+    vote_store = StorageVoteStore(base_url=storage_base)
+    work_store = StorageWorkStore(base_url=storage_base)
+    authenticator = JwtAuthenticator()
+    votes_service = VotesService(vote_store, work_store, authenticator)
+    container.set_vote_store(vote_store)
+    container.set_work_store(work_store)
+    container.set_authenticator(authenticator)
+    container.set_votes(votes_service)
+
+    # Consumir user.deleted (osap-auth): anonimiza votos y conserva el agregado.
+    def _on_user_deleted(event: Event) -> None:
+        votes_service.handle_user_deleted(str(event.payload.get("user_id")))
+
+    event_bus.subscribe("user.deleted", _on_user_deleted)
     return container

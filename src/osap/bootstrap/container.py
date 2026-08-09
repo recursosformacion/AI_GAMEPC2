@@ -3,6 +3,7 @@ from src.osap.application.evidence_engine import EvidenceEngine
 from src.osap.application.export_manager import ExportManager
 from src.osap.application.library_manager import LibraryManager
 from src.osap.application.provider_orchestrator import ProviderOrchestrator
+from src.osap.application.votes_service import VotesService
 from src.osap.application.work_merge_service import WorkMergeService
 from src.osap.application.work_resolution_engine import WorkResolutionEngine
 from src.osap.application.work_resolver import WorkResolver
@@ -28,6 +29,7 @@ from src.osap.ports.ranking_engine import IRankingEngine
 from src.osap.ports.score_exporter import IScoreExporter
 from src.osap.ports.score_validator import IScoreValidator
 from src.osap.ports.user_profile import IUserProfileStore
+from src.osap.ports.votes import IAuthenticator, IVoteStore, IWorkStore
 
 
 class Container:
@@ -48,9 +50,45 @@ class Container:
         self._merge_engine: MergeEngine | None = None
         self._auth_manager: AuthenticationManager | None = None
         self._defined_providers: tuple[tuple[str, str, str, bool], ...] = ()
+        self._vote_store: IVoteStore | None = None
+        self._work_store: IWorkStore | None = None
+        self._authenticator: IAuthenticator | None = None
+        self._votes_service: VotesService | None = None
 
     def register_catalog_provider(self, provider: ICatalogProvider) -> None:
         self._catalog_providers.append(provider)
+
+    def set_votes(self, votes: VotesService) -> None:
+        self._votes_service = votes
+
+    def set_vote_store(self, store: IVoteStore) -> None:
+        self._vote_store = store
+
+    def set_work_store(self, store: IWorkStore) -> None:
+        self._work_store = store
+
+    def set_authenticator(self, authenticator: IAuthenticator) -> None:
+        self._authenticator = authenticator
+
+    def votes_service(self) -> VotesService:
+        if self._votes_service is None:
+            raise RuntimeError("VotesService not wired")
+        return self._votes_service
+
+    def vote_store(self) -> IVoteStore:
+        if self._vote_store is None:
+            raise RuntimeError("VoteStore not wired")
+        return self._vote_store
+
+    def work_store(self) -> IWorkStore:
+        if self._work_store is None:
+            raise RuntimeError("WorkStore not wired")
+        return self._work_store
+
+    def authenticator(self) -> IAuthenticator:
+        if self._authenticator is None:
+            raise RuntimeError("Authenticator not wired")
+        return self._authenticator
 
     def set_defined_providers(self, providers: tuple[tuple[str, str, str, bool], ...]) -> None:
         """Metadata (id, name, base_url, wired) of every declared provider, wired or not."""

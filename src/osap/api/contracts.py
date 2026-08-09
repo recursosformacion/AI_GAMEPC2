@@ -267,6 +267,43 @@ class IntentResponse(_Frozen):
     label: str
 
 
+# --- votes & statistics (v1) -----------------------------------------------
+
+
+class VoteRequest(_Frozen):
+    model_config = ConfigDict(
+        frozen=True,
+        json_schema_extra={"examples": [{"vote": 5}]},
+    )
+    vote: int
+
+
+class VoteResponse(_Frozen):
+    work_id: str
+    vote: int
+    voted_at: str
+    vote_day: str
+
+
+class WorkStatisticsResponse(_Frozen):
+    work_id: str
+    vote_count: int
+    vote_average: float | None
+
+
+class ComposerStatisticsResponse(_Frozen):
+    composer_id: str
+    vote_count: int
+    vote_average: float | None
+
+
+class VotesOverviewResponse(_Frozen):
+    total_votes: int
+    top_works: list[WorkStatisticsResponse] = []
+    top_composers: list[ComposerStatisticsResponse] = []
+    last_execution: dict[str, object] | None = None
+
+
 class SuccessEnvelope(_Frozen, Generic[T]):  # noqa: UP046
     success: bool
     request_id: str
