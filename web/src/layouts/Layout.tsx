@@ -18,7 +18,9 @@ const MAIN_NAV = [
   { to: "/knowledge/observations", key: "nav.knowledge" },
 ] as const;
 
-const ADMIN_LINKS = [
+const ADMIN_MENU = [
+  { to: "/admin", key: "admin.overview" },
+  { to: "/composers", key: "admin.composers" },
   { to: "/providers", key: "providers" },
   { to: "/jobs", key: "jobs" },
 ] as const;
@@ -62,6 +64,7 @@ export function Header() {
   const { t } = useI18n();
   const { user, logout, isAdmin } = useAuth();
   const [loginOpen, setLoginOpen] = useState(false);
+  const [adminOpen, setAdminOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   return (
     <header className="border-b border-osap-border bg-osap-surface">
@@ -117,9 +120,29 @@ export function Header() {
                 {isAdmin() ? t("auth.admin") : "👤"}
               </span>
               {isAdmin() && (
-                <Link to="/admin" className="rounded-full border border-osap-border px-3 py-1 text-sm hover:bg-osap-surface">
-                  {t("admin.title")}
-                </Link>
+                <div className="relative">
+                  <button
+                    onClick={() => setAdminOpen((o) => !o)}
+                    className="rounded-full border border-osap-border px-3 py-1 text-sm hover:bg-osap-surface"
+                  >
+                    {t("admin.title")} ▾
+                  </button>
+                  {adminOpen && (
+                    <ul className="absolute right-0 top-full z-20 mt-2 w-44 rounded border border-osap-border bg-osap-surface shadow">
+                      {ADMIN_MENU.map((item) => (
+                        <li key={item.to}>
+                          <Link
+                            to={item.to}
+                            onClick={() => setAdminOpen(false)}
+                            className="block px-3 py-2 text-sm hover:bg-osap-surface"
+                          >
+                            {t(item.key)}
+                          </Link>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
               )}
               <button
                 onClick={logout}
@@ -150,16 +173,6 @@ export function Navigation() {
             >
               {t(item.key)}
             </NavLink>
-          </li>
-        ))}
-        <li className="ml-auto">
-          <span className="block px-3 py-2 text-xs text-osap-muted">{t("nav.admin")}</span>
-        </li>
-        {ADMIN_LINKS.map((item) => (
-          <li key={item.to}>
-            <Link to={item.to} className="block px-2 py-2 text-xs text-osap-muted hover:text-osap-ink">
-              {item.key}
-            </Link>
           </li>
         ))}
       </ul>
