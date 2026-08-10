@@ -42,6 +42,7 @@ class WorkInfo(_Frozen):
     title: str
     composer: str | None = None
     catalogue: str | None = None
+    collection: str | None = None
 
 
 class RepresentationInfo(_Frozen):

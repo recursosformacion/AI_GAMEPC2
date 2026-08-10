@@ -97,7 +97,7 @@ class MetadataNormalizer:
         # Normalización central: la tabla de aliases de compositor de resources/canonical.
         if _CANONICALIZER is not None:
             central = _CANONICALIZER.canonicalize(text).output
-            if central != text and central.split()[-1].lower() in _KNOWN_LAST_NAMES:
+            if central and central != text and central.split()[-1].lower() in _KNOWN_LAST_NAMES:
                 return central
         key = _collapse_initials(MusicQueryNormalizer.normalize(text))
         if key in _KNOWN_COMPOSERS:

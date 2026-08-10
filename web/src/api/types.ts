@@ -36,6 +36,7 @@ export interface WorkInfo {
   title: string;
   composer: string | null;
   catalogue: string | null;
+  collection?: string | null;
 }
 
 export interface RepresentationInfo {

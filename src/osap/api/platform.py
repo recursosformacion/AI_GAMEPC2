@@ -103,6 +103,35 @@ def _host_of(url: str) -> str:
         return url
 
 
+_COLLECTION_RULES: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("symphon", "sinfon"), "Symphonies"),
+    (("concerto", "konzert"), "Concertos"),
+    (("sonata",), "Sonatas"),
+    (("quartet", "trio", "quintet", "chamber"), "Chamber"),
+    (("opera", "aria", "operatic", "zarzuela"), "Operas"),
+    (
+        (
+            "missa", "requiem", "ave", "te deum", "magnificat", "mass",
+            "hymn", "cantata", "chorale", "motet", "psalm", "sacred",
+        ),
+        "Sacred Music",
+    ),    (("piano", "harpsichord", "clavier", "organ", "keyboard"), "Keyboard"),
+)
+
+def _classify_collection(title: str | None) -> str | None:
+    """Asigna una colección a una obra a partir de su título (catalogación post-búsqueda).
+
+    Es una clasificación ligera por palabras clave del título. Solo devuelve colecciones que
+    existen en el lote; una obra sin coincidencia no recibe colección.
+    """
+    text = (title or "").lower()
+    for keywords, collection in _COLLECTION_RULES:
+        for keyword in keywords:
+            if keyword in text:
+                return collection
+    return None
+
+
 def _remote_online(url: str) -> bool:
     """True if the remote API responds; the OpenMusicRepository provider's availability
     is defined by its remote endpoint (api.openmusicrepository.com), not a local index.
@@ -507,6 +536,7 @@ class PlatformApi:
                         title=work.title,
                         composer=work.composer,
                         catalogue=work.catalogue_number,
+                        collection=_classify_collection(work.title),
                     ),
                     representation=best,
                     representations=reps,

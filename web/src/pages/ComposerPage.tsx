@@ -42,6 +42,7 @@ export function ComposerPage() {
   const loading = useSearches((s) => s.loading);
   const error = useSearches((s) => s.error);
   const [open, setOpen] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   if (loading) {
     return <EmptyState message={t("states.loading")} />;
@@ -62,13 +63,24 @@ export function ComposerPage() {
   const perPage = data.per_page ?? (data.results.length || works.length);
   const totalPages = Math.max(1, Math.ceil(total / perPage));
 
+  // Solo las colecciones presentes en el lote recibido.
+  const collections = [...new Set(works.map((w) => w.work.collection).filter((c): c is string => Boolean(c)))];
+  const filtered = selected.size === 0 ? works : works.filter((w) => w.work.collection && selected.has(w.work.collection));
+
   const goPage = (next: number) => {
     const last = useSearches.getState().lastRequest;
     if (last) void useSearches.getState().create({ ...last, page: next });
   };
 
-  // Toggle the inline expandable panel in the same window. Opening one work
-  // closes any other that was open, and pushes the rest of the list down.
+  const toggleCollection = (c: string) => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(c)) next.delete(c);
+      else next.add(c);
+      return next;
+    });
+  };
+
   const toggleWork = (workId: string) => {
     setOpen(open === workId ? null : workId);
   };
@@ -76,21 +88,31 @@ export function ComposerPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">{composer}</h1>
-      <p className="text-sm text-osap-muted">{works.length} works found</p>
+      <p className="text-sm text-osap-muted">
+        {filtered.length} of {works.length} works
+      </p>
 
-      <Card title="Collections">
-        <div className="flex flex-wrap gap-2">
-          {["Symphonies", "Sacred Music", "Operas", "Chamber", "All works"].map((c) => (
-            <span key={c} className="rounded bg-osap-accent-soft px-2 py-0.5 text-xs text-osap-accent">
-              {c}
-            </span>
-          ))}
-        </div>
-      </Card>
+      {collections.length > 0 && (
+        <Card title="Collections">
+          <div className="flex flex-wrap gap-3">
+            {collections.map((c) => (
+              <label key={c} className="flex items-center gap-1.5 text-sm">
+                <input
+                  type="checkbox"
+                  checked={selected.has(c)}
+                  onChange={() => toggleCollection(c)}
+                  className="accent-osap-accent"
+                />
+                {c}
+              </label>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Card title="Works">
         <ul className="divide-y divide-osap-border">
-          {works.map((w) => {
+          {filtered.map((w) => {
             const reps = allRepresentations(w);
             const providers = new Set(reps.map((r) => r.provider));
             const isOpen = open === w.work.work_id;
