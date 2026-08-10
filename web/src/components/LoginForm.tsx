@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useI18n } from "../i18n/I18n";
 import { useAuth } from "../state/auth";
 
-export function LoginForm() {
+export function LoginForm({ onDone }: { onDone?: () => void }) {
   const { t } = useI18n();
   const login = useAuth((s) => s.login);
   const [email, setEmail] = useState("");
@@ -18,6 +18,7 @@ export function LoginForm() {
       await login(email, password);
       setEmail("");
       setPassword("");
+      onDone?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("auth.error"));
     } finally {
@@ -26,14 +27,15 @@ export function LoginForm() {
   };
 
   return (
-    <form onSubmit={submit} className="flex items-center gap-2">
+    <form onSubmit={submit} className="flex flex-col gap-2">
       <input
         type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         placeholder={t("auth.email")}
         required
-        className="w-40 rounded border border-osap-border bg-osap-bg px-2 py-1 text-sm"
+        autoFocus
+        className="rounded border border-osap-border bg-osap-bg px-2 py-1 text-sm"
       />
       <input
         type="password"
@@ -41,7 +43,7 @@ export function LoginForm() {
         onChange={(e) => setPassword(e.target.value)}
         placeholder={t("auth.password")}
         required
-        className="w-32 rounded border border-osap-border bg-osap-bg px-2 py-1 text-sm"
+        className="rounded border border-osap-border bg-osap-bg px-2 py-1 text-sm"
       />
       <button
         disabled={busy}

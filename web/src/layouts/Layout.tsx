@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { DarkModeToggle } from "../components/DarkModeToggle";
 import { GlobalSearch } from "../components/GlobalSearch";
@@ -59,6 +60,7 @@ function Breadcrumb() {
 export function Header() {
   const { t } = useI18n();
   const { user, logout, isAdmin } = useAuth();
+  const [loginOpen, setLoginOpen] = useState(false);
   return (
     <header className="border-b border-osap-border bg-osap-surface">
       <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-3 px-4 py-3">
@@ -73,7 +75,20 @@ export function Header() {
           <LanguageSelect />
           <DarkModeToggle />
           {user === null ? (
-            <LoginForm />
+            <div className="relative">
+              <button
+                onClick={() => setLoginOpen((o) => !o)}
+                aria-label={t("auth.login")}
+                className="rounded-full border border-osap-border px-3 py-1 text-lg leading-none hover:bg-osap-surface"
+              >
+                👤
+              </button>
+              {loginOpen && (
+                <div className="absolute right-0 top-full z-20 mt-2 w-56 rounded border border-osap-border bg-osap-surface p-3 shadow">
+                  <LoginForm onDone={() => setLoginOpen(false)} />
+                </div>
+              )}
+            </div>
           ) : (
             <>
               <span className="rounded-full border border-osap-border px-3 py-1 text-sm">
