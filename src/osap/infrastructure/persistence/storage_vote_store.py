@@ -125,10 +125,10 @@ class StorageVoteStore(IVoteStore):
             "Accept": "application/json",
             "Content-Type": "application/json",
         }
-        if self._token_provider is not None:
-            headers["Authorization"] = f"Bearer {self._token_provider.token((scope,))}"
-        request = urllib.request.Request(url, data=data, method=method, headers=headers)
         try:
+            if self._token_provider is not None:
+                headers["Authorization"] = f"Bearer {self._token_provider.token((scope,))}"
+            request = urllib.request.Request(url, data=data, method=method, headers=headers)
             with urllib.request.urlopen(request, timeout=self._timeout) as response:  # noqa: S310 (storage contract)
                 raw = response.read()
                 try:
