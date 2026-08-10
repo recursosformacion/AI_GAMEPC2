@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Layout } from "../layouts/Layout";
 import { AboutPage } from "../pages/AboutPage";
+import { AdminComposerDetailPage } from "../pages/AdminComposerDetailPage";
 import { AdminComposersPage } from "../pages/AdminComposersPage";
 import { AdminPage } from "../pages/AdminPage";
 import { HowItWorksPage } from "../pages/HowItWorksPage";
@@ -33,6 +34,7 @@ export function AppRoutes() {
         <Route path="/composers/:composerId" element={<ComposerDetailPage />} />
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/admin/composers" element={<AdminComposersPage />} />
+        <Route path="/admin/composers/:composerId" element={<AdminComposerDetailPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/about/how-it-works" element={<HowItWorksPage />} />
         <Route path="/candidates" element={<CandidatesPage />} />

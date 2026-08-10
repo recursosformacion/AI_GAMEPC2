@@ -68,7 +68,7 @@ export function AdminComposersPage() {
               {data.items.map((c) => (
                 <li key={c.id} className="flex items-center justify-between px-3 py-2">
                   <div className="flex items-center gap-2">
-                    <Link to={`/composers/${encodeURIComponent(c.id)}`} className="font-medium hover:text-osap-accent">
+                    <Link to={`/admin/composers/${encodeURIComponent(c.id)}`} className="font-medium hover:text-osap-accent">
                       {c.name}
                     </Link>
                     {c.review_status && <ReviewBadge status={c.review_status} />}
