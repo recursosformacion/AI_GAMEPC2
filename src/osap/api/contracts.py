@@ -287,14 +287,22 @@ class VoteResponse(_Frozen):
 
 class WorkStatisticsResponse(_Frozen):
     work_id: str
-    vote_count: int
-    vote_average: float | None
+    rating: float | None
+    adjusted_rating: float | None = None
+    vote_count: int = 0
+    work_count: int = 1
+    confidence: float | None = None
+    calculated_at: str | None = None
 
 
 class ComposerStatisticsResponse(_Frozen):
     composer_id: str
-    vote_count: int
-    vote_average: float | None
+    rating: float | None
+    adjusted_rating: float | None = None
+    vote_count: int = 0
+    work_count: int = 0
+    confidence: float | None = None
+    calculated_at: str | None = None
 
 
 class VotesOverviewResponse(_Frozen):

@@ -9,6 +9,7 @@ import json
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime
 
 from src.osap.domain.votes import (
     ComposerStats,
@@ -60,14 +61,18 @@ class StorageVoteStore(IVoteStore):
 
     def work_statistics(self, work_id: str) -> WorkStats | None:
         status, doc = self._call("GET", f"/api/v1/works/{_q(work_id)}/statistics", scope="storage:read")
+        if status == 404:
+            raise WorkNotFoundError("Work not found")
         if not 200 <= status < 300 or not isinstance(doc, dict):
-            return None
+            raise StorageUnavailableError(f"Storage statistics unavailable (HTTP {status})")
         return _work_stats(work_id, doc)
 
     def composer_statistics(self, composer_id: str) -> ComposerStats | None:
         status, doc = self._call("GET", f"/api/v1/composers/{_q(composer_id)}/statistics", scope="storage:read")
+        if status == 404:
+            raise WorkNotFoundError("Composer not found")
         if not 200 <= status < 300 or not isinstance(doc, dict):
-            return None
+            raise StorageUnavailableError(f"Storage statistics unavailable (HTTP {status})")
         return _composer_stats(composer_id, doc)
 
     def anonymize_user(self, user_id: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
@@ -173,12 +178,24 @@ def _as_str(value: object) -> str:
     return str(value) if value is not None else ""
 
 
+def _from_iso(value: str) -> datetime | None:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except ValueError:
+        return None
+
+
 def _work_stats(work_id: str, doc: dict[str, object]) -> WorkStats:
     return WorkStats(
         work_id=work_id,
         vote_count=_as_int(doc.get("vote_count")),
-        vote_sum=_as_int(doc.get("vote_sum")),
-        vote_average=_as_float(doc.get("vote_average")),
+        rating=_as_float(doc.get("rating")),
+        adjusted_rating=_as_float(doc.get("adjusted_rating")),
+        work_count=_as_int(doc.get("work_count")) or 1,
+        confidence=_as_float(doc.get("confidence")),
+        calculated_at=_from_iso(_as_str(doc.get("calculated_at"))),
     )
 
 
@@ -186,6 +203,9 @@ def _composer_stats(composer_id: str, doc: dict[str, object]) -> ComposerStats:
     return ComposerStats(
         composer_id=composer_id,
         vote_count=_as_int(doc.get("vote_count")),
-        vote_sum=_as_int(doc.get("vote_sum")),
-        vote_average=_as_float(doc.get("vote_average")),
+        rating=_as_float(doc.get("rating")),
+        adjusted_rating=_as_float(doc.get("adjusted_rating")),
+        work_count=_as_int(doc.get("work_count")),
+        confidence=_as_float(doc.get("confidence")),
+        calculated_at=_from_iso(_as_str(doc.get("calculated_at"))),
     )

@@ -157,7 +157,7 @@ def test_work_statistics() -> None:
     data = resp.json()["data"]
     assert data["work_id"] == "work-a"
     assert data["vote_count"] == 1
-    assert data["vote_average"] == 4.0
+    assert data["rating"] == 4.0
 
 
 def test_work_without_votes_has_zero_and_null() -> None:
@@ -165,7 +165,7 @@ def test_work_without_votes_has_zero_and_null() -> None:
     resp = client.get("/api/v1/works/work-c/statistics")
     data = resp.json()["data"]
     assert data["vote_count"] == 0
-    assert data["vote_average"] is None
+    assert data["rating"] is None
 
 
 # --- estadísticas de compositor ---------------------------------------------
@@ -180,7 +180,7 @@ def test_composer_statistics() -> None:
     data = resp.json()["data"]
     assert data["composer_id"] == "comp-mozart"
     assert data["vote_count"] == 2
-    assert data["vote_average"] == 4.5  # (4+5)/2, no media de medias
+    assert data["rating"] == 4.5  # (4+5)/2, no media de medias
 
 
 def test_weighted_aggregation_not_average_of_averages() -> None:
@@ -191,10 +191,9 @@ def test_weighted_aggregation_not_average_of_averages() -> None:
     store.insert_vote(WorkVote(vote=5, work_id="work-b", user_id="u1", composer_id="comp-mozart"))
     store.insert_vote(WorkVote(vote=5, work_id="work-b", user_id="u2", composer_id="comp-mozart"))
     stats = service.composer_statistics("comp-mozart")
-    # Peso real: sum(5,1,5,5)=16 / 4 = 4.0 (una media de medias daría (3+5)/2=4.0 también aquí)
+    # Peso real: sum(5,1,5,5)=16 / 4 = 4.0 (no media de medias).
     assert stats.vote_count == 4
-    assert stats.vote_sum == 16
-    assert stats.vote_average == 4.0
+    assert stats.rating == 4.0
 
 
 def test_composer_without_votes() -> None:
@@ -202,7 +201,7 @@ def test_composer_without_votes() -> None:
     resp = client.get("/api/v1/composers/comp-bach/statistics")
     data = resp.json()["data"]
     assert data["vote_count"] == 0
-    assert data["vote_average"] is None
+    assert data["rating"] is None
 
 
 # --- recálculo / idempotencia -----------------------------------------------
@@ -216,16 +215,15 @@ def test_storage_aggregation_idempotent_and_weighted() -> None:
     store.insert_vote(WorkVote(vote=5, work_id="work-b", user_id="u1", composer_id="comp-mozart"))
     store.insert_vote(WorkVote(vote=5, work_id="work-b", user_id="u2", composer_id="comp-mozart"))
     work = store.work_statistics("work-a")
-    assert work is not None and work.vote_count == 2 and work.vote_sum == 6 and work.vote_average == 3.0
+    assert work is not None and work.vote_count == 2 and work.rating == 3.0
     composer = service.composer_statistics("comp-mozart")
     # Peso real: sum(5,1,5,5)=16 / 4 = 4.0 (no media de medias).
     assert composer.vote_count == 4
-    assert composer.vote_sum == 16
-    assert composer.vote_average == 4.0
+    assert composer.rating == 4.0
     # Idempotencia: releer no cambia el agregado.
     again = service.composer_statistics("comp-mozart")
     assert again.vote_count == composer.vote_count
-    assert again.vote_average == composer.vote_average
+    assert again.rating == composer.rating
 
 
 def test_service_sends_current_composer_id_from_storage() -> None:
@@ -251,7 +249,7 @@ def test_user_deleted_anonymizes_votes_and_stats_survive() -> None:
     after = service.composer_statistics("comp-mozart")
     # El agregado sobrevive a la anonimización.
     assert after.vote_count == before.vote_count == 2
-    assert after.vote_average == before.vote_average == 4.5
+    assert after.rating == before.rating == 4.5
     # El usuario ya no está asociado a los votos (sin PII).
     remaining = store.work_statistics("work-a")
     assert remaining is not None and remaining.vote_count == 1

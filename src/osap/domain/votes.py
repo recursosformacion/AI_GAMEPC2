@@ -5,7 +5,7 @@ como máximo una vez al día (UTC). Las estadísticas agregadas de obras y de co
 se calculan siempre a partir de los votos originales, nunca como media de medias.
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import uuid4
 
@@ -93,17 +93,25 @@ class VoteStats:
 
 @dataclass(frozen=True)
 class WorkStats:
+    """Estadísticas agregadas de una obra (proxy de osap-storage)."""
+
     work_id: str
     vote_count: int
-    vote_sum: int
-    vote_average: float | None
-    updated_at: datetime | None = field(default=None)
+    rating: float | None
+    adjusted_rating: float | None = None
+    work_count: int = 1
+    confidence: float | None = None
+    calculated_at: datetime | None = None
 
 
 @dataclass(frozen=True)
 class ComposerStats:
+    """Estadísticas agregadas de un compositor (proxy de osap-storage)."""
+
     composer_id: str
     vote_count: int
-    vote_sum: int
-    vote_average: float | None
-    updated_at: datetime | None = field(default=None)
+    rating: float | None
+    adjusted_rating: float | None = None
+    work_count: int = 0
+    confidence: float | None = None
+    calculated_at: datetime | None = None

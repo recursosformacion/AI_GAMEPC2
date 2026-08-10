@@ -5,8 +5,6 @@ Implementa :class:`IVoteStore` con la misma semántica que Storage (regla
 orquestador de osap-api sin red ni BD propia.
 """
 
-from datetime import UTC, datetime
-
 from src.osap.domain.votes import ComposerStats, DuplicateVoteError, WorkStats, WorkVote
 from src.osap.ports.votes import IVoteStore
 
@@ -36,22 +34,15 @@ class MemoryVoteStore(IVoteStore):
     def _refresh(self, work_id: str, composer_id: str | None) -> None:
         work_votes = [v for v in self._votes if v.work_id == work_id]
         count = len(work_votes)
-        total = sum(v.vote for v in work_votes)
-        avg = round(total / count, 2) if count else None
-        self._work_stats[work_id] = WorkStats(
-            work_id=work_id, vote_count=count, vote_sum=total, vote_average=avg, updated_at=datetime.now(UTC)
-        )
+        avg = round(sum(v.vote for v in work_votes) / count, 2) if count else None
+        self._work_stats[work_id] = WorkStats(work_id=work_id, vote_count=count, rating=avg, work_count=1)
         if composer_id:
             composer_votes = [v for v in self._votes if v.composer_id == composer_id]
             ccount = len(composer_votes)
-            ctotal = sum(v.vote for v in composer_votes)
-            cavg = round(ctotal / ccount, 2) if ccount else None
+            cavg = round(sum(v.vote for v in composer_votes) / ccount, 2) if ccount else None
+            works = {v.work_id for v in composer_votes}
             self._composer_stats[composer_id] = ComposerStats(
-                composer_id=composer_id,
-                vote_count=ccount,
-                vote_sum=ctotal,
-                vote_average=cavg,
-                updated_at=datetime.now(UTC),
+                composer_id=composer_id, vote_count=ccount, rating=cavg, work_count=len(works)
             )
 
     def work_statistics(self, work_id: str) -> WorkStats | None:
@@ -88,12 +79,12 @@ class MemoryVoteStore(IVoteStore):
 
     def top_works(self, limit: int = 20) -> list[WorkStats]:
         return sorted(
-            self._work_stats.values(), key=lambda s: (s.vote_average or 0, s.vote_count), reverse=True
+            self._work_stats.values(), key=lambda s: (s.rating or 0, s.vote_count), reverse=True
         )[:limit]
 
     def top_composers(self, limit: int = 20) -> list[ComposerStats]:
         return sorted(
-            self._composer_stats.values(), key=lambda s: (s.vote_average or 0, s.vote_count), reverse=True
+            self._composer_stats.values(), key=lambda s: (s.rating or 0, s.vote_count), reverse=True
         )[:limit]
 
     def last_execution(self) -> dict[str, object] | None:

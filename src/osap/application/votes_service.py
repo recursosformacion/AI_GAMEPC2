@@ -88,13 +88,13 @@ class VotesService:
         stats = self._votes.work_statistics(work_id)
         if stats is not None:
             return stats
-        return WorkStats(work_id=work_id, vote_count=0, vote_sum=0, vote_average=None)
+        return WorkStats(work_id=work_id, vote_count=0, rating=None)
 
     def composer_statistics(self, composer_id: str) -> ComposerStats:
         stats = self._votes.composer_statistics(composer_id)
         if stats is not None:
             return stats
-        return ComposerStats(composer_id=composer_id, vote_count=0, vote_sum=0, vote_average=None)
+        return ComposerStats(composer_id=composer_id, vote_count=0, rating=None)
 
     # -- user.deleted --------------------------------------------------------
 
@@ -115,8 +115,18 @@ class VotesService:
 
 
 def _work_stats_to_dict(stats: WorkStats) -> dict[str, object]:
-    return {"work_id": stats.work_id, "vote_count": stats.vote_count, "vote_average": stats.vote_average}
+    return {
+        "work_id": stats.work_id,
+        "vote_count": stats.vote_count,
+        "rating": stats.rating,
+        "work_count": stats.work_count,
+    }
 
 
 def _composer_stats_to_dict(stats: ComposerStats) -> dict[str, object]:
-    return {"composer_id": stats.composer_id, "vote_count": stats.vote_count, "vote_average": stats.vote_average}
+    return {
+        "composer_id": stats.composer_id,
+        "vote_count": stats.vote_count,
+        "rating": stats.rating,
+        "work_count": stats.work_count,
+    }

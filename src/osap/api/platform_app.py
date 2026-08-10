@@ -61,6 +61,7 @@ from src.osap.domain.votes import (
     UnauthenticatedError,
     WorkNotFoundError,
 )
+from src.osap.infrastructure.persistence.storage_vote_store import StorageUnavailableError
 from src.osap.infrastructure.storage.storage_composer_client import StorageComposerError
 
 if TYPE_CHECKING:
@@ -329,16 +330,18 @@ _COMPOSER_STATS_200 = _resp(
 def _work_stats_dto(d: dict[str, object]) -> WorkStatisticsResponse:
     return WorkStatisticsResponse(
         work_id=cast("str", d["work_id"]),
+        rating=cast("float | None", d.get("rating")),
         vote_count=cast("int", d["vote_count"]),
-        vote_average=cast("float | None", d["vote_average"]),
+        work_count=cast("int", d.get("work_count") or 1),
     )
 
 
 def _composer_stats_dto(d: dict[str, object]) -> ComposerStatisticsResponse:
     return ComposerStatisticsResponse(
         composer_id=cast("str", d["composer_id"]),
+        rating=cast("float | None", d.get("rating")),
         vote_count=cast("int", d["vote_count"]),
-        vote_average=cast("float | None", d["vote_average"]),
+        work_count=cast("int", d.get("work_count") or 0),
     )
 
 
@@ -911,31 +914,53 @@ def create_platform_app(
         "/api/v1/works/{work_id}/statistics",
         tags=["Votes"],
         summary="Work statistics",
-        description="Aggregated statistics of a work (vote_count, vote_average).",
-        response_model=SuccessEnvelope[WorkStatisticsResponse],
-        responses={200: _WORK_STATS_200, **_standard_errors()},
+        description="Valoración agregada de una obra (proxy de osap-storage).",
+        response_model=SuccessEnvelope[WorkStatisticsResponse] | ErrorEnvelope,
+        responses={200: _WORK_STATS_200, 404: _NOT_FOUND_404, 503: _SERVICE_UNAVAILABLE_503, **_standard_errors()},
     )
-    def work_statistics(work_id: str) -> SuccessEnvelope[object]:
-        stats = api.work_statistics(work_id)
+    def work_statistics(work_id: str, response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            stats = api.work_statistics(work_id)
+        except WorkNotFoundError:
+            return fail(404, response, "NOT_FOUND", "Work not found")
+        except StorageUnavailableError:
+            return fail(503, response, "SERVICE_UNAVAILABLE", "Statistics service is not configured")
         return ok(
-            WorkStatisticsResponse(work_id=stats.work_id, vote_count=stats.vote_count, vote_average=stats.vote_average)
+            WorkStatisticsResponse(
+                work_id=stats.work_id,
+                rating=stats.rating,
+                adjusted_rating=stats.adjusted_rating,
+                vote_count=stats.vote_count,
+                work_count=stats.work_count,
+                confidence=stats.confidence,
+                calculated_at=stats.calculated_at.isoformat() if stats.calculated_at else None,
+            )
         )
 
     @app.get(
         "/api/v1/composers/{composer_id}/statistics",
         tags=["Votes"],
         summary="Composer statistics",
-        description="Aggregated statistics of a composer (by composer_id, provided by Storage).",
-        response_model=SuccessEnvelope[ComposerStatisticsResponse],
-        responses={200: _COMPOSER_STATS_200, **_standard_errors()},
+        description="Valoración agregada de un compositor (proxy de osap-storage).",
+        response_model=SuccessEnvelope[ComposerStatisticsResponse] | ErrorEnvelope,
+        responses={200: _COMPOSER_STATS_200, 404: _NOT_FOUND_404, 503: _SERVICE_UNAVAILABLE_503, **_standard_errors()},
     )
-    def composer_statistics(composer_id: str) -> SuccessEnvelope[object]:
-        stats = api.composer_statistics(composer_id)
+    def composer_statistics(composer_id: str, response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            stats = api.composer_statistics(composer_id)
+        except WorkNotFoundError:
+            return fail(404, response, "NOT_FOUND", "Composer not found")
+        except StorageUnavailableError:
+            return fail(503, response, "SERVICE_UNAVAILABLE", "Statistics service is not configured")
         return ok(
             ComposerStatisticsResponse(
                 composer_id=stats.composer_id,
+                rating=stats.rating,
+                adjusted_rating=stats.adjusted_rating,
                 vote_count=stats.vote_count,
-                vote_average=stats.vote_average,
+                work_count=stats.work_count,
+                confidence=stats.confidence,
+                calculated_at=stats.calculated_at.isoformat() if stats.calculated_at else None,
             )
         )
 
