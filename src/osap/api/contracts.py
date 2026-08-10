@@ -342,6 +342,7 @@ class ComposerWorkRefResponse(_Frozen):
     work_id: int
     title: str | None = None
     composer_id: str | None = None
+    tags: str | None = None
 
 
 class ComposerWorksResponse(_Frozen):

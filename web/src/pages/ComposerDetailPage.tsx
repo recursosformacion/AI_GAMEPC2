@@ -67,9 +67,11 @@ export function ComposerDetailPage() {
         <h2 className="mb-2 text-base font-semibold">{t("composers.worksTitle")}</h2>
         <ul className="divide-y divide-osap-border rounded border border-osap-border">
           {(works?.items ?? []).map((w) => (
-            <li key={w.work_id} className="flex items-center justify-between px-3 py-2 text-sm">
-              <span>{w.title ?? w.work_id}</span>
-              <span className="text-xs text-osap-muted">#{w.work_id}</span>
+            <li key={w.work_id} className="flex flex-col gap-0.5 px-3 py-2 text-sm">
+              <span className="font-medium">{w.title ?? w.work_id}</span>
+              <span className="text-xs text-osap-muted">
+                {t("composers.origin")}: {w.tags ?? "—"} · #{w.work_id}
+              </span>
             </li>
           ))}
         </ul>

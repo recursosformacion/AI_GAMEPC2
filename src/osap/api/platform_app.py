@@ -392,6 +392,7 @@ def _composer_work_ref(d: dict[str, object]) -> ComposerWorkRefResponse:
         work_id=cast("int", d.get("work_id") or 0),
         title=cast("str | None", d.get("title")),
         composer_id=cast("str | None", d.get("composer_id")),
+        tags=cast("str | None", d.get("tags")),
     )
 
 

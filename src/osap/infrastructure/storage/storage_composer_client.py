@@ -62,9 +62,26 @@ class StorageComposerClient:
     def composer_works(self, composer_id: str, limit: int, offset: int) -> dict[str, object]:
         path = f"/api/admin/composers/{_q(composer_id)}/works?limit={limit}&offset={offset}"
         status, doc = self._call("GET", path, scope="storage:read")
+        if not 200 <= status < 300 or not isinstance(doc, dict):
+            return {"items": [], "total": 0}
+        items = doc.get("items")
+        enriched: list[dict[str, object]] = []
+        for item in items if isinstance(items, list) else []:
+            if not isinstance(item, dict):
+                continue
+            entry = dict(item)
+            entry["tags"] = self._work_tags(_as_int(item.get("work_id")))
+            enriched.append(entry)
+        return {"items": enriched, "total": _as_int(doc.get("total"))}
+
+    def _work_tags(self, work_id: int) -> str | None:
+        status, doc = self._call("GET", f"/api/v1/works/{_q(str(work_id))}", scope="storage:read")
         if 200 <= status < 300 and isinstance(doc, dict):
-            return doc
-        return {"items": [], "total": 0}
+            work = doc.get("work")
+            if isinstance(work, dict):
+                tags = work.get("tags")
+                return _as_str(tags) or None
+        return None
 
     def merge_composers(self, target_id: str, source_ids: list[str]) -> tuple[int, dict[str, object]]:
         payload: dict[str, object] = {"source_ids": source_ids}
@@ -116,3 +133,20 @@ class StorageComposerClient:
 
 def _q(value: str) -> str:
     return urllib.parse.quote(value)
+
+
+def _as_int(value: object) -> int:
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, (int, float)):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value)
+        except ValueError:
+            return 0
+    return 0
+
+
+def _as_str(value: object) -> str:
+    return str(value) if value is not None else ""

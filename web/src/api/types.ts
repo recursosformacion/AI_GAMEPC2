@@ -265,6 +265,7 @@ export interface ComposerWorkRef {
   work_id: number;
   title: string | null;
   composer_id: string | null;
+  tags: string | null;
 }
 
 export interface ComposerWorks {
