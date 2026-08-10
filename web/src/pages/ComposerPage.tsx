@@ -70,6 +70,8 @@ export function ComposerPage() {
     selected === null
       ? works
       : works.filter((w) => !w.work.collection || selected.has(w.work.collection));
+  const rangeStart = total === 0 ? 0 : (page - 1) * perPage + 1;
+  const rangeEnd = Math.min(page * perPage, total);
 
   const goPage = (next: number) => {
     const last = useSearches.getState().lastRequest;
@@ -99,7 +101,7 @@ export function ComposerPage() {
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">{composer}</h1>
       <p className="text-sm text-osap-muted">
-        {filtered.length} of {works.length} works
+        {rangeStart}–{rangeEnd} of {total} works
       </p>
 
       {collections.length > 0 && (

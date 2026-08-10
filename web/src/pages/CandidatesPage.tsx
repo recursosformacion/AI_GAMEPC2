@@ -59,6 +59,8 @@ export function CandidatesPage() {
   const page = data.page ?? 1;
   const perPage = data.per_page ?? (data.results.length || candidates.length);
   const totalPages = Math.max(1, Math.ceil(total / perPage));
+  const rangeStart = total === 0 ? 0 : (page - 1) * perPage + 1;
+  const rangeEnd = Math.min(page * perPage, total);
 
   const goPage = (next: number) => {
     const last = useSearches.getState().lastRequest;
@@ -74,7 +76,9 @@ export function CandidatesPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">Matching Works</h1>
-      <p className="text-sm text-osap-muted">{total} works</p>
+      <p className="text-sm text-osap-muted">
+        {rangeStart}–{rangeEnd} of {total} works
+      </p>
       <ul className="space-y-2">
         {candidates.map((c) => {
           const reps = allRepresentations(c);

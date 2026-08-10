@@ -93,7 +93,7 @@ class WorkGrouper:
         for m in members:
             if not composer and m.work_descriptor.composer:
                 composer = m.work_descriptor.composer
-        display = self._normalizer.clean_display_title(title, composer)
+        display = self._normalizer.clean_display_title(title, composer, keep_catalogue=True)
 
         catalogue: str | None = None
         mkey: str | None = None

@@ -157,12 +157,18 @@ class MetadataNormalizer:
         )
 
     @staticmethod
-    def clean_display_title(title: str, composer: str | None = None) -> str:
+    def clean_display_title(
+        title: str, composer: str | None = None, *, keep_catalogue: bool = False
+    ) -> str:
         """Best-effort display title: removes the catalogue marker (shown
         separately) and any trailing composer clause, then title-cases it. The
-        work number and key are preserved. Never returns a broken fragment."""
+        work number and key are preserved. Never returns a broken fragment.
+
+        With ``keep_catalogue=True`` the catalogue/Op. marker is kept, so the
+        displayed title is the first title that composes a merge (con su Op.)."""
         text = MetadataNormalizer._clean_text(title)
-        text = _REMOVE_CATALOGUE.sub("", text)
+        if not keep_catalogue:
+            text = _REMOVE_CATALOGUE.sub("", text)
         if composer:
             last = composer.split()[-1].strip(" .,")
             text = re.sub(rf"\s*\([^)]*{re.escape(last)}[^)]*\)\s*$", "", text, flags=re.IGNORECASE)

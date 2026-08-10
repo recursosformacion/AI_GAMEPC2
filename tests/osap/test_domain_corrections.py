@@ -33,11 +33,11 @@ class TestDisplayVsCanonical:
                 _candidate("c2", "Symphony No. 5 in C minor, Op. 67", "Beethoven", "openscore"),
             )
         )
-        # The catalogue is shown separately; the display title keeps the work
-        # number and key but not the catalogue marker.
+        # El título de pantalla es el primer título que compone la fusión, conservando
+        # el catálogo/Op. (también se expone por separado en catalogue_number).
         titles = {g.work.title for g in groups}
-        assert "Piano Sonata No. 11 in A" in titles
-        assert "Symphony No. 5 in C Minor" in titles
+        assert any("K. 331" in t for t in titles)
+        assert any("Op. 67" in t for t in titles)
         cats = {g.work.catalogue_number for g in groups}
         assert "K 331" in cats
         assert "Op. 67" in cats
@@ -51,9 +51,8 @@ class TestDisplayVsCanonical:
         assert work.canonical_key == MetadataNormalizer.normalize(work.title, work.composer).signature()
 
     def test_best_title_wins_across_providers(self) -> None:
-        # Two representations of the same work merge into ONE work; the display
-        # title is the clean best-preference title and the catalogue is shown
-        # separately (never embedded in the title).
+        # Dos representaciones de la misma obra se fusionan en UNA; el título de
+        # pantalla es el primer título (mejor preferencia) y conserva el catálogo.
         service = WorkMergeService()
         candidates = (
             _candidate("c1", "Ave Verum Corpus", "Mozart", "omr"),
@@ -61,7 +60,8 @@ class TestDisplayVsCanonical:
         )
         groups = service.group(candidates)
         assert len(groups) == 1
-        assert groups[0].work.title == "Ave Verum Corpus"
+        assert "Ave Verum Corpus" in groups[0].work.title
+        assert "K. 618" in groups[0].work.title
         assert groups[0].work.catalogue_number == "K 618"
 
 
