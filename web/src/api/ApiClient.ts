@@ -11,9 +11,11 @@
 import type {
   ComposerDetail,
   ComposerList,
+  ComposerStatistics,
   ComposerWorks,
   Envelope,
   MergeComposersResult,
+  WorkStatistics,
 } from "./types";
 import { ApiError } from "./errors";
 
@@ -88,6 +90,14 @@ export class ApiClient {
       `/admin/composers/${encodeURIComponent(targetId)}/merge`,
       { source_ids: sourceIds },
     );
+  }
+
+  async getWorkStatistics(workId: string): Promise<WorkStatistics> {
+    return this.get<WorkStatistics>(`/works/${encodeURIComponent(workId)}/statistics`);
+  }
+
+  async getComposerStatistics(composerId: string): Promise<ComposerStatistics> {
+    return this.get<ComposerStatistics>(`/composers/${encodeURIComponent(composerId)}/statistics`);
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {

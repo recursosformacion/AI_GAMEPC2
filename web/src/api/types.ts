@@ -302,3 +302,20 @@ export interface VoteResponse {
   voted_at: string;
   vote_day: string;
 }
+
+export interface Statistics {
+  rating: number | null;
+  adjusted_rating: number | null;
+  vote_count: number;
+  work_count: number;
+  confidence: number | null;
+  calculated_at: string | null;
+}
+
+export interface WorkStatistics extends Statistics {
+  work_id: string;
+}
+
+export interface ComposerStatistics extends Statistics {
+  composer_id: string;
+}
