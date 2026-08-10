@@ -6,9 +6,9 @@
 import { ApiError } from "./errors";
 import type { AuthSession } from "./types";
 
-// URL base de osap-auth. En dev apunta al servicio local; en producción debe servirse a
-// través de un proxy inverso que exponga /auth/* (CORS o proxy).
-export const AUTH_BASE_URL = "http://127.0.0.1:8200";
+// URL base de osap-auth. En dev/prod el Web llama a /auth a través del mismo origen
+// (proxy inverso de osap-app → osap-auth), evitando CORS.
+export const AUTH_BASE_URL = "";
 
 interface AuthErrorDetail {
   detail?: string | { msg?: string }[];
@@ -61,6 +61,8 @@ export class AuthClient {
       message = detail;
     } else if (Array.isArray(detail) && detail[0] && typeof detail[0].msg === "string") {
       message = detail[0].msg;
+    } else if (response.status >= 500) {
+      message = "Auth service unavailable";
     }
     throw new ApiError(response.status === 401 ? "UNAUTHORIZED" : "AUTH_ERROR", message);
   }
