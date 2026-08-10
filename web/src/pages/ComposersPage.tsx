@@ -13,7 +13,7 @@ export function ComposersPage() {
   const [offset, setOffset] = useState(0);
 
   useEffect(() => {
-    void fetchList(q, LIMIT, offset);
+    void fetchList(q, LIMIT, offset, null);
   }, [fetchList, q, offset]);
 
   const search = () => {

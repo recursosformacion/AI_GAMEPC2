@@ -72,10 +72,13 @@ export class ApiClient {
     return this.request<T>("DELETE", path);
   }
 
-  async getComposers(q: string, limit: number, offset: number): Promise<ComposerList> {
+  async getComposers(q: string, limit: number, offset: number, review?: string): Promise<ComposerList> {
     const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
     if (q) {
       params.set("q", q);
+    }
+    if (review) {
+      params.set("review", review);
     }
     return this.get<ComposerList>(`/composers?${params.toString()}`);
   }

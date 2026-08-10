@@ -245,6 +245,7 @@ export interface ComposerSummary {
   status: string;
   aliases_count: number;
   works_count: number;
+  review_status: string | null;
 }
 
 export interface ComposerList {
@@ -270,6 +271,8 @@ export interface ComposerDetail {
   merged_into: string | null;
   merged_at: string | null;
   creation_evidence: ComposerCreationEvidence[];
+  review_status: string | null;
+  reviewed_at: string | null;
 }
 
 export interface ComposerWorkRef {

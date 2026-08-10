@@ -39,7 +39,7 @@ export function ComposerDetailPage() {
   const originSummary: ComposerSummary | null =
     detail === null
       ? null
-      : { id: detail.id, name: detail.name, status: detail.status, aliases_count: detail.aliases.length, works_count: detail.works_count };
+      : { id: detail.id, name: detail.name, status: detail.status, aliases_count: detail.aliases.length, works_count: detail.works_count, review_status: detail.review_status };
 
   return (
     <div className="space-y-4">

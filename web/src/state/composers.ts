@@ -15,8 +15,10 @@ interface ComposersState {
   q: string;
   limit: number;
   offset: number;
+  review: string | null;
   setQuery: (q: string) => void;
-  fetchList: (q: string, limit: number, offset: number) => Promise<void>;
+  setReview: (review: string | null) => void;
+  fetchList: (q: string, limit: number, offset: number, review: string | null) => Promise<void>;
   fetchDetail: (id: string) => Promise<void>;
   fetchWorks: (id: string, limit: number, offset: number) => Promise<void>;
   merge: (targetId: string, sourceIds: string[]) => Promise<void>;
@@ -31,11 +33,13 @@ export const useComposers = create<ComposersState>((set, get) => ({
   q: "",
   limit: 50,
   offset: 0,
+  review: null,
   setQuery: (q) => set({ q }),
-  fetchList: async (q, limit, offset) => {
+  setReview: (review) => set({ review }),
+  fetchList: async (q, limit, offset, review) => {
     set({ loading: true, error: null });
     try {
-      const list = await apiClient.getComposers(q, limit, offset);
+      const list = await apiClient.getComposers(q, limit, offset, review ?? undefined);
       set({ list, loading: false, error: null });
     } catch (e) {
       set({ loading: false, error: e instanceof ApiError ? e : new ApiError("UNKNOWN", String(e)) });

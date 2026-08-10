@@ -21,7 +21,7 @@ const MAIN_NAV = [
 
 const ADMIN_MENU = [
   { to: "/admin", key: "admin.overview" },
-  { to: "/composers", key: "admin.composers" },
+  { to: "/admin/composers", key: "admin.composers" },
   { to: "/providers", key: "providers" },
   { to: "/jobs", key: "jobs" },
 ] as const;
@@ -117,9 +117,7 @@ export function Header() {
             </div>
           ) : (
             <>
-              <span className="rounded-full border border-osap-border px-3 py-1 text-sm">
-                {isAdmin() ? t("auth.admin") : "👤"}
-              </span>
+              <span className="rounded-full border border-osap-border px-3 py-1 text-sm">👤</span>
               {isAdmin() && (
                 <div className="relative">
                   <button
