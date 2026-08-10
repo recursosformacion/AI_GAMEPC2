@@ -24,6 +24,7 @@ from src.osap.api.contracts import (
     ComposerSummaryResponse,
     ComposerWorkRefResponse,
     ComposerWorksResponse,
+    CreateComposerRequest,
     DiscoverSource,
     ErrorBody,
     ErrorEnvelope,
@@ -356,6 +357,7 @@ def _composer_summary_dto(d: dict[str, object]) -> ComposerSummaryResponse:
         status=cast("str", d.get("status") or "active"),
         aliases_count=cast("int", d.get("aliases_count") or 0),
         works_count=cast("int", d.get("works_count") or 0),
+        review_status=cast("str | None", d.get("review_status")),
     )
 
 
@@ -382,6 +384,8 @@ def _composer_detail_dto(d: dict[str, object]) -> ComposerDetailResponse:
         merged_into=cast("str | None", d.get("merged_into")),
         merged_at=_iso_or_none(d.get("merged_at")),
         creation_evidence=[_composer_evidence_dto(dict(e)) for e in raw_evidence if isinstance(e, dict)],
+        review_status=cast("str | None", d.get("review_status")),
+        reviewed_at=_iso_or_none(d.get("reviewed_at")),
     )
 
 
@@ -1111,9 +1115,14 @@ def create_platform_app(
         q: str | None = Query(default=None),
         limit: int = Query(50, ge=1, le=500),
         offset: int = Query(0, ge=0),
+        review: str | None = Query(
+            default=None,
+            pattern=r"^(correct|incorrect|reviewed|not_reviewed)$",
+            description="Filtro por estado de revisión.",
+        ),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            return ok(_composer_list_dto(api.list_composers(q, limit, offset)))
+            return ok(_composer_list_dto(api.list_composers(q, limit, offset, review)))
         except StorageComposerError:
             return fail(503, response, "SERVICE_UNAVAILABLE", "Composer service is not configured")
 
@@ -1187,5 +1196,37 @@ def create_platform_app(
                 503, response, "ADMIN_SERVICE_UNAVAILABLE", "Composer admin service is not configured"
             )
         return ok(_merge_result_dto(result))
+
+    @app.post(
+        "/api/v1/admin/composers",
+        status_code=201,
+        tags=["Composers"],
+        summary="Create composer (admin)",
+        description="Crea un compositor con el nombre dado (para fusionar hacia un compositor "
+        "inexistente). Exige role=admin; backend: osap-storage con storage:admin.",
+        response_model=SuccessEnvelope[ComposerSummaryResponse] | ErrorEnvelope,
+        responses={
+            201: _resp("Created composer", _example({})),
+            401: _UNAUTHORIZED_401,
+            403: _FORBIDDEN_403,
+            **_standard_errors(422),
+        },
+    )
+    def create_composer(
+        payload: CreateComposerRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            composer = api.create_composer(authorization, payload.name)
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+        except StorageComposerError:
+            return fail(
+                503, response, "ADMIN_SERVICE_UNAVAILABLE", "Composer admin service is not configured"
+            )
+        return ok(_composer_summary_dto(composer))
 
     return app

@@ -4,7 +4,7 @@
 import { create } from "zustand";
 import { apiClient } from "../api/ApiClient";
 import { ApiError } from "../api/errors";
-import type { ComposerDetail, ComposerList, ComposerWorks, MergeComposersResult } from "../api/types";
+import type { ComposerDetail, ComposerList, ComposerSummary, ComposerWorks, MergeComposersResult } from "../api/types";
 
 interface ComposersState {
   list: ComposerList | null;
@@ -22,6 +22,7 @@ interface ComposersState {
   fetchDetail: (id: string) => Promise<void>;
   fetchWorks: (id: string, limit: number, offset: number) => Promise<void>;
   merge: (targetId: string, sourceIds: string[]) => Promise<void>;
+  createComposer: (name: string) => Promise<ComposerSummary>;
 }
 
 export const useComposers = create<ComposersState>((set, get) => ({
@@ -73,5 +74,8 @@ export const useComposers = create<ComposersState>((set, get) => ({
     } catch (e) {
       set({ loading: false, error: e instanceof ApiError ? e : new ApiError("UNKNOWN", String(e)) });
     }
+  },
+  createComposer: async (name) => {
+    return apiClient.createComposer(name);
   },
 }));

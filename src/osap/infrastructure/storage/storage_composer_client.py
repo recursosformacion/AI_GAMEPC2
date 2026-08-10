@@ -43,10 +43,14 @@ class StorageComposerClient:
         self._token_provider = token_provider
         self._admin_token_provider = admin_token_provider
 
-    def list_composers(self, q: str | None, limit: int, offset: int) -> dict[str, object]:
+    def list_composers(
+        self, q: str | None, limit: int, offset: int, review: str | None = None
+    ) -> dict[str, object]:
         query = {"limit": str(limit), "offset": str(offset)}
         if q:
             query["q"] = q
+        if review:
+            query["review"] = review
         path = f"/api/admin/composers?{urllib.parse.urlencode(query)}"
         status, doc = self._call("GET", path, scope="storage:read")
         if 200 <= status < 300 and isinstance(doc, dict):
@@ -102,6 +106,19 @@ class StorageComposerClient:
         if 200 <= status < 300 and isinstance(doc, dict):
             return status, doc
         return status, {}
+
+    def create_composer(self, name: str) -> dict[str, object] | None:
+        payload: dict[str, object] = {"name": name}
+        status, doc = self._call(
+            "POST",
+            "/api/admin/composers",
+            payload=payload,
+            scope="storage:admin",
+            provider=self._admin_token_provider,
+        )
+        if 200 <= status < 300 and isinstance(doc, dict):
+            return doc
+        return None
 
     # -- helpers -------------------------------------------------------------
 

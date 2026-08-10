@@ -20,8 +20,10 @@ class ComposersService:
 
     # -- consulta (pública) --------------------------------------------------
 
-    def list_composers(self, q: str | None, limit: int, offset: int) -> dict[str, object]:
-        return self._client.list_composers(q, limit, offset)
+    def list_composers(
+        self, q: str | None, limit: int, offset: int, review: str | None = None
+    ) -> dict[str, object]:
+        return self._client.list_composers(q, limit, offset, review)
 
     def get_composer(self, composer_id: str) -> dict[str, object] | None:
         return self._client.get_composer(composer_id)
@@ -41,6 +43,13 @@ class ComposersService:
             if status == 404:
                 raise WorkNotFoundError("Composer not found")
             raise ForbiddenError(f"Storage rejected merge (HTTP {status})")
+        return doc
+
+    def create_composer(self, token: str | None, name: str) -> dict[str, object]:
+        self.require_admin(token)
+        doc = self._client.create_composer(name)
+        if doc is None:
+            raise ForbiddenError("Storage rejected composer creation")
         return doc
 
     def require_admin(self, token: str | None) -> UserPrincipal:

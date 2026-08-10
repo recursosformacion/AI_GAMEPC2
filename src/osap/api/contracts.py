@@ -332,6 +332,7 @@ class ComposerSummaryResponse(_Frozen):
     status: str
     aliases_count: int = 0
     works_count: int = 0
+    review_status: str | None = None
 
 
 class ComposerListResponse(_Frozen):
@@ -357,6 +358,8 @@ class ComposerDetailResponse(_Frozen):
     merged_into: str | None = None
     merged_at: str | None = None
     creation_evidence: list[ComposerCreationEvidenceResponse] = []
+    review_status: str | None = None
+    reviewed_at: str | None = None
 
 
 class ComposerWorkRefResponse(_Frozen):
@@ -374,6 +377,10 @@ class ComposerWorksResponse(_Frozen):
 class MergeComposersRequest(_Frozen):
     target_id: str
     sources: list[str]
+
+
+class CreateComposerRequest(_Frozen):
+    name: str
 
 
 class MergeComposersResultResponse(_Frozen):

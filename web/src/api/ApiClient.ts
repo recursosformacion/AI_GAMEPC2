@@ -12,6 +12,7 @@ import type {
   ComposerDetail,
   ComposerList,
   ComposerStatistics,
+  ComposerSummary,
   ComposerWorks,
   Envelope,
   MergeComposersResult,
@@ -98,6 +99,10 @@ export class ApiClient {
 
   async mergeComposers(targetId: string, sources: string[]): Promise<MergeComposersResult> {
     return this.post<MergeComposersResult>("/admin/composers/merge", { target_id: targetId, sources });
+  }
+
+  async createComposer(name: string): Promise<ComposerSummary> {
+    return this.post<ComposerSummary>("/admin/composers", { name });
   }
 
   async getWorkStatistics(workId: string): Promise<WorkStatistics> {

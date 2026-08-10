@@ -18,7 +18,9 @@ class _FakeComposerClient(StorageComposerClient):
     def __init__(self) -> None:
         super().__init__(base_url="http://127.0.0.1:1")
 
-    def list_composers(self, q: str | None, limit: int, offset: int) -> dict[str, object]:
+    def list_composers(
+        self, q: str | None, limit: int, offset: int, review: str | None = None
+    ) -> dict[str, object]:
         return {
             "items": [{"id": "comp-a", "name": "Mozart", "status": "active", "aliases_count": 3, "works_count": 264}],
             "total": 1,
@@ -56,6 +58,9 @@ class _FakeComposerClient(StorageComposerClient):
             "works_moved": 2,
             "merge_operation_id": "op-1",
         }
+
+    def create_composer(self, name: str) -> dict[str, object] | None:
+        return {"id": "comp-new", "name": name, "status": "active", "aliases_count": 0, "works_count": 0}
 
 
 def _build(auth) -> TestClient:
@@ -138,3 +143,22 @@ def test_premium_without_admin_has_no_admin_perms() -> None:
         headers={"Authorization": f"Bearer {TOKEN_USER}"},
     )
     assert resp.status_code == 403
+
+
+def test_create_composer_requires_admin() -> None:
+    client = _build(StaticTokenAuthenticator(TOKEN_USER, "u1"))
+    resp = client.post("/api/v1/admin/composers", json={"name": "New Composer"})
+    assert resp.status_code == 401
+
+
+def test_create_composer_admin_201() -> None:
+    client = _build(StaticTokenAuthenticator(TOKEN_ADMIN, "admin1", roles=("user", "admin")))
+    resp = client.post(
+        "/api/v1/admin/composers",
+        json={"name": "New Composer"},
+        headers={"Authorization": f"Bearer {TOKEN_ADMIN}"},
+    )
+    assert resp.status_code == 201
+    data = resp.json()["data"]
+    assert data["name"] == "New Composer"
+    assert data["id"] == "comp-new"

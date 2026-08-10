@@ -653,8 +653,10 @@ class PlatformApi:
     def composers(self) -> ComposersService:
         return self._container.composers_service()
 
-    def list_composers(self, q: str | None, limit: int, offset: int) -> dict[str, object]:
-        return self.composers().list_composers(q, limit, offset)
+    def list_composers(
+        self, q: str | None, limit: int, offset: int, review: str | None = None
+    ) -> dict[str, object]:
+        return self.composers().list_composers(q, limit, offset, review)
 
     def get_composer(self, composer_id: str) -> dict[str, object] | None:
         return self.composers().get_composer(composer_id)
@@ -667,6 +669,9 @@ class PlatformApi:
 
     def merge_composers(self, token: str | None, target_id: str, source_ids: list[str]) -> dict[str, object]:
         return self.composers().merge_composers(token, target_id, source_ids)
+
+    def create_composer(self, token: str | None, name: str) -> dict[str, object]:
+        return self.composers().create_composer(token, name)
 
     # --- knowledge (read-only) ----------------------------------------------
 
