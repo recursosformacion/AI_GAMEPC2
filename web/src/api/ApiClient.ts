@@ -86,11 +86,8 @@ export class ApiClient {
     return this.get<ComposerWorks>(`/composers/${encodeURIComponent(composerId)}/works?${params.toString()}`);
   }
 
-  async mergeComposers(targetId: string, sourceIds: string[]): Promise<MergeComposersResult> {
-    return this.post<MergeComposersResult>(
-      `/admin/composers/${encodeURIComponent(targetId)}/merge`,
-      { source_ids: sourceIds },
-    );
+  async mergeComposers(targetId: string, sources: string[]): Promise<MergeComposersResult> {
+    return this.post<MergeComposersResult>("/admin/composers/merge", { target_id: targetId, sources });
   }
 
   async getWorkStatistics(workId: string): Promise<WorkStatistics> {

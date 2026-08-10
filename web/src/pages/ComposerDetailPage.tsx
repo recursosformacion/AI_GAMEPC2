@@ -2,18 +2,16 @@ import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { ComposerStatistics } from "../api/types";
+import { ComposerMergeForm } from "../components/ComposerMergeForm";
 import { Envelope } from "../components/Envelope";
 import { RatingView } from "../components/RatingView";
 import { useI18n } from "../i18n/I18n";
-import { useAuth } from "../state/auth";
 import { useComposers } from "../state/composers";
 
 export function ComposerDetailPage() {
   const { composerId = "" } = useParams<{ composerId: string }>();
   const { t } = useI18n();
-  const { detail, works, loading, error, fetchDetail, fetchWorks, merge } = useComposers();
-  const isAdmin = useAuth((s) => s.isAdmin());
-  const [sourceIds, setSourceIds] = useState("");
+  const { detail, works, loading, error, fetchDetail, fetchWorks } = useComposers();
   const [rating, setRating] = useState<ComposerStatistics | null>(null);
 
   useEffect(() => {
@@ -24,16 +22,6 @@ export function ComposerDetailPage() {
       .then((s) => setRating(s))
       .catch(() => setRating(null));
   }, [fetchDetail, fetchWorks, composerId]);
-
-  const onMerge = () => {
-    const ids = sourceIds
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (ids.length > 0) {
-      void merge(composerId, ids);
-    }
-  };
 
   return (
     <div className="space-y-4">
@@ -77,23 +65,7 @@ export function ComposerDetailPage() {
         </ul>
       </section>
 
-      {isAdmin && (
-        <section className="rounded border border-osap-border bg-osap-surface p-4">
-          <h2 className="mb-2 text-base font-semibold">{t("composers.mergeTitle")}</h2>
-          <div className="flex gap-2">
-            <input
-              value={sourceIds}
-              onChange={(e) => setSourceIds(e.target.value)}
-              placeholder={t("composers.mergePlaceholder")}
-              className="w-full rounded border border-osap-border bg-osap-bg px-3 py-1 text-sm"
-            />
-            <button onClick={onMerge} className="rounded bg-osap-accent px-4 py-1 text-sm text-white">
-              {t("composers.merge")}
-            </button>
-          </div>
-          {error !== null && <p className="mt-2 text-xs text-red-500">{error.message}</p>}
-        </section>
-      )}
+      <ComposerMergeForm />
     </div>
   );
 }

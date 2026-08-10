@@ -1052,12 +1052,12 @@ def create_platform_app(
             return fail(503, response, "SERVICE_UNAVAILABLE", "Composer service is not configured")
 
     @app.post(
-        "/api/v1/admin/composers/{target_id}/merge",
+        "/api/v1/admin/composers/merge",
         status_code=200,
         tags=["Composers"],
         summary="Merge composers (admin)",
-        description="Fusiona source_ids dentro de target_id. Exige role=admin; "
-        "backend: osap-storage con storage:admin.",
+        description="Fusiona `sources` dentro de `target_id` (ambos composer_id existentes). "
+        "Exige role=admin; backend: osap-storage con storage:admin.",
         response_model=SuccessEnvelope[MergeComposersResultResponse] | ErrorEnvelope,
         responses={
             200: _resp("Merge result", _example({})),
@@ -1068,13 +1068,12 @@ def create_platform_app(
         },
     )
     def merge_composers(
-        target_id: str,
         payload: MergeComposersRequest,
         response: Response,
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            result = api.merge_composers(authorization, target_id, payload.source_ids)
+            result = api.merge_composers(authorization, payload.target_id, payload.sources)
         except UnauthenticatedError:
             return fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
         except ForbiddenError:

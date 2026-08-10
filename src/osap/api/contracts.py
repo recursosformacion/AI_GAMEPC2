@@ -351,7 +351,8 @@ class ComposerWorksResponse(_Frozen):
 
 
 class MergeComposersRequest(_Frozen):
-    source_ids: list[str]
+    target_id: str
+    sources: list[str]
 
 
 class MergeComposersResultResponse(_Frozen):

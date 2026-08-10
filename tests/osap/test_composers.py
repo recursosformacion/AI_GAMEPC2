@@ -88,15 +88,15 @@ def test_anonymous_can_get_composer_works() -> None:
 
 def test_merge_without_token_401() -> None:
     client = _build(StaticTokenAuthenticator(TOKEN_USER, "u1"))
-    resp = client.post("/api/v1/admin/composers/comp-a/merge", json={"source_ids": ["comp-b"]})
+    resp = client.post("/api/v1/admin/composers/merge", json={"target_id": "comp-a", "sources": ["comp-b"]})
     assert resp.status_code == 401
 
 
 def test_merge_non_admin_403() -> None:
     client = _build(StaticTokenAuthenticator(TOKEN_USER, "u1", roles=("user",)))
     resp = client.post(
-        "/api/v1/admin/composers/comp-a/merge",
-        json={"source_ids": ["comp-b"]},
+        "/api/v1/admin/composers/merge",
+        json={"target_id": "comp-a", "sources": ["comp-b"]},
         headers={"Authorization": f"Bearer {TOKEN_USER}"},
     )
     assert resp.status_code == 403
@@ -105,8 +105,8 @@ def test_merge_non_admin_403() -> None:
 def test_merge_admin_200() -> None:
     client = _build(StaticTokenAuthenticator(TOKEN_ADMIN, "admin1", roles=("user", "admin")))
     resp = client.post(
-        "/api/v1/admin/composers/comp-a/merge",
-        json={"source_ids": ["comp-b"]},
+        "/api/v1/admin/composers/merge",
+        json={"target_id": "comp-a", "sources": ["comp-b"]},
         headers={"Authorization": f"Bearer {TOKEN_ADMIN}"},
     )
     assert resp.status_code == 200
@@ -119,8 +119,8 @@ def test_premium_without_admin_has_no_admin_perms() -> None:
     # Un usuario "premium" sin role=admin NO puede fusionar (403).
     client = _build(StaticTokenAuthenticator(TOKEN_USER, "u1", roles=("user",)))
     resp = client.post(
-        "/api/v1/admin/composers/comp-a/merge",
-        json={"source_ids": ["comp-b"]},
+        "/api/v1/admin/composers/merge",
+        json={"target_id": "comp-a", "sources": ["comp-b"]},
         headers={"Authorization": f"Bearer {TOKEN_USER}"},
     )
     assert resp.status_code == 403
