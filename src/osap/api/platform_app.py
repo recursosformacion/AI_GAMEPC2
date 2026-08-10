@@ -997,7 +997,10 @@ def create_platform_app(
             return fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
         except ForbiddenError:
             return fail(403, response, "FORBIDDEN", "Admin role required")
-        overview = api.votes_overview()
+        try:
+            overview = api.votes_overview()
+        except StorageUnavailableError:
+            return fail(503, response, "SERVICE_UNAVAILABLE", "Votes service is not configured")
         top_works = cast("list[dict[str, object]]", overview["top_works"])
         top_composers = cast("list[dict[str, object]]", overview["top_composers"])
         return ok(
