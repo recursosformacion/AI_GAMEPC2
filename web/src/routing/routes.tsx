@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Layout } from "../layouts/Layout";
+import { AdminPage } from "../pages/AdminPage";
 import { CandidatesPage } from "../pages/CandidatesPage";
 import { ComposerDetailPage } from "../pages/ComposerDetailPage";
 import { ComposerPage } from "../pages/ComposerPage";
@@ -27,6 +28,7 @@ export function AppRoutes() {
         <Route path="/composer" element={<ComposerPage />} />
         <Route path="/composers" element={<ComposersPage />} />
         <Route path="/composers/:composerId" element={<ComposerDetailPage />} />
+        <Route path="/admin" element={<AdminPage />} />
         <Route path="/candidates" element={<CandidatesPage />} />
         <Route path="/resolution" element={<WorkResolutionPage />} />
         <Route path="/knowledge" element={<Navigate to="/knowledge/observations" replace />} />

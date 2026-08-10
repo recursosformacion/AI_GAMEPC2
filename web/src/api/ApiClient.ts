@@ -15,6 +15,7 @@ import type {
   ComposerWorks,
   Envelope,
   MergeComposersResult,
+  VotesOverview,
   WorkStatistics,
 } from "./types";
 import { ApiError } from "./errors";
@@ -98,6 +99,10 @@ export class ApiClient {
 
   async getComposerStatistics(composerId: string): Promise<ComposerStatistics> {
     return this.get<ComposerStatistics>(`/composers/${encodeURIComponent(composerId)}/statistics`);
+  }
+
+  async getVotesOverview(): Promise<VotesOverview> {
+    return this.get<VotesOverview>("/admin/votes");
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {

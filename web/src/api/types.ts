@@ -319,3 +319,10 @@ export interface WorkStatistics extends Statistics {
 export interface ComposerStatistics extends Statistics {
   composer_id: string;
 }
+
+export interface VotesOverview {
+  total_votes: number;
+  top_works: Array<{ work_id: string; vote_count: number; rating: number | null; work_count: number }>;
+  top_composers: Array<{ composer_id: string; vote_count: number; rating: number | null; work_count: number }>;
+  last_execution: { kind: string; status: string; started_at: string; finished_at: string } | null;
+}

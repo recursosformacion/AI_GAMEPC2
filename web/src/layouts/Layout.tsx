@@ -94,6 +94,11 @@ export function Header() {
               <span className="rounded-full border border-osap-border px-3 py-1 text-sm">
                 {isAdmin() ? t("auth.admin") : "👤"}
               </span>
+              {isAdmin() && (
+                <Link to="/admin" className="rounded-full border border-osap-border px-3 py-1 text-sm hover:bg-osap-surface">
+                  {t("admin.title")}
+                </Link>
+              )}
               <button
                 onClick={logout}
                 className="rounded-full border border-osap-border px-3 py-1 text-sm hover:bg-osap-surface"
