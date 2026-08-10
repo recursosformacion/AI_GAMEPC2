@@ -5,6 +5,7 @@ import { DarkModeToggle } from "../components/DarkModeToggle";
 import { GlobalSearch } from "../components/GlobalSearch";
 import { LanguageSelect } from "../components/LanguageSelect";
 import { LoginForm } from "../components/LoginForm";
+import { RegisterForm } from "../components/RegisterForm";
 import { useI18n } from "../i18n/I18n";
 import { useAuth } from "../state/auth";
 
@@ -61,6 +62,7 @@ export function Header() {
   const { t } = useI18n();
   const { user, logout, isAdmin } = useAuth();
   const [loginOpen, setLoginOpen] = useState(false);
+  const [authMode, setAuthMode] = useState<"login" | "register">("login");
   return (
     <header className="border-b border-osap-border bg-osap-surface">
       <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-3 px-4 py-3">
@@ -84,8 +86,28 @@ export function Header() {
                 👤
               </button>
               {loginOpen && (
-                <div className="absolute right-0 top-full z-20 mt-2 w-56 rounded border border-osap-border bg-osap-surface p-3 shadow">
-                  <LoginForm onDone={() => setLoginOpen(false)} />
+                <div className="absolute right-0 top-full z-20 mt-2 w-60 rounded border border-osap-border bg-osap-surface p-3 shadow">
+                  <div className="mb-2 flex gap-2 text-sm">
+                    <button
+                      type="button"
+                      onClick={() => setAuthMode("login")}
+                      className={authMode === "login" ? "font-semibold text-osap-accent" : "text-osap-muted"}
+                    >
+                      {t("auth.login")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAuthMode("register")}
+                      className={authMode === "register" ? "font-semibold text-osap-accent" : "text-osap-muted"}
+                    >
+                      {t("auth.register")}
+                    </button>
+                  </div>
+                  {authMode === "login" ? (
+                    <LoginForm onDone={() => setLoginOpen(false)} />
+                  ) : (
+                    <RegisterForm onDone={() => setLoginOpen(false)} />
+                  )}
                 </div>
               )}
             </div>

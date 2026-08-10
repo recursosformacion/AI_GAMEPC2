@@ -337,3 +337,13 @@ export interface VotesOverview {
   top_composers: Array<{ composer_id: string; vote_count: number; rating: number | null; work_count: number }>;
   last_execution: { kind: string; status: string; started_at: string; finished_at: string } | null;
 }
+
+export interface RegisterResult {
+  user_id: string | null;
+  verification_token: string | null;
+  message: string;
+}
+
+export interface VerifyEmailResult {
+  message: string;
+}

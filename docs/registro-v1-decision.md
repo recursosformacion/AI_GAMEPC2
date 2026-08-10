@@ -1,6 +1,6 @@
 # OSAP — Registro de usuario (Web OSAP) — decisión v1
 
-**Estado:** DECISIÓN ARQUITECTÓNICA (a congelar). **No implementado.**
+**Estado:** DECISIÓN APROBADA. **No implementado.**
 **Base:** osap-auth es la autoridad de identidad. **No se crea** tabla de usuarios en osap-api,
 registro paralelo, endpoint que escriba en storage, segundo sistema de credenciales, ni roles/
 tier en el Web.
@@ -29,10 +29,51 @@ osap-auth
   servicios.
 - osap-api **no** crea usuarios directamente en la BD de osap-auth.
 - osap-auth sigue siendo la **autoridad de identidad**.
+- **El Web no conoce directamente la infraestructura de osap-auth**; osap-api proxya.
+- **Anti-enumeración**: el Web **tampoco** debe revelar si el email ya existía (misma respuesta
+  genérica para "creado" y "ya existe").
 
 ---
 
-# 2. Contrato de registro de osap-auth (inspección)
+# 2. Registro ≠ verificación ≠ autenticación
+
+Ciclo completo:
+
+```
+         ┌──────────────┐
+         │  Registro    │  POST /register
+         └──────┬───────┘
+                │
+                ▼
+          usuario creado
+          email_verified=false
+                │
+                ▼
+         ┌──────────────┐
+         │ Verificación │  POST /verify-email
+         └──────┬───────┘
+                │
+                ▼
+          email_verified=true
+                │
+                ▼
+         ┌──────────────┐
+         │    Login     │  POST /login
+         └──────┬───────┘
+                │
+                ▼
+          access + refresh
+                │
+                ▼
+             osap-api
+```
+
+- `email_verified=true` es una **condición de autorización** (p. ej. para votar); **no** es algo
+  que el Web pueda decidir.
+
+---
+
+# 3. Contrato de registro de osap-auth (inspección)
 
 ## `POST /auth/register`
 
@@ -60,7 +101,7 @@ osap-auth
 
 ---
 
-# 3. Decisión congelada — Registro
+# 4. Decisión congelada — Registro
 
 - osap-api expone un **proxy público** `POST /api/v1/auth/register` que reenvía a osap-auth
   (sin service client, sin BD).
@@ -70,19 +111,20 @@ osap-auth
   - El Web muestra "**verifica tu email**" (no inicia sesión).
   - En **dev**, si llega `verification_token`, el Web puede autoverificar o mostrar el paso de
     verificación.
-- Después del registro, el flujo continúa con **Login** (osap-auth → tokens).
+- Después de verificar, el flujo continúa con **Login** (osap-auth → tokens).
 
-## Registro (no autenticado) → Login
+## Registro (no autenticado) → Verificación → Login
 
 ```
 NO autenticado
-   ├── Login → osap-auth → tokens
-   └── Registro → osap-auth → usuario (verificado) → luego Login
+   ├── Registro → osap-auth → usuario (email_verified=false)
+   ├── Verificación → osap-auth → email_verified=true
+   └── Login → osap-auth → tokens
 ```
 
 ---
 
-# 4. Fuera de v1
+# 5. Fuera de v1
 
 - CRUD/roles/tier en el Web.
 - Segundo sistema de credenciales.
@@ -91,11 +133,11 @@ NO autenticado
 
 ---
 
-# 5. No implementar todavía
+# 6. No implementar todavía
 
 - No se implementa el registro aún.
 - No se toca lo ya cerrado (login, voto, compositores, valoración, administración).
 
 ---
 
-*Decisión de Registro v1 (2026-08) — pendiente de aprobación; no implementado.*
+*Decisión de Registro v1 (2026-08) — aprobada; no implementado.*

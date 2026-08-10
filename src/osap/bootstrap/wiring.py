@@ -10,6 +10,7 @@ from src.osap.infrastructure.adapters.export.musicxml import MusicXmlExporter
 from src.osap.infrastructure.adapters.library.local import LocalLibrary
 from src.osap.infrastructure.adapters.validation import BasicValidator
 from src.osap.infrastructure.auth import AuthenticationManager, SecureCredentialStore
+from src.osap.infrastructure.auth.auth_proxy_client import AuthProxyClient
 from src.osap.infrastructure.auth.service_token_provider import ClientCredentialsServiceTokenProvider
 from src.osap.infrastructure.auth.token_authenticator import JwtAuthenticator
 from src.osap.infrastructure.cache import InMemoryCache
@@ -44,6 +45,16 @@ DEFAULT_PROVIDER_ORDER = (
     "imslp",
     "openmusicrepository",
 )
+
+
+def _auth_base_from_token_url(token_url: str | None) -> str:
+    """Deriva la base de osap-auth desde la URL del token (o usa el default de dev)."""
+    if token_url:
+        stripped = token_url.rstrip("/")
+        if stripped.endswith("/oauth/token"):
+            return stripped[: -len("/oauth/token")]
+        return stripped
+    return "http://127.0.0.1:8200"
 
 
 def wire(container: Container, configuration: Configuration | None = None) -> Container:
@@ -128,6 +139,11 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     master_key = config.credentials_key or "osap-local-dev-key"
     auth_store = SecureCredentialStore(Path(config.credentials_path), master_key)
     container.set_authentication_manager(AuthenticationManager(auth_store))
+
+    # --- registro/verificación de usuario (proxy público a osap-auth) ---------
+    auth_base = config.osap_auth_base_url or _auth_base_from_token_url(config.osap_auth_token_url)
+    auth_proxy = AuthProxyClient(base_url=auth_base)
+    container.set_auth_proxy(auth_proxy)
 
     # --- votes & statistics (v1) --------------------------------------------
     # Los votos y las estadísticas viven en osap-storage (no en una BD de osap-api).

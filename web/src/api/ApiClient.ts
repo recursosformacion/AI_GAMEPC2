@@ -15,6 +15,8 @@ import type {
   ComposerWorks,
   Envelope,
   MergeComposersResult,
+  RegisterResult,
+  VerifyEmailResult,
   VotesOverview,
   WorkStatistics,
 } from "./types";
@@ -100,6 +102,14 @@ export class ApiClient {
 
   async getVotesOverview(): Promise<VotesOverview> {
     return this.get<VotesOverview>("/admin/votes");
+  }
+
+  async register(email: string, password: string, name?: string): Promise<RegisterResult> {
+    return this.post<RegisterResult>("/auth/register", { email, password, name });
+  }
+
+  async verifyEmail(token: string): Promise<VerifyEmailResult> {
+    return this.post<VerifyEmailResult>("/auth/verify-email", { token });
   }
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {

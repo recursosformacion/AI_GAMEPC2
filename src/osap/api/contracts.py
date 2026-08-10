@@ -267,6 +267,16 @@ class IntentResponse(_Frozen):
     label: str
 
 
+class RegisterRequest(_Frozen):
+    email: str
+    password: str
+    name: str | None = None
+
+
+class VerifyEmailRequest(_Frozen):
+    token: str
+
+
 # --- votes & statistics (v1) -----------------------------------------------
 
 

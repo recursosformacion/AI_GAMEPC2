@@ -10,6 +10,7 @@ from src.osap.application.work_resolution_engine import WorkResolutionEngine
 from src.osap.application.work_resolver import WorkResolver
 from src.osap.domain.ranking_config import RankingConfig
 from src.osap.infrastructure.auth import AuthenticationManager
+from src.osap.infrastructure.auth.auth_proxy_client import AuthProxyClient
 from src.osap.infrastructure.cache import InMemoryCache
 from src.osap.infrastructure.dedup import DuplicateResolver
 from src.osap.infrastructure.events import InMemoryEventBus
@@ -56,6 +57,7 @@ class Container:
         self._authenticator: IAuthenticator | None = None
         self._votes_service: VotesService | None = None
         self._composers_service: ComposersService | None = None
+        self._auth_proxy: AuthProxyClient | None = None
 
     def register_catalog_provider(self, provider: ICatalogProvider) -> None:
         self._catalog_providers.append(provider)
@@ -84,6 +86,14 @@ class Container:
         if self._composers_service is None:
             raise RuntimeError("ComposersService not wired")
         return self._composers_service
+
+    def set_auth_proxy(self, client: AuthProxyClient) -> None:
+        self._auth_proxy = client
+
+    def auth_proxy(self) -> AuthProxyClient:
+        if self._auth_proxy is None:
+            raise RuntimeError("AuthProxyClient not wired")
+        return self._auth_proxy
 
     def vote_store(self) -> IVoteStore:
         if self._vote_store is None:

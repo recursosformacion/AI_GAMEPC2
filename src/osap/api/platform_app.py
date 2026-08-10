@@ -36,6 +36,7 @@ from src.osap.api.contracts import (
     MergeComposersRequest,
     MergeComposersResultResponse,
     ProviderResponse,
+    RegisterRequest,
     RepositorySource,
     RepositorySourceSummary,
     SearchModel,
@@ -47,6 +48,7 @@ from src.osap.api.contracts import (
     SystemHealthResponse,
     SystemStatisticsResponse,
     SystemVersionResponse,
+    VerifyEmailRequest,
     VoteRequest,
     VoteResponse,
     VotesOverviewResponse,
@@ -62,6 +64,7 @@ from src.osap.domain.votes import (
     UnauthenticatedError,
     WorkNotFoundError,
 )
+from src.osap.infrastructure.auth.auth_proxy_client import AuthProxyError
 from src.osap.infrastructure.persistence.storage_vote_store import StorageUnavailableError
 from src.osap.infrastructure.storage.storage_composer_client import StorageComposerError
 
@@ -1011,6 +1014,65 @@ def create_platform_app(
                 last_execution=cast("dict[str, object] | None", overview["last_execution"]),
             )
         )
+
+    # --- registro / verificación de usuario (proxy a osap-auth) --------------
+
+    @app.post(
+        "/api/v1/auth/register",
+        status_code=200,
+        tags=["Auth"],
+        summary="Register user",
+        description="Registra un usuario vía osap-auth (proxy público, sin service client). "
+        "Anti-enumeración: email ya existente devuelve la misma respuesta genérica.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={
+            200: _resp("Register result", _example({})),
+            422: _INVALID_VOTE_422,
+            429: _resp("Rate limited", _error("RATE_LIMITED", "Too many requests")),
+            502: _resp("Bad gateway", _error("BAD_GATEWAY", "Identity service unreachable")),
+            **_standard_errors(),
+        },
+    )
+    def register_user(
+        payload: RegisterRequest,
+        response: Response,
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            status, doc = api.register_user(payload.email, payload.password, payload.name)
+        except AuthProxyError:
+            return fail(502, response, "BAD_GATEWAY", "Identity service unreachable")
+        if status == 422:
+            return fail(422, response, "VALIDATION_ERROR", "Invalid email/password/name")
+        if status == 429:
+            return fail(429, response, "RATE_LIMITED", "Too many requests")
+        if status >= 500:
+            return fail(502, response, "BAD_GATEWAY", "Identity service unavailable")
+        return ok(doc)
+
+    @app.post(
+        "/api/v1/auth/verify-email",
+        status_code=200,
+        tags=["Auth"],
+        summary="Verify email",
+        description="Verifica el email de un usuario vía osap-auth (proxy público).",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={
+            200: _resp("Email verified", _example({})),
+            422: _INVALID_VOTE_422,
+            502: _resp("Bad gateway", _error("BAD_GATEWAY", "Identity service unreachable")),
+            **_standard_errors(),
+        },
+    )
+    def verify_email(payload: VerifyEmailRequest, response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            status, doc = api.verify_email(payload.token)
+        except AuthProxyError:
+            return fail(502, response, "BAD_GATEWAY", "Identity service unreachable")
+        if status == 422:
+            return fail(422, response, "VALIDATION_ERROR", "Invalid token")
+        if status >= 500:
+            return fail(502, response, "BAD_GATEWAY", "Identity service unavailable")
+        return ok(doc)
 
     # --- compositores (consulta pública + fusión admin) ----------------------
 

@@ -610,6 +610,14 @@ class PlatformApi:
     def votes_overview(self) -> dict[str, object]:
         return self.votes().overview()
 
+    # --- registro / verificación de usuario (proxy a osap-auth) --------------
+
+    def register_user(self, email: str, password: str, name: str | None = None) -> tuple[int, dict[str, object]]:
+        return self._container.auth_proxy().register(email, password, name)
+
+    def verify_email(self, token: str) -> tuple[int, dict[str, object]]:
+        return self._container.auth_proxy().verify_email(token)
+
     # --- compositores (consulta pública + fusión admin) ----------------------
 
     def composers(self) -> ComposersService:
