@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { RepresentationInfo, SearchResultItem } from "../api/types";
 import { Card } from "../components/Card";
-import { EmptyState } from "../components/EmptyState";
+import { Spinner } from "../components/Spinner";
 import { WorkDetailTabs } from "../components/WorkDetailTabs";
 import { useI18n } from "../i18n/I18n";
 import { useSearches } from "../state/searches";
@@ -45,7 +45,7 @@ export function ComposerPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
   if (loading) {
-    return <EmptyState message={t("states.loading")} />;
+    return <Spinner label={t("states.loading")} />;
   }
   if (error !== null || data === null || data.results.length === 0) {
     return (

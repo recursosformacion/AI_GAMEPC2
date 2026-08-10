@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import type { RepresentationInfo, SearchResultItem } from "../api/types";
 import { Card } from "../components/Card";
 import { EmptyState } from "../components/EmptyState";
+import { Spinner } from "../components/Spinner";
 import { useI18n } from "../i18n/I18n";
 import { useSearches } from "../state/searches";
 
@@ -63,7 +64,7 @@ export function WorkResolutionPage() {
   }, [searchIdParam, workParam]);
 
   if (loading) {
-    return <EmptyState message={t("states.loading")} />;
+    return <Spinner label={t("states.loading")} />;
   }
   if (error !== null || data === null || data.results.length === 0) {
     return (
