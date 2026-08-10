@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { EvidenceInfo, RepresentationInfo, WorkInfo, WorkRelationships } from "../api/types";
 import { useI18n } from "../i18n/I18n";
+import { VoteControl } from "./VoteControl";
 
 export type WorkDetailTab = "overview" | "representations" | "evidence" | "relationships";
 
@@ -76,6 +77,11 @@ export function WorkDetailTabs({
             Merge: {representations.length} representation{representations.length === 1 ? "" : "s"} from{" "}
             {providers.size} provider{providers.size === 1 ? "" : "s"} consolidated into this work.
           </p>
+          {work.work_id ? (
+            <div className="mt-4 border-t border-osap-border pt-3">
+              <VoteControl workId={work.work_id} />
+            </div>
+          ) : null}
         </div>
       ) : null}
 

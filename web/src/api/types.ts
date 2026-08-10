@@ -295,3 +295,10 @@ export interface AuthSession {
   roles: string[];
   email_verified: boolean;
 }
+
+export interface VoteResponse {
+  work_id: string;
+  vote: number;
+  voted_at: string;
+  vote_day: string;
+}
