@@ -5,7 +5,7 @@ import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
 import { useComposers } from "../state/composers";
 
-const LIMIT = 50;
+const LIMIT = 30;
 
 export function AdminComposersPage() {
   const { t } = useI18n();

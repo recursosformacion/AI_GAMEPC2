@@ -18,7 +18,7 @@ export function ComposerDetailPage() {
   // Igual que una búsqueda con ese compositor.
   useEffect(() => {
     if (detail?.name) {
-      void useSearches.getState().create({ query: "", composer: detail.name, limit: 50 });
+      void useSearches.getState().create({ query: "", composer: detail.name, limit: 30 });
     }
   }, [detail?.name]);
 

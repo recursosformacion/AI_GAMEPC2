@@ -4,7 +4,7 @@ import { Envelope } from "../components/Envelope";
 import { useI18n } from "../i18n/I18n";
 import { useComposers } from "../state/composers";
 
-const LIMIT = 50;
+const LIMIT = 30;
 
 export function ComposersPage() {
   const { t } = useI18n();
