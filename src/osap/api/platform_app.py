@@ -40,6 +40,7 @@ from src.osap.api.contracts import (
     RegisterRequest,
     RepositorySource,
     RepositorySourceSummary,
+    ReviewComposerRequest,
     SearchModel,
     SearchRequest,
     SearchResponse,
@@ -1248,5 +1249,41 @@ def create_platform_app(
                 503, response, "ADMIN_SERVICE_UNAVAILABLE", "Composer admin service is not configured"
             )
         return ok(_composer_summary_dto(composer))
+
+    @app.post(
+        "/api/v1/admin/composers/{composer_id}/review",
+        status_code=200,
+        tags=["Composers"],
+        summary="Set composer review status (admin)",
+        description="Marca el estado de revisión de un compositor (correct|incorrect|reviewed|"
+        "not_reviewed). Exige role=admin; backend: osap-storage con storage:admin.",
+        response_model=SuccessEnvelope[ComposerDetailResponse] | ErrorEnvelope,
+        responses={
+            200: _resp("Reviewed composer", _example({})),
+            401: _UNAUTHORIZED_401,
+            403: _FORBIDDEN_403,
+            404: _NOT_FOUND_404,
+            **_standard_errors(422),
+        },
+    )
+    def review_composer(
+        composer_id: str,
+        payload: ReviewComposerRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            composer = api.review_composer(authorization, composer_id, payload.review_status)
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return fail(404, response, "NOT_FOUND", "Composer not found")
+        except StorageComposerError:
+            return fail(
+                503, response, "ADMIN_SERVICE_UNAVAILABLE", "Composer admin service is not configured"
+            )
+        return ok(_composer_detail_dto(composer))
 
     return app

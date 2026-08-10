@@ -62,6 +62,17 @@ class _FakeComposerClient(StorageComposerClient):
     def create_composer(self, name: str) -> dict[str, object] | None:
         return {"id": "comp-new", "name": name, "status": "active", "aliases_count": 0, "works_count": 0}
 
+    def review_composer(self, composer_id: str, review_status: str) -> tuple[int, dict[str, object]]:
+        return 200, {
+            "id": composer_id,
+            "name": "Mozart",
+            "status": "active",
+            "aliases": [],
+            "works_count": 264,
+            "creation_evidence": [],
+            "review_status": review_status,
+        }
+
 
 def _build(auth) -> TestClient:
     client = _FakeComposerClient()
@@ -162,3 +173,23 @@ def test_create_composer_admin_201() -> None:
     data = resp.json()["data"]
     assert data["name"] == "New Composer"
     assert data["id"] == "comp-new"
+
+
+def test_review_composer_requires_admin() -> None:
+    client = _build(StaticTokenAuthenticator(TOKEN_USER, "u1"))
+    resp = client.post(
+        "/api/v1/admin/composers/comp-a/review", json={"review_status": "correct"}
+    )
+    assert resp.status_code == 401
+
+
+def test_review_composer_admin_200() -> None:
+    client = _build(StaticTokenAuthenticator(TOKEN_ADMIN, "admin1", roles=("user", "admin")))
+    resp = client.post(
+        "/api/v1/admin/composers/comp-a/review",
+        json={"review_status": "correct"},
+        headers={"Authorization": f"Bearer {TOKEN_ADMIN}"},
+    )
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["review_status"] == "correct"

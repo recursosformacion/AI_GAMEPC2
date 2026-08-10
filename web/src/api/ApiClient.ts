@@ -105,6 +105,12 @@ export class ApiClient {
     return this.post<ComposerSummary>("/admin/composers", { name });
   }
 
+  async reviewComposer(composerId: string, reviewStatus: string): Promise<ComposerDetail> {
+    return this.post<ComposerDetail>(`/admin/composers/${encodeURIComponent(composerId)}/review`, {
+      review_status: reviewStatus,
+    });
+  }
+
   async getWorkStatistics(workId: string): Promise<WorkStatistics> {
     return this.get<WorkStatistics>(`/works/${encodeURIComponent(workId)}/statistics`);
   }

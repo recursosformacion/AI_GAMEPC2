@@ -52,6 +52,15 @@ class ComposersService:
             raise ForbiddenError("Storage rejected composer creation")
         return doc
 
+    def review_composer(self, token: str | None, composer_id: str, review_status: str) -> dict[str, object]:
+        self.require_admin(token)
+        status, doc = self._client.review_composer(composer_id, review_status)
+        if not 200 <= status < 300:
+            if status == 404:
+                raise WorkNotFoundError("Composer not found")
+            raise ForbiddenError(f"Storage rejected review (HTTP {status})")
+        return doc
+
     def require_admin(self, token: str | None) -> UserPrincipal:
         principal: Principal | None = self._authenticator.resolve(token)
         if not isinstance(principal, UserPrincipal):

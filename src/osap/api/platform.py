@@ -641,6 +641,9 @@ class PlatformApi:
     def create_composer(self, token: str | None, name: str) -> dict[str, object]:
         return self.composers().create_composer(token, name)
 
+    def review_composer(self, token: str | None, composer_id: str, review_status: str) -> dict[str, object]:
+        return self.composers().review_composer(token, composer_id, review_status)
+
     # --- knowledge (read-only) ----------------------------------------------
 
     def knowledge(self) -> KnowledgeResponse:

@@ -23,6 +23,7 @@ interface ComposersState {
   fetchWorks: (id: string, limit: number, offset: number) => Promise<void>;
   merge: (targetId: string, sourceIds: string[]) => Promise<void>;
   createComposer: (name: string) => Promise<ComposerSummary>;
+  reviewComposer: (composerId: string, reviewStatus: string) => Promise<void>;
 }
 
 export const useComposers = create<ComposersState>((set, get) => ({
@@ -77,5 +78,16 @@ export const useComposers = create<ComposersState>((set, get) => ({
   },
   createComposer: async (name) => {
     return apiClient.createComposer(name);
+  },
+  reviewComposer: async (composerId, reviewStatus) => {
+    set({ loading: true, error: null });
+    try {
+      await apiClient.reviewComposer(composerId, reviewStatus);
+      const { q, limit, offset, review } = get();
+      await get().fetchList(q, limit, offset, review);
+      set({ loading: false, error: null });
+    } catch (e) {
+      set({ loading: false, error: e instanceof ApiError ? e : new ApiError("UNKNOWN", String(e)) });
+    }
   },
 }));

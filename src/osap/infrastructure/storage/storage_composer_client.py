@@ -120,6 +120,19 @@ class StorageComposerClient:
             return doc
         return None
 
+    def review_composer(self, composer_id: str, review_status: str) -> tuple[int, dict[str, object]]:
+        payload: dict[str, object] = {"review_status": review_status}
+        status, doc = self._call(
+            "POST",
+            f"/api/admin/composers/{_q(composer_id)}/review",
+            payload=payload,
+            scope="storage:admin",
+            provider=self._admin_token_provider,
+        )
+        if 200 <= status < 300 and isinstance(doc, dict):
+            return status, doc
+        return status, {}
+
     # -- helpers -------------------------------------------------------------
 
     def _call(

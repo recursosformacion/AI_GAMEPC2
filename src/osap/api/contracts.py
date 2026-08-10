@@ -383,6 +383,10 @@ class CreateComposerRequest(_Frozen):
     name: str
 
 
+class ReviewComposerRequest(_Frozen):
+    review_status: str
+
+
 class MergeComposersResultResponse(_Frozen):
     target_id: str
     sources_merged: list[str] = []
