@@ -3,6 +3,7 @@ import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { DarkModeToggle } from "../components/DarkModeToggle";
 import { GlobalSearch } from "../components/GlobalSearch";
 import { LanguageSelect } from "../components/LanguageSelect";
+import { LoginForm } from "../components/LoginForm";
 import { useI18n } from "../i18n/I18n";
 import { useAuth } from "../state/auth";
 
@@ -57,15 +58,7 @@ function Breadcrumb() {
 
 export function Header() {
   const { t } = useI18n();
-  const { user, login, logout, isAdmin } = useAuth();
-  const onLogin = () => {
-    // Dev: pega un JWT (user token) para probar la navegación/acciones. La integración real
-    // de login sigue el contrato de osap-auth.
-    const token = window.prompt(t("auth.pasteToken"));
-    if (token) {
-      login(token);
-    }
-  };
+  const { user, logout, isAdmin } = useAuth();
   return (
     <header className="border-b border-osap-border bg-osap-surface">
       <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-3 px-4 py-3">
@@ -76,16 +69,11 @@ export function Header() {
         <div className="flex-1">
           <GlobalSearch />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <LanguageSelect />
           <DarkModeToggle />
           {user === null ? (
-            <button
-              onClick={onLogin}
-              className="rounded-full border border-osap-border px-3 py-1 text-sm hover:bg-osap-surface"
-            >
-              {t("auth.login")}
-            </button>
+            <LoginForm />
           ) : (
             <>
               <span className="rounded-full border border-osap-border px-3 py-1 text-sm">

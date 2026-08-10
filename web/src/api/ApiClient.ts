@@ -19,10 +19,21 @@ import { ApiError } from "./errors";
 
 export const API_PREFIX = "/api/v1";
 
+export interface AuthHandler {
+  getToken: () => string | null;
+  refresh: () => Promise<boolean>;
+  logout: () => void;
+}
+
 export class ApiClient {
   private readonly baseUrl: string;
   private readonly fetcher: typeof fetch | undefined;
   private token: string | null = null;
+  private auth: AuthHandler = {
+    getToken: () => null,
+    refresh: async () => false,
+    logout: () => undefined,
+  };
 
   constructor(baseUrl: string = API_PREFIX, fetcher?: typeof fetch) {
     this.baseUrl = baseUrl;
@@ -37,6 +48,10 @@ export class ApiClient {
 
   getToken(): string | null {
     return this.token;
+  }
+
+  setAuthHandler(auth: AuthHandler): void {
+    this.auth = auth;
   }
 
   async get<T>(path: string): Promise<T> {
@@ -77,46 +92,64 @@ export class ApiClient {
 
   private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
     const fetchImpl = this.fetcher ?? globalThis.fetch;
-    const headers: Record<string, string> = {};
-    if (body !== undefined) {
-      headers["Content-Type"] = "application/json";
-    }
-    if (this.token !== null) {
-      headers["Authorization"] = `Bearer ${this.token}`;
-    }
-    let response: Response;
-    try {
-      // `fetch` must be invoked with `this` bound to globalThis/window, otherwise it
-      // throws "Illegal invocation". Pages never touch this detail.
-      response = await fetchImpl.call(globalThis, `${this.baseUrl}${path}`, {
-        method,
-        headers,
-        body: body !== undefined ? JSON.stringify(body) : undefined,
-      });
-    } catch (cause) {
-      throw new ApiError("NETWORK", "Network error", { cause: String(cause) });
-    }
+    let retried = false;
+    // eslint-disable-next-line no-constant-condition
+    for (;;) {
+      const headers: Record<string, string> = {};
+      if (body !== undefined) {
+        headers["Content-Type"] = "application/json";
+      }
+      const token = this.auth.getToken() ?? this.token;
+      if (token !== null) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+      let response: Response;
+      try {
+        // `fetch` must be invoked with `this` bound to globalThis/window, otherwise it
+        // throws "Illegal invocation". Pages never touch this detail.
+        response = await fetchImpl.call(globalThis, `${this.baseUrl}${path}`, {
+          method,
+          headers,
+          body: body !== undefined ? JSON.stringify(body) : undefined,
+        });
+      } catch (cause) {
+        throw new ApiError("NETWORK", "Network error", { cause: String(cause) });
+      }
 
-    let parsed: Envelope<T> | null = null;
-    try {
-      parsed = (await response.json()) as Envelope<T>;
-    } catch {
-      parsed = null;
-    }
+      // 401 → refresh (una vez) → retry único. Si vuelve a 401 → logout.
+      if (response.status === 401 && !retried) {
+        retried = true;
+        const refreshed = await this.auth.refresh();
+        if (refreshed) {
+          continue;
+        }
+        throw new ApiError("UNAUTHORIZED", "Session expired");
+      }
+      if (response.status === 401 && retried) {
+        this.auth.logout();
+      }
 
-    if (parsed === null || typeof parsed !== "object") {
-      throw new ApiError("INVALID_RESPONSE", `Invalid response (HTTP ${response.status})`);
-    }
+      let parsed: Envelope<T> | null = null;
+      try {
+        parsed = (await response.json()) as Envelope<T>;
+      } catch {
+        parsed = null;
+      }
 
-    if (parsed.success === true) {
-      return parsed.data;
-    }
+      if (parsed === null || typeof parsed !== "object") {
+        throw new ApiError("INVALID_RESPONSE", `Invalid response (HTTP ${response.status})`);
+      }
 
-    if ("error" in parsed && parsed.error !== undefined && parsed.error !== null) {
-      throw new ApiError(parsed.error.code, parsed.error.message, parsed.error.details);
-    }
+      if (parsed.success === true) {
+        return parsed.data;
+      }
 
-    throw new ApiError("INVALID_RESPONSE", `Unexpected response (HTTP ${response.status})`);
+      if ("error" in parsed && parsed.error !== undefined && parsed.error !== null) {
+        throw new ApiError(parsed.error.code, parsed.error.message, parsed.error.details);
+      }
+
+      throw new ApiError("INVALID_RESPONSE", `Unexpected response (HTTP ${response.status})`);
+    }
   }
 }
 

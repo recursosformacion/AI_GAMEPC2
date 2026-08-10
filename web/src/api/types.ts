@@ -285,4 +285,13 @@ export interface MergeComposersResult {
 export interface FrontendUser {
   user_id: string;
   roles: string[];
+  email_verified: boolean;
+}
+
+export interface AuthSession {
+  access_token: string;
+  refresh_token: string;
+  user_id: string;
+  roles: string[];
+  email_verified: boolean;
 }
