@@ -251,6 +251,15 @@ export interface ComposerList {
   total: number;
 }
 
+export interface ComposerCreationEvidence {
+  composer_id: string;
+  extracted_author: string | null;
+  work_id: number | null;
+  work_title: string | null;
+  provider: string | null;
+  resource_reference: string | null;
+}
+
 export interface ComposerDetail {
   id: string;
   name: string;
@@ -259,6 +268,7 @@ export interface ComposerDetail {
   works_count: number;
   merged_into: string | null;
   merged_at: string | null;
+  creation_evidence: ComposerCreationEvidence[];
 }
 
 export interface ComposerWorkRef {

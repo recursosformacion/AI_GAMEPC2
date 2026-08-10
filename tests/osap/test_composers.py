@@ -33,6 +33,16 @@ class _FakeComposerClient(StorageComposerClient):
             "status": "active",
             "aliases": ["W. A. Mozart"],
             "works_count": 264,
+            "creation_evidence": [
+                {
+                    "composer_id": composer_id,
+                    "extracted_author": "W. A. Mozart",
+                    "work_id": 2,
+                    "work_title": "Ocean Man",
+                    "provider": "musescore",
+                    "resource_reference": "ext:abc",
+                }
+            ],
         }
 
     def composer_works(self, composer_id: str, limit: int, offset: int) -> dict[str, object]:
@@ -71,7 +81,11 @@ def test_anonymous_can_get_composer_detail() -> None:
     client = _build(StaticTokenAuthenticator(TOKEN_USER, "u1"))
     resp = client.get("/api/v1/composers/comp-a")
     assert resp.status_code == 200
-    assert resp.json()["data"]["aliases"] == ["W. A. Mozart"]
+    data = resp.json()["data"]
+    assert data["aliases"] == ["W. A. Mozart"]
+    assert data["creation_evidence"][0]["work_title"] == "Ocean Man"
+    assert data["creation_evidence"][0]["provider"] == "musescore"
+    assert data["creation_evidence"][0]["extracted_author"] == "W. A. Mozart"
 
 
 def test_unknown_composer_404() -> None:

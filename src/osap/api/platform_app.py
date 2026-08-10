@@ -17,6 +17,7 @@ from fastapi import FastAPI, Header, Query, Response
 from fastapi.responses import StreamingResponse
 
 from src.osap.api.contracts import (
+    ComposerCreationEvidenceResponse,
     ComposerDetailResponse,
     ComposerListResponse,
     ComposerStatisticsResponse,
@@ -367,6 +368,8 @@ def _composer_list_dto(d: dict[str, object]) -> ComposerListResponse:
 def _composer_detail_dto(d: dict[str, object]) -> ComposerDetailResponse:
     aliases = d.get("aliases")
     raw_aliases = aliases if isinstance(aliases, list) else []
+    evidence = d.get("creation_evidence")
+    raw_evidence = evidence if isinstance(evidence, list) else []
     return ComposerDetailResponse(
         id=cast("str", d.get("id") or ""),
         name=cast("str", d.get("name") or ""),
@@ -375,6 +378,18 @@ def _composer_detail_dto(d: dict[str, object]) -> ComposerDetailResponse:
         works_count=cast("int", d.get("works_count") or 0),
         merged_into=cast("str | None", d.get("merged_into")),
         merged_at=_iso_or_none(d.get("merged_at")),
+        creation_evidence=[_composer_evidence_dto(dict(e)) for e in raw_evidence if isinstance(e, dict)],
+    )
+
+
+def _composer_evidence_dto(d: dict[str, object]) -> ComposerCreationEvidenceResponse:
+    return ComposerCreationEvidenceResponse(
+        composer_id=cast("str", d.get("composer_id") or ""),
+        extracted_author=cast("str | None", d.get("extracted_author")),
+        work_id=cast("int | None", d.get("work_id")),
+        work_title=cast("str | None", d.get("work_title")),
+        provider=cast("str | None", d.get("provider")),
+        resource_reference=cast("str | None", d.get("resource_reference")),
     )
 
 

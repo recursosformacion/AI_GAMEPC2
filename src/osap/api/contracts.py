@@ -328,6 +328,15 @@ class ComposerListResponse(_Frozen):
     total: int = 0
 
 
+class ComposerCreationEvidenceResponse(_Frozen):
+    composer_id: str = ""
+    extracted_author: str | None = None
+    work_id: int | None = None
+    work_title: str | None = None
+    provider: str | None = None
+    resource_reference: str | None = None
+
+
 class ComposerDetailResponse(_Frozen):
     id: str
     name: str
@@ -336,6 +345,7 @@ class ComposerDetailResponse(_Frozen):
     works_count: int = 0
     merged_into: str | None = None
     merged_at: str | None = None
+    creation_evidence: list[ComposerCreationEvidenceResponse] = []
 
 
 class ComposerWorkRefResponse(_Frozen):

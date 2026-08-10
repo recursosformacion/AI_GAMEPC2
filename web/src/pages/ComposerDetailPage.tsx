@@ -47,6 +47,19 @@ export function ComposerDetailPage() {
                 {t("composers.aliases")}: {c.aliases.join(", ")}
               </p>
             )}
+            {c.creation_evidence.length > 0 && (
+              <div className="mt-3 space-y-1 border-t border-osap-border pt-2 text-xs text-osap-muted">
+                {c.creation_evidence.map((e, i) => (
+                  <div key={i}>
+                    <p>
+                      {t("composers.evidenceExtracted")}: {e.work_title ?? "—"} ·{" "}
+                      {t("composers.evidenceAuthor")}: {e.extracted_author ?? "—"} ·{" "}
+                      {t("composers.evidenceProvider")}: {e.provider ?? "—"}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </Envelope>
