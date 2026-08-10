@@ -42,7 +42,8 @@ export function ComposerPage() {
   const loading = useSearches((s) => s.loading);
   const error = useSearches((s) => s.error);
   const [open, setOpen] = useState<string | null>(null);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
+  // null = todas las colecciones seleccionadas (por defecto). Un Set = filtro activo.
+  const [selected, setSelected] = useState<Set<string> | null>(null);
 
   if (loading) {
     return <Spinner label={t("states.loading")} />;
@@ -65,7 +66,10 @@ export function ComposerPage() {
 
   // Solo las colecciones presentes en el lote recibido.
   const collections = [...new Set(works.map((w) => w.work.collection).filter((c): c is string => Boolean(c)))];
-  const filtered = selected.size === 0 ? works : works.filter((w) => w.work.collection && selected.has(w.work.collection));
+  const filtered =
+    selected === null
+      ? works
+      : works.filter((w) => !w.work.collection || selected.has(w.work.collection));
 
   const goPage = (next: number) => {
     const last = useSearches.getState().lastRequest;
@@ -74,6 +78,12 @@ export function ComposerPage() {
 
   const toggleCollection = (c: string) => {
     setSelected((prev) => {
+      if (prev === null) {
+        // Primera interacción: arranca con todas marcadas y desmarca esta.
+        const next = new Set(collections);
+        next.delete(c);
+        return next;
+      }
       const next = new Set(prev);
       if (next.has(c)) next.delete(c);
       else next.add(c);
@@ -99,7 +109,7 @@ export function ComposerPage() {
               <label key={c} className="flex items-center gap-1.5 text-sm">
                 <input
                   type="checkbox"
-                  checked={selected.has(c)}
+                  checked={selected === null || selected.has(c)}
                   onChange={() => toggleCollection(c)}
                   className="accent-osap-accent"
                 />

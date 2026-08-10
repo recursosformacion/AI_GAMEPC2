@@ -89,6 +89,17 @@ def _download_filename(info: dict[str, object]) -> str:
     return re.sub(r'[\\/:*?"<>|]+', "_", base) + ext
 
 
+_MEDIA_TYPES: dict[str, str] = {
+    "pdf": "application/pdf",
+    "musicxml": "application/vnd.recordare.musicxml+xml",
+    "midi": "audio/midi",
+}
+
+
+def _media_type_for_format(fmt: str) -> str:
+    return _MEDIA_TYPES.get(fmt, "application/octet-stream")
+
+
 def _configure_osap_logging() -> None:
     logger = logging.getLogger("osap.api")
     logger.setLevel(logging.INFO)
@@ -482,12 +493,17 @@ def create_platform_app(
         tags=["Searches"],
         summary="Download a representation",
         description=(
-            "Streams the representation file with a Content-Disposition filename "
-            "(the client never sees the storage URL)."
+            "Streams the representation file. Por defecto fuerza descarga (attachment). "
+            "Con `?view=1` sirve el fichero inline con su content-type para visualizarlo "
+            "directamente en el navegador (p. ej. PDFs)."
         ),
         response_model=None,
     )
-    def download_representation(representation_id: str, response: Response) -> Response | ErrorEnvelope:
+    def download_representation(
+        representation_id: str,
+        response: Response,
+        view: int = Query(default=0, ge=0, le=1),
+    ) -> Response | ErrorEnvelope:
         info = api.get_representation_download(representation_id)
         if info is None:
             return fail(404, response, "NOT_FOUND", "Representation not found")
@@ -505,12 +521,16 @@ def create_platform_app(
                         break
                     yield chunk
 
+        media_type = "application/octet-stream"
+        disposition = f'attachment; filename="{filename}"'
+        if view == 1:
+            media_type = _media_type_for_format(str(info.get("format") or ""))
+            disposition = f'inline; filename="{filename}"'
+
         return StreamingResponse(
             iter_chunks(),
-            headers={
-                "Content-Disposition": f'attachment; filename="{filename}"'
-            },
-            media_type="application/octet-stream",
+            headers={"Content-Disposition": disposition},
+            media_type=media_type,
         )
 
     # --- search model (Search Studio is driven by it) ------------------------

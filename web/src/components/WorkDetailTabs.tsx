@@ -163,7 +163,13 @@ function RepresentationsTab({
               </span>
               <span className="w-20 text-right text-xs text-osap-muted">{rep.confidence.toFixed(2)}</span>
               <span className="flex w-24 items-center justify-end gap-1">
-                <a href={href} title="View score" className="rounded border border-osap-border px-2 py-0.5 text-xs text-osap-accent">
+                <a
+                  href={`${href}?view=1`}
+                  target="_blank"
+                  rel="noreferrer"
+                  title="View score"
+                  className="rounded border border-osap-border px-2 py-0.5 text-xs text-osap-accent"
+                >
                   View
                 </a>
                 <a
