@@ -47,14 +47,11 @@ class StorageWorkStore(IWorkStore):
             return None
         if not isinstance(doc, dict):
             return None
-        composer_id = doc.get("composer_id")
-        if isinstance(composer_id, str) and composer_id:
-            return composer_id
-        inner = doc.get("composer")
-        if isinstance(inner, dict):
-            nested = inner.get("composer_id")
-            if isinstance(nested, str) and nested:
-                return nested
+        work = doc.get("work")
+        if isinstance(work, dict):
+            composer_id = work.get("composer_id")
+            if isinstance(composer_id, str) and composer_id:
+                return composer_id
         return None
 
 

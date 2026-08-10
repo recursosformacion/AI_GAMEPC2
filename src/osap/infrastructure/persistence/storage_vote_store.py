@@ -13,6 +13,7 @@ import urllib.request
 from src.osap.domain.votes import (
     ComposerStats,
     DuplicateVoteError,
+    WorkNotFoundError,
     WorkStats,
     WorkVote,
 )
@@ -43,17 +44,16 @@ class StorageVoteStore(IVoteStore):
         self._token_provider = token_provider
 
     def insert_vote(self, vote: WorkVote) -> WorkVote:
-        payload: dict[str, object] = {
-            "user_id": vote.user_id,
-            "work_id": vote.work_id,
-            "composer_id": vote.composer_id,
-            "vote": vote.vote,
-            "voted_at": vote.voted_at.isoformat() if vote.voted_at else None,
-            "vote_day": vote.vote_day,
-        }
-        status, doc = self._call("POST", "/api/v1/votes", payload, scope="storage:write")
+        # El contrato de storage registra el voto en /works/{work_id}/votes (work_id en la URL,
+        # integer) con body {user_id, vote}. El user_id es dato de negocio.
+        payload: dict[str, object] = {"user_id": vote.user_id, "vote": vote.vote}
+        status, doc = self._call(
+            "POST", f"/api/v1/works/{_q(vote.work_id)}/votes", payload, scope="storage:write"
+        )
         if status == 409:
             raise DuplicateVoteError("Already voted for this work today")
+        if status == 404:
+            raise WorkNotFoundError("Work not found")
         if not 200 <= status < 300:
             raise StorageUnavailableError(f"Storage vote rejected: HTTP {status}")
         return vote
