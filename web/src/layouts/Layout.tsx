@@ -184,7 +184,10 @@ export function Footer() {
   const { t } = useI18n();
   return (
     <footer className="border-t border-osap-border bg-osap-surface py-4 text-center text-xs text-osap-muted">
-      {t("app.name")} · {t("app.subtitle")} — {t("app.poweredBy")}
+      {t("app.name")} · {t("app.subtitle")} — {t("app.poweredBy")} ·{" "}
+      <Link to="/about" className="text-osap-accent hover:underline">
+        {t("help.about")}
+      </Link>
     </footer>
   );
 }
