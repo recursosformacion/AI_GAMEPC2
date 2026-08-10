@@ -632,6 +632,9 @@ class PlatformApi:
     def composer_works(self, composer_id: str, limit: int, offset: int) -> dict[str, object]:
         return self.composers().composer_works(composer_id, limit, offset)
 
+    def get_work(self, work_id: str) -> dict[str, object] | None:
+        return self.composers().get_work(work_id)
+
     def merge_composers(self, token: str | None, target_id: str, source_ids: list[str]) -> dict[str, object]:
         return self.composers().merge_composers(token, target_id, source_ids)
 

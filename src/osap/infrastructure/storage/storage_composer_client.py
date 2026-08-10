@@ -83,6 +83,13 @@ class StorageComposerClient:
                 return _as_str(tags) or None
         return None
 
+    def get_work(self, work_id: str) -> dict[str, object] | None:
+        """Devuelve el detalle completo de una obra (work + resources) para inspección."""
+        status, doc = self._call("GET", f"/api/v1/works/{_q(work_id)}", scope="storage:read")
+        if 200 <= status < 300 and isinstance(doc, dict):
+            return doc
+        return None
+
     def merge_composers(self, target_id: str, source_ids: list[str]) -> tuple[int, dict[str, object]]:
         payload: dict[str, object] = {"source_ids": source_ids}
         status, doc = self._call(

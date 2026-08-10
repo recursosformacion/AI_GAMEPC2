@@ -338,6 +338,29 @@ export interface VotesOverview {
   last_execution: { kind: string; status: string; started_at: string; finished_at: string } | null;
 }
 
+export interface WorkResource {
+  relative_path?: string | null;
+  format?: string | null;
+  file_id?: number | null;
+  available?: boolean;
+  url?: string | null;
+}
+
+export interface WorkDetailWork {
+  id?: number | null;
+  title?: string | null;
+  composer?: string | null;
+  composer_id?: string | null;
+  artist?: string | null;
+  tags?: string | null;
+  catalogue?: string | null;
+}
+
+export interface WorkDetail {
+  work: WorkDetailWork;
+  resources: WorkResource[];
+}
+
 export interface RegisterResult {
   user_id: string | null;
   verification_token: string | null;

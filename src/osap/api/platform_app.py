@@ -1077,6 +1077,28 @@ def create_platform_app(
     # --- compositores (consulta pública + fusión admin) ----------------------
 
     @app.get(
+        "/api/v1/works/{work_id}",
+        tags=["Composers"],
+        summary="Work detail (inspection)",
+        description="Detalle completo de una obra (work + resources) para inspección administrativa.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={
+            200: _resp("Work detail", _example({})),
+            404: _NOT_FOUND_404,
+            503: _SERVICE_UNAVAILABLE_503,
+            **_standard_errors(),
+        },
+    )
+    def get_work(work_id: str, response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            doc = api.get_work(work_id)
+        except StorageUnavailableError:
+            return fail(503, response, "SERVICE_UNAVAILABLE", "Works service is not configured")
+        if doc is None:
+            return fail(404, response, "NOT_FOUND", "Work not found")
+        return ok(doc)
+
+    @app.get(
         "/api/v1/composers",
         tags=["Composers"],
         summary="List composers",

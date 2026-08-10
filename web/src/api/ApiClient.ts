@@ -18,6 +18,7 @@ import type {
   RegisterResult,
   VerifyEmailResult,
   VotesOverview,
+  WorkDetail,
   WorkStatistics,
 } from "./types";
 import { ApiError } from "./errors";
@@ -81,6 +82,10 @@ export class ApiClient {
 
   async getComposer(composerId: string): Promise<ComposerDetail> {
     return this.get<ComposerDetail>(`/composers/${encodeURIComponent(composerId)}`);
+  }
+
+  async getWork(workId: string): Promise<WorkDetail> {
+    return this.get<WorkDetail>(`/works/${encodeURIComponent(workId)}`);
   }
 
   async getComposerWorks(composerId: string, limit: number, offset: number): Promise<ComposerWorks> {

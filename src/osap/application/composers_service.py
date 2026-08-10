@@ -29,6 +29,9 @@ class ComposersService:
     def composer_works(self, composer_id: str, limit: int, offset: int) -> dict[str, object]:
         return self._client.composer_works(composer_id, limit, offset)
 
+    def get_work(self, work_id: str) -> dict[str, object] | None:
+        return self._client.get_work(work_id)
+
     # -- administración (fusión) ---------------------------------------------
 
     def merge_composers(self, token: str | None, target_id: str, source_ids: list[str]) -> dict[str, object]:
