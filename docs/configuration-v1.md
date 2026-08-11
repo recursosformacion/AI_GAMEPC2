@@ -10,12 +10,20 @@ La configuración de osap-api ya **no vive en ficheros**: se centraliza en la **
 ```toml
 [db]
 host = "127.0.0.1"
-name = "osap-api"
-user = "osap2027"
-password = "2027osapdb"
+name = "osap_api"
+user = "osap"
+password = "osap2027"
 ```
 
 Nada más. No contiene rutas, credenciales de servicio, ni `dev_mode`.
+
+- **Producción**: usa este `osap.toml` (usuario `osap`, BD `osap_api`; MySQL ya concedió
+  `ALL PRIVILEGES ON osap_api.*`).
+- **Desarrollo local**: sobreescribe la conexión por variable de entorno (env > osap.toml):
+  ```
+  OSAP_API_DB_USER=osap2027 OSAP_API_DB_PASSWORD=2027osapdb OSAP_API_DB_NAME=osap-api OSAP_DEPLOYMENT=dev
+  ```
+
 
 ## 2. Precedencia de la configuración
 
