@@ -16,6 +16,8 @@ import type {
   ComposerWorks,
   Envelope,
   MergeComposersResult,
+  SourcePreview,
+  SourceSuggestion,
   RegisterResult,
   VerifyEmailResult,
   VotesOverview,
@@ -108,6 +110,30 @@ export class ApiClient {
   async reviewComposer(composerId: string, reviewStatus: string): Promise<ComposerDetail> {
     return this.post<ComposerDetail>(`/admin/composers/${encodeURIComponent(composerId)}/review`, {
       review_status: reviewStatus,
+    });
+  }
+
+  async previewSource(url: string): Promise<SourcePreview> {
+    return this.post<SourcePreview>("/sources/preview", { url });
+  }
+
+  async suggestSource(payload: {
+    name: string;
+    type: string;
+    location: string;
+    mapping: Record<string, unknown>;
+  }): Promise<SourceSuggestion> {
+    return this.post<SourceSuggestion>("/sources/suggest", payload);
+  }
+
+  async listSourceSuggestions(): Promise<SourceSuggestion[]> {
+    return this.get<SourceSuggestion[]>("/admin/source-suggestions");
+  }
+
+  async resolveSourceSuggestion(suggestionId: string, action: string, message: string): Promise<SourceSuggestion> {
+    return this.post<SourceSuggestion>(`/admin/source-suggestions/${encodeURIComponent(suggestionId)}/resolve`, {
+      action,
+      message,
     });
   }
 

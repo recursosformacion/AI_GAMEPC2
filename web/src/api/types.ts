@@ -369,6 +369,24 @@ export interface SystemHealth {
   read_only: boolean;
 }
 
+export interface SourcePreview {
+  ok: boolean;
+  fields: string[];
+  error: string | null;
+}
+
+export interface SourceSuggestion {
+  id: string;
+  name: string;
+  type: string;
+  location: string;
+  mapping: Record<string, unknown>;
+  requested_by: string;
+  status: string;
+  admin_message: string | null;
+  created_at: string;
+}
+
 export interface RegisterResult {
   user_id: string | null;
   verification_token: string | null;

@@ -32,6 +32,7 @@ from src.osap.api.contracts import (
     SearchResultItem,
     SessionSource,
     SourceObservation,
+    SourceSuggestionRead,
     SystemStatisticsResponse,
     SystemVersionResponse,
     WorkInfo,
@@ -324,6 +325,8 @@ class PlatformApi:
         self._jobs: dict[str, JobResponse] = {}
         self._representations: dict[str, dict[str, object]] = {}
         self._job_counter = 0
+        self._source_suggestions: list[SourceSuggestionRead] = []
+        self._suggestion_counter = 0
 
     # --- search -------------------------------------------------------------
 
@@ -738,6 +741,114 @@ class PlatformApi:
 
     def use_session_source(self, source_id: str) -> SessionSource | None:
         return self._sessions.use(source_id)
+
+    # --- fuente propuesta por un usuario (Añadir fuente) --------------------
+
+    def preview_source(self, url: str) -> tuple[bool, list[str], str | None]:
+        """Intenta leer el fichero de la URL y adivinar los campos (mapping).
+
+        Es best-effort: si no se puede leer o no es JSON, devuelve error sin romper
+        el flujo. Los campos son las claves de primer nivel más las de una muestra
+        de elementos (works/items/results/data/files).
+        """
+        if not url:
+            return False, [], "Provide a URL"
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (OpenMusicRepository)"})
+            with urllib.request.urlopen(req, timeout=15) as resp:  # noqa: S310 (user-provided source URL)
+                raw = resp.read(2_000_000)
+        except Exception as exc:  # noqa: BLE001
+            return False, [], f"Could not read URL: {exc}"
+        try:
+            import json
+
+            doc = json.loads(raw)
+        except Exception:  # noqa: BLE001
+            return False, [], "The URL does not contain valid JSON"
+        if not isinstance(doc, dict):
+            return False, [], "Expected a JSON object"
+        fields = [k for k in doc if isinstance(k, str)]
+        for arr_key in ("works", "items", "results", "data", "files", "scores"):
+            value = doc.get(arr_key)
+            if isinstance(value, list) and value and isinstance(value[0], dict):
+                for k in value[0]:
+                    if isinstance(k, str) and k not in fields:
+                        fields.append(k)
+        return True, fields, None
+
+    def suggest_source(
+        self,
+        token: str | None,
+        name: str,
+        source_type: str,
+        location: str,
+        mapping: dict[str, object],
+    ) -> SourceSuggestionRead:
+        principal = self._container.authenticator().resolve(token)
+        if principal is None or not getattr(principal, "user_id", None):
+            from src.osap.domain.votes import UnauthenticatedError
+
+            raise UnauthenticatedError("Login required to suggest a source")
+        user = str(getattr(principal, "user_id", "anonymous"))
+        self._suggestion_counter += 1
+        suggestion = SourceSuggestionRead(
+            id=f"sug-{self._suggestion_counter}",
+            name=name,
+            type=source_type,
+            location=location,
+            mapping=mapping,
+            requested_by=user,
+            status="pending",
+            created_at=datetime.now(UTC).isoformat(),
+        )
+        self._source_suggestions.append(suggestion)
+        # En esta sesión se incluye en los resultados de búsqueda.
+        self._sessions.create(name, source_type, location)
+        return suggestion
+
+    def list_source_suggestions(self, token: str | None) -> list[SourceSuggestionRead]:
+        self._require_admin(token)
+        return list(self._source_suggestions)
+
+    def resolve_source_suggestion(
+        self,
+        token: str | None,
+        suggestion_id: str,
+        action: str,
+        message: str,
+    ) -> SourceSuggestionRead | None:
+        self._require_admin(token)
+        for index, suggestion in enumerate(self._source_suggestions):
+            if suggestion.id != suggestion_id:
+                continue
+            status = "approved" if action == "approve" else "cancelled"
+            resolved = SourceSuggestionRead(
+                id=suggestion.id,
+                name=suggestion.name,
+                type=suggestion.type,
+                location=suggestion.location,
+                mapping=suggestion.mapping,
+                requested_by=suggestion.requested_by,
+                status=status,
+                admin_message=message or ("" if action == "approve" else "Cancelled by administrator"),
+                created_at=suggestion.created_at,
+            )
+            self._source_suggestions[index] = resolved
+            # Notificación por email (pendiente de SMTP: se registra en log).
+            logging.getLogger("osap.sources").info(
+                "source suggestion %s -> %s for user %s: %s", suggestion_id, status, resolved.requested_by, message
+            )
+            return resolved
+        return None
+
+    def _require_admin(self, token: str | None) -> None:
+        from src.osap.domain.votes import ForbiddenError, UnauthenticatedError
+
+        principal = self._container.authenticator().resolve(token)
+        if principal is None:
+            raise UnauthenticatedError("Login required")
+        if not getattr(principal, "has_role", lambda r: False)("admin"):
+            raise ForbiddenError("Admin role required")
 
     # --- discovery ----------------------------------------------------------
 

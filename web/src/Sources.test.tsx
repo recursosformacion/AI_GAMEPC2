@@ -44,7 +44,7 @@ describe("Sources (V3.6.x)", () => {
     expect(screen.queryByText("CPDL")).not.toBeInTheDocument();
   });
 
-  it("Discover shows providers to connect (not wired) and wired sources", async () => {
+  it("Discover shows only providers to connect (not wired)", async () => {
     stubFetch();
     render(
       <MemoryRouter initialEntries={["/discover"]}>
@@ -53,6 +53,7 @@ describe("Sources (V3.6.x)", () => {
     );
     // CPDL no está cableado → aparece como "providers to connect".
     await waitFor(() => expect(screen.getByText("CPDL")).toBeInTheDocument());
-    expect(screen.getByText("IMSLP")).toBeInTheDocument();
+    // IMSLP está cableado (Online) → no debe aparecer en Descubrir.
+    expect(screen.queryByText("IMSLP")).not.toBeInTheDocument();
   });
 });

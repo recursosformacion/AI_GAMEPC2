@@ -248,6 +248,41 @@ class SessionSourceCreate(_Frozen):
     location: str = ""
 
 
+class SourcePreviewRequest(_Frozen):
+    url: str
+    name: str = ""
+
+
+class SourcePreviewResponse(_Frozen):
+    ok: bool
+    fields: list[str] = []
+    error: str | None = None
+
+
+class SourceSuggestionRequest(_Frozen):
+    name: str
+    type: str
+    location: str
+    mapping: dict[str, object] = {}
+
+
+class SourceSuggestionRead(_Frozen):
+    id: str
+    name: str
+    type: str
+    location: str
+    mapping: dict[str, object]
+    requested_by: str
+    status: str
+    admin_message: str | None = None
+    created_at: str
+
+
+class SourceSuggestionResolveRequest(_Frozen):
+    action: str
+    message: str = ""
+
+
 class SearchModelCriteria(_Frozen):
     key: str
     label: str

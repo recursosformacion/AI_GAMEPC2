@@ -46,6 +46,11 @@ from src.osap.api.contracts import (
     SearchResponse,
     SessionSource,
     SessionSourceCreate,
+    SourcePreviewRequest,
+    SourcePreviewResponse,
+    SourceSuggestionRead,
+    SourceSuggestionRequest,
+    SourceSuggestionResolveRequest,
     SuccessEnvelope,
     SystemHealthResponse,
     SystemStatisticsResponse,
@@ -802,6 +807,89 @@ def create_platform_app(
         if source is None:
             return fail(404, response, "NOT_FOUND", "Session source not found")
         return ok(source)
+
+    @app.post(
+        "/api/v1/sources/preview",
+        tags=["Sources"],
+        summary="Preview a source (check JSON / infer mapping)",
+        description="Reads the source URL, validates its JSON and infers the field mapping.",
+        response_model=SuccessEnvelope[SourcePreviewResponse] | ErrorEnvelope,
+        responses={200: _resp("Preview", _example({})), **_standard_errors(422)},
+    )
+    def preview_source(payload: SourcePreviewRequest) -> SuccessEnvelope[object]:
+        ok_flag, fields, error = api.preview_source(payload.url)
+        return ok(SourcePreviewResponse(ok=ok_flag, fields=fields, error=error))
+
+    @app.post(
+        "/api/v1/sources/suggest",
+        tags=["Sources"],
+        summary="Suggest a source to the administrator",
+        description="Requires login. Adds the source to the session and creates a "
+        "suggestion pending admin approval.",
+        response_model=SuccessEnvelope[SourceSuggestionRead] | ErrorEnvelope,
+        responses={200: _resp("Suggested", _example({})), 401: _UNAUTHORIZED_401, 403: _FORBIDDEN_403},
+    )
+    def suggest_source(
+        payload: SourceSuggestionRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            suggestion = api.suggest_source(
+                authorization, payload.name, payload.type, payload.location, payload.mapping
+            )
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Login required to suggest a source")
+        return ok(suggestion)
+
+    @app.get(
+        "/api/v1/admin/source-suggestions",
+        tags=["Sources"],
+        summary="List pending source suggestions",
+        description="Administrator view of user source suggestions. Exige role=admin.",
+        response_model=SuccessEnvelope[list[SourceSuggestionRead]] | ErrorEnvelope,
+        responses={200: _resp("Suggestions", _example([])), 401: _UNAUTHORIZED_401, 403: _FORBIDDEN_403},
+    )
+    def list_source_suggestions(
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            return ok(api.list_source_suggestions(authorization))
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Login required")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+
+    @app.post(
+        "/api/v1/admin/source-suggestions/{suggestion_id}/resolve",
+        tags=["Sources"],
+        summary="Resolve a source suggestion (approve / cancel)",
+        description="The administrator approves or cancels a user suggestion, with a message. "
+        "La decisión se notifica al usuario solicitante.",
+        response_model=SuccessEnvelope[SourceSuggestionRead] | ErrorEnvelope,
+        responses={
+            200: _resp("Resolved", _example({})),
+            401: _UNAUTHORIZED_401,
+            403: _FORBIDDEN_403,
+            404: _NOT_FOUND_404,
+        },
+    )
+    def resolve_source_suggestion(
+        suggestion_id: str,
+        payload: SourceSuggestionResolveRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            resolved = api.resolve_source_suggestion(authorization, suggestion_id, payload.action, payload.message)
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Login required")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+        if resolved is None:
+            return fail(404, response, "NOT_FOUND", "Suggestion not found")
+        return ok(resolved)
 
     # --- discovery ----------------------------------------------------------
 
