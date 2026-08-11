@@ -127,6 +127,14 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     storage_base = routes["storage"]
     auth_token_url = routes["auth_token"]
     auth_base = routes["auth_base"]
+    container.set_op_store_config(
+        {
+            "host": config.osap_api_db_host,
+            "user": config.osap_api_db_user,
+            "password": config.osap_api_db_password,
+            "database": config.osap_api_db_name,
+        }
+    )
 
     github = GitHubClient(
         token=config.github_token,
@@ -249,14 +257,6 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
         else "remote"
     )
     container.set_storage_info(target, storage_read_only)
-    container.set_op_store_config(
-        {
-            "host": config.osap_api_db_host,
-            "user": config.osap_api_db_user,
-            "password": config.osap_api_db_password,
-            "database": config.osap_api_db_name,
-        }
-    )
     composer_client = StorageComposerClient(
         base_url=storage_base,
         token_provider=service_token_provider,
