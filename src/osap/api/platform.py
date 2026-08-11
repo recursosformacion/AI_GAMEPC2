@@ -328,7 +328,7 @@ class PlatformApi:
         self._representations: dict[str, dict[str, object]] = {}
         self._job_counter = 0
         self._suggestion_counter = 0
-        self._store = OpStore(self._container.op_store_path())
+        self._store = OpStore(**self._container.op_store_config())
         highest = 0
         for item in self._store.list_suggestions():
             sid = str(item.get("id") or "")

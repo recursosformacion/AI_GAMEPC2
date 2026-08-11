@@ -20,6 +20,10 @@ function applyTheme(dark: boolean): void {
   document.documentElement.dataset.theme = dark ? "dark" : "light";
 }
 
+function applyLang(lang: Language): void {
+  document.documentElement.lang = lang;
+}
+
 interface PreferencesState {
   lang: Language;
   dark: boolean;
@@ -28,15 +32,18 @@ interface PreferencesState {
 }
 
 export const usePreferences = create<PreferencesState>((set) => {
+  const lang = readLang();
   const dark = readDark();
   if (typeof document !== "undefined") {
     applyTheme(dark);
+    applyLang(lang);
   }
   return {
-    lang: readLang(),
+    lang,
     dark,
     setLang: (lang) => {
       localStorage.setItem(LANG_KEY, lang);
+      applyLang(lang);
       set({ lang });
     },
     toggleDark: () =>

@@ -32,7 +32,10 @@ class Configuration:
     admin_client_secret: str | None = None
     osap_auth_token_url: str | None = None
     osap_auth_base_url: str | None = None
-    osap_api_db: str = "osap_api.db"
+    osap_api_db_host: str = "127.0.0.1"
+    osap_api_db_user: str = "osap2027"
+    osap_api_db_password: str = "2027osapdb"
+    osap_api_db_name: str = "osap-api"
     credentials_path: str = "osap_credentials.db"
     credentials_key: str | None = None
 
@@ -50,7 +53,10 @@ _CONFIG_FIELDS: dict[str, tuple[str, str, str]] = {
     "admin_client_secret": ("service", "admin_client_secret", "OSAP_ADMIN_CLIENT_SECRET"),
     "osap_auth_token_url": ("auth", "token_url", "OSAP_AUTH_TOKEN_URL"),
     "osap_auth_base_url": ("auth", "base_url", "OSAP_AUTH_BASE_URL"),
-    "osap_api_db": ("osap", "api_db", "OSAP_API_DB"),
+    "osap_api_db_host": ("osap", "db_host", "OSAP_API_DB_HOST"),
+    "osap_api_db_user": ("osap", "db_user", "OSAP_API_DB_USER"),
+    "osap_api_db_password": ("osap", "db_password", "OSAP_API_DB_PASSWORD"),
+    "osap_api_db_name": ("osap", "db_name", "OSAP_API_DB_NAME"),
 }
 
 

@@ -26,4 +26,7 @@ token_url = "https://auth.osap/oauth/token"
 #       indicador en 0) no hay ningún aviso y el storage se actualiza.
 dev_mode = 0
 # BD operativa de osap-api (estado operativo: sugerencias de fuente, proveedores, config).
-api_db = "osap_api.db"
+db_host = "127.0.0.1"
+db_name = "osap-api"
+db_user = "osap2027"
+db_password = "2027osapdb"

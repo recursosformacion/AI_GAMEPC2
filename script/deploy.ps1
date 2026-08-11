@@ -47,6 +47,7 @@ if ($LASTEXITCODE -ne 0) { Fail "scp falló" }
 
 Write-Host "== [4/5] Extrayendo en el servidor y reiniciando ==" -ForegroundColor Cyan
 $remoteCmd = "set -e; cd $BackendDir && tar -xzf ~/deploy_tmp/backend.tar.gz && " +
+    "python -m pip install --quiet PyMySQL && " +
     "cd $SpaDir && rm -rf assets index.html && tar -xzf ~/deploy_tmp/dist.tar.gz && " +
     "rm -rf ~/deploy_tmp && sudo systemctl restart osap-api.service && echo RESTART_DONE"
 $out = ssh -o BatchMode=yes $HostAlias $remoteCmd

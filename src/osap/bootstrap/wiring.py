@@ -186,7 +186,14 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     # administrativo separado (storage:admin) — osap-api NO recibe storage:admin por defecto.
     storage_target, storage_read_only = _storage_target(config.omr_base_url, config.dev_mode)
     container.set_storage_info(storage_target, storage_read_only)
-    container.set_op_store_path(config.osap_api_db)
+    container.set_op_store_config(
+        {
+            "host": config.osap_api_db_host,
+            "user": config.osap_api_db_user,
+            "password": config.osap_api_db_password,
+            "database": config.osap_api_db_name,
+        }
+    )
     composer_client = StorageComposerClient(
         base_url=storage_base,
         token_provider=service_token_provider,

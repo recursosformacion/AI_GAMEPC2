@@ -2,10 +2,26 @@ import pytest
 
 from src.osap.infrastructure.state.op_store import OpStore
 
+TEST_DB = "osap_api_test"
+
 
 @pytest.fixture()
-def store(tmp_path):
-    return OpStore(str(tmp_path / "op.db"))
+def store():
+    import pymysql
+
+    base = pymysql.connect(
+        host="127.0.0.1", user="osap2027", password="2027osapdb", charset="utf8mb4", autocommit=True
+    )
+    with base.cursor() as cur:
+        cur.execute(f"CREATE DATABASE IF NOT EXISTS {TEST_DB}")
+    base.close()
+
+    s = OpStore(database=TEST_DB)
+    # limpieza de las tablas entre tests
+    s._run("DELETE FROM source_suggestions")
+    s._run("DELETE FROM providers")
+    s._run("DELETE FROM app_config")
+    return s
 
 
 def test_suggestion_roundtrip(store: OpStore) -> None:
