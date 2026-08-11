@@ -1,4 +1,6 @@
+import json
 from pathlib import Path
+from typing import Any
 
 from src.osap.application.composers_service import ComposersService
 from src.osap.application.votes_service import VotesService
@@ -25,7 +27,11 @@ from src.osap.infrastructure.merge import MergeEngine
 from src.osap.infrastructure.metrics import InMemoryMetricsCollector
 from src.osap.infrastructure.persistence.storage_vote_store import StorageVoteStore
 from src.osap.infrastructure.pipeline import PipelineEngine
-from src.osap.infrastructure.providers.adapters.generic_provider_adapter import load_definition
+from src.osap.infrastructure.providers.adapters.generic_provider_adapter import (
+    ProviderDefinition,
+    load_definition,
+    load_definition_from_config,
+)
 from src.osap.infrastructure.providers.fetchers import (
     GitHubFetcher,
     MediaWikiFetcher,
@@ -34,6 +40,7 @@ from src.osap.infrastructure.providers.fetchers import (
     OmrStorageFetcher,
 )
 from src.osap.infrastructure.rankings import DefaultRankingEngine
+from src.osap.infrastructure.state.op_store import build_op_store
 from src.osap.infrastructure.storage.storage_composer_client import StorageComposerClient
 from src.osap.infrastructure.storage.work_store import StorageWorkStore
 from src.osap.infrastructure.user_profile import InMemoryUserProfileStore
@@ -71,11 +78,30 @@ def _routes(deployment: str, dev_mode: int) -> tuple[dict[str, str], bool]:
     return (_REAL_ROUTES if use_real else _LOCAL_ROUTES), use_real
 
 
-def _db_provider_metadata(container: Container) -> list[tuple[str, str, str | None, bool]]:
-    """Lee la metadata de proveedores desde la BD operativa (si está sembrada)."""
+def _provider_definition(
+    store: Any,
+    provider_id: str,
+    fallback_path: Path,
+    base_url: str | None = None,
+) -> ProviderDefinition:
+    """Carga la definición del proveedor desde la BD (dev); si no, desde YAML (prod)."""
     try:
-        from src.osap.infrastructure.state.op_store import build_op_store
+        row = store.get_provider(provider_id)
+        if row and row.get("config"):
+            definition = load_definition_from_config(provider_id, json.loads(str(row["config"])))
+        else:
+            definition = load_definition(fallback_path)
+    except Exception:  # noqa: BLE001
+        definition = load_definition(fallback_path)
+    if base_url:
+        from dataclasses import replace
 
+        return replace(definition, base_url=base_url.rstrip("/"))
+    return definition
+
+
+def _db_provider_metadata(container: Container) -> list[tuple[str, str, str | None, bool]]:
+    try:
         store = build_op_store(**container.op_store_config())
         rows = store.list_providers()
         if not rows:
@@ -110,37 +136,44 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     )
 
     # All sources are plain ICatalogProvider implementations. Level 1 providers are
-    # fully described by their YAML definition. Level 2 providers add a light fetcher
-    # (MediaWiki, GitHub) that returns normalized contract JSON through the same mapping.
+    # fully described by their definition (leída de la BD operativa en dev, de los
+    # YAML en prod). Level 2 providers añaden un fetcher (MediaWiki, GitHub) que
+    # devuelve JSON normalizado por el mismo mapping.
     providers_root = Path(__file__).resolve().parents[3] / "providers"
+    op_store = build_op_store(
+        host=config.osap_api_db_host,
+        user=config.osap_api_db_user,
+        password=config.osap_api_db_password,
+        database=config.osap_api_db_name,
+    )
     container.register_catalog_provider(
         RemoteCatalogProvider(
-            definition_path=providers_root / "imslp",
+            definition=_provider_definition(op_store, "imslp", providers_root / "imslp"),
             fetcher=MediaWikiFetcher(MediaWikiClient(verify=config.imslp_verify_ssl)),
         )
     )
     container.register_catalog_provider(
         RemoteCatalogProvider(
-            definition_path=providers_root / "openscore",
+            definition=_provider_definition(op_store, "openscore", providers_root / "openscore"),
             fetcher=GitHubFetcher(github, config.openscore_repos),
         )
     )
     container.register_catalog_provider(
         RemoteCatalogProvider(
-            definition_path=providers_root / "omr",
+            definition=_provider_definition(op_store, "omr", providers_root / "omr", base_url=storage_base),
             base_url=storage_base,
             fetcher=OmrStorageFetcher(base_url=storage_base),
         )
     )
     container.register_catalog_provider(
         RemoteCatalogProvider(
-            definition_path=providers_root / "mutopia",
+            definition=_provider_definition(op_store, "mutopia", providers_root / "mutopia"),
             fetcher=MutopiaFetcher(),
         )
     )
     container.register_catalog_provider(
         RemoteCatalogProvider(
-            definition_path=providers_root / "musicbrainz",
+            definition=_provider_definition(op_store, "musicbrainz", providers_root / "musicbrainz"),
             fetcher=MusicBrainzFetcher(),
         )
     )
