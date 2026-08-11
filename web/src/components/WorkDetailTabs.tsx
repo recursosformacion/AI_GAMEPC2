@@ -1,16 +1,17 @@
 import { useState } from "react";
 import type { EvidenceInfo, RepresentationInfo, WorkInfo, WorkRelationships } from "../api/types";
 import { useI18n } from "../i18n/I18n";
+import type { TKey } from "../i18n/translations";
 import { VoteControl } from "./VoteControl";
 import { WorkRating } from "./WorkRating";
 
 export type WorkDetailTab = "overview" | "representations" | "evidence" | "relationships";
 
-const TABS: { id: WorkDetailTab; label: string }[] = [
-  { id: "overview", label: "Overview" },
-  { id: "representations", label: "Representations" },
-  { id: "evidence", label: "Evidence" },
-  { id: "relationships", label: "Relationships" },
+const TABS: { id: WorkDetailTab; labelKey: string }[] = [
+  { id: "overview", labelKey: "work.overview" },
+  { id: "representations", labelKey: "work.representations" },
+  { id: "evidence", labelKey: "work.evidence" },
+  { id: "relationships", labelKey: "work.relationships" },
 ];
 
 interface WorkDetailTabsProps {
@@ -61,7 +62,7 @@ export function WorkDetailTabs({
             onClick={() => setTab(tb.id)}
             className={`px-3 py-1.5 text-xs ${tab === tb.id ? "border-b-2 border-osap-accent font-medium text-osap-accent" : "text-osap-muted"}`}
           >
-            {tb.label}
+            {t(tb.labelKey as TKey)}
           </button>
         ))}
       </div>
@@ -69,14 +70,13 @@ export function WorkDetailTabs({
       {tab === "overview" ? (
         <div className="p-3">
           <dl className="grid gap-1 text-sm sm:grid-cols-2">
-            <Meta label="Catalogue" value={work.catalogue ?? "—"} />
-            <Meta label="Composer" value={work.composer ?? "—"} />
-            <Meta label="Representations" value={String(representations.length)} />
-            <Meta label="Providers" value={String(providers.size)} />
+            <Meta label={t("work.catalogue")} value={work.catalogue ?? "—"} />
+            <Meta label={t("work.composer")} value={work.composer ?? "—"} />
+            <Meta label={t("work.representations")} value={String(representations.length)} />
+            <Meta label={t("work.providers")} value={String(providers.size)} />
           </dl>
           <p className="mt-3 text-sm text-osap-muted">
-            Merge: {representations.length} representation{representations.length === 1 ? "" : "s"} from{" "}
-            {providers.size} provider{providers.size === 1 ? "" : "s"} consolidated into this work.
+            {t("work.mergeSummary").replace("{n}", String(representations.length)).replace("{p}", String(providers.size))}
           </p>
           {work.work_id ? (
             <div className="mt-4 flex flex-col gap-2 border-t border-osap-border pt-3">
@@ -131,20 +131,22 @@ function RepresentationsTab({
   representations: RepresentationInfo[];
   byProvider: Map<string, RepresentationInfo[]>;
 }) {
+  const { t } = useI18n();
+  const providers = [...byProvider.keys()];
   return (
     <div className="p-3">
       <p className="mb-2 text-sm text-osap-muted">
-        {byProvider.size === 1 ? "Only " : ""}
-        <strong>{[...byProvider.keys()].join(", ")}</strong>
-        {byProvider.size === 1 ? " returned results for this search." : ` (${byProvider.size} providers) matched.`}
+        {byProvider.size === 1
+          ? `${t("work.onlyProvider")}${providers.join(", ")}${t("work.returnedResults")}`
+          : `${providers.join(", ")} ${t("work.providersMatched").replace("{p}", String(byProvider.size))}`}
       </p>
 
       {/* Header row (desktop-friendly single-line grid) */}
       <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2 border-b border-osap-border px-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-osap-muted">
-        <span>Title</span>
-        <span className="w-16 text-right">Format</span>
-        <span className="w-20 text-right">Confidence</span>
-        <span className="w-24 text-right">Action</span>
+        <span>{t("work.title")}</span>
+        <span className="w-16 text-right">{t("work.format")}</span>
+        <span className="w-20 text-right">{t("work.confidence")}</span>
+        <span className="w-24 text-right">{t("work.action")}</span>
       </div>
 
       <ul className="divide-y divide-osap-border">
@@ -170,7 +172,7 @@ function RepresentationsTab({
                   title="View score"
                   className="rounded border border-osap-border px-2 py-0.5 text-xs text-osap-accent"
                 >
-                  View
+                  {t("work.view")}
                 </a>
                 <a
                   href={href}
@@ -178,7 +180,7 @@ function RepresentationsTab({
                   title={`Download ${filename}`}
                   className="rounded border border-osap-border px-2 py-0.5 text-xs text-osap-accent"
                 >
-                  DL
+                  {t("work.download")}
                 </a>
               </span>
             </li>
@@ -190,10 +192,11 @@ function RepresentationsTab({
 }
 
 function RelationshipsTab({ relationships }: { relationships?: WorkRelationships | null }) {
+  const { t } = useI18n();
   return (
     <div className="space-y-4 p-3">
       <div>
-        <h3 className="text-xs font-semibold uppercase text-osap-muted">Aliases</h3>
+        <h3 className="text-xs font-semibold uppercase text-osap-muted">{t("work.aliases")}</h3>
         {relationships && relationships.aliases && relationships.aliases.length > 0 ? (
           <div className="mt-1 flex flex-wrap gap-1">
             {relationships.aliases.map((a) => (
@@ -208,7 +211,7 @@ function RelationshipsTab({ relationships }: { relationships?: WorkRelationships
       </div>
 
       <div>
-        <h3 className="text-xs font-semibold uppercase text-osap-muted">Related catalogue</h3>
+        <h3 className="text-xs font-semibold uppercase text-osap-muted">{t("work.relatedCatalogue")}</h3>
         {relationships && relationships.related_catalogues && relationships.related_catalogues.length > 0 ? (
           <div className="mt-1 flex flex-wrap gap-1">
             {relationships.related_catalogues.map((c) => (
@@ -223,16 +226,16 @@ function RelationshipsTab({ relationships }: { relationships?: WorkRelationships
       </div>
 
       <div>
-        <h3 className="text-xs font-semibold uppercase text-osap-muted">Different editions</h3>
-        <p className="mt-1 text-sm text-osap-muted">Pending (requires edition/publisher metadata).</p>
+        <h3 className="text-xs font-semibold uppercase text-osap-muted">{t("work.differentEditions")}</h3>
+        <p className="mt-1 text-sm text-osap-muted">{t("work.differentEditionsPending")}</p>
       </div>
       <div>
-        <h3 className="text-xs font-semibold uppercase text-osap-muted">Parent work</h3>
-        <p className="mt-1 text-sm text-osap-muted">Pending (Work model).</p>
+        <h3 className="text-xs font-semibold uppercase text-osap-muted">{t("work.parentWork")}</h3>
+        <p className="mt-1 text-sm text-osap-muted">{t("work.pendingModel")}</p>
       </div>
       <div>
-        <h3 className="text-xs font-semibold uppercase text-osap-muted">Movements</h3>
-        <p className="mt-1 text-sm text-osap-muted">Pending (Work model).</p>
+        <h3 className="text-xs font-semibold uppercase text-osap-muted">{t("work.movements")}</h3>
+        <p className="mt-1 text-sm text-osap-muted">{t("work.pendingModel")}</p>
       </div>
     </div>
   );

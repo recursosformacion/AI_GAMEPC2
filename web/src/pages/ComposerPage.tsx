@@ -105,7 +105,7 @@ export function ComposerPage() {
       </p>
 
       {collections.length > 0 && (
-        <Card title="Collections">
+        <Card title={t("work.collections")}>
           <div className="flex flex-wrap gap-3">
             {collections.map((c) => (
               <label key={c} className="flex items-center gap-1.5 text-sm">
@@ -122,7 +122,7 @@ export function ComposerPage() {
         </Card>
       )}
 
-      <Card title="Works">
+      <Card title={t("work.works")}>
         <ul className="divide-y divide-osap-border">
           {filtered.map((w) => {
             const reps = allRepresentations(w);
@@ -144,7 +144,7 @@ export function ComposerPage() {
                   </span>
                   <span className="flex items-center gap-2">
                     <span className="text-xs text-osap-muted">
-                      {reps.length} reps · {providers.size} providers
+                      {t("work.repsProviders").replace("{n}", String(reps.length)).replace("{p}", String(providers.size))}
                     </span>
                     <span className="text-osap-muted">{isOpen ? "▲" : "▼"}</span>
                   </span>
@@ -168,13 +168,13 @@ export function ComposerPage() {
 
       <div className="flex items-center justify-between pt-2">
         <button type="button" disabled={page <= 1} onClick={() => goPage(page - 1)} className="rounded border border-osap-border px-3 py-1 text-sm disabled:opacity-40">
-          ← Prev
+          {t("work.prev")}
         </button>
         <span className="text-sm text-osap-muted">
-          Page {page} of {totalPages}
+          {t("work.pageOf").replace("{page}", String(page)).replace("{total}", String(totalPages))}
         </span>
         <button type="button" disabled={page >= totalPages} onClick={() => goPage(page + 1)} className="rounded border border-osap-border px-3 py-1 text-sm disabled:opacity-40">
-          Next →
+          {t("work.next")}
         </button>
       </div>
     </div>

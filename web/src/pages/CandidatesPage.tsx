@@ -75,9 +75,9 @@ export function CandidatesPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-xl font-semibold">Matching Works</h1>
+      <h1 className="text-xl font-semibold">{t("candidates.matchingWorks")}</h1>
       <p className="text-sm text-osap-muted">
-        {rangeStart}–{rangeEnd} of {total} works
+        {t("candidates.range").replace("{start}", String(rangeStart)).replace("{end}", String(rangeEnd)).replace("{total}", String(total))}
       </p>
       <ul className="space-y-2">
         {candidates.map((c) => {

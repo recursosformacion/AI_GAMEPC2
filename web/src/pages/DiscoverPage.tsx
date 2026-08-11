@@ -25,13 +25,13 @@ export function DiscoverPage() {
           to="/sources"
           className="rounded bg-osap-accent px-3 py-1.5 text-sm text-white hover:bg-osap-accent/90"
         >
-          + Add a source
+          {t("discover.addSource")}
         </Link>
       </div>
 
       {/* Discover sources (suggestions) */}
-      <Card title="Discover Sources">
-        <Envelope loading={discover.loading} error={discover.error} data={discover.data} emptyMessage="No suggestions">
+      <Card title={t("discover.sources")}>
+        <Envelope loading={discover.loading} error={discover.error} data={discover.data} emptyMessage={t("discover.noSuggestions")}>
           {(sources) => (
             <ul className="grid gap-3 sm:grid-cols-2">
               {sources.map((s) => (
@@ -49,8 +49,8 @@ export function DiscoverPage() {
       </Card>
 
       {/* Collections (repository catalog) */}
-      <Card title="Collections">
-        <Envelope loading={list.loading} error={list.error} data={list.data} emptyMessage="No collections">
+      <Card title={t("discover.collections")}>
+        <Envelope loading={list.loading} error={list.error} data={list.data} emptyMessage={t("discover.noCollections")}>
           {(sources) => (
             <ul className="grid gap-3 sm:grid-cols-2">
               {sources.map((s) => (
@@ -69,16 +69,16 @@ export function DiscoverPage() {
       </Card>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Card title="Trending works">
+        <Card title={t("discover.trending")}>
           <EmptyState />
         </Card>
-        <Card title="Recently added">
+        <Card title={t("discover.recentlyAdded")}>
           <EmptyState />
         </Card>
-        <Card title="Most downloaded">
+        <Card title={t("discover.mostDownloaded")}>
           <EmptyState />
         </Card>
-        <Card title="Popular composers">
+        <Card title={t("discover.popularComposers")}>
           <EmptyState />
         </Card>
       </div>
