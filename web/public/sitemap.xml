@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://app.openmusicrepository.com/</loc><changefreq>daily</changefreq><priority>1.0</priority></url>
+  <url><loc>https://app.openmusicrepository.com/discover</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://app.openmusicrepository.com/catalog</loc><changefreq>daily</changefreq><priority>0.9</priority></url>
+  <url><loc>https://app.openmusicrepository.com/sources</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://app.openmusicrepository.com/studio</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://app.openmusicrepository.com/composer</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://app.openmusicrepository.com/composers</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
+  <url><loc>https://app.openmusicrepository.com/candidates</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://app.openmusicrepository.com/resolution</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://app.openmusicrepository.com/about</loc><changefreq>monthly</changefreq><priority>0.4</priority></url>
+  <url><loc>https://app.openmusicrepository.com/about/how-it-works</loc><changefreq>monthly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://app.openmusicrepository.com/knowledge/observations</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://app.openmusicrepository.com/knowledge/facts</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://app.openmusicrepository.com/knowledge/suggestions</loc><changefreq>weekly</changefreq><priority>0.5</priority></url>
+  <url><loc>https://app.openmusicrepository.com/providers</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+</urlset>
