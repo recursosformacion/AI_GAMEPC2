@@ -25,7 +25,7 @@ class Configuration:
     imslp_verify_ssl: bool = True
     omr_base_url: str | None = None
     omr_api_key: str | None = None
-    osap_env: str = "prod"
+    dev_mode: int = 0
     service_client_id: str | None = None
     service_client_secret: str | None = None
     admin_client_id: str | None = None
@@ -42,7 +42,7 @@ _CONFIG_FIELDS: dict[str, tuple[str, str, str]] = {
     "imslp_base_url": ("osap", "imslp_base_url", "OSAP_IMSLP_BASE_URL"),
     "omr_base_url": ("omr", "base_url", "OSAP_OMR_BASE_URL"),
     "omr_api_key": ("omr", "api_key", "OSAP_OMR_API_KEY"),
-    "osap_env": ("osap", "env", "OSAP_ENV"),
+    "dev_mode": ("osap", "dev_mode", "OSAP_DEV_MODE"),
     "service_client_id": ("service", "client_id", "OSAP_SERVICE_CLIENT_ID"),
     "service_client_secret": ("service", "client_secret", "OSAP_SERVICE_CLIENT_SECRET"),
     "admin_client_id": ("service", "admin_client_id", "OSAP_ADMIN_CLIENT_ID"),
@@ -70,7 +70,14 @@ def load_configuration(path: str | Path | None = None) -> Configuration:
             if isinstance(block, dict):
                 value = block.get(key)
         if value is not None:
-            kwargs[field] = value
+            if field == "dev_mode":
+                try:
+                    parsed: object = int(str(value))
+                except ValueError:
+                    parsed = 0
+                kwargs[field] = parsed
+            else:
+                kwargs[field] = value
     return Configuration(**kwargs)
 
 

@@ -14,6 +14,7 @@ import type {
   ComposerStatistics,
   ComposerSummary,
   ComposerWorks,
+  AdminOverview,
   Envelope,
   MergeComposersResult,
   SourcePreview,
@@ -135,6 +136,10 @@ export class ApiClient {
       action,
       message,
     });
+  }
+
+  async getAdminOverview(): Promise<AdminOverview> {
+    return this.get<AdminOverview>("/admin/overview");
   }
 
   async getWorkStatistics(workId: string): Promise<WorkStatistics> {

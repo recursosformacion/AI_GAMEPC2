@@ -387,6 +387,11 @@ export interface SourceSuggestion {
   created_at: string;
 }
 
+export interface AdminOverview {
+  composers: Record<string, number>;
+  source_suggestions_pending: number;
+}
+
 export interface RegisterResult {
   user_id: string | null;
   verification_token: string | null;

@@ -133,6 +133,17 @@ class StorageComposerClient:
             return status, doc
         return status, {}
 
+    def composer_review_stats(self) -> dict[str, int]:
+        status, doc = self._call(
+            "GET",
+            "/api/admin/composers/stats",
+            scope="storage:read",
+            provider=self._token_provider,
+        )
+        if 200 <= status < 300 and isinstance(doc, dict):
+            return {str(k): int(v) for k, v in doc.items()}
+        return {"total": 0, "correct": 0, "incorrect": 0, "reviewed": 0, "not_reviewed": 0}
+
     # -- helpers -------------------------------------------------------------
 
     def _call(

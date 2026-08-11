@@ -200,17 +200,15 @@ export function StorageBanner() {
   useEffect(() => {
     void load();
   }, [load]);
-  if (!health) return null;
-  const remote = health.storage_target === "remote" || health.read_only;
-  const label = remote ? t("system.readOnlyRemote") : t("system.localStorage");
+  // Solo hay aviso cuando osap-api en desarrollo está conectado a un storage real
+  // (read_only). El resto del tiempo no se muestra ningún aviso.
+  if (!health || !health.read_only) return null;
   return (
     <div
       data-testid="storage-banner"
-      className={`px-4 py-1 text-center text-xs font-medium ${
-        remote ? "bg-amber-300 text-amber-900" : "bg-emerald-100 text-emerald-800"
-      }`}
+      className="bg-amber-300 px-4 py-1 text-center text-xs font-medium text-amber-900"
     >
-      {label}
+      {t("system.readOnlyRemote")}
     </div>
   );
 }

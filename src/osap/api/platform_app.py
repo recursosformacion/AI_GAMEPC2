@@ -17,6 +17,7 @@ from fastapi import FastAPI, Header, Query, Response
 from fastapi.responses import StreamingResponse
 
 from src.osap.api.contracts import (
+    AdminOverviewResponse,
     ComposerCreationEvidenceResponse,
     ComposerDetailResponse,
     ComposerListResponse,
@@ -841,6 +842,32 @@ def create_platform_app(
         except UnauthenticatedError:
             return fail(401, response, "UNAUTHORIZED", "Login required to suggest a source")
         return ok(suggestion)
+
+    @app.get(
+        "/api/v1/admin/overview",
+        tags=["Composers"],
+        summary="Admin overview (composer review stats + source suggestions)",
+        description="Resumen de administración: conteo de compositores por estado de revisión "
+        "y número de sugerencias de fuente pendientes. Exige role=admin.",
+        response_model=SuccessEnvelope[AdminOverviewResponse] | ErrorEnvelope,
+        responses={200: _resp("Overview", _example({})), 401: _UNAUTHORIZED_401, 403: _FORBIDDEN_403},
+    )
+    def admin_overview(
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            overview = api.admin_overview(authorization)
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Login required")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+        return ok(
+            AdminOverviewResponse(
+                composers=cast("dict[str, int]", overview["composers"]),
+                source_suggestions_pending=cast("int", overview["source_suggestions_pending"]),
+            )
+        )
 
     @app.get(
         "/api/v1/admin/source-suggestions",

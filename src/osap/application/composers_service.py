@@ -71,6 +71,10 @@ class ComposersService:
             raise ForbiddenError(f"Storage rejected review (HTTP {status})")
         return doc
 
+    def composer_review_stats(self, token: str | None) -> dict[str, int]:
+        self.require_admin(token)
+        return self._client.composer_review_stats()
+
     def _ensure_writable(self) -> None:
         if self._read_only:
             raise ForbiddenError("Storage is remote; this environment is read-only")

@@ -57,13 +57,13 @@ def _auth_base_from_token_url(token_url: str | None) -> str:
     return "http://127.0.0.1:8200"
 
 
-def _storage_target(omr_base_url: str | None, osap_env: str) -> tuple[str, bool]:
+def _storage_target(omr_base_url: str | None, dev_mode: int) -> tuple[str, bool]:
     """Clasifica el destino de osap-storage y si es solo lectura.
 
-    `target` es "local" o "remote" según la URL configurada ([omr] base_url /
-    OSAP_OMR_BASE_URL). Solo se fuerza `read_only` en desarrollo (osap_env=dev)
-    cuando el destino es remoto: se puede leer pero no modificar. En producción el
-    storage web es escribible.
+    `target` es "local" o "remote" según la URL configurada. El aviso de solo-lectura
+    SOLO se activa en modo desarrollo conectado a un storage real (dev_mode=1):
+    osap-api en desarrollo + osap-storage/osap-auth reales. En el resto de casos
+    (todo local, o producción real) NO hay aviso y se puede escribir.
     """
     import urllib.parse
 
@@ -71,7 +71,7 @@ def _storage_target(omr_base_url: str | None, osap_env: str) -> tuple[str, bool]
     host = urllib.parse.urlsplit(base).netloc.lower()
     is_local = host.startswith("localhost") or host.startswith("127.") or host.startswith("0.0.0.0")
     target = "local" if is_local else "remote"
-    read_only = osap_env == "dev" and target == "remote"
+    read_only = dev_mode == 1 and target == "remote"
     return target, read_only
 
 
@@ -184,7 +184,7 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     # --- compositores (consulta pública + fusión admin) ----------------------
     # Consulta usa el service client normal (storage:read). La fusión usa un service client
     # administrativo separado (storage:admin) — osap-api NO recibe storage:admin por defecto.
-    storage_target, storage_read_only = _storage_target(config.omr_base_url, config.osap_env)
+    storage_target, storage_read_only = _storage_target(config.omr_base_url, config.dev_mode)
     container.set_storage_info(storage_target, storage_read_only)
     composer_client = StorageComposerClient(
         base_url=storage_base,

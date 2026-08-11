@@ -283,6 +283,11 @@ class SourceSuggestionResolveRequest(_Frozen):
     message: str = ""
 
 
+class AdminOverviewResponse(_Frozen):
+    composers: dict[str, int] = {}
+    source_suggestions_pending: int = 0
+
+
 class SearchModelCriteria(_Frozen):
     key: str
     label: str

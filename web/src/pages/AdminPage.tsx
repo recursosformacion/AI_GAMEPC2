@@ -2,29 +2,43 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import { ApiError } from "../api/errors";
-import type { VotesOverview } from "../api/types";
+import type { AdminOverview, VotesOverview } from "../api/types";
 import { useI18n } from "../i18n/I18n";
+import type { TKey } from "../i18n/translations";
 import { useAuth } from "../state/auth";
 
 function rankLabel(id: string): string {
   return id.length > 24 ? `${id.slice(0, 12)}…` : id;
 }
 
+const REVIEW_KEYS: { key: string; labelKey: TKey }[] = [
+  { key: "correct", labelKey: "composers.reviewCorrect" },
+  { key: "incorrect", labelKey: "composers.reviewIncorrect" },
+  { key: "reviewed", labelKey: "composers.reviewReviewed" },
+  { key: "not_reviewed", labelKey: "composers.reviewNotReviewed" },
+];
+
 export function AdminPage() {
   const { t } = useI18n();
   const isAdmin = useAuth((s) => s.isAdmin());
   const [overview, setOverview] = useState<VotesOverview | null>(null);
+  const [adminOverview, setAdminOverview] = useState<AdminOverview | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isAdmin) {
       setOverview(null);
+      setAdminOverview(null);
       return;
     }
     apiClient
       .getVotesOverview()
       .then(setOverview)
       .catch((e) => setError(e instanceof ApiError ? e.message : t("admin.error")));
+    apiClient
+      .getAdminOverview()
+      .then(setAdminOverview)
+      .catch(() => setAdminOverview(null));
   }, [isAdmin, t]);
 
   if (!isAdmin) {
@@ -34,6 +48,30 @@ export function AdminPage() {
   return (
     <div className="space-y-4">
       <h1 className="text-xl font-semibold">{t("admin.title")}</h1>
+
+      {adminOverview !== null && (
+        <div className="rounded border border-osap-border bg-osap-surface p-4">
+          <h2 className="mb-2 text-sm font-semibold">{t("admin.composersReview")}</h2>
+          <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
+            <div>
+              <p className="text-osap-muted">{t("admin.total")}</p>
+              <p className="text-xl font-bold">{adminOverview.composers.total ?? 0}</p>
+            </div>
+            {REVIEW_KEYS.map((r) => (
+              <div key={r.key}>
+                <p className="text-osap-muted">{t(r.labelKey)}</p>
+                <p className="text-xl font-bold">{adminOverview.composers[r.key] ?? 0}</p>
+              </div>
+            ))}
+          </div>
+          <Link
+            to="/admin/source-suggestions"
+            className="mt-3 inline-block rounded bg-osap-accent px-3 py-1 text-sm text-white"
+          >
+            {t("admin.sourceSuggestions")} · {adminOverview.source_suggestions_pending}
+          </Link>
+        </div>
+      )}
 
       {overview === null ? (
         <p className="text-sm text-osap-muted">{error ?? t("admin.loading")}</p>

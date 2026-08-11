@@ -327,6 +327,38 @@ class PlatformApi:
         self._job_counter = 0
         self._source_suggestions: list[SourceSuggestionRead] = []
         self._suggestion_counter = 0
+        self._suggestions_path = Path(__file__).resolve().parent / "osap_state_source_suggestions.json"
+        self._load_suggestions()
+
+    # --- persistencia de sugerencias de fuente -------------------------------
+
+    def _load_suggestions(self) -> None:
+        try:
+            if self._suggestions_path.exists():
+                import json
+
+                data = json.loads(self._suggestions_path.read_text("utf-8"))
+                items = [SourceSuggestionRead(**d) for d in data if isinstance(d, dict)]
+                self._source_suggestions = items
+                highest = 0
+                for item in items:
+                    if item.id.startswith("sug-"):
+                        try:
+                            highest = max(highest, int(item.id[4:]))
+                        except ValueError:
+                            continue
+                self._suggestion_counter = highest + 1
+        except Exception:  # noqa: BLE001
+            self._source_suggestions = []
+
+    def _save_suggestions(self) -> None:
+        try:
+            import json
+
+            payload = [s.__dict__ for s in self._source_suggestions]
+            self._suggestions_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), "utf-8")
+        except Exception:  # noqa: BLE001
+            logging.getLogger("osap.sources").exception("could not persist source suggestions")
 
     # --- search -------------------------------------------------------------
 
@@ -647,6 +679,14 @@ class PlatformApi:
     def review_composer(self, token: str | None, composer_id: str, review_status: str) -> dict[str, object]:
         return self.composers().review_composer(token, composer_id, review_status)
 
+    def composer_review_stats(self, token: str | None) -> dict[str, int]:
+        return self.composers().composer_review_stats(token)
+
+    def admin_overview(self, token: str | None) -> dict[str, object]:
+        stats = self.composers().composer_review_stats(token)
+        pending = sum(1 for s in self._source_suggestions if s.status == "pending")
+        return {"composers": stats, "source_suggestions_pending": pending}
+
     # --- knowledge (read-only) ----------------------------------------------
 
     def knowledge(self) -> KnowledgeResponse:
@@ -802,6 +842,7 @@ class PlatformApi:
             created_at=datetime.now(UTC).isoformat(),
         )
         self._source_suggestions.append(suggestion)
+        self._save_suggestions()
         # En esta sesión se incluye en los resultados de búsqueda.
         self._sessions.create(name, source_type, location)
         return suggestion
@@ -834,6 +875,7 @@ class PlatformApi:
                 created_at=suggestion.created_at,
             )
             self._source_suggestions[index] = resolved
+            self._save_suggestions()
             # Notificación por email (pendiente de SMTP: se registra en log).
             logging.getLogger("osap.sources").info(
                 "source suggestion %s -> %s for user %s: %s", suggestion_id, status, resolved.requested_by, message

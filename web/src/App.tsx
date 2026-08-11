@@ -31,6 +31,9 @@ export default function App() {
   const lang = usePreferences((s) => s.lang);
   const setLang = usePreferences((s) => s.setLang);
   useEffect(() => {
+    document.documentElement.lang = lang;
+  }, [lang]);
+  useEffect(() => {
     // Rehidratación de sesión al arrancar (refresco proactivo si hay refresh en localStorage).
     void useAuth.getState().rehydrate();
   }, []);
