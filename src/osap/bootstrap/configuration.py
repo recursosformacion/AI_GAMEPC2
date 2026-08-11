@@ -25,6 +25,7 @@ class Configuration:
     imslp_verify_ssl: bool = True
     omr_base_url: str | None = None
     omr_api_key: str | None = None
+    osap_env: str = "prod"
     service_client_id: str | None = None
     service_client_secret: str | None = None
     admin_client_id: str | None = None
@@ -41,6 +42,7 @@ _CONFIG_FIELDS: dict[str, tuple[str, str, str]] = {
     "imslp_base_url": ("osap", "imslp_base_url", "OSAP_IMSLP_BASE_URL"),
     "omr_base_url": ("omr", "base_url", "OSAP_OMR_BASE_URL"),
     "omr_api_key": ("omr", "api_key", "OSAP_OMR_API_KEY"),
+    "osap_env": ("osap", "env", "OSAP_ENV"),
     "service_client_id": ("service", "client_id", "OSAP_SERVICE_CLIENT_ID"),
     "service_client_secret": ("service", "client_secret", "OSAP_SERVICE_CLIENT_SECRET"),
     "admin_client_id": ("service", "admin_client_id", "OSAP_ADMIN_CLIENT_ID"),

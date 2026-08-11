@@ -1,81 +1,43 @@
-import { useEffect, useState } from "react";
-import { Button } from "../components/Button";
+import { useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Card } from "../components/Card";
 import { Envelope } from "../components/Envelope";
-import { ResultList } from "../components/ResultList";
 import { useI18n } from "../i18n/I18n";
-import { useSessionSources } from "../state/sources";
-
-const SOURCE_TYPES = ["Local", "Git", "HTTP", "WebDAV", "FTP", "OPDS"];
+import { useSources } from "../state/repositorySources";
 
 export function SourcesPage() {
   const { t } = useI18n();
-  const { list, listAll, create, analyze, use: useSource, forget } = useSessionSources();
-  const [name, setName] = useState("");
-  const [type, setType] = useState("Local");
-  const [location, setLocation] = useState("");
+  const { list, loadList } = useSources();
 
   useEffect(() => {
-    void listAll();
-  }, [listAll]);
-
-  const submit = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!name.trim()) return;
-    void create({ name, type, location });
-    setName("");
-    setLocation("");
-  };
+    void loadList();
+  }, [loadList]);
 
   return (
     <div className="space-y-6">
       <h1 className="text-xl font-semibold">{t("nav.sources")}</h1>
+      <p className="text-sm text-osap-muted">{t("sources.wiredOnly")}</p>
 
-      <Card title="Add a source (use it immediately)">
-        <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
-          <label className="flex flex-col text-sm">
-            Name
-            <input aria-label="name" value={name} onChange={(e) => setName(e.target.value)} className="mt-1 rounded border border-osap-border px-2 py-1" />
-          </label>
-          <label className="flex flex-col text-sm">
-            Type
-            <select aria-label="type" value={type} onChange={(e) => setType(e.target.value)} className="mt-1 rounded border border-osap-border px-2 py-1">
-              {SOURCE_TYPES.map((s) => (
-                <option key={s}>{s}</option>
-              ))}
-            </select>
-          </label>
-          <label className="flex flex-col text-sm">
-            Location / URL
-            <input aria-label="location" value={location} onChange={(e) => setLocation(e.target.value)} className="mt-1 rounded border border-osap-border px-2 py-1" />
-          </label>
-          <Button type="submit">Add</Button>
-        </form>
-      </Card>
-
-      <Card title="Your session sources">
-        <Envelope loading={list.loading} error={list.error} data={list.data} emptyMessage="No session sources yet">
-          {(sources) => (
-            <ResultList
-              items={sources}
-              keyOf={(s) => s.source_id}
-              renderItem={(s) => (
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <span className="font-medium">{s.name}</span>
-                    <span className="ml-2 text-xs text-osap-muted">
-                      {s.type} · {s.status}
-                    </span>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button onClick={() => void analyze(s.source_id)}>Analyze</Button>
-                    <Button onClick={() => void useSource(s.source_id)}>Use</Button>
-                    <Button onClick={() => void forget(s.source_id)}>Forget</Button>
-                  </div>
-                </div>
-              )}
-            />
-          )}
+      <Card title={t("discover.wiredSources")}>
+        <Envelope loading={list.loading} error={list.error} data={list.data} emptyMessage={t("discover.noCollections")}>
+          {(sources) => {
+            const wired = sources.filter((s) => s.status === "Online");
+            if (wired.length === 0) return <p className="text-sm text-osap-muted">{t("discover.noCollections")}</p>;
+            return (
+              <ul className="divide-y divide-osap-border">
+                {wired.map((s) => (
+                  <li key={s.source_id}>
+                    <Link to="/catalog" className="block rounded px-1 py-2 hover:bg-osap-accent-soft">
+                      <span className="font-medium">{s.name}</span>
+                      <span className="ml-2 text-xs text-osap-muted">
+                        {s.type} · {s.origin} · {s.trust}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            );
+          }}
         </Envelope>
       </Card>
     </div>

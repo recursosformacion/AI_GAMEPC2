@@ -280,9 +280,7 @@ export interface ComposerWorkRef {
   title: string | null;
   composer_id: string | null;
   tags: string | null;
-}
-
-export interface ComposerWorks {
+}export interface ComposerWorks {
   items: ComposerWorkRef[];
   total: number;
 }
@@ -363,6 +361,12 @@ export interface WorkDetailWork {
 export interface WorkDetail {
   work: WorkDetailWork;
   resources: WorkResource[];
+}
+
+export interface SystemHealth {
+  status: string;
+  storage_target: string | null;
+  read_only: boolean;
 }
 
 export interface RegisterResult {

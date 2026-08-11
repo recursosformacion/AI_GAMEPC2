@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
 import { DarkModeToggle } from "../components/DarkModeToggle";
 import { GlobalSearch } from "../components/GlobalSearch";
@@ -8,6 +8,7 @@ import { LoginForm } from "../components/LoginForm";
 import { RegisterForm } from "../components/RegisterForm";
 import { useI18n } from "../i18n/I18n";
 import { useAuth } from "../state/auth";
+import { useSystem } from "../state/system";
 
 const MAIN_NAV = [
   { to: "/", key: "nav.home" },
@@ -191,9 +192,32 @@ export function Footer() {
   );
 }
 
+export function StorageBanner() {
+  const { t } = useI18n();
+  const health = useSystem((s) => s.health);
+  const load = useSystem((s) => s.load);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  if (!health) return null;
+  const remote = health.storage_target === "remote" || health.read_only;
+  const label = remote ? t("system.readOnlyRemote") : t("system.localStorage");
+  return (
+    <div
+      data-testid="storage-banner"
+      className={`px-4 py-1 text-center text-xs font-medium ${
+        remote ? "bg-amber-300 text-amber-900" : "bg-emerald-100 text-emerald-800"
+      }`}
+    >
+      {label}
+    </div>
+  );
+}
+
 export function Layout(): ReactNode {
   return (
     <div className="flex min-h-screen flex-col bg-osap-bg text-osap-ink">
+      <StorageBanner />
       <Header />
       <Navigation />
       <Breadcrumb />

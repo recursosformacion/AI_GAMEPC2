@@ -58,6 +58,8 @@ class Container:
         self._votes_service: VotesService | None = None
         self._composers_service: ComposersService | None = None
         self._auth_proxy: AuthProxyClient | None = None
+        self._storage_target: str | None = None
+        self._storage_read_only: bool = False
 
     def register_catalog_provider(self, provider: ICatalogProvider) -> None:
         self._catalog_providers.append(provider)
@@ -89,6 +91,13 @@ class Container:
 
     def set_auth_proxy(self, client: AuthProxyClient) -> None:
         self._auth_proxy = client
+
+    def set_storage_info(self, target: str, read_only: bool) -> None:
+        self._storage_target = target
+        self._storage_read_only = read_only
+
+    def storage_info(self) -> tuple[str, bool]:
+        return self._storage_target or "unknown", self._storage_read_only
 
     def auth_proxy(self) -> AuthProxyClient:
         if self._auth_proxy is None:

@@ -862,7 +862,10 @@ def create_platform_app(
         responses={200: _HEALTH_200, **_standard_errors()},
     )
     def system_health() -> SuccessEnvelope[object]:
-        return ok(SystemHealthResponse(status=api.health()))
+        storage_target, read_only = api.storage_info()
+        return ok(
+            SystemHealthResponse(status=api.health(), storage_target=storage_target, read_only=read_only)
+        )
 
     @app.get(
         "/api/v1/system/ready",

@@ -1,26 +1,76 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Envelope } from "../components/Envelope";
 import type { SearchModelBlock } from "../api/types";
+import { useI18n } from "../i18n/I18n";
+import type { TKey } from "../i18n/translations";
 import { useSearches } from "../state/searches";
 import { useSearchModel } from "../state/searchModel";
 
 type Criteria = Record<string, string>;
 type Multi = Record<string, boolean>;
 
+const STORAGE_KEY = "osap.studio.multi";
+
+// El título de cada bloque viene del backend; lo localizamos por id.
+const BLOCK_LABELS: Record<string, string> = {
+  what: "studio.what",
+  where: "studio.where",
+  what_kind: "studio.whatKind",
+  quality: "studio.quality",
+  options: "studio.options",
+};
+
 export function SearchStudioPage() {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const { data: model, loading, error, load } = useSearchModel();
 
   const [text, setText] = useState<Criteria>({});
   const [multi, setMulti] = useState<Multi>({});
   const [confidence, setConfidence] = useState(0.5);
+  const initialized = useRef(false);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Inicializa los checkboxes: activados por defecto salvo el bloque de Opciones,
+  // y aplica la selección guardada en localStorage si existe.
+  useEffect(() => {
+    if (!model || initialized.current) return;
+    initialized.current = true;
+
+    const defaults: Multi = {};
+    for (const block of model.blocks) {
+      if (block.kind === "multi") {
+        for (const o of block.options) defaults[o] = true;
+      } else if (block.kind === "boolean") {
+        for (const c of block.criteria) defaults[c.key] = false;
+      }
+    }
+
+    let saved: Multi = {};
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      saved = raw ? (JSON.parse(raw) as Multi) : {};
+    } catch {
+      saved = {};
+    }
+
+    const merged: Multi = {};
+    for (const key of Object.keys(defaults)) {
+      merged[key] = typeof saved[key] === "boolean" ? saved[key] : Boolean(defaults[key]);
+    }
+    setMulti(merged);
+  }, [model]);
+
+  const updateMulti = (next: Multi) => {
+    setMulti(next);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+  };
 
   const resolve = () => {
     const payload: Record<string, unknown> = {
@@ -31,8 +81,6 @@ export function SearchStudioPage() {
       catalogue: text["catalogue"] || null,
       confidence,
     };
-    const providers = Object.entries(multi).filter(([, v]) => v).map(([k]) => k);
-    const formats = Object.entries(multi).filter(([, v]) => v).map(([k]) => k);
     void useSearches.getState().create({
       query: payload.query as string,
       limit: 50,
@@ -40,8 +88,7 @@ export function SearchStudioPage() {
       title: payload.title as string | null,
       catalogue: payload.catalogue as string | null,
     });
-    void providers;
-    void formats;
+    void payload;
     navigate("/candidates");
   };
 
@@ -57,50 +104,67 @@ export function SearchStudioPage() {
 
   return (
     <div className="space-y-5">
-      <h1 className="text-xl font-semibold">Search Studio</h1>
+      <div>
+        <h1 className="text-xl font-semibold">{t("studio.title")}</h1>
+        <p className="text-sm text-osap-muted">{t("studio.saved")}</p>
+      </div>
 
-      <Envelope loading={loading} error={error} data={model} emptyMessage="Loading search model…">
+      <Envelope loading={loading} error={error} data={model} emptyMessage={t("states.loading")}>
         {(m) => (
-          <>
+          <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
+            {/* Columna principal: criterios */}
             <div className="space-y-4">
-              {m.blocks.map((block) => (
-                <Block
-                  key={block.id}
-                  block={block}
-                  text={text}
-                  setText={setText}
-                  multi={multi}
-                  setMulti={setMulti}
-                  confidence={confidence}
-                  setConfidence={setConfidence}
-                />
-              ))}
+              {m.blocks
+                .filter((b) => b.id !== "quality" && b.id !== "options")
+                .map((block) => (
+                  <Block
+                    key={block.id}
+                    block={block}
+                    text={text}
+                    setText={setText}
+                    multi={multi}
+                    setMulti={updateMulti}
+                    confidence={confidence}
+                    setConfidence={setConfidence}
+                  />
+                ))}
             </div>
 
-            {summary.length > 0 ? (
-              <Card title="Search Summary">
-                <p className="mb-2 text-sm text-osap-muted">{phrase}</p>
-                <ul className="space-y-1 text-sm">
-                  {summary.map((s) => (
-                    <li key={s.label} className="flex justify-between">
-                      <span className="text-osap-muted">{s.label}</span>
-                      <span>{s.value}</span>
-                    </li>
-                  ))}
-                  {confidence > 0 ? (
-                    <li className="flex justify-between">
-                      <span className="text-osap-muted">Confidence</span>
-                      <span>≥ {Math.round(confidence * 100)}%</span>
-                    </li>
-                  ) : null}
-                </ul>
-              </Card>
-            ) : null}
+            {/* Barra lateral: calidad, opciones, resumen y acción */}
+            <aside className="space-y-4 lg:sticky lg:top-2 lg:self-start">
+              {m.blocks
+                .filter((b) => b.id === "quality" || b.id === "options")
+                .map((block) => (
+                  <Block
+                    key={block.id}
+                    block={block}
+                    text={text}
+                    setText={setText}
+                    multi={multi}
+                    setMulti={updateMulti}
+                    confidence={confidence}
+                    setConfidence={setConfidence}
+                  />
+                ))}
 
-            <Button onClick={resolve} className="mt-6 w-full">
-              Resolve works
-            </Button>
-          </>
+              <Card title={t("studio.summary")}>
+                {summary.length > 0 ? (
+                  <p className="text-sm text-osap-muted">{phrase}</p>
+                ) : (
+                  <p className="text-sm text-osap-muted">—</p>
+                )}
+                {confidence > 0 ? (
+                  <p className="mt-2 text-sm text-osap-muted">
+                    {t("studio.confidence")}: ≥ {Math.round(confidence * 100)}%
+                  </p>
+                ) : null}
+              </Card>
+
+              <Button onClick={resolve} className="w-full">
+                {t("studio.resolve")}
+              </Button>
+            </aside>
+          </div>
         )}
       </Envelope>
     </div>
@@ -116,10 +180,14 @@ function Block(props: {
   confidence: number;
   setConfidence: (v: number) => void;
 }) {
+  const { t } = useI18n();
   const { block } = props;
+  const labelKey = BLOCK_LABELS[block.id] as TKey | undefined;
+  const title = labelKey ? t(labelKey) : block.label;
+
   if (block.kind === "text") {
     return (
-      <Card title={block.label}>
+      <Card title={title}>
         <div className="grid gap-2 sm:grid-cols-2">
           {block.criteria.map((c) => (
             <label key={c.key} className="flex flex-col text-xs">
@@ -138,7 +206,7 @@ function Block(props: {
   }
   if (block.kind === "multi") {
     return (
-      <Card title={block.label}>
+      <Card title={title}>
         <div className="flex flex-wrap gap-3">
           {block.options.map((o) => (
             <label key={o} className="flex items-center gap-1 text-sm">
@@ -156,9 +224,9 @@ function Block(props: {
   }
   if (block.kind === "range") {
     return (
-      <Card title={block.label}>
+      <Card title={title}>
         <div className="flex items-center gap-3 text-sm">
-          <span className="text-osap-muted">Confidence</span>
+          <span className="text-osap-muted">{t("studio.confidence")}</span>
           <input
             type="range"
             min={0}
@@ -173,12 +241,17 @@ function Block(props: {
       </Card>
     );
   }
+  // kind === "boolean" (Options)
   return (
-    <Card title={block.label}>
+    <Card title={title}>
       <div className="flex flex-wrap gap-3">
         {block.criteria.map((c) => (
           <label key={c.key} className="flex items-center gap-1 text-sm">
-            <input type="checkbox" onChange={(e) => props.setMulti({ ...props.multi, [c.key]: e.target.checked })} />
+            <input
+              type="checkbox"
+              checked={props.multi[c.key] ?? false}
+              onChange={(e) => props.setMulti({ ...props.multi, [c.key]: e.target.checked })}
+            />
             {c.label}
           </label>
         ))}

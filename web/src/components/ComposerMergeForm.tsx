@@ -4,6 +4,7 @@ import type { ComposerSummary } from "../api/types";
 import { useI18n } from "../i18n/I18n";
 import { useAuth } from "../state/auth";
 import { useComposers } from "../state/composers";
+import { useSystem } from "../state/system";
 import { ComposerSearchSelect } from "./ComposerSearchSelect";
 
 type Mode = "existing" | "new";
@@ -14,6 +15,7 @@ type Mode = "existing" | "new";
 export function ComposerMergeForm({ origin }: { origin: ComposerSummary }) {
   const { t } = useI18n();
   const isAdmin = useAuth((s) => s.isAdmin());
+  const readOnly = useSystem((s) => s.health?.read_only ?? false);
   const { merge, createComposer, loading, error } = useComposers();
   const [mode, setMode] = useState<Mode>("existing");
   const [destino, setDestino] = useState<ComposerSummary | null>(null);
@@ -135,7 +137,7 @@ export function ComposerMergeForm({ origin }: { origin: ComposerSummary }) {
               </p>
               <button
                 onClick={onMergeExisting}
-                disabled={loading}
+                disabled={loading || readOnly}
                 className="mt-2 rounded bg-osap-accent px-4 py-1.5 text-sm text-white disabled:opacity-50"
               >
                 {loading ? t("composers.merging") : t("composers.merge")}
@@ -169,7 +171,7 @@ export function ComposerMergeForm({ origin }: { origin: ComposerSummary }) {
 
           <button
             onClick={onMergeNew}
-            disabled={loading || newName.trim().length === 0}
+            disabled={loading || readOnly || newName.trim().length === 0}
             className="rounded bg-osap-accent px-4 py-1.5 text-sm text-white disabled:opacity-50"
           >
             {loading ? t("composers.merging") : newMatch ? t("composers.merge") : t("composers.mergeCreate")}

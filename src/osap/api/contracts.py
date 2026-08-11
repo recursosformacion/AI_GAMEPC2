@@ -140,6 +140,8 @@ class KnowledgeResponse(_Frozen):
 
 class SystemHealthResponse(_Frozen):
     status: str
+    storage_target: str | None = None
+    read_only: bool = False
 
 
 class SystemVersionResponse(_Frozen):

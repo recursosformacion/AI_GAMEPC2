@@ -14,9 +14,16 @@ from src.osap.ports.votes import IAuthenticator
 class ComposersService:
     """Casos de uso de compositores (backend: osap-storage)."""
 
-    def __init__(self, client: StorageComposerClient, authenticator: IAuthenticator) -> None:
+    def __init__(
+        self,
+        client: StorageComposerClient,
+        authenticator: IAuthenticator,
+        *,
+        read_only: bool = False,
+    ) -> None:
         self._client = client
         self._authenticator = authenticator
+        self._read_only = read_only
 
     # -- consulta (pública) --------------------------------------------------
 
@@ -38,6 +45,7 @@ class ComposersService:
 
     def merge_composers(self, token: str | None, target_id: str, source_ids: list[str]) -> dict[str, object]:
         self.require_admin(token)
+        self._ensure_writable()
         status, doc = self._client.merge_composers(target_id, source_ids)
         if not 200 <= status < 300:
             if status == 404:
@@ -47,6 +55,7 @@ class ComposersService:
 
     def create_composer(self, token: str | None, name: str) -> dict[str, object]:
         self.require_admin(token)
+        self._ensure_writable()
         doc = self._client.create_composer(name)
         if doc is None:
             raise ForbiddenError("Storage rejected composer creation")
@@ -54,12 +63,17 @@ class ComposersService:
 
     def review_composer(self, token: str | None, composer_id: str, review_status: str) -> dict[str, object]:
         self.require_admin(token)
+        self._ensure_writable()
         status, doc = self._client.review_composer(composer_id, review_status)
         if not 200 <= status < 300:
             if status == 404:
                 raise WorkNotFoundError("Composer not found")
             raise ForbiddenError(f"Storage rejected review (HTTP {status})")
         return doc
+
+    def _ensure_writable(self) -> None:
+        if self._read_only:
+            raise ForbiddenError("Storage is remote; this environment is read-only")
 
     def require_admin(self, token: str | None) -> UserPrincipal:
         principal: Principal | None = self._authenticator.resolve(token)

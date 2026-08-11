@@ -5,6 +5,7 @@ import { ComposerSearchSelect } from "../components/ComposerSearchSelect";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
 import { useComposers } from "../state/composers";
+import { useSystem } from "../state/system";
 import type { ComposerSummary } from "../api/types";
 
 const LIMIT = 30;
@@ -19,6 +20,7 @@ const REVIEW_OPTIONS: { value: string; key: TKey }[] = [
 export function AdminComposersPage() {
   const { t } = useI18n();
   const { list, loading, error, q, setQuery, fetchList, review, setReview, merge, reviewComposer } = useComposers();
+  const readOnly = useSystem((s) => s.health?.read_only ?? false);
   const [input, setInput] = useState(q);
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -123,7 +125,7 @@ export function AdminComposersPage() {
             </div>
             <button
               onClick={onMergeSelected}
-              disabled={loading || target === null}
+              disabled={loading || target === null || readOnly}
               className="rounded bg-osap-accent px-4 py-1.5 text-sm text-white disabled:opacity-50"
             >
               {loading ? t("composers.merging") : `${t("composers.merge")} (${selectedCount - (target ? 1 : 0)})`}
@@ -156,8 +158,9 @@ export function AdminComposersPage() {
                     <select
                       value={c.review_status ?? "not_reviewed"}
                       onChange={(e) => onReviewStatus(c.id, e.target.value)}
+                      disabled={readOnly}
                       title={t("composers.reviewFilter")}
-                      className="rounded border border-osap-border bg-osap-surface px-1 py-0.5 text-xs"
+                      className="rounded border border-osap-border bg-osap-surface px-1 py-0.5 text-xs disabled:opacity-40"
                     >
                       {REVIEW_OPTIONS.map((o) => (
                         <option key={o.value} value={o.value}>

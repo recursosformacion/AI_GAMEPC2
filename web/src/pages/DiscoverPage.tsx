@@ -1,87 +1,75 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Card } from "../components/Card";
-import { EmptyState } from "../components/EmptyState";
 import { Envelope } from "../components/Envelope";
 import { useI18n } from "../i18n/I18n";
 import { useSources } from "../state/repositorySources";
-import { useSessionSources } from "../state/sources";
 
 export function DiscoverPage() {
   const { t } = useI18n();
   const { list, loadList } = useSources();
-  const { discover, loadDiscover } = useSessionSources();
 
   useEffect(() => {
     void loadList();
-    void loadDiscover();
-  }, [loadList, loadDiscover]);
+  }, [loadList]);
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div>
         <h1 className="text-xl font-semibold">{t("nav.discover")}</h1>
-        <Link
-          to="/sources"
-          className="rounded bg-osap-accent px-3 py-1.5 text-sm text-white hover:bg-osap-accent/90"
-        >
-          {t("discover.addSource")}
-        </Link>
+        <p className="text-sm text-osap-muted">{t("discover.explain")}</p>
       </div>
 
-      {/* Discover sources (suggestions) */}
-      <Card title={t("discover.sources")}>
-        <Envelope loading={discover.loading} error={discover.error} data={discover.data} emptyMessage={t("discover.noSuggestions")}>
-          {(sources) => (
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {sources.map((s) => (
-                <li key={s.source_id} className="rounded border border-osap-border p-3">
-                  <div className="font-medium text-osap-accent">{s.name}</div>
-                  <div className="text-xs text-osap-muted">
-                    {s.type} · {s.origin} · {s.trust}
-                  </div>
-                  <div className="text-sm">{"★".repeat(Math.max(1, Math.min(5, Math.round(s.quality / 20))))} {s.quality}/100</div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Envelope>
-      </Card>
-
-      {/* Collections (repository catalog) */}
-      <Card title={t("discover.collections")}>
-        <Envelope loading={list.loading} error={list.error} data={list.data} emptyMessage={t("discover.noCollections")}>
-          {(sources) => (
-            <ul className="grid gap-3 sm:grid-cols-2">
-              {sources.map((s) => (
-                <li key={s.source_id}>
-                  <Link to="/catalog" className="block rounded border border-osap-border p-3 hover:border-osap-accent">
-                    <span className="font-medium">{s.name}</span>
-                    <span className="ml-2 text-xs text-osap-muted">
-                      {s.type} · {s.origin}
+      {/* Proveedores de música no cableados (candidatos a conectar) */}
+      <Card title={t("discover.providersToConnect")}>
+        <Envelope loading={list.loading} error={list.error} data={list.data} emptyMessage={t("discover.nonePending")}>
+          {(sources) => {
+            const pending = sources.filter((s) => s.status !== "Online");
+            if (pending.length === 0) return <p className="text-sm text-osap-muted">{t("discover.nonePending")}</p>;
+            return (
+              <ul className="divide-y divide-osap-border">
+                {pending.map((s) => (
+                  <li key={s.source_id} className="flex items-center justify-between py-2">
+                    <div>
+                      <span className="font-medium">{s.name}</span>
+                      <span className="ml-2 text-xs text-osap-muted">
+                        {s.type} · {s.origin}
+                      </span>
+                    </div>
+                    <span className="rounded border border-osap-border px-2 py-0.5 text-xs text-osap-muted">
+                      {s.status}
                     </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
+                  </li>
+                ))}
+              </ul>
+            );
+          }}
         </Envelope>
       </Card>
 
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Card title={t("discover.trending")}>
-          <EmptyState />
-        </Card>
-        <Card title={t("discover.recentlyAdded")}>
-          <EmptyState />
-        </Card>
-        <Card title={t("discover.mostDownloaded")}>
-          <EmptyState />
-        </Card>
-        <Card title={t("discover.popularComposers")}>
-          <EmptyState />
-        </Card>
-      </div>
+      {/* Fuentes cableadas */}
+      <Card title={t("discover.wiredSources")}>
+        <Envelope loading={list.loading} error={list.error} data={list.data} emptyMessage={t("discover.noCollections")}>
+          {(sources) => {
+            const wired = sources.filter((s) => s.status === "Online");
+            if (wired.length === 0) return <p className="text-sm text-osap-muted">{t("discover.noCollections")}</p>;
+            return (
+              <ul className="divide-y divide-osap-border">
+                {wired.map((s) => (
+                  <li key={s.source_id}>
+                    <Link to="/catalog" className="block rounded px-1 py-2 hover:bg-osap-accent-soft">
+                      <span className="font-medium">{s.name}</span>
+                      <span className="ml-2 text-xs text-osap-muted">
+                        {s.type} · {s.origin} · {s.trust}
+                      </span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            );
+          }}
+        </Envelope>
+      </Card>
     </div>
   );
 }

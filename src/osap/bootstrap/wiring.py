@@ -57,6 +57,24 @@ def _auth_base_from_token_url(token_url: str | None) -> str:
     return "http://127.0.0.1:8200"
 
 
+def _storage_target(omr_base_url: str | None, osap_env: str) -> tuple[str, bool]:
+    """Clasifica el destino de osap-storage y si es solo lectura.
+
+    `target` es "local" o "remote" según la URL configurada ([omr] base_url /
+    OSAP_OMR_BASE_URL). Solo se fuerza `read_only` en desarrollo (osap_env=dev)
+    cuando el destino es remoto: se puede leer pero no modificar. En producción el
+    storage web es escribible.
+    """
+    import urllib.parse
+
+    base = omr_base_url or "https://storage.openmusicrepository.com"
+    host = urllib.parse.urlsplit(base).netloc.lower()
+    is_local = host.startswith("localhost") or host.startswith("127.") or host.startswith("0.0.0.0")
+    target = "local" if is_local else "remote"
+    read_only = osap_env == "dev" and target == "remote"
+    return target, read_only
+
+
 def wire(container: Container, configuration: Configuration | None = None) -> Container:
     config = configuration or load_configuration()
 
@@ -166,6 +184,8 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     # --- compositores (consulta pública + fusión admin) ----------------------
     # Consulta usa el service client normal (storage:read). La fusión usa un service client
     # administrativo separado (storage:admin) — osap-api NO recibe storage:admin por defecto.
+    storage_target, storage_read_only = _storage_target(config.omr_base_url, config.osap_env)
+    container.set_storage_info(storage_target, storage_read_only)
     composer_client = StorageComposerClient(
         base_url=storage_base,
         token_provider=service_token_provider,
@@ -175,7 +195,7 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
             token_url=config.osap_auth_token_url or "https://auth.osap/oauth/token",
         ),
     )
-    composers_service = ComposersService(composer_client, authenticator)
+    composers_service = ComposersService(composer_client, authenticator, read_only=storage_read_only)
     container.set_composers(composers_service)
 
     # Consumir user.deleted (osap-auth): anonimiza votos y conserva el agregado.

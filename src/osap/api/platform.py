@@ -680,6 +680,9 @@ class PlatformApi:
     def health(self) -> str:
         return "ok"
 
+    def storage_info(self) -> tuple[str, bool]:
+        return self._container.storage_info()
+
     def version(self) -> SystemVersionResponse:
         return SystemVersionResponse(version=VERSION)
 
