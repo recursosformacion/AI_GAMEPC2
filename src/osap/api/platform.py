@@ -4,6 +4,7 @@ Use cases exposed by the API. It calls existing Application Services (never doma
 internals directly) and produces the public contract DTOs. Pure orchestration; no HTTP.
 """
 
+import json
 import logging
 import re
 import urllib.parse
@@ -48,6 +49,7 @@ from src.osap.domain.knowledge import KnowledgeBase
 from src.osap.domain.principal import Principal
 from src.osap.domain.resolve_request import ResolveRequestBuilder
 from src.osap.domain.votes import ComposerStats, WorkStats, WorkVote
+from src.osap.infrastructure.state.op_store import OpStore
 
 VERSION = "3.1"
 
@@ -325,40 +327,17 @@ class PlatformApi:
         self._jobs: dict[str, JobResponse] = {}
         self._representations: dict[str, dict[str, object]] = {}
         self._job_counter = 0
-        self._source_suggestions: list[SourceSuggestionRead] = []
         self._suggestion_counter = 0
-        self._suggestions_path = Path(__file__).resolve().parent / "osap_state_source_suggestions.json"
-        self._load_suggestions()
-
-    # --- persistencia de sugerencias de fuente -------------------------------
-
-    def _load_suggestions(self) -> None:
-        try:
-            if self._suggestions_path.exists():
-                import json
-
-                data = json.loads(self._suggestions_path.read_text("utf-8"))
-                items = [SourceSuggestionRead(**d) for d in data if isinstance(d, dict)]
-                self._source_suggestions = items
-                highest = 0
-                for item in items:
-                    if item.id.startswith("sug-"):
-                        try:
-                            highest = max(highest, int(item.id[4:]))
-                        except ValueError:
-                            continue
-                self._suggestion_counter = highest + 1
-        except Exception:  # noqa: BLE001
-            self._source_suggestions = []
-
-    def _save_suggestions(self) -> None:
-        try:
-            import json
-
-            payload = [s.__dict__ for s in self._source_suggestions]
-            self._suggestions_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), "utf-8")
-        except Exception:  # noqa: BLE001
-            logging.getLogger("osap.sources").exception("could not persist source suggestions")
+        self._store = OpStore(self._container.op_store_path())
+        highest = 0
+        for item in self._store.list_suggestions():
+            sid = str(item.get("id") or "")
+            if sid.startswith("sug-"):
+                try:
+                    highest = max(highest, int(sid[4:]))
+                except ValueError:
+                    continue
+        self._suggestion_counter = highest + 1
 
     # --- search -------------------------------------------------------------
 
@@ -684,7 +663,7 @@ class PlatformApi:
 
     def admin_overview(self, token: str | None) -> dict[str, object]:
         stats = self.composers().composer_review_stats(token)
-        pending = sum(1 for s in self._source_suggestions if s.status == "pending")
+        pending = self._store.pending_suggestion_count()
         return {"composers": stats, "source_suggestions_pending": pending}
 
     # --- knowledge (read-only) ----------------------------------------------
@@ -831,25 +810,48 @@ class PlatformApi:
             raise UnauthenticatedError("Login required to suggest a source")
         user = str(getattr(principal, "user_id", "anonymous"))
         self._suggestion_counter += 1
-        suggestion = SourceSuggestionRead(
-            id=f"sug-{self._suggestion_counter}",
-            name=name,
-            type=source_type,
-            location=location,
-            mapping=mapping,
-            requested_by=user,
-            status="pending",
-            created_at=datetime.now(UTC).isoformat(),
+        suggestion_id = f"sug-{self._suggestion_counter}"
+        row = self._store.add_suggestion(
+            suggestion_id,
+            name,
+            source_type,
+            location,
+            dict(mapping),
+            user,
         )
-        self._source_suggestions.append(suggestion)
-        self._save_suggestions()
+        suggestion = SourceSuggestionRead(
+            id=str(row["id"]),
+            name=str(row["name"]),
+            type=str(row["type"]),
+            location=str(row["location"]),
+            mapping=json.loads(str(row["mapping"])),
+            requested_by=str(row["requested_by"]),
+            status=str(row["status"]),
+            admin_message=str(row["admin_message"]) if row.get("admin_message") else None,
+            created_at=str(row["created_at"]),
+        )
         # En esta sesión se incluye en los resultados de búsqueda.
         self._sessions.create(name, source_type, location)
         return suggestion
 
     def list_source_suggestions(self, token: str | None) -> list[SourceSuggestionRead]:
         self._require_admin(token)
-        return list(self._source_suggestions)
+        result: list[SourceSuggestionRead] = []
+        for row in self._store.list_suggestions():
+            result.append(
+                SourceSuggestionRead(
+                    id=str(row["id"]),
+                    name=str(row["name"]),
+                    type=str(row["type"]),
+                    location=str(row["location"]),
+                    mapping=json.loads(str(row["mapping"])),
+                    requested_by=str(row["requested_by"]),
+                    status=str(row["status"]),
+                    admin_message=str(row["admin_message"]) if row.get("admin_message") else None,
+                    created_at=str(row["created_at"]),
+                )
+            )
+        return result
 
     def resolve_source_suggestion(
         self,
@@ -859,29 +861,27 @@ class PlatformApi:
         message: str,
     ) -> SourceSuggestionRead | None:
         self._require_admin(token)
-        for index, suggestion in enumerate(self._source_suggestions):
-            if suggestion.id != suggestion_id:
-                continue
-            status = "approved" if action == "approve" else "cancelled"
-            resolved = SourceSuggestionRead(
-                id=suggestion.id,
-                name=suggestion.name,
-                type=suggestion.type,
-                location=suggestion.location,
-                mapping=suggestion.mapping,
-                requested_by=suggestion.requested_by,
-                status=status,
-                admin_message=message or ("" if action == "approve" else "Cancelled by administrator"),
-                created_at=suggestion.created_at,
-            )
-            self._source_suggestions[index] = resolved
-            self._save_suggestions()
-            # Notificación por email (pendiente de SMTP: se registra en log).
-            logging.getLogger("osap.sources").info(
-                "source suggestion %s -> %s for user %s: %s", suggestion_id, status, resolved.requested_by, message
-            )
-            return resolved
-        return None
+        principal = self._container.authenticator().resolve(token)
+        decided_by = str(getattr(principal, "user_id", "admin"))
+        status = "approved" if action == "approve" else "cancelled"
+        row = self._store.resolve_suggestion(suggestion_id, status, message, decided_by)
+        if row is None:
+            return None
+        # Notificación por email (pendiente de SMTP: se registra en log).
+        logging.getLogger("osap.sources").info(
+            "source suggestion %s -> %s for user %s: %s", suggestion_id, status, row.get("requested_by"), message
+        )
+        return SourceSuggestionRead(
+            id=str(row["id"]),
+            name=str(row["name"]),
+            type=str(row["type"]),
+            location=str(row["location"]),
+            mapping=json.loads(str(row["mapping"])),
+            requested_by=str(row["requested_by"]),
+            status=str(row["status"]),
+            admin_message=str(row["admin_message"]) if row.get("admin_message") else None,
+            created_at=str(row["created_at"]),
+        )
 
     def _require_admin(self, token: str | None) -> None:
         from src.osap.domain.votes import ForbiddenError, UnauthenticatedError

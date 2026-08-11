@@ -25,3 +25,5 @@ token_url = "https://auth.osap/oauth/token"
 #       aviso se activa y SOLO SE PUEDE LEER (no modificar). En producción real (este
 #       indicador en 0) no hay ningún aviso y el storage se actualiza.
 dev_mode = 0
+# BD operativa de osap-api (estado operativo: sugerencias de fuente, proveedores, config).
+api_db = "osap_api.db"
