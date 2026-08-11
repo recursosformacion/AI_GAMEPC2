@@ -34,7 +34,7 @@ Write-Host "== [2/5] Empaquetando backend y SPA ==" -ForegroundColor Cyan
 Push-Location $root
 tar -czf (Join-Path $tmp "backend.tar.gz") `
     --exclude="__pycache__" --exclude="*.pyc" `
-    src providers resources pyproject.toml
+    src providers resources pyproject.toml osap.toml
 if ($LASTEXITCODE -ne 0) { Fail "tar backend falló" }
 tar -czf (Join-Path $tmp "dist.tar.gz") -C (Join-Path $root "web\dist") .
 if ($LASTEXITCODE -ne 0) { Fail "tar dist falló" }
@@ -47,7 +47,7 @@ if ($LASTEXITCODE -ne 0) { Fail "scp falló" }
 
 Write-Host "== [4/5] Extrayendo en el servidor y reiniciando ==" -ForegroundColor Cyan
 $remoteCmd = "set -e; cd $BackendDir && tar -xzf ~/deploy_tmp/backend.tar.gz && " +
-    "python -m pip install --quiet PyMySQL && " +
+    ".venv/bin/pip install --quiet PyMySQL && " +
     "cd $SpaDir && rm -rf assets index.html && tar -xzf ~/deploy_tmp/dist.tar.gz && " +
     "rm -rf ~/deploy_tmp && sudo systemctl restart osap-api.service && echo RESTART_DONE"
 $out = ssh -o BatchMode=yes $HostAlias $remoteCmd

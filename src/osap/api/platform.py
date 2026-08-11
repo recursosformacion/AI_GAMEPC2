@@ -666,6 +666,51 @@ class PlatformApi:
         pending = self._store.pending_suggestion_count()
         return {"composers": stats, "source_suggestions_pending": pending}
 
+    # --- proveedores dinámicos + config (BD operativa) -----------------------
+
+    def list_op_providers(self, token: str | None) -> list[dict[str, object]]:
+        self._require_admin(token)
+        return self._store.list_providers()
+
+    def upsert_op_provider(
+        self,
+        token: str | None,
+        provider_id: str,
+        name: str,
+        base_url: str | None,
+        wired: bool,
+        config: dict[str, object],
+    ) -> dict[str, object]:
+        self._require_admin(token)
+        return self._store.upsert_provider(
+            provider_id, name, base_url=base_url, wired=wired, kind="dynamic", config=config
+        )
+
+    def set_op_provider_wired(self, token: str | None, provider_id: str, wired: bool) -> dict[str, object] | None:
+        self._require_admin(token)
+        return self._store.set_provider_wired(provider_id, wired)
+
+    def get_op_config(self, token: str | None) -> dict[str, object]:
+        self._require_admin(token)
+        out: dict[str, object] = {}
+        for key in (
+            "deployment",
+            "dev_mode",
+            "imslp_base_url",
+            "library_root",
+            "default_output_format",
+            "default_quality_level",
+        ):
+            value = self._store.get_config(key)
+            if value is not None:
+                out[key] = value
+        return out
+
+    def set_op_config(self, token: str | None, key: str, value: str) -> dict[str, object]:
+        self._require_admin(token)
+        self._store.set_config(key, value)
+        return {"key": key, "value": value}
+
     # --- knowledge (read-only) ----------------------------------------------
 
     def knowledge(self) -> KnowledgeResponse:

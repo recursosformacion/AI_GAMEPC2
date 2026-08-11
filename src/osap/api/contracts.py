@@ -288,6 +288,23 @@ class AdminOverviewResponse(_Frozen):
     source_suggestions_pending: int = 0
 
 
+class UpsertProviderRequest(_Frozen):
+    provider_id: str
+    name: str
+    base_url: str | None = None
+    wired: bool = False
+    config: dict[str, object] = {}
+
+
+class SetProviderWiredRequest(_Frozen):
+    wired: bool
+
+
+class SetOpConfigRequest(_Frozen):
+    key: str
+    value: str
+
+
 class SearchModelCriteria(_Frozen):
     key: str
     label: str

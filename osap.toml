@@ -1,32 +1,10 @@
-# Configuración de osap-api (backed por src/osap/bootstrap/configuration.py).
-# Precedencia: variable de entorno > este fichero > defaults.
-# El client_secret NO se versiona aquí: definir OSAP_SERVICE_CLIENT_SECRET en el entorno.
+# osap.toml — SOLO conexión a la BD operativa de osap-api.
+# El resto de configuración (deployment, dev_mode, credenciales de servicio, etc.)
+# vive centralizado en la BD operativa (tabla app_config) y se puede sobreescribir
+# por variable de entorno (OSAP_*). Precedencia: entorno > BD > defaults.
 
-[service]
-# Identidad de servicio (OAuth2 client_credentials) para osap-api -> osap-storage vía osap-auth.
-client_id = "f9152dd9-791a-40a4-b22b-31288f49fb1f"
-# client_secret = "via OSAP_SERVICE_CLIENT_SECRET"
-
-[auth]
-token_url = "https://auth.osap/oauth/token"
-
-[omr]
-# Dónde conecta osap-api con osap-storage.
-# - Si se deja vacío/comentado → usa el default de producción:
-#   https://storage.openmusicrepository.com
-# - Para desarrollo contra el storage local:
-#   base_url = "http://127.0.0.1:8000"
-# base_url = "http://127.0.0.1:8000"
-
-[osap]
-# Indicador de modo de desarrollo (dev_mode):
-#   0 = modo desarrollo: todo local (osap-api, osap-storage y osap-auth) → sin aviso.
-#   1 = osap-api en desarrollo conectado a osap-storage/osap-auth REALES → la barra de
-#       aviso se activa y SOLO SE PUEDE LEER (no modificar). En producción real (este
-#       indicador en 0) no hay ningún aviso y el storage se actualiza.
-dev_mode = 0
-# BD operativa de osap-api (estado operativo: sugerencias de fuente, proveedores, config).
-db_host = "127.0.0.1"
-db_name = "osap-api"
-db_user = "osap2027"
-db_password = "2027osapdb"
+[db]
+host = "127.0.0.1"
+name = "osap-api"
+user = "osap2027"
+password = "2027osapdb"

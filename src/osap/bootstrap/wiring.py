@@ -47,36 +47,36 @@ DEFAULT_PROVIDER_ORDER = (
 )
 
 
-def _auth_base_from_token_url(token_url: str | None) -> str:
-    """Deriva la base de osap-auth desde la URL del token (o usa el default de dev)."""
-    if token_url:
-        stripped = token_url.rstrip("/")
-        if stripped.endswith("/oauth/token"):
-            return stripped[: -len("/oauth/token")]
-        return stripped
-    return "http://127.0.0.1:8200"
+_LOCAL_ROUTES = {
+    "storage": "http://127.0.0.1:8000",
+    "auth_token": "http://127.0.0.1:8200/oauth/token",
+    "auth_base": "http://127.0.0.1:8200",
+}
+_REAL_ROUTES = {
+    "storage": "https://storage.openmusicrepository.com",
+    "auth_token": "https://auth.osap/oauth/token",
+    "auth_base": "https://auth.osap",
+}
 
 
-def _storage_target(omr_base_url: str | None, dev_mode: int) -> tuple[str, bool]:
-    """Clasifica el destino de osap-storage y si es solo lectura.
+def _routes(deployment: str, dev_mode: int) -> tuple[dict[str, str], bool]:
+    """Decide las rutas (storage/auth) y si es solo lectura según entorno y dev_mode.
 
-    `target` es "local" o "remote" según la URL configurada. El aviso de solo-lectura
-    SOLO se activa en modo desarrollo conectado a un storage real (dev_mode=1):
-    osap-api en desarrollo + osap-storage/osap-auth reales. En el resto de casos
-    (todo local, o producción real) NO hay aviso y se puede escribir.
+    - deployment == "prod": rutas reales, escribible.
+    - deployment == "dev": dev_mode=0 → local; dev_mode=1 → real y SOLO lectura.
     """
-    import urllib.parse
-
-    base = omr_base_url or "https://storage.openmusicrepository.com"
-    host = urllib.parse.urlsplit(base).netloc.lower()
-    is_local = host.startswith("localhost") or host.startswith("127.") or host.startswith("0.0.0.0")
-    target = "local" if is_local else "remote"
-    read_only = dev_mode == 1 and target == "remote"
-    return target, read_only
+    if deployment == "prod":
+        return _REAL_ROUTES, False
+    use_real = dev_mode == 1
+    return (_REAL_ROUTES if use_real else _LOCAL_ROUTES), use_real
 
 
 def wire(container: Container, configuration: Configuration | None = None) -> Container:
     config = configuration or load_configuration()
+    routes, storage_read_only = _routes(config.deployment, config.dev_mode)
+    storage_base = routes["storage"]
+    auth_token_url = routes["auth_token"]
+    auth_base = routes["auth_base"]
 
     github = GitHubClient(
         token=config.github_token,
@@ -104,10 +104,8 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     container.register_catalog_provider(
         RemoteCatalogProvider(
             definition_path=providers_root / "omr",
-            base_url=config.omr_base_url,
-            fetcher=OmrStorageFetcher(
-                base_url=config.omr_base_url or "https://storage.openmusicrepository.com"
-            ),
+            base_url=storage_base,
+            fetcher=OmrStorageFetcher(base_url=storage_base),
         )
     )
     container.register_catalog_provider(
@@ -159,18 +157,16 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     container.set_authentication_manager(AuthenticationManager(auth_store))
 
     # --- registro/verificación de usuario (proxy público a osap-auth) ---------
-    auth_base = config.osap_auth_base_url or _auth_base_from_token_url(config.osap_auth_token_url)
     auth_proxy = AuthProxyClient(base_url=auth_base)
     container.set_auth_proxy(auth_proxy)
 
     # --- votes & statistics (v1) --------------------------------------------
     # Los votos y las estadísticas viven en osap-storage (no en una BD de osap-api).
     # osap-api se autentica frente a storage con identidad de servicio (least privilege).
-    storage_base = config.omr_base_url or "https://storage.openmusicrepository.com"
     service_token_provider = ClientCredentialsServiceTokenProvider(
         client_id=config.service_client_id or "osap-api",
         client_secret=config.service_client_secret or "",
-        token_url=config.osap_auth_token_url or "https://auth.osap/oauth/token",
+        token_url=auth_token_url,
     )
     vote_store = StorageVoteStore(base_url=storage_base, token_provider=service_token_provider)
     work_store = StorageWorkStore(base_url=storage_base, token_provider=service_token_provider)
@@ -184,8 +180,12 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     # --- compositores (consulta pública + fusión admin) ----------------------
     # Consulta usa el service client normal (storage:read). La fusión usa un service client
     # administrativo separado (storage:admin) — osap-api NO recibe storage:admin por defecto.
-    storage_target, storage_read_only = _storage_target(config.omr_base_url, config.dev_mode)
-    container.set_storage_info(storage_target, storage_read_only)
+    target = (
+        "local"
+        if storage_base.startswith("http://127.") or storage_base.startswith("http://localhost")
+        else "remote"
+    )
+    container.set_storage_info(target, storage_read_only)
     container.set_op_store_config(
         {
             "host": config.osap_api_db_host,
@@ -200,7 +200,7 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
         admin_token_provider=ClientCredentialsServiceTokenProvider(
             client_id=config.admin_client_id or "osap-composer-admin-service",
             client_secret=config.admin_client_secret or "",
-            token_url=config.osap_auth_token_url or "https://auth.osap/oauth/token",
+            token_url=auth_token_url,
         ),
     )
     composers_service = ComposersService(composer_client, authenticator, read_only=storage_read_only)

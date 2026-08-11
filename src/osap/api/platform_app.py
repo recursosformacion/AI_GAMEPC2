@@ -47,6 +47,8 @@ from src.osap.api.contracts import (
     SearchResponse,
     SessionSource,
     SessionSourceCreate,
+    SetOpConfigRequest,
+    SetProviderWiredRequest,
     SourcePreviewRequest,
     SourcePreviewResponse,
     SourceSuggestionRead,
@@ -56,6 +58,7 @@ from src.osap.api.contracts import (
     SystemHealthResponse,
     SystemStatisticsResponse,
     SystemVersionResponse,
+    UpsertProviderRequest,
     VerifyEmailRequest,
     VoteRequest,
     VoteResponse,
@@ -868,6 +871,122 @@ def create_platform_app(
                 source_suggestions_pending=cast("int", overview["source_suggestions_pending"]),
             )
         )
+
+    # --- proveedores dinámicos + config (BD operativa de osap-api) -----------
+
+    @app.get(
+        "/api/v1/admin/op/providers",
+        tags=["Providers"],
+        summary="List dynamic providers",
+        description="Lista los proveedores registrados dinámicamente en la BD operativa. "
+        "Exige role=admin.",
+        response_model=SuccessEnvelope[list[dict[str, object]]] | ErrorEnvelope,
+        responses={200: _resp("Providers", _example([])), 401: _UNAUTHORIZED_401, 403: _FORBIDDEN_403},
+    )
+    def list_op_providers(
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            return ok(api.list_op_providers(authorization))
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Login required")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+
+    @app.post(
+        "/api/v1/admin/op/providers",
+        status_code=201,
+        tags=["Providers"],
+        summary="Register / update a dynamic provider",
+        description="Da de alta o actualiza un proveedor dinámico en la BD operativa. "
+        "Exige role=admin.",
+        response_model=SuccessEnvelope[dict[str, object]] | ErrorEnvelope,
+        responses={201: _resp("Provider", _example({})), 401: _UNAUTHORIZED_401, 403: _FORBIDDEN_403},
+    )
+    def upsert_op_provider(
+        payload: UpsertProviderRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            return ok(
+                api.upsert_op_provider(
+                    authorization,
+                    payload.provider_id,
+                    payload.name,
+                    payload.base_url,
+                    payload.wired,
+                    payload.config,
+                )
+            )
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Login required")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+
+    @app.post(
+        "/api/v1/admin/op/providers/{provider_id}/wire",
+        tags=["Providers"],
+        summary="Set provider wired flag",
+        description="Activa/desactiva un proveedor dinámico. Exige role=admin.",
+        response_model=SuccessEnvelope[dict[str, object]] | ErrorEnvelope,
+        responses={200: _resp("Provider", _example({})), 401: _UNAUTHORIZED_401, 403: _FORBIDDEN_403},
+    )
+    def set_op_provider_wired(
+        provider_id: str,
+        payload: SetProviderWiredRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            provider = api.set_op_provider_wired(authorization, provider_id, payload.wired)
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Login required")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+        if provider is None:
+            return fail(404, response, "NOT_FOUND", "Provider not found")
+        return ok(provider)
+
+    @app.get(
+        "/api/v1/admin/op/config",
+        tags=["System"],
+        summary="Get operational config",
+        description="Devuelve la configuración operativa persistida en la BD. Exige role=admin.",
+        response_model=SuccessEnvelope[dict[str, object]] | ErrorEnvelope,
+        responses={200: _resp("Config", _example({})), 401: _UNAUTHORIZED_401, 403: _FORBIDDEN_403},
+    )
+    def get_op_config(
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            return ok(api.get_op_config(authorization))
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Login required")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+
+    @app.put(
+        "/api/v1/admin/op/config",
+        tags=["System"],
+        summary="Set a configuration value",
+        description="Persiste una clave de configuración operativa en la BD. Exige role=admin.",
+        response_model=SuccessEnvelope[dict[str, object]] | ErrorEnvelope,
+        responses={200: _resp("Config", _example({})), 401: _UNAUTHORIZED_401, 403: _FORBIDDEN_403},
+    )
+    def set_op_config(
+        payload: SetOpConfigRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            return ok(api.set_op_config(authorization, payload.key, payload.value))
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Login required")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
 
     @app.get(
         "/api/v1/admin/source-suggestions",
