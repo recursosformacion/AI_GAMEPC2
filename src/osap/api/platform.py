@@ -49,7 +49,7 @@ from src.osap.domain.knowledge import KnowledgeBase
 from src.osap.domain.principal import Principal
 from src.osap.domain.resolve_request import ResolveRequestBuilder
 from src.osap.domain.votes import ComposerStats, WorkStats, WorkVote
-from src.osap.infrastructure.state.op_store import OpStore
+from src.osap.infrastructure.state.op_store import build_op_store
 
 VERSION = "3.1"
 
@@ -328,7 +328,7 @@ class PlatformApi:
         self._representations: dict[str, dict[str, object]] = {}
         self._job_counter = 0
         self._suggestion_counter = 0
-        self._store = OpStore(**self._container.op_store_config())
+        self._store = build_op_store(**self._container.op_store_config())
         highest = 0
         for item in self._store.list_suggestions():
             sid = str(item.get("id") or "")

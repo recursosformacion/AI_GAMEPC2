@@ -3,33 +3,137 @@
 Aloja SOLO estado operativo del propio osap-api, nunca una copia del catálogo de
 osap-storage. Contiene: sugerencias de fuentes/proveedores y su auditoría, proveedores
 dinámicos + configuración de conectores, y configuración operativa persistente.
+
+`OpStore` es una factoría: intenta usar MySQL y, si no está disponible (usuario/BD sin
+crear en el entorno), degrada a un almacén en memoria para no tumbar el servicio.
 """
 
 from __future__ import annotations
 
 import json
+import logging
 from datetime import UTC, datetime
 
 import pymysql
 from pymysql.cursors import DictCursor
 
-_DB_PARAMS = ("host", "user", "password", "database")
+_LOGGER = logging.getLogger("osap.state")
 
 
 def _now() -> str:
     return datetime.now(UTC).isoformat()
 
 
-class OpStore:
-    """Almacén operativo de osap-api respaldado por MySQL."""
+class _MemoryStore:
+    """Almacén en memoria con la misma interfaz (fallback cuando MySQL no está)."""
 
-    def __init__(
+    def __init__(self) -> None:
+        self._suggestions: list[dict[str, object]] = []
+        self._providers: list[dict[str, object]] = []
+        self._config: dict[str, str] = {}
+
+    def list_suggestions(self) -> list[dict[str, object]]:
+        return list(self._suggestions)
+
+    def add_suggestion(
         self,
-        host: str = "127.0.0.1",
-        user: str = "osap2027",
-        password: str = "2027osapdb",
-        database: str = "osap-api",
-    ) -> None:
+        suggestion_id: str,
+        name: str,
+        source_type: str,
+        location: str,
+        mapping: dict[str, object],
+        requested_by: str,
+    ) -> dict[str, object]:
+        row: dict[str, object] = {
+            "id": suggestion_id,
+            "name": name,
+            "type": source_type,
+            "location": location,
+            "mapping": json.dumps(mapping, ensure_ascii=False),
+            "requested_by": requested_by,
+            "status": "pending",
+            "admin_message": None,
+            "created_at": _now(),
+            "decided_at": None,
+            "decided_by": None,
+        }
+        self._suggestions.append(row)
+        return row
+
+    def get_suggestion(self, suggestion_id: str) -> dict[str, object] | None:
+        for row in self._suggestions:
+            if row["id"] == suggestion_id:
+                return row
+        return None
+
+    def resolve_suggestion(
+        self, suggestion_id: str, status: str, message: str, decided_by: str
+    ) -> dict[str, object] | None:
+        for row in self._suggestions:
+            if row["id"] == suggestion_id:
+                row["status"] = status
+                row["admin_message"] = message
+                row["decided_at"] = _now()
+                row["decided_by"] = decided_by
+                return row
+        return None
+
+    def pending_suggestion_count(self) -> int:
+        return sum(1 for r in self._suggestions if r["status"] == "pending")
+
+    def list_providers(self) -> list[dict[str, object]]:
+        return list(self._providers)
+
+    def get_provider(self, provider_id: str) -> dict[str, object] | None:
+        for row in self._providers:
+            if row["provider_id"] == provider_id:
+                return row
+        return None
+
+    def upsert_provider(
+        self,
+        provider_id: str,
+        name: str,
+        base_url: str | None = None,
+        wired: bool = False,
+        kind: str = "dynamic",
+        config: dict[str, object] | None = None,
+    ) -> dict[str, object]:
+        payload = json.dumps(config or {}, ensure_ascii=False)
+        for existing in self._providers:
+            if existing["provider_id"] == provider_id:
+                existing.update({"name": name, "base_url": base_url, "wired": int(wired), "config": payload})
+                return existing
+        row: dict[str, object] = {
+            "provider_id": provider_id,
+            "name": name,
+            "kind": kind,
+            "base_url": base_url,
+            "wired": int(wired),
+            "config": payload,
+            "created_at": _now(),
+        }
+        self._providers.append(row)
+        return row
+
+    def set_provider_wired(self, provider_id: str, wired: bool) -> dict[str, object] | None:
+        for row in self._providers:
+            if row["provider_id"] == provider_id:
+                row["wired"] = int(wired)
+                return row
+        return None
+
+    def get_config(self, key: str) -> str | None:
+        return self._config.get(key)
+
+    def set_config(self, key: str, value: str) -> None:
+        self._config[key] = value
+
+
+class _MysqlStore(_MemoryStore):
+    """Almacén operativo respaldado por MySQL."""
+
+    def __init__(self, host: str, user: str, password: str, database: str) -> None:
         self._params = {"host": host, "user": user, "password": password, "database": database}
         self._init()
 
@@ -96,8 +200,6 @@ class OpStore:
             """
         )
 
-    # --- sugerencias de fuentes ---------------------------------------------
-
     def list_suggestions(self) -> list[dict[str, object]]:
         return self._run("SELECT * FROM source_suggestions ORDER BY created_at")
 
@@ -145,8 +247,6 @@ class OpStore:
         rows = self._run("SELECT COUNT(*) AS n FROM source_suggestions WHERE status = 'pending'")
         return int(str(rows[0]["n"])) if rows else 0
 
-    # --- proveedores dinámicos ----------------------------------------------
-
     def list_providers(self) -> list[dict[str, object]]:
         return self._run("SELECT * FROM providers ORDER BY name")
 
@@ -179,8 +279,6 @@ class OpStore:
         self._run("UPDATE providers SET wired = %s WHERE provider_id = %s", (int(wired), provider_id))
         return self.get_provider(provider_id)
 
-    # --- configuración operativa --------------------------------------------
-
     def get_config(self, key: str) -> str | None:
         rows = self._run("SELECT value FROM app_config WHERE `key` = %s", (key,))
         return str(rows[0]["value"]) if rows else None
@@ -191,3 +289,20 @@ class OpStore:
             "ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = VALUES(updated_at)",
             (key, value, _now()),
         )
+
+
+def build_op_store(
+    host: str = "127.0.0.1",
+    user: str = "osap2027",
+    password: str = "2027osapdb",
+    database: str = "osap-api",
+) -> _MemoryStore:
+    """Factoría: MySQL con fallback a memoria si no está disponible."""
+    params = {"host": host, "user": user, "password": password, "database": database}
+    try:
+        store = _MysqlStore(**params)
+        store._init()
+        return store
+    except pymysql.err.OperationalError as exc:
+        _LOGGER.warning("MySQL operativo no disponible (%s); usando almacén en memoria", exc)
+        return _MemoryStore()
