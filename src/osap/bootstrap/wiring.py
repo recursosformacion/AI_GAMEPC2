@@ -71,6 +71,30 @@ def _routes(deployment: str, dev_mode: int) -> tuple[dict[str, str], bool]:
     return (_REAL_ROUTES if use_real else _LOCAL_ROUTES), use_real
 
 
+def _db_provider_metadata(container: Container) -> list[tuple[str, str, str | None, bool]]:
+    """Lee la metadata de proveedores desde la BD operativa (si está sembrada)."""
+    try:
+        from src.osap.infrastructure.state.op_store import build_op_store
+
+        store = build_op_store(**container.op_store_config())
+        rows = store.list_providers()
+        if not rows:
+            return []
+        out: list[tuple[str, str, str | None, bool]] = []
+        for row in rows:
+            out.append(
+                (
+                    str(row.get("provider_id") or ""),
+                    str(row.get("name") or ""),
+                    str(row.get("base_url")) if row.get("base_url") else None,
+                    bool(row.get("wired")),
+                )
+            )
+        return out
+    except Exception:  # noqa: BLE001
+        return []
+
+
 def wire(container: Container, configuration: Configuration | None = None) -> Container:
     config = configuration or load_configuration()
     routes, storage_read_only = _routes(config.deployment, config.dev_mode)
@@ -124,15 +148,21 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
 
     # Register metadata of EVERY declared provider (wired or not) so Discover/Sources
     # can list them all. `wired` tells whether the provider is registered as active.
+    # Se lee de la BD operativa si está sembrada (dev); si no, de los YAML (prod).
     active_ids = {p.provider_id.value for p in container.catalog_manager().providers()}
     defined: list[tuple[str, str, str, bool]] = []
-    for child in sorted(providers_root.iterdir()):
-        if child.is_dir() and (child / "provider.yaml").exists():
-            try:
-                d = load_definition(child)
-            except Exception:
-                continue
-            defined.append((d.id, d.name, d.base_url, d.id in active_ids))
+    db_providers = _db_provider_metadata(container)
+    if db_providers:
+        for provider_id, name, base_url, wired in db_providers:
+            defined.append((provider_id, name, base_url or "", wired))
+    else:
+        for child in sorted(providers_root.iterdir()):
+            if child.is_dir() and (child / "provider.yaml").exists():
+                try:
+                    d = load_definition(child)
+                except Exception:
+                    continue
+                defined.append((d.id, d.name, d.base_url, d.id in active_ids))
     container.set_defined_providers(tuple(defined))
 
     container.register_library(LocalLibrary(Path(config.library_root)))

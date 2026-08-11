@@ -551,6 +551,47 @@ def _auth_type(auth: object) -> str | None:
     return str(auth)
 
 
+def load_definition_from_config(provider_id: str, config: dict[str, object]) -> ProviderDefinition:
+    """Reconstruye una `ProviderDefinition` desde el config JSON persistido en la BD.
+
+    El config es la representación de los ficheros YAML de un proveedor:
+    {"provider": {...}, "endpoints": {...}, "mapping": {...}, "resources": {...}, "transforms": {...}}.
+    """
+    provider = config.get("provider")
+    provider_doc = provider if isinstance(provider, dict) else {}
+    endpoints_doc = config.get("endpoints")
+    endpoints = _parse_endpoints(endpoints_doc if isinstance(endpoints_doc, dict) else {})
+
+    mapping_doc = config.get("mapping")
+    mapping = mapping_doc if isinstance(mapping_doc, dict) else {}
+    work_block = mapping.get("works") or mapping.get("work") or {}
+    work, resource_mapping, resource_list = _split_work_mapping(work_block)
+
+    resources_doc = config.get("resources")
+    if isinstance(resources_doc, dict):
+        res_block = resources_doc.get("works") or resources_doc.get("work") or {}
+        extra_work, extra_mapping, extra_list = _split_work_mapping(res_block)
+        if extra_mapping:
+            resource_mapping = {**resource_mapping, **extra_mapping}
+        if extra_list:
+            resource_list = extra_list
+
+    transforms_doc = config.get("transforms")
+    transforms = _normalize_transforms(transforms_doc)
+
+    return ProviderDefinition(
+        id=str(provider_doc.get("id") or provider_id),
+        name=str(provider_doc.get("name") or provider_doc.get("id") or provider_id),
+        base_url=str(provider_doc.get("base_url") or ""),
+        endpoints=endpoints,
+        work_mapping=work,
+        resource_list=resource_list,
+        resource_mapping=resource_mapping,
+        authentication=_auth_type(provider_doc.get("authentication")),
+        transforms=transforms,
+    )
+
+
 def _flatten_work_mapping(dotted: dict[str, str]) -> dict[str, str]:
     """Convert legacy dotted-target mapping (`identity.id` -> source) to flat keys
     (`id` -> source) used by `_build_work`."""
