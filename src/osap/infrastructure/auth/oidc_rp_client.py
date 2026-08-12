@@ -22,6 +22,12 @@ class OidcError(Exception):
     """Fallo en el flujo OIDC (config ausente, discovery/canje fallido, etc.)."""
 
 
+_USER_AGENT = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+)
+
+
 def _b64url(data: bytes) -> str:
     return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
 
@@ -57,7 +63,7 @@ class OidcRpClient:
             raise OidcError("OIDC issuer no configurado")
         well_known = f"{self._issuer}/.well-known/openid-configuration"
         req = urllib.request.Request(
-            well_known, headers={"Accept": "application/json"}
+            well_known, headers={"Accept": "application/json", "User-Agent": _USER_AGENT}
         )
         try:
             with urllib.request.urlopen(req, timeout=15) as resp:  # noqa: S310 (issuer confiado)
@@ -113,7 +119,10 @@ class OidcRpClient:
             token_endpoint,
             data=data,
             method="POST",
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
+            headers={
+                "Content-Type": "application/x-www-form-urlencoded",
+                "User-Agent": _USER_AGENT,
+            },
         )
         try:
             with urllib.request.urlopen(req, timeout=20) as resp:  # noqa: S310 (token endpoint confiado)
