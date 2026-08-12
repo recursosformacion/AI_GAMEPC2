@@ -42,13 +42,14 @@ con al menos: `issuer`, `authorization_endpoint`, `token_endpoint`, `jwks_uri`,
 client_id: osap-api
 grant_types: [authorization_code, refresh_token]
 response_types: [code]
-redirect_uris:
-  - prod: https://api.openmusicrepository.com/auth/oidc/callback
-  - dev:   http://osap-app/auth/oidc/callback   (o el origin local de desarrollo)
-scope: openid profile
 token_endpoint_auth_method: client_secret_post
 ```
 
+- **`redirect_uri` NO es fijo ni pertenece a una aplicación**: lo envía el cliente (osap-api)
+  en **cada** petición de authorize, tomado de su configuración. osap-auth debe **aceptar el
+  `redirect_uri` proporcionado por el cliente**, validando **al menos el dominio** contra los
+  orígenes permitidos del cliente (y sin exigir una única URL hardcodeada). Así osap-auth no
+  queda atado a una única aplicación.
 - **PKCE obligatorio** (`S256`); `code` de un solo uso; `nonce` validado.
 - El **secreto del cliente** vive fuera (env/secret manager de osap-auth); se entrega a osap-api
   por un canal seguro. Nunca en una BD en claro ni en respuestas.
