@@ -1,0 +1,9 @@
+# osap.toml de PRODUCCIÓN — SOLO conexión a la BD operativa de osap-api.
+# El resto de la configuración vive en la BD (app_config) o en entorno (OSAP_*).
+# Este fichero se despliega como osap.toml en el servidor (~/osap-api/osap.toml).
+
+[db]
+host = "127.0.0.1"
+name = "osap_api"
+user = "osap"
+password = "osap2027"
