@@ -138,10 +138,19 @@ def _load_db_overrides(cfg: Configuration) -> dict[str, Any]:
 
 
 def load_configuration(path: str | Path | None = None) -> Configuration:
-    """Carga la configuración: osap.toml (solo [db]) > BD operativa > entorno > defaults.
+    """Carga la configuración: .env > osap.toml (secciones) > BD > entorno > defaults.
 
-    Precedencia final: variable de entorno > BD (app_config) > osap.toml ([db]) > defaults.
+    Precedencia final: variable de entorno > .env > osap.toml > BD (app_config) > defaults.
+    Carga `.env` del directorio de trabajo (dev) y, si `OSAP_DOTENV` apunta a un fichero
+    (p. ej. `.env.production`), también lo carga.
     """
+    from dotenv import load_dotenv
+
+    load_dotenv()
+    dotenv_extra = os.environ.get("OSAP_DOTENV")
+    if dotenv_extra:
+        load_dotenv(dotenv_extra)
+
     config_path = Path(path) if path else Path(os.environ.get("OSAP_CONFIG", "osap.toml"))
     data: dict[str, Any] = {}
     if config_path.exists():

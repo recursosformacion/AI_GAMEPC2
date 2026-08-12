@@ -19,3 +19,8 @@ osap_library/
 htmlcov/
 .tox/
 .nox/
+
+# entorno local (secretos)
+.env
+.env.production
+.env.*
