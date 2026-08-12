@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { apiClient } from "../api/ApiClient";
 import { useI18n } from "../i18n/I18n";
 import { useAuth } from "../state/auth";
+import { OidcAuthButton } from "./OidcAuthButton";
 
 interface OidcStart {
   authorize_url: string;
@@ -10,10 +11,8 @@ interface OidcStart {
 
 type Mode = "checking" | "oidc" | "password";
 
-// Login vía osap-auth (OIDC). El flujo OIDC se muestra en una ventana flotante (popup):
-// - el popup navega a la pantalla de authorize de osap-auth;
-// - el callback (backend) redirige el popup a /auth/callback#tokens;
-// - AuthCallbackPage (en el popup) envía la sesión a esta ventana con postMessage y cierra.
+// Login vía osap-auth (OIDC en ventana flotante). Si OIDC no está configurado, respaldo
+// con formulario de email/password.
 export function LoginForm({ onDone }: { onDone?: () => void }) {
   const { t } = useI18n();
   const login = useAuth((s) => s.login);
@@ -38,44 +37,6 @@ export function LoginForm({ onDone }: { onDone?: () => void }) {
     };
   }, []);
 
-  // Recibe la sesión que el popup envía tras autenticar en osap-auth.
-  useEffect(() => {
-    const onMessage = (e: MessageEvent) => {
-      const data = e.data as { type?: string; access_token?: string; refresh_token?: string };
-      if (data?.type === "osap-oidc" && data.access_token) {
-        useAuth.getState().completeOidc(data.access_token, data.refresh_token ?? "");
-        onDone?.();
-      }
-    };
-    window.addEventListener("message", onMessage);
-    return () => window.removeEventListener("message", onMessage);
-  }, [onDone]);
-
-  const startOidc = async () => {
-    // Se abre el popup de forma síncrona (gesto de usuario) para no ser bloqueado.
-    const popup = window.open("", "osap-auth-login", "width=480,height=640");
-    if (!popup) {
-      setError(t("auth.popupBlocked"));
-      return;
-    }
-    setBusy(true);
-    setError(null);
-    try {
-      const result = await apiClient.get<OidcStart>("/auth/oidc/start");
-      if (!result.authorize_url) {
-        popup.close();
-        setError(t("auth.oidcUnavailable"));
-        setBusy(false);
-        return;
-      }
-      popup.location.assign(result.authorize_url);
-    } catch {
-      popup.close();
-      setError(t("auth.oidcUnavailable"));
-      setBusy(false);
-    }
-  };
-
   const submitPassword = async (event: React.FormEvent) => {
     event.preventDefault();
     setBusy(true);
@@ -99,19 +60,12 @@ export function LoginForm({ onDone }: { onDone?: () => void }) {
   if (mode === "oidc") {
     return (
       <div className="flex flex-col gap-2">
-        <button
-          disabled={busy}
-          onClick={startOidc}
-          className="rounded bg-osap-accent px-3 py-2 text-sm text-white disabled:opacity-60"
-        >
-          {busy ? t("auth.working") : t("auth.oidc")}
-        </button>
+        <OidcAuthButton onDone={onDone} />
         {onDone ? (
           <button onClick={onDone} className="rounded px-3 py-1 text-xs text-osap-muted">
             {t("auth.skip")}
           </button>
         ) : null}
-        {error !== null && <span className="text-xs text-red-500">{error}</span>}
       </div>
     );
   }
