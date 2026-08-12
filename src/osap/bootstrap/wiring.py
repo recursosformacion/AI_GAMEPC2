@@ -61,8 +61,8 @@ _LOCAL_ROUTES = {
 }
 _REAL_ROUTES = {
     "storage": "https://storage.openmusicrepository.com",
-    "auth_token": "https://auth.osap/oauth/token",
-    "auth_base": "https://auth.osap",
+    "auth_token": "https://auth.openmusicrepository.com/oauth/token",
+    "auth_base": "https://auth.openmusicrepository.com",
 }
 
 
