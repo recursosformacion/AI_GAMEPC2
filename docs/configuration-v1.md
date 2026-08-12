@@ -83,3 +83,21 @@ FLUSH PRIVILEGES;
 ```
 
 Hasta entonces prod usa el fallback a memoria (funciona; las sugerencias no persisten entre reinicios).
+
+---
+
+# 7. Registro OIDC del cliente `osap-api` (dev y prod)
+
+El cliente se registra en **osap-auth** (CLI `register-oauth-client`), no en ficheros de osap-api.
+Cada ejecución genera un `client_secret` nuevo que se imprime **una sola vez**; hay que guardarlo
+en el entorno de osap-api (nunca en git).
+
+| Entorno | `redirect_uri` | `allowed_hosts` | Dónde vive el `client_secret` |
+|---|---|---|---|
+| Dev | `http://osap-app/api/v1/auth/oidc/callback` | `osap-app` | `.env` → `OSAP_OIDC_CLIENT_SECRET` |
+| Prod | `https://api.openmusicrepository.com/api/v1/auth/oidc/callback` | `api.openmusicrepository.com` | `osap.toml` del servidor `[oidc] client_secret` (o `OSAP_OIDC_CLIENT_SECRET`) |
+
+Notas:
+- `client_id` = `osap-api`, `grant_types` = `authorization_code,refresh_token`, scopes `openid,profile`, PKCE obligatorio.
+- El `[oidc]` de `osap.toml`/`osap.production.toml` (repo) lleva `client_secret = ""` a propósito; el secreto real NO se commitea.
+- Si se regenera el cliente en osap-auth, actualizar el secret en `.env` (dev) y en el `osap.toml` del servidor / env (prod).
