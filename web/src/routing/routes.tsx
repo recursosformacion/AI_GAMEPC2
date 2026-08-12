@@ -27,7 +27,7 @@ export function AppRoutes() {
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
-        <Route path="/auth/callback" element={<AuthCallbackPage />} />
+        <Route path="/oidc/callback" element={<AuthCallbackPage />} />
         <Route path="/discover" element={<DiscoverPage />} />
         <Route path="/catalog" element={<SourceCatalogPage />} />
         <Route path="/sources" element={<SourcesPage />} />

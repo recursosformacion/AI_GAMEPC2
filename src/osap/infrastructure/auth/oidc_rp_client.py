@@ -125,12 +125,12 @@ class OidcRpClient:
 
     def spa_callback_url(self, access_token: str, refresh_token: str) -> str:
         # Se devuelven en el fragmento (#), no en la query: así no viajan al servidor
-        # de la SPA ni quedan en logs/historial/referrer.
+        # de la SPA ni quedan en logs/historial/referrer. Path que Apache sirve como SPA.
         params = urllib.parse.urlencode(
             {"access_token": access_token, "refresh_token": refresh_token}
         )
-        return f"{self._spa_origin}/auth/callback#{params}"
+        return f"{self._spa_origin}/oidc/callback#{params}"
 
     def error_callback_url(self, message: str) -> str:
         params = urllib.parse.urlencode({"error": message})
-        return f"{self._spa_origin}/auth/callback?{params}"
+        return f"{self._spa_origin}/oidc/callback?{params}"
