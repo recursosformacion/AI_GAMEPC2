@@ -1,0 +1,8 @@
+# osap.toml de PRODUCCIÓN — referencia (NO se despliega; se mantiene manualmente
+# en el servidor en ~/osap-api/osap.toml y no se sobrescribe en los deploys).
+
+[db]
+host = "127.0.0.1"
+name = "osap_api"
+user = "osap"
+password = "osap2027"

@@ -1,7 +1,10 @@
-# osap.toml — SOLO conexión a la BD operativa de osap-api.
+# osap.toml de DESARROLLO — SOLO conexión a la BD operativa de osap-api.
 # El resto de configuración (deployment, dev_mode, credenciales de servicio, etc.)
 # vive centralizado en la BD operativa (tabla app_config) y se puede sobreescribir
 # por variable de entorno (OSAP_*). Precedencia: entorno > BD > defaults.
+#
+# NOTA: el fichero de PRODUCCIÓN es distinto y NO se sobrescribe en los deploys
+# (el paquete de deploy no incluye osap.toml). Ver osap.production.example.toml.
 
 [db]
 host = "127.0.0.1"
