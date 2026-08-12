@@ -142,11 +142,12 @@ function RepresentationsTab({
       </p>
 
       {/* Header row (desktop-friendly single-line grid) */}
-      <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2 border-b border-osap-border px-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-osap-muted">
+      <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-2 border-b border-osap-border px-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-osap-muted">
         <span>{t("work.title")}</span>
-        <span className="w-16 text-right">{t("work.format")}</span>
-        <span className="w-20 text-right">{t("work.confidence")}</span>
-        <span className="w-24 text-right">{t("work.action")}</span>
+        <span className="w-12 text-right">{t("work.provider")}</span>
+        <span className="w-12 text-right">{t("work.format")}</span>
+        <span className="w-9 text-right">{t("work.confidence")}</span>
+        <span className="w-12 text-right">{t("work.action")}</span>
       </div>
 
       <ul className="divide-y divide-osap-border">
@@ -156,31 +157,41 @@ function RepresentationsTab({
           const filename = `${work.title}.${ext}`;
           const title = rep.title || `${rep.provider} · ${rep.format} · ${rep.confidence.toFixed(2)}`;
           return (
-            <li key={`${rep.provider}-${rep.format}-${i}`} className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2 px-1 py-1.5 text-sm">
+            <li key={`${rep.provider}-${rep.format}-${i}`} className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-2 px-1 py-1.5 text-sm">
               <span title={title} className="truncate">
                 <span className="font-medium">{title}</span>
               </span>
-              <span title={rep.format} className="w-16 text-right text-xs text-osap-muted">
+              <span title={rep.provider} className="w-12 truncate text-right text-xs text-osap-muted">
+                {providerAbbrev(rep.provider)}
+              </span>
+              <span title={rep.format} className="w-12 text-right text-xs text-osap-muted">
                 {rep.format}
               </span>
-              <span className="w-20 text-right text-xs text-osap-muted">{rep.confidence.toFixed(2)}</span>
-              <span className="flex w-24 items-center justify-end gap-1">
+              <span className="w-9 text-right text-xs text-osap-muted">{rep.confidence.toFixed(2)}</span>
+              <span className="flex w-12 items-center justify-end gap-1">
                 <a
                   href={`${href}?view=1`}
                   target="_blank"
                   rel="noreferrer"
                   title="View score"
-                  className="rounded border border-osap-border px-2 py-0.5 text-xs text-osap-accent"
+                  className="rounded p-1 text-osap-accent hover:bg-osap-accent-soft"
                 >
-                  {t("work.view")}
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                    <circle cx="12" cy="12" r="3" />
+                  </svg>
                 </a>
                 <a
                   href={href}
                   download={filename}
                   title={`Download ${filename}`}
-                  className="rounded border border-osap-border px-2 py-0.5 text-xs text-osap-accent"
+                  className="rounded p-1 text-osap-accent hover:bg-osap-accent-soft"
                 >
-                  {t("work.download")}
+                  <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                    <polyline points="7 10 12 15 17 10" />
+                    <line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
                 </a>
               </span>
             </li>
@@ -189,6 +200,11 @@ function RepresentationsTab({
       </ul>
     </div>
   );
+}
+
+function providerAbbrev(name: string): string {
+  const clean = name.trim();
+  return clean.length <= 5 ? clean : clean.slice(0, 5);
 }
 
 function RelationshipsTab({ relationships }: { relationships?: WorkRelationships | null }) {
