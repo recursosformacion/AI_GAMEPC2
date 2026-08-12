@@ -20,18 +20,22 @@ export function OidcAuthButton({ onDone, label }: { onDone?: () => void; label?:
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  // Recibe la sesión que el popup envía tras autenticar en osap-auth.
+  // Recibe la sesión (o el error) que el popup envía tras el callback de osap-auth.
   useEffect(() => {
     const onMessage = (e: MessageEvent) => {
-      const data = e.data as { type?: string; access_token?: string; refresh_token?: string };
+      const data = e.data as { type?: string; access_token?: string; refresh_token?: string; message?: string };
       if (data?.type === "osap-oidc" && data.access_token) {
+        setError(null);
         useAuth.getState().completeOidc(data.access_token, data.refresh_token ?? "");
         onDone?.();
+      } else if (data?.type === "osap-oidc-error") {
+        setError(data.message ?? t("auth.error"));
+        setBusy(false);
       }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [onDone]);
+  }, [onDone, t]);
 
   const open = async () => {
     // Se abre el popup de forma síncrona (gesto de usuario), centrado y sin barra de URL.

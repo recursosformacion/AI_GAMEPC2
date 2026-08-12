@@ -1337,7 +1337,9 @@ def create_platform_app(
         try:
             redirect_url = api.oidc_callback(code, state)
         except Exception as exc:  # noqa: BLE001
-            return HTMLResponse("Login fallido: " + str(exc), status_code=400)
+            # Siempre redirigir a la SPA (con error) para que el popup cierre y el error
+            # llegue a la ventana principal.
+            redirect_url = api.oidc_error_url(f"Error en el intercambio de tokens OIDC: {exc}")
         return RedirectResponse(redirect_url, status_code=302)
 
     @app.post(

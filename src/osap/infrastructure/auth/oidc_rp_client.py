@@ -130,3 +130,7 @@ class OidcRpClient:
             {"access_token": access_token, "refresh_token": refresh_token}
         )
         return f"{self._spa_origin}/auth/callback#{params}"
+
+    def error_callback_url(self, message: str) -> str:
+        params = urllib.parse.urlencode({"error": message})
+        return f"{self._spa_origin}/auth/callback?{params}"

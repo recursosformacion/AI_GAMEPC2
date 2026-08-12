@@ -770,6 +770,9 @@ class PlatformApi:
         authorize_url = oidc.build_authorize_url(state, nonce, challenge)
         return {"authorize_url": authorize_url, "configured": True}
 
+    def oidc_error_url(self, message: str) -> str:
+        return self._container.oidc_client().error_callback_url(message)
+
     def oidc_callback(self, code: str | None, state: str | None) -> str:
         from src.osap.infrastructure.auth.oidc_rp_client import OidcError
 
