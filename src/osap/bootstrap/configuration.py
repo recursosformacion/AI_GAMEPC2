@@ -40,8 +40,6 @@ class Configuration:
     osap_api_db_user: str = "osap2027"
     osap_api_db_password: str = "2027osapdb"
     osap_api_db_name: str = "osap-api"
-    credentials_path: str = "osap_credentials.db"
-    credentials_key: str | None = None
 
 
 # Campo -> (variable de entorno, convertidor)

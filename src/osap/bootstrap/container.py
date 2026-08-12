@@ -9,7 +9,6 @@ from src.osap.application.work_merge_service import WorkMergeService
 from src.osap.application.work_resolution_engine import WorkResolutionEngine
 from src.osap.application.work_resolver import WorkResolver
 from src.osap.domain.ranking_config import RankingConfig
-from src.osap.infrastructure.auth import AuthenticationManager
 from src.osap.infrastructure.auth.auth_proxy_client import AuthProxyClient
 from src.osap.infrastructure.cache import InMemoryCache
 from src.osap.infrastructure.dedup import DuplicateResolver
@@ -50,7 +49,6 @@ class Container:
         self._pipeline_engine: PipelineEngine | None = None
         self._duplicate_resolver: DuplicateResolver | None = None
         self._merge_engine: MergeEngine | None = None
-        self._auth_manager: AuthenticationManager | None = None
         self._defined_providers: tuple[tuple[str, str, str, bool], ...] = ()
         self._vote_store: IVoteStore | None = None
         self._work_store: IWorkStore | None = None
@@ -175,9 +173,6 @@ class Container:
     def set_merge_engine(self, engine: MergeEngine) -> None:
         self._merge_engine = engine
 
-    def set_authentication_manager(self, manager: AuthenticationManager) -> None:
-        self._auth_manager = manager
-
     def event_bus(self) -> IEventBus:
         if self._event_bus is None:
             raise RuntimeError("Event bus not wired")
@@ -217,11 +212,6 @@ class Container:
         if self._merge_engine is None:
             raise RuntimeError("Merge engine not wired")
         return self._merge_engine
-
-    def authentication_manager(self) -> AuthenticationManager:
-        if self._auth_manager is None:
-            raise RuntimeError("Authentication manager not wired")
-        return self._auth_manager
 
     def export_manager(self) -> ExportManager:
         return ExportManager(tuple(self._exporters))

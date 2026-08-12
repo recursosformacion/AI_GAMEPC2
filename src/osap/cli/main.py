@@ -51,18 +51,6 @@ def _build_parser() -> argparse.ArgumentParser:
     catalog_sub.add_parser("list", help="Lista catálogos disponibles.")
     catalog_sub.add_parser("info", help="Información de un catálogo.").add_argument("name")
 
-    auth = subparsers.add_parser("auth", help="Gestiona autenticación de proveedores.")
-    auth_sub = auth.add_subparsers(dest="auth_command", required=True)
-    auth_login = auth_sub.add_parser("login", help="Guarda credenciales de un proveedor.")
-    auth_login.add_argument("provider")
-    auth_login.add_argument(
-        "--type", dest="auth_type", choices=["token", "oauth2", "api_key", "password"], default="token"
-    )
-    auth_login.add_argument("--secret", default=None, help="Secreto. Si se omite, se pide de forma interactiva.")
-    auth_sub.add_parser("logout", help="Elimina credenciales de un proveedor.").add_argument("provider")
-    auth_sub.add_parser("status", help="Estado de autenticación de un proveedor.").add_argument("provider")
-    auth_sub.add_parser("list", help="Lista credenciales guardadas.")
-
     search = subparsers.add_parser("search", help="Busca obras musicales (tolerante).")
     search.add_argument("query", nargs="?", default=None)
     search.add_argument(
@@ -498,42 +486,6 @@ def _run_catalog(args: argparse.Namespace, container: Container) -> int:
     return 2
 
 
-def _run_auth(args: argparse.Namespace, container: Container) -> int:
-    import getpass
-
-    manager = container.authentication_manager()
-    if args.auth_command == "list":
-        creds = manager.list()
-        if not creds:
-            print("No hay credenciales guardadas.")
-            return 0
-        for c in creds:
-            print(f"  {c.provider_id} [{c.auth_type.value}] permisos={', '.join(c.permissions) or '-'}")
-        return 0
-    if args.auth_command == "status":
-        cred = manager.status(args.provider)
-        if cred is None:
-            print(f"{args.provider}: no autenticado")
-            return 1
-        print(f"{args.provider}: autenticado ({cred.auth_type.value})")
-        return 0
-    if args.auth_command == "logout":
-        manager.logout(args.provider)
-        print(f"Credenciales de '{args.provider}' eliminadas.")
-        return 0
-    if args.auth_command == "login":
-        from src.osap.domain.auth import AuthType
-
-        secret = args.secret
-        if secret is None:
-            secret = getpass.getpass(f"Secreto para {args.provider}: ")
-        auth_type = AuthType(args.auth_type)
-        cred = manager.login(args.provider, auth_type, secret)
-        print(f"Credenciales de '{args.provider}' guardadas ({cred.auth_type.value}).")
-        return 0
-    return 2
-
-
 def _config_path(args: argparse.Namespace) -> Path:
     explicit = getattr(args, "file", None)
     return Path(explicit or os.environ.get("OSAP_CONFIG", "osap.toml"))
@@ -590,8 +542,6 @@ def main(argv: list[str] | None = None) -> int:
         return _run_download(args, container)
     if args.command == "catalog":
         return _run_catalog(args, container)
-    if args.command == "auth":
-        return _run_auth(args, container)
     if args.command == "search":
         return _run_search(args, container)
     raise SystemExit(f"comando desconocido: {args.command}")

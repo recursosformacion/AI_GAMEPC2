@@ -1,5 +1,4 @@
 from src.osap.infrastructure.adapters import export, library, validation
-from src.osap.infrastructure.auth import AuthenticationManager, SecureCredentialStore
 from src.osap.infrastructure.cache import InMemoryCache
 from src.osap.infrastructure.catalogs import (
     CPDLCatalogProvider,
@@ -20,8 +19,6 @@ __all__ = [
     "export",
     "library",
     "validation",
-    "AuthenticationManager",
-    "SecureCredentialStore",
     "RemoteCatalogProvider",
     "CPDLCatalogProvider",
     "LocalCatalogProvider",

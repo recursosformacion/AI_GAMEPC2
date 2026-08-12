@@ -11,7 +11,6 @@ from src.osap.domain.ranking_config import RankingConfig
 from src.osap.infrastructure.adapters.export.musicxml import MusicXmlExporter
 from src.osap.infrastructure.adapters.library.local import LocalLibrary
 from src.osap.infrastructure.adapters.validation import BasicValidator
-from src.osap.infrastructure.auth import AuthenticationManager, SecureCredentialStore
 from src.osap.infrastructure.auth.auth_proxy_client import AuthProxyClient
 from src.osap.infrastructure.auth.service_token_provider import ClientCredentialsServiceTokenProvider
 from src.osap.infrastructure.auth.token_authenticator import JwtAuthenticator
@@ -222,10 +221,6 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     container.set_pipeline_engine(PipelineEngine(event_bus))
     container.set_duplicate_resolver(DuplicateResolver())
     container.set_merge_engine(MergeEngine())
-
-    master_key = config.credentials_key or "osap-local-dev-key"
-    auth_store = SecureCredentialStore(Path(config.credentials_path), master_key)
-    container.set_authentication_manager(AuthenticationManager(auth_store))
 
     # --- registro/verificación de usuario (proxy público a osap-auth) ---------
     auth_proxy = AuthProxyClient(base_url=auth_base)
