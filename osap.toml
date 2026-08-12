@@ -5,6 +5,6 @@
 
 [db]
 host = "127.0.0.1"
-name = "osap_api"
-user = "osap"
-password = "osap2027"
+name = "osap-api"
+user = "osap2027"
+password = "2027osapdb"
