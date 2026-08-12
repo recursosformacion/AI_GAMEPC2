@@ -78,6 +78,26 @@ _CONFIG_FIELDS: dict[str, tuple[str, Any]] = {
     "oidc_scope": ("OSAP_OIDC_SCOPE", str),
 }
 
+# Campo -> (sección TOML, clave) para leer config desde osap.toml (precedencia media).
+_TOML_SECTIONS: dict[str, tuple[str, str]] = {
+    "deployment": ("osap", "deployment"),
+    "dev_mode": ("osap", "dev_mode"),
+    "library_root": ("osap", "library_root"),
+    "imslp_base_url": ("osap", "imslp_base_url"),
+    "default_output_format": ("osap", "default_output_format"),
+    "default_quality_level": ("osap", "default_quality_level"),
+    "service_client_id": ("service", "client_id"),
+    "service_client_secret": ("service", "client_secret"),
+    "admin_client_id": ("service", "admin_client_id"),
+    "admin_client_secret": ("service", "admin_client_secret"),
+    "oidc_issuer": ("oidc", "issuer"),
+    "oidc_client_id": ("oidc", "client_id"),
+    "oidc_client_secret": ("oidc", "client_secret"),
+    "oidc_redirect_uri": ("oidc", "redirect_uri"),
+    "oidc_spa_origin": ("oidc", "spa_origin"),
+    "oidc_scope": ("oidc", "scope"),
+}
+
 
 def _coerce(field: str, raw: Any) -> Any:
     _, conv = _CONFIG_FIELDS.get(field, ("", str))
@@ -140,6 +160,12 @@ def load_configuration(path: str | Path | None = None) -> Configuration:
     )
 
     overrides: dict[str, Any] = _load_db_overrides(base)
+
+    # osap.toml (secciones) — precedencia media (env > osap.toml > BD > defaults).
+    for field, (section, key) in _TOML_SECTIONS.items():
+        block = data.get(section)
+        if isinstance(block, dict) and block.get(key) is not None:
+            overrides[field] = _coerce(field, block.get(key))
 
     for field, (env, _conv) in _CONFIG_FIELDS.items():
         value = os.environ.get(env)
