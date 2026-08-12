@@ -45,7 +45,9 @@ class OidcRpClient:
         self._discovered: dict[str, str] | None = None
 
     def configured(self) -> bool:
-        return bool(self._issuer and self._client_id and self._redirect_uri)
+        return bool(
+            self._issuer and self._client_id and self._redirect_uri and self._spa_origin
+        )
 
     def _discover(self) -> dict[str, str]:
         """Descubre los endpoints del proveedor desde el well-known del issuer (con caché)."""
@@ -122,7 +124,9 @@ class OidcRpClient:
             raise OidcError(f"OIDC token exchange error: {exc}") from exc
 
     def spa_callback_url(self, access_token: str, refresh_token: str) -> str:
+        # Se devuelven en el fragmento (#), no en la query: así no viajan al servidor
+        # de la SPA ni quedan en logs/historial/referrer.
         params = urllib.parse.urlencode(
             {"access_token": access_token, "refresh_token": refresh_token}
         )
-        return f"{self._spa_origin}/auth/callback?{params}"
+        return f"{self._spa_origin}/auth/callback#{params}"

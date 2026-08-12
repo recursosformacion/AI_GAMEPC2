@@ -154,10 +154,18 @@ osap-api actúa como *relying party* con `client_id=osap-api`.
    URL de `authorize` (con `client_id=osap-api`, `scope=openid profile`, PKCE S256).
 2. El navegador redirige a osap-auth; el usuario se autentica (email o social).
 3. osap-auth redirige a `redirect_uri` → `GET /auth/oidc/callback?code=...&state=...` (backend).
-4. osap-api valida `state`, canjea el `code` en `POST {token_url}` (authorization_code + PKCE) y
-   redirige el navegador a la SPA (`spa_origin/auth/callback`) con `access_token` y `refresh_token`.
-5. La SPA (`/auth/callback`) guarda refresh en `localStorage` y access en memoria (store `useAuth`),
-   igual que antes; mantiene refresh/logout.
+4. osap-api valida `state`, canjea el `code` en `POST {token_endpoint}` (authorization_code + PKCE) y
+   redirige el navegador a la SPA (`spa_origin/auth/callback#access_token=...&refresh_token=...`)
+   con la sesión **en el fragmento** (`#`, no en la query: no viaja al servidor ni queda en logs).
+5. La SPA (`/auth/callback`) lee el fragmento, guarda refresh en `localStorage` y access en memoria
+   (store `useAuth`), limpia la URL y mantiene refresh/logout.
+
+**Simplificaciones asumidas (documentadas):**
+- `nonce` se envía en `authorize` pero no se valida: osap-api usa el **access token** (validado por
+  `JwtAuthenticator`) y no procesa `id_token`. Si en el futuro se validara `id_token`, habría que
+  verificar firma/JWKS + `nonce`.
+- El `state`/`verifier` pendientes viven en **memoria** (`PlatformApi._oidc_pending`, TTL 10 min):
+  se pierden al reiniciar y no escalan a multi-instancia. Suficiente para un solo proceso.
 
 **Tokens (no mezclar):**
 - **Usuario** (`sub=user_id`, `token_use=user`, `aud=osap-api`) → APIs de usuario, validado por
