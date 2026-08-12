@@ -12,6 +12,7 @@ from src.osap.infrastructure.adapters.export.musicxml import MusicXmlExporter
 from src.osap.infrastructure.adapters.library.local import LocalLibrary
 from src.osap.infrastructure.adapters.validation import BasicValidator
 from src.osap.infrastructure.auth.auth_proxy_client import AuthProxyClient
+from src.osap.infrastructure.auth.oidc_rp_client import OidcRpClient
 from src.osap.infrastructure.auth.service_token_provider import ClientCredentialsServiceTokenProvider
 from src.osap.infrastructure.auth.token_authenticator import JwtAuthenticator
 from src.osap.infrastructure.cache import InMemoryCache
@@ -225,6 +226,16 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     # --- registro/verificación de usuario (proxy público a osap-auth) ---------
     auth_proxy = AuthProxyClient(base_url=auth_base)
     container.set_auth_proxy(auth_proxy)
+    oidc_client = OidcRpClient(
+        authorize_url=config.oidc_authorize_url,
+        token_url=config.oidc_token_url,
+        client_id=config.oidc_client_id,
+        client_secret=config.oidc_client_secret,
+        redirect_uri=config.oidc_redirect_uri,
+        spa_origin=config.oidc_spa_origin,
+        scope=config.oidc_scope,
+    )
+    container.set_oidc_client(oidc_client)
 
     # --- votes & statistics (v1) --------------------------------------------
     # Los votos y las estadísticas viven en osap-storage (no en una BD de osap-api).

@@ -142,4 +142,43 @@ Las decisiones de autorización viven en osap-api:
 | 409 | Voto duplicado (ya votó esta obra hoy) |
 
 ---
+
+# 9. Login OIDC vía osap-auth como IdP (v1)
+
+El login del Web deja de usar el formulario de email/password propio y pasa a **redirigir el
+navegador a la pantalla de authorize de osap-auth** (OIDC *Authorization Code + PKCE*).
+osap-api actúa como *relying party* con `client_id=osap-api`.
+
+**Flujo:**
+1. La SPA llama a `GET /api/v1/auth/oidc/start` → osap-api genera PKCE/state/nonce y devuelve la
+   URL de `authorize` (con `client_id=osap-api`, `scope=openid profile`, PKCE S256).
+2. El navegador redirige a osap-auth; el usuario se autentica (email o social).
+3. osap-auth redirige a `redirect_uri` → `GET /auth/oidc/callback?code=...&state=...` (backend).
+4. osap-api valida `state`, canjea el `code` en `POST {token_url}` (authorization_code + PKCE) y
+   redirige el navegador a la SPA (`spa_origin/auth/callback`) con `access_token` y `refresh_token`.
+5. La SPA (`/auth/callback`) guarda refresh en `localStorage` y access en memoria (store `useAuth`),
+   igual que antes; mantiene refresh/logout.
+
+**Tokens (no mezclar):**
+- **Usuario** (`sub=user_id`, `token_use=user`, `aud=osap-api`) → APIs de usuario, validado por
+  `JwtAuthenticator`.
+- **Servicio** (`sub=client_id`, `token_use=service`) → machine-to-machine hacia osap-storage
+  (sin cambios). El refresh/login de usuario NO usa `client_credentials`.
+
+**Configuración (por variable de entorno; nunca commitear `client_secret`):**
+| Variable | Descripción |
+|---|---|
+| `OSAP_OIDC_AUTHORIZE_URL` | URL de authorize de osap-auth |
+| `OSAP_OIDC_TOKEN_URL` | URL del token (canje del code) |
+| `OSAP_OIDC_CLIENT_ID` | `client_id` de osap-api |
+| `OSAP_OIDC_CLIENT_SECRET` | secreto del cliente (solo backend) |
+| `OSAP_OIDC_REDIRECT_URI` | callback (backend) que registra osap-auth |
+| `OSAP_OIDC_SPA_ORIGIN` | origen de la SPA (p. ej. `https://app.openmusicrepository.com`) |
+| `OSAP_OIDC_SCOPE` | scopes (default `openid profile`) |
+
+> ⚠️ Las URLs definitivas de `authorize`/`token` (y el prefijo `/auth-api` en producción) las
+> **confirma osap-auth**; no se fijan por defecto. Sin config, `GET /api/v1/auth/oidc/start`
+> devuelve `503 OIDC_NOT_CONFIGURED`.
+
+---
 *Documento de integración de autenticación para osap-api (v1, 2026-08).*

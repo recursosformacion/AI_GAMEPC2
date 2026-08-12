@@ -14,7 +14,7 @@ import uuid
 from typing import TYPE_CHECKING, Any, cast
 
 from fastapi import FastAPI, Header, Query, Response
-from fastapi.responses import StreamingResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 
 from src.osap.api.contracts import (
     AdminOverviewResponse,
@@ -1310,6 +1310,35 @@ def create_platform_app(
         if status >= 500:
             return fail(502, response, "BAD_GATEWAY", "Identity service unavailable")
         return ok(doc)
+
+    @app.get(
+        "/api/v1/auth/oidc/start",
+        tags=["Auth"],
+        summary="Start OIDC login (authorize URL)",
+        description="Genera el estado PKCE y devuelve la URL de authorize de osap-auth para "
+        "redirigir el navegador (login vía IdP).",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={200: _resp("OIDC start", _example({})), 503: _resp("Not configured", _example({}))},
+    )
+    def oidc_start(response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            return ok(api.oidc_start())
+        except Exception as exc:  # noqa: BLE001
+            return fail(503, response, "OIDC_NOT_CONFIGURED", str(exc))
+
+    @app.get(
+        "/auth/oidc/callback",
+        include_in_schema=False,
+        response_model=None,
+    )
+    def oidc_callback(
+        code: str | None, state: str | None, response: Response
+    ) -> RedirectResponse | HTMLResponse:
+        try:
+            redirect_url = api.oidc_callback(code, state)
+        except Exception as exc:  # noqa: BLE001
+            return HTMLResponse("Login fallido: " + str(exc), status_code=400)
+        return RedirectResponse(redirect_url, status_code=302)
 
     @app.post(
         "/api/v1/auth/verify-email",

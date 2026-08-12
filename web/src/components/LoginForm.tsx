@@ -1,57 +1,52 @@
 import { useState } from "react";
+import { apiClient } from "../api/ApiClient";
 import { useI18n } from "../i18n/I18n";
-import { useAuth } from "../state/auth";
 
+interface OidcStart {
+  authorize_url: string;
+  configured: boolean;
+}
+
+// Login vía osap-auth como IdP (OIDC Authorization Code + PKCE): se redirige al
+// navegador a la pantalla de authorize de osap-auth. El callback (backend) devuelve
+// la sesión a la SPA en /auth/callback.
 export function LoginForm({ onDone }: { onDone?: () => void }) {
   const { t } = useI18n();
-  const login = useAuth((s) => s.login);
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const submit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const start = async () => {
     setBusy(true);
     setError(null);
     try {
-      await login(email, password);
-      setEmail("");
-      setPassword("");
-      onDone?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t("auth.error"));
-    } finally {
+      const result = await apiClient.get<OidcStart>("/auth/oidc/start");
+      if (!result.authorize_url) {
+        setError(t("auth.oidcUnavailable"));
+        setBusy(false);
+        return;
+      }
+      window.location.assign(result.authorize_url);
+    } catch {
+      setError(t("auth.oidcUnavailable"));
       setBusy(false);
     }
   };
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-2">
-      <input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder={t("auth.email")}
-        required
-        autoFocus
-        className="rounded border border-osap-border bg-osap-bg px-2 py-1 text-sm"
-      />
-      <input
-        type="password"
-        value={password}
-        onChange={(e) => setPassword(e.target.value)}
-        placeholder={t("auth.password")}
-        required
-        className="rounded border border-osap-border bg-osap-bg px-2 py-1 text-sm"
-      />
+    <div className="flex flex-col gap-2">
       <button
         disabled={busy}
-        className="rounded bg-osap-accent px-3 py-1 text-sm text-white disabled:opacity-60"
+        onClick={start}
+        className="rounded bg-osap-accent px-3 py-2 text-sm text-white disabled:opacity-60"
       >
-        {busy ? t("auth.working") : t("auth.login")}
+        {busy ? t("auth.working") : t("auth.oidc")}
       </button>
+      {onDone ? (
+        <button onClick={onDone} className="rounded px-3 py-1 text-xs text-osap-muted">
+          {t("auth.skip")}
+        </button>
+      ) : null}
       {error !== null && <span className="text-xs text-red-500">{error}</span>}
-    </form>
+    </div>
   );
 }

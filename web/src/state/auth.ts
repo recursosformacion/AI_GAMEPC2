@@ -22,6 +22,7 @@ interface AuthState {
   user: FrontendUser | null;
   status: AuthStatus;
   login: (email: string, password: string) => Promise<void>;
+  completeOidc: (accessToken: string, refreshToken: string) => void;
   logout: () => void;
   refreshSession: () => Promise<boolean>;
   rehydrate: () => Promise<void>;
@@ -74,6 +75,17 @@ export const useAuth = create<AuthState>((set, get) => ({
   logout: () => {
     localStorage.removeItem(REFRESH_KEY);
     set({ accessToken: null, refreshToken: null, user: null, status: "anonymous" });
+  },
+
+  // Sesión obtenida tras el callback OIDC (osap-api devolvió access+refresh a la SPA).
+  completeOidc: (accessToken, refreshToken) => {
+    localStorage.setItem(REFRESH_KEY, refreshToken);
+    set({
+      accessToken,
+      refreshToken,
+      user: decodeUser(accessToken),
+      status: "authenticated",
+    });
   },
 
   refreshSession: async () => {

@@ -327,6 +327,7 @@ class PlatformApi:
         self._jobs: dict[str, JobResponse] = {}
         self._representations: dict[str, dict[str, object]] = {}
         self._job_counter = 0
+        self._oidc_pending: dict[str, dict[str, object]] = {}
         self._suggestion_counter = 0
         self._store = build_op_store(**self._container.op_store_config())
         highest = 0
@@ -749,6 +750,44 @@ class PlatformApi:
 
     def storage_info(self) -> tuple[str, bool]:
         return self._container.storage_info()
+
+    # --- OIDC (login vía osap-auth como IdP) --------------------------------
+
+    def oidc_start(self) -> dict[str, object]:
+        from src.osap.infrastructure.auth.oidc_rp_client import OidcError
+
+        oidc = self._container.oidc_client()
+        if not oidc.configured():
+            raise OidcError("OIDC no configurado")
+        verifier, challenge = oidc.generate_pkce()
+        state = oidc.generate_state()
+        nonce = oidc.generate_state()
+        self._oidc_pending[state] = {
+            "verifier": verifier,
+            "nonce": nonce,
+            "created_at": datetime.now(UTC).timestamp(),
+        }
+        authorize_url = oidc.build_authorize_url(state, nonce, challenge)
+        return {"authorize_url": authorize_url, "configured": True}
+
+    def oidc_callback(self, code: str | None, state: str | None) -> str:
+        from src.osap.infrastructure.auth.oidc_rp_client import OidcError
+
+        oidc = self._container.oidc_client()
+        if not state or state not in self._oidc_pending:
+            raise OidcError("OIDC state inválido o ausente")
+        pending = self._oidc_pending.pop(state)
+        created = float(str(pending.get("created_at") or 0))
+        if datetime.now(UTC).timestamp() - created > 600:
+            raise OidcError("OIDC state caducado")
+        if not code:
+            raise OidcError("OIDC code ausente")
+        tokens = oidc.exchange_code(code, str(pending["verifier"]))
+        access = str(tokens.get("access_token") or "")
+        refresh = str(tokens.get("refresh_token") or "")
+        if not access:
+            raise OidcError("OIDC no devolvió access_token")
+        return oidc.spa_callback_url(access, refresh)
 
     def version(self) -> SystemVersionResponse:
         return SystemVersionResponse(version=VERSION)

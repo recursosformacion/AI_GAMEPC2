@@ -10,6 +10,7 @@ from src.osap.application.work_resolution_engine import WorkResolutionEngine
 from src.osap.application.work_resolver import WorkResolver
 from src.osap.domain.ranking_config import RankingConfig
 from src.osap.infrastructure.auth.auth_proxy_client import AuthProxyClient
+from src.osap.infrastructure.auth.oidc_rp_client import OidcRpClient
 from src.osap.infrastructure.cache import InMemoryCache
 from src.osap.infrastructure.dedup import DuplicateResolver
 from src.osap.infrastructure.events import InMemoryEventBus
@@ -56,6 +57,7 @@ class Container:
         self._votes_service: VotesService | None = None
         self._composers_service: ComposersService | None = None
         self._auth_proxy: AuthProxyClient | None = None
+        self._oidc_client: OidcRpClient | None = None
         self._storage_target: str | None = None
         self._storage_read_only: bool = False
         self._op_store_config: dict[str, str] = {
@@ -95,6 +97,14 @@ class Container:
 
     def set_auth_proxy(self, client: AuthProxyClient) -> None:
         self._auth_proxy = client
+
+    def set_oidc_client(self, client: OidcRpClient) -> None:
+        self._oidc_client = client
+
+    def oidc_client(self) -> OidcRpClient:
+        if self._oidc_client is None:
+            raise RuntimeError("OIDC RP client not wired")
+        return self._oidc_client
 
     def set_storage_info(self, target: str, read_only: bool) -> None:
         self._storage_target = target
