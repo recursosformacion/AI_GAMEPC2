@@ -3,8 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { useI18n } from "../i18n/I18n";
 import { useAuth } from "../state/auth";
 
-// Recibe la sesión que osap-api devolvió tras el callback OIDC (en el fragmento #) y la
-// guarda en el store.
+// Recibe la sesión que osap-api devolvió tras el callback OIDC (en el fragmento #).
+// - En el popup (login OIDC): envía la sesión a la ventana que abrió el popup y cierra.
+// - Si se accede directo (sin opener): completa el login en esta misma ventana.
 export function AuthCallbackPage() {
   const { t } = useI18n();
   const navigate = useNavigate();
@@ -19,8 +20,19 @@ export function AuthCallbackPage() {
       setError(t("auth.callbackInvalid"));
       return;
     }
+
+    if (window.opener) {
+      // Flujo popup: entregar la sesión a la ventana principal y cerrar.
+      window.opener.postMessage(
+        { type: "osap-oidc", access_token: access, refresh_token: refresh },
+        window.location.origin,
+      );
+      window.close();
+      return;
+    }
+
+    // Acceso directo: completar aquí.
     useAuth.getState().completeOidc(access, refresh);
-    // Limpia el fragmento del historial (no dejar los tokens en la URL).
     window.history.replaceState(null, "", "/");
     navigate("/", { replace: true });
   }, [navigate, t]);
