@@ -6,6 +6,7 @@ import { GlobalSearch } from "../components/GlobalSearch";
 import { LanguageSelect } from "../components/LanguageSelect";
 import { LoginForm } from "../components/LoginForm";
 import { RegisterForm } from "../components/RegisterForm";
+import { useOidcLogin } from "../components/useOidcLogin";
 import { useI18n } from "../i18n/I18n";
 import { useAuth } from "../state/auth";
 import { useSystem } from "../state/system";
@@ -69,6 +70,17 @@ export function Header() {
   const [loginOpen, setLoginOpen] = useState(false);
   const [adminOpen, setAdminOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
+  const { start: startOidc, error: oidcError } = useOidcLogin();
+
+  // Sin sesión: pulsar 👤 abre directamente el login OIDC (popup). Si OIDC no está
+  // configurado, cae al desplegable con login/registro de respaldo (email/password).
+  const openAuth = () => {
+    void (async () => {
+      const opened = await startOidc();
+      if (!opened) setLoginOpen(true);
+    })();
+  };
+
   return (
     <header className="border-b border-osap-border bg-osap-surface">
       <div className="mx-auto flex w-full max-w-5xl flex-wrap items-center gap-3 px-4 py-3">
@@ -85,12 +97,15 @@ export function Header() {
           {user === null ? (
             <div className="relative">
               <button
-                onClick={() => setLoginOpen((o) => !o)}
+                onClick={openAuth}
                 aria-label={t("auth.login")}
                 className="rounded-full border border-osap-border px-3 py-1 text-lg leading-none hover:bg-osap-surface"
               >
                 👤
               </button>
+              {oidcError && (
+                <p className="absolute right-0 top-full z-20 mt-1 w-60 text-right text-xs text-red-500">{oidcError}</p>
+              )}
               {loginOpen && (
                 <div className="absolute right-0 top-full z-20 mt-2 w-60 rounded border border-osap-border bg-osap-surface p-3 shadow">
                   <div className="mb-2 flex gap-2 text-sm">
