@@ -7,11 +7,14 @@ JWT del usuario.
 """
 
 import json
+import logging
 import urllib.error
 import urllib.parse
 import urllib.request
 
 from src.osap.ports.service_token import IServiceTokenProvider
+
+_LOGGER = logging.getLogger("osap.storage")
 
 _USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -162,10 +165,16 @@ class StorageComposerClient:
             "Content-Type": "application/json",
         }
         effective = provider if provider is not None else self._token_provider
-        try:
-            if effective is not None:
+        if effective is not None:
+            try:
                 headers["Authorization"] = f"Bearer {effective.token((scope,))}"
-            request = urllib.request.Request(url, data=data, method=method, headers=headers)
+            except Exception as exc:  # noqa: BLE001
+                # Si no se puede obtener el token (p. ej. dev contra storage remoto sin
+                # auth accesible), se llama a storage sin autenticación: sus endpoints de
+                # lectura son públicos y así el modo desarrollo puede leer.
+                _LOGGER.warning("No hay token de servicio %s; llamando a storage sin auth: %s", scope, exc)
+        request = urllib.request.Request(url, data=data, method=method, headers=headers)
+        try:
             with urllib.request.urlopen(request, timeout=self._timeout) as response:  # noqa: S310 (storage contract)
                 raw = response.read()
                 try:
