@@ -1327,7 +1327,7 @@ def create_platform_app(
             return fail(503, response, "OIDC_NOT_CONFIGURED", str(exc))
 
     @app.get(
-        "/auth/oidc/callback",
+        "/api/v1/auth/oidc/callback",
         include_in_schema=False,
         response_model=None,
     )
