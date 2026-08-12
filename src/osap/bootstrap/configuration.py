@@ -40,8 +40,7 @@ class Configuration:
     osap_api_db_user: str = "osap2027"
     osap_api_db_password: str = "2027osapdb"
     osap_api_db_name: str = "osap-api"
-    oidc_authorize_url: str | None = None
-    oidc_token_url: str | None = None
+    oidc_issuer: str | None = None
     oidc_client_id: str | None = None
     oidc_client_secret: str | None = None
     oidc_redirect_uri: str | None = None
@@ -71,8 +70,7 @@ _CONFIG_FIELDS: dict[str, tuple[str, Any]] = {
     "service_client_secret": ("OSAP_SERVICE_CLIENT_SECRET", str),
     "admin_client_id": ("OSAP_ADMIN_CLIENT_ID", str),
     "admin_client_secret": ("OSAP_ADMIN_CLIENT_SECRET", str),
-    "oidc_authorize_url": ("OSAP_OIDC_AUTHORIZE_URL", str),
-    "oidc_token_url": ("OSAP_OIDC_TOKEN_URL", str),
+    "oidc_issuer": ("OSAP_OIDC_ISSUER", str),
     "oidc_client_id": ("OSAP_OIDC_CLIENT_ID", str),
     "oidc_client_secret": ("OSAP_OIDC_CLIENT_SECRET", str),
     "oidc_redirect_uri": ("OSAP_OIDC_REDIRECT_URI", str),

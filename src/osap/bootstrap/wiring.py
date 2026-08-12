@@ -227,8 +227,7 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     auth_proxy = AuthProxyClient(base_url=auth_base)
     container.set_auth_proxy(auth_proxy)
     oidc_client = OidcRpClient(
-        authorize_url=config.oidc_authorize_url,
-        token_url=config.oidc_token_url,
+        issuer=config.oidc_issuer,
         client_id=config.oidc_client_id,
         client_secret=config.oidc_client_secret,
         redirect_uri=config.oidc_redirect_uri,
