@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { apiClient } from "../api/ApiClient";
 import { useI18n } from "../i18n/I18n";
 import { useAuth } from "../state/auth";
+import { useSystem } from "../state/system";
 import { OidcAuthButton } from "./OidcAuthButton";
 
 interface OidcStart {
@@ -16,11 +17,25 @@ type Mode = "checking" | "oidc" | "password";
 export function LoginForm({ onDone }: { onDone?: () => void }) {
   const { t } = useI18n();
   const login = useAuth((s) => s.login);
+  const devBypass = useSystem((s) => s.health?.dev_auth_bypass ?? false);
   const [mode, setMode] = useState<Mode>("checking");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const devAdmin = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const session = await apiClient.devSession();
+      useAuth.getState().completeOidc(session.access_token, session.refresh_token);
+      onDone?.();
+    } catch {
+      setError(t("auth.error"));
+      setBusy(false);
+    }
+  };
 
   useEffect(() => {
     let active = true;
@@ -66,6 +81,15 @@ export function LoginForm({ onDone }: { onDone?: () => void }) {
             {t("auth.skip")}
           </button>
         ) : null}
+        {devBypass ? (
+          <button
+            onClick={devAdmin}
+            disabled={busy}
+            className="rounded border border-osap-border px-2 py-1 text-xs text-osap-muted hover:bg-osap-surface"
+          >
+            {t("auth.devAdmin")}
+          </button>
+        ) : null}
       </div>
     );
   }
@@ -96,6 +120,16 @@ export function LoginForm({ onDone }: { onDone?: () => void }) {
         {busy ? t("auth.working") : t("auth.login")}
       </button>
       {error !== null && <span className="text-xs text-red-500">{error}</span>}
+      {devBypass ? (
+        <button
+          type="button"
+          onClick={devAdmin}
+          disabled={busy}
+          className="rounded border border-osap-border px-2 py-1 text-xs text-osap-muted hover:bg-osap-surface"
+        >
+          {t("auth.devAdmin")}
+        </button>
+      ) : null}
     </form>
   );
 }

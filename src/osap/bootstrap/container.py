@@ -60,6 +60,7 @@ class Container:
         self._oidc_client: OidcRpClient | None = None
         self._storage_target: str | None = None
         self._storage_read_only: bool = False
+        self._dev_auth_bypass: bool = False
         self._op_store_config: dict[str, str] = {
             "host": "127.0.0.1",
             "user": "osap2027",
@@ -109,6 +110,12 @@ class Container:
     def set_storage_info(self, target: str, read_only: bool) -> None:
         self._storage_target = target
         self._storage_read_only = read_only
+
+    def set_dev_auth_bypass(self, enabled: bool) -> None:
+        self._dev_auth_bypass = enabled
+
+    def dev_auth_bypass(self) -> bool:
+        return self._dev_auth_bypass
 
     def storage_info(self) -> tuple[str, bool]:
         return self._storage_target or "unknown", self._storage_read_only

@@ -40,6 +40,7 @@ class Configuration:
     osap_api_db_user: str = "osap2027"
     osap_api_db_password: str = "2027osapdb"
     osap_api_db_name: str = "osap-api"
+    dev_auth_bypass: bool = False
     oidc_issuer: str | None = None
     oidc_client_id: str | None = None
     oidc_client_secret: str | None = None
@@ -76,6 +77,7 @@ _CONFIG_FIELDS: dict[str, tuple[str, Any]] = {
     "oidc_redirect_uri": ("OSAP_OIDC_REDIRECT_URI", str),
     "oidc_spa_origin": ("OSAP_OIDC_SPA_ORIGIN", str),
     "oidc_scope": ("OSAP_OIDC_SCOPE", str),
+    "dev_auth_bypass": ("OSAP_DEV_AUTH_BYPASS", bool),
 }
 
 # Campo -> (sección TOML, clave) para leer config desde osap.toml (precedencia media).
@@ -96,6 +98,7 @@ _TOML_SECTIONS: dict[str, tuple[str, str]] = {
     "oidc_redirect_uri": ("oidc", "redirect_uri"),
     "oidc_spa_origin": ("oidc", "spa_origin"),
     "oidc_scope": ("oidc", "scope"),
+    "dev_auth_bypass": ("osap", "dev_auth_bypass"),
 }
 
 

@@ -146,6 +146,10 @@ export class ApiClient {
     return this.get<{ url: string }>("/admin/storage-web");
   }
 
+  async devSession(): Promise<{ access_token: string; refresh_token: string }> {
+    return this.post<{ access_token: string; refresh_token: string }>("/auth/dev-session", {});
+  }
+
   async getWorkStatistics(workId: string): Promise<WorkStatistics> {
     return this.get<WorkStatistics>(`/works/${encodeURIComponent(workId)}/statistics`);
   }

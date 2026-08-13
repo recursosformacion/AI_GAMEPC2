@@ -1100,7 +1100,12 @@ def create_platform_app(
     def system_health() -> SuccessEnvelope[object]:
         storage_target, read_only = api.storage_info()
         return ok(
-            SystemHealthResponse(status=api.health(), storage_target=storage_target, read_only=read_only)
+            SystemHealthResponse(
+                status=api.health(),
+                storage_target=storage_target,
+                read_only=read_only,
+                dev_auth_bypass=api.dev_auth_bypass(),
+            )
         )
 
     @app.get(
@@ -1312,6 +1317,21 @@ def create_platform_app(
         if status >= 500:
             return fail(502, response, "BAD_GATEWAY", "Identity service unavailable")
         return ok(doc)
+
+    @app.post(
+        "/api/v1/auth/dev-session",
+        tags=["Auth"],
+        summary="Dev admin session (SOLO desarrollo)",
+        description="Devuelve una sesión admin de desarrollo. Solo activa con "
+        "OSAP_DEV_AUTH_BYPASS=1; NUNCA en producción.",
+        response_model=SuccessEnvelope[dict[str, object]] | ErrorEnvelope,
+        responses={200: _resp("Session", _example({})), 403: _FORBIDDEN_403},
+    )
+    def dev_session(response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            return ok(api.dev_session())
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Dev auth bypass not enabled")
 
     @app.get(
         "/api/v1/auth/oidc/start",

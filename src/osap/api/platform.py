@@ -788,6 +788,42 @@ class PlatformApi:
     def storage_info(self) -> tuple[str, bool]:
         return self._container.storage_info()
 
+    # --- bypass de desarrollo (SOLO dev; activado por OSAP_DEV_AUTH_BYPASS=1) ---
+
+    def dev_auth_bypass(self) -> bool:
+        return self._container.dev_auth_bypass()
+
+    def dev_session(self) -> dict[str, object]:
+        """Sesión admin de desarrollo. `JwtAuthenticator` en dev decodifica sin firma;
+        este endpoint NUNCA debe activarse en producción (OSAP_DEV_AUTH_BYPASS)."""
+        from src.osap.domain.votes import ForbiddenError
+
+        if not self._container.dev_auth_bypass():
+            raise ForbiddenError("Dev auth bypass not enabled")
+        import base64
+
+        def _b64(data: bytes) -> str:
+            return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+        header = _b64(json.dumps({"alg": "none", "typ": "JWT"}).encode("utf-8"))
+        payload = _b64(
+            json.dumps(
+                {
+                    "sub": "dev-admin",
+                    "token_use": "user",
+                    "roles": ["user", "admin"],
+                    "email_verified": True,
+                    "aud": "osap-api",
+                }
+            ).encode("utf-8")
+        )
+        return {
+            "access_token": f"{header}.{payload}.",
+            "refresh_token": "dev-refresh-token",
+            "token_type": "Bearer",
+            "expires_in": 86400,
+        }
+
     # --- OIDC (login vía osap-auth como IdP) --------------------------------
 
     def oidc_start(self) -> dict[str, object]:

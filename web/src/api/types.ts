@@ -367,6 +367,7 @@ export interface SystemHealth {
   status: string;
   storage_target: string | null;
   read_only: boolean;
+  dev_auth_bypass?: boolean;
 }
 
 export interface SourcePreview {
