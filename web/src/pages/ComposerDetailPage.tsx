@@ -129,6 +129,7 @@ function toRepresentations(d: WorkDetail): RepresentationInfo[] {
       format: r.format ?? "unknown",
       confidence: 1,
       url: r.url ?? undefined,
+      available: r.available ?? Boolean(r.url ?? r.file_id != null),
       title: d.work.title ?? undefined,
     }));
 }

@@ -44,8 +44,11 @@ export interface RepresentationInfo {
   provider: string;
   format: string;
   confidence: number;
+  /** Link a la fuente original (para abrir cuando no hay fichero servible). */
   url?: string | null;
   title?: string | null;
+  /** Hay fichero descargable vía el endpoint de descarga. */
+  available?: boolean;
 }
 
 export interface EvidenceInfo {

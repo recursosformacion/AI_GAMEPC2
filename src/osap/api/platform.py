@@ -510,6 +510,8 @@ class PlatformApi:
                             format=m.format.value,
                             confidence=m.confidence.value,
                             title=m.work_descriptor.title,
+                            url=m.download_url,
+                            available=bool(m.download_url),
                         )
                     )
             if not reps:

@@ -50,8 +50,9 @@ class RepresentationInfo(_Frozen):
     provider: str
     format: str
     confidence: float = 0.0
-    url: str | None = None  # never exposed: the client only uses `id`
+    url: str | None = None  # link a la fuente original (para abrir cuando no hay fichero servible)
     title: str | None = None
+    available: bool = True  # hay fichero descargable vía el endpoint de descarga
 
 
 class EvidenceInfo(_Frozen):

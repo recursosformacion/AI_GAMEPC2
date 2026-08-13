@@ -192,25 +192,43 @@ function RepresentationsTab({
               </span>
             </span>
             <span className="flex shrink-0 items-center gap-1.5">
-              <a
-                href={`/api/v1/representations/${rep.id}/download?view=1`}
-                target="_blank"
-                rel="noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="rounded border border-osap-border px-2 py-0.5 text-xs text-osap-accent hover:bg-osap-accent-soft"
-              >
-                {t("work.view")}
-              </a>
-              <a
-                href={`/api/v1/representations/${rep.id}/download`}
-                download={downloadFileName(rep)}
-                target="_blank"
-                rel="noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                className="rounded border border-osap-border px-2 py-0.5 text-xs text-osap-accent hover:bg-osap-accent-soft"
-              >
-                {t("work.download")}
-              </a>
+              {rep.available === false ? (
+                rep.url ? (
+                  <a
+                    href={rep.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="rounded border border-osap-border px-2 py-0.5 text-xs text-osap-accent hover:bg-osap-accent-soft"
+                  >
+                    {t("work.openIn").replace("{p}", rep.provider)}
+                  </a>
+                ) : (
+                  <span className="px-1 text-xs text-osap-muted">—</span>
+                )
+              ) : (
+                <>
+                  <a
+                    href={`/api/v1/representations/${rep.id}/download?view=1`}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="rounded border border-osap-border px-2 py-0.5 text-xs text-osap-accent hover:bg-osap-accent-soft"
+                  >
+                    {t("work.view")}
+                  </a>
+                  <a
+                    href={`/api/v1/representations/${rep.id}/download`}
+                    download={downloadFileName(rep)}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="rounded border border-osap-border px-2 py-0.5 text-xs text-osap-accent hover:bg-osap-accent-soft"
+                  >
+                    {t("work.download")}
+                  </a>
+                </>
+              )}
             </span>
           </li>
         ))}
@@ -228,33 +246,40 @@ function RepresentationsTab({
             <Meta label={t("work.providerId")} value={sel.id} />
           </dl>
           <div className="mt-3 flex flex-wrap gap-2">
-            {sel.url && sel.provider !== "osap-storage" ? (
-              <a
-                href={sel.url}
-                target="_blank"
-                rel="noreferrer"
-                className="rounded bg-osap-accent px-3 py-1 text-sm text-white"
-              >
-                {t("work.openIn").replace("{p}", sel.provider)}
-              </a>
-            ) : null}
-            <a
-              href={`/api/v1/representations/${sel.id}/download?view=1`}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded border border-osap-border px-3 py-1 text-sm text-osap-accent"
-            >
-              {t("work.view")}
-            </a>
-            <a
-              href={`/api/v1/representations/${sel.id}/download`}
-              download={downloadFileName(sel)}
-              target="_blank"
-              rel="noreferrer"
-              className="rounded border border-osap-border px-3 py-1 text-sm text-osap-accent"
-            >
-              {t("work.download")}
-            </a>
+            {sel.available === false ? (
+              sel.url ? (
+                <a
+                  href={sel.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded bg-osap-accent px-3 py-1 text-sm text-white"
+                >
+                  {t("work.openIn").replace("{p}", sel.provider)}
+                </a>
+              ) : (
+                <span className="text-sm text-osap-muted">—</span>
+              )
+            ) : (
+              <>
+                <a
+                  href={`/api/v1/representations/${sel.id}/download?view=1`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded border border-osap-border px-3 py-1 text-sm text-osap-accent"
+                >
+                  {t("work.view")}
+                </a>
+                <a
+                  href={`/api/v1/representations/${sel.id}/download`}
+                  download={downloadFileName(sel)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="rounded border border-osap-border px-3 py-1 text-sm text-osap-accent"
+                >
+                  {t("work.download")}
+                </a>
+              </>
+            )}
           </div>
         </div>
       ) : null}
