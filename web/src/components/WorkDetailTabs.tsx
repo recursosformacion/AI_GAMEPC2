@@ -171,18 +171,19 @@ function RepresentationsTab({
         {t("work.foundReps").replace("{n}", String(representations.length)).replace("{p}", String(byProvider.size))}
       </p>
 
-      <div className="grid grid-cols-[1fr_auto_auto_auto] items-center gap-2 border-b border-osap-border px-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-osap-muted">
+      <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-2 border-b border-osap-border px-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-osap-muted">
         <span>{t("work.title")}</span>
         <span className="w-12 text-right">{t("work.provider")}</span>
         <span className="w-12 text-right">{t("work.format")}</span>
         <span className="w-9 text-right">{t("work.confidence")}</span>
+        <span className="w-24 text-right">{t("work.action")}</span>
       </div>
 
       <ul className="divide-y divide-osap-border">
         {representations.map((rep, i) => (
           <li
             key={`${rep.provider}-${rep.format}-${i}`}
-            className={`grid grid-cols-[1fr_auto_auto_auto] cursor-pointer items-center gap-2 px-1 py-1.5 text-sm hover:bg-osap-accent-soft ${
+            className={`grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-2 px-1 py-1.5 text-sm hover:bg-osap-accent-soft ${
               selected === rep.id ? "bg-osap-accent-soft" : ""
             }`}
             onClick={() => setSelected(rep.id)}
@@ -197,6 +198,27 @@ function RepresentationsTab({
               {rep.format}
             </span>
             <span className="w-9 text-right text-xs text-osap-muted">{(rep.confidence * 100).toFixed(0)}%</span>
+            <span className="flex w-24 items-center justify-end gap-1.5">
+              <a
+                href={`/api/v1/representations/${rep.id}/download?view=1`}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="rounded border border-osap-border px-1.5 py-0.5 text-xs text-osap-accent hover:bg-osap-accent-soft"
+              >
+                {t("work.view")}
+              </a>
+              <a
+                href={`/api/v1/representations/${rep.id}/download`}
+                download={downloadFileName(rep)}
+                target="_blank"
+                rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
+                className="rounded border border-osap-border px-1.5 py-0.5 text-xs text-osap-accent hover:bg-osap-accent-soft"
+              >
+                {t("work.download")}
+              </a>
+            </span>
           </li>
         ))}
       </ul>
