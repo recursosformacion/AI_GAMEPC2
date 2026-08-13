@@ -55,20 +55,29 @@ class StorageComposerClient:
         if review:
             query["review"] = review
         path = f"/api/admin/composers?{urllib.parse.urlencode(query)}"
-        status, doc = self._call("GET", path, scope="storage:read")
+        status, doc = self._call(
+            "GET", path, scope="storage:admin", provider=self._admin_token_provider
+        )
         if 200 <= status < 300 and isinstance(doc, dict):
             return doc
         return {"items": [], "total": 0}
 
     def get_composer(self, composer_id: str) -> dict[str, object] | None:
-        status, doc = self._call("GET", f"/api/admin/composers/{_q(composer_id)}", scope="storage:read")
+        status, doc = self._call(
+            "GET",
+            f"/api/admin/composers/{_q(composer_id)}",
+            scope="storage:admin",
+            provider=self._admin_token_provider,
+        )
         if 200 <= status < 300 and isinstance(doc, dict):
             return doc
         return None
 
     def composer_works(self, composer_id: str, limit: int, offset: int) -> dict[str, object]:
         path = f"/api/admin/composers/{_q(composer_id)}/works?limit={limit}&offset={offset}"
-        status, doc = self._call("GET", path, scope="storage:read")
+        status, doc = self._call(
+            "GET", path, scope="storage:admin", provider=self._admin_token_provider
+        )
         if not 200 <= status < 300 or not isinstance(doc, dict):
             return {"items": [], "total": 0}
         items = doc.get("items")
@@ -140,8 +149,8 @@ class StorageComposerClient:
         status, doc = self._call(
             "GET",
             "/api/admin/composers/stats",
-            scope="storage:read",
-            provider=self._token_provider,
+            scope="storage:admin",
+            provider=self._admin_token_provider,
         )
         if 200 <= status < 300 and isinstance(doc, dict):
             return {str(k): int(v) for k, v in doc.items()}
