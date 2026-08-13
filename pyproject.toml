@@ -16,7 +16,7 @@ authors = [
 osap = "src.osap.cli.main:entrypoint"
 
 [project.optional-dependencies]
-api = ["fastapi>=0.115", "uvicorn[standard]>=0.30", "PyMySQL>=1.1"]
+api = ["fastapi>=0.115", "uvicorn[standard]>=0.30", "PyMySQL>=1.1", "requests>=2.31"]
 
 [tool.setuptools.packages.find]
 where = ["."]

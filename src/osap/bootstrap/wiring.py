@@ -41,7 +41,8 @@ from src.osap.infrastructure.providers.fetchers import (
 )
 from src.osap.infrastructure.rankings import DefaultRankingEngine
 from src.osap.infrastructure.resolvers.canonical_resolver import CanonicalComposerResolver
-from src.osap.infrastructure.resolvers.stub_resolvers import CPDLResolver, MusicBrainzResolver, WikidataResolver
+from src.osap.infrastructure.resolvers.stub_resolvers import CPDLResolver, MusicBrainzResolver
+from src.osap.infrastructure.resolvers.wikidata_resolver import WikidataIdentityResolver
 from src.osap.infrastructure.resolvers.work_match import WorkComposerMatcher
 from src.osap.infrastructure.state.op_store import build_op_store
 from src.osap.infrastructure.storage.storage_composer_client import StorageComposerClient
@@ -293,6 +294,6 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     container.register_composer_resolver(CanonicalComposerResolver())
     container.register_composer_resolver(CPDLResolver())
     container.register_composer_resolver(MusicBrainzResolver())
-    container.register_composer_resolver(WikidataResolver())
+    container.register_composer_resolver(WikidataIdentityResolver())
 
     return container

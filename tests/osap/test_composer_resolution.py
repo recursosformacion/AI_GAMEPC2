@@ -118,6 +118,39 @@ def test_engine_resolves_via_work_when_composer_corrupt() -> None:
     assert "imslp" in providers
 
 
+def test_wikidata_resolver_builds_identity() -> None:
+    from src.osap.infrastructure.resolvers.wikidata_resolver import WikidataIdentityResolver
+
+    resolver = WikidataIdentityResolver()
+
+    async def run() -> ResolverResult:
+        original = WikidataIdentityResolver._query
+        WikidataIdentityResolver._query = staticmethod(
+            lambda name: [
+                {
+                    "item": "Q53068",
+                    "itemLabel": "Claudio Monteverdi",
+                    "cpdlId": "794",
+                    "mbid": "9a75168c-...",
+                    "viaf": None,
+                    "aliases": "Monteverdi|Monteverde",
+                }
+            ]
+        )
+        try:
+            return await resolver.resolve(ResolverQuery(composer="Claudio Monteverdi"))
+        finally:
+            WikidataIdentityResolver._query = original
+
+    result = asyncio.run(run())
+    assert len(result.candidates) == 1
+    candidate = result.candidates[0]
+    assert candidate.name == "Claudio Monteverdi"
+    assert "Monteverdi" in candidate.aliases
+    assert candidate.external_ids["cpdl"] == "794"
+    assert candidate.external_ids["musicbrainz"] == "9a75168c-..."
+
+
 def _build_client(resolvers: list[IComposerResolver]) -> TestClient:
     container = Container()
     for resolver in resolvers:
