@@ -693,7 +693,13 @@ class PlatformApi:
 
     def storage_web(self, token: str | None) -> str:
         self._require_admin(token)
-        return self.composers().storage_web_admin_url()
+        base = self.composers().storage_base_url().rstrip("/")
+        if self._container.dev_auth_bypass():
+            # Dev: token de desarrollo (el storage local no valida auth en desarrollo).
+            service_token = "dev-storage-token"
+        else:
+            service_token = self.composers().storage_admin_token()
+        return f"{base}/admin?token={urllib.parse.quote(service_token)}"
 
     def admin_overview(self, token: str | None) -> dict[str, object]:
         stats = self.composer_review_stats(token)

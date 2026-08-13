@@ -81,6 +81,12 @@ class ComposersService:
     def storage_web_admin_url(self) -> str:
         return self._client.storage_web_admin_url()
 
+    def storage_base_url(self) -> str:
+        return self._client.storage_base_url()
+
+    def storage_admin_token(self) -> str:
+        return self._client.storage_admin_token()
+
     def _ensure_writable(self) -> None:
         if self._read_only:
             raise ForbiddenError("Storage is remote; this environment is read-only")
