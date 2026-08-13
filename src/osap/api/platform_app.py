@@ -870,6 +870,7 @@ def create_platform_app(
             AdminOverviewResponse(
                 composers=cast("dict[str, int]", overview["composers"]),
                 source_suggestions_pending=cast("int", overview["source_suggestions_pending"]),
+                source_suggestions=cast("dict[str, int]", overview["source_suggestions"]),
             )
         )
 
@@ -1451,6 +1452,27 @@ def create_platform_app(
             return ok(api.catalogues(prefix, composer))
         except StorageComposerError:
             return fail(503, response, "SERVICE_UNAVAILABLE", "Storage service is not configured")
+
+    @app.get(
+        "/api/v1/admin/storage-web",
+        tags=["System"],
+        summary="Storage web admin URL (CRUD)",
+        description="Devuelve la URL de la capa web de administración de osap-storage, "
+        "autenticada con token de servicio (storage:admin). Exige role=admin.",
+        response_model=SuccessEnvelope[dict[str, str]] | ErrorEnvelope,
+        responses={200: _resp("URL", _example({})), 401: _UNAUTHORIZED_401, 403: _FORBIDDEN_403},
+    )
+    def storage_web(
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            url = api.storage_web(authorization)
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Login required")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+        return ok({"url": url})
 
     @app.get(
         "/api/v1/composers/{composer_id}/works",

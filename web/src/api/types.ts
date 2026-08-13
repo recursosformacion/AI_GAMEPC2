@@ -390,6 +390,7 @@ export interface SourceSuggestion {
 export interface AdminOverview {
   composers: Record<string, number>;
   source_suggestions_pending: number;
+  source_suggestions: Record<string, number>;
 }
 
 export interface RegisterResult {

@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { apiClient } from "../api/ApiClient";
 import { DarkModeToggle } from "../components/DarkModeToggle";
 import { GlobalSearch } from "../components/GlobalSearch";
 import { LanguageSelect } from "../components/LanguageSelect";
@@ -156,6 +157,25 @@ export function Header() {
                           </Link>
                         </li>
                       ))}
+                      <li>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAdminOpen(false);
+                            void (async () => {
+                              try {
+                                const r = await apiClient.getStorageWebUrl();
+                                window.open(r.url, "_blank");
+                              } catch {
+                                /* storage web no disponible */
+                              }
+                            })();
+                          }}
+                          className="block w-full px-3 py-2 text-left text-sm hover:bg-osap-surface"
+                        >
+                          {t("admin.storageMaint")}
+                        </button>
+                      </li>
                     </ul>
                   )}
                 </div>

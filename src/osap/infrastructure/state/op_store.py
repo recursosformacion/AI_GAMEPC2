@@ -81,6 +81,14 @@ class _MemoryStore:
     def pending_suggestion_count(self) -> int:
         return sum(1 for r in self._suggestions if r["status"] == "pending")
 
+    def suggestion_counts(self) -> dict[str, int]:
+        counts: dict[str, int] = {"pending": 0, "approved": 0, "cancelled": 0, "total": 0}
+        for r in self._suggestions:
+            status = str(r.get("status") or "pending")
+            counts[status] = counts.get(status, 0) + 1
+            counts["total"] += 1
+        return counts
+
     def list_providers(self) -> list[dict[str, object]]:
         return list(self._providers)
 
@@ -246,6 +254,16 @@ class _MysqlStore(_MemoryStore):
     def pending_suggestion_count(self) -> int:
         rows = self._run("SELECT COUNT(*) AS n FROM source_suggestions WHERE status = 'pending'")
         return int(str(rows[0]["n"])) if rows else 0
+
+    def suggestion_counts(self) -> dict[str, int]:
+        rows = self._run("SELECT status, COUNT(*) AS n FROM source_suggestions GROUP BY status")
+        counts: dict[str, int] = {"pending": 0, "approved": 0, "cancelled": 0, "total": 0}
+        for r in rows:
+            status = str(r.get("status") or "pending")
+            count = int(str(r.get("n") or 0))
+            counts[status] = counts.get(status, 0) + count
+            counts["total"] += count
+        return counts
 
     def list_providers(self) -> list[dict[str, object]]:
         return self._run("SELECT * FROM providers ORDER BY name")

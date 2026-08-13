@@ -78,6 +78,9 @@ class ComposersService:
     def catalogues(self, prefix: str | None = None, composer: str | None = None) -> list[dict[str, object]]:
         return self._client.catalogues(prefix, composer)
 
+    def storage_web_admin_url(self) -> str:
+        return self._client.storage_web_admin_url()
+
     def _ensure_writable(self) -> None:
         if self._read_only:
             raise ForbiddenError("Storage is remote; this environment is read-only")

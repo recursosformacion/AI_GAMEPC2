@@ -142,6 +142,10 @@ export class ApiClient {
     return this.get<AdminOverview>("/admin/overview");
   }
 
+  async getStorageWebUrl(): Promise<{ url: string }> {
+    return this.get<{ url: string }>("/admin/storage-web");
+  }
+
   async getWorkStatistics(workId: string): Promise<WorkStatistics> {
     return this.get<WorkStatistics>(`/works/${encodeURIComponent(workId)}/statistics`);
   }

@@ -164,6 +164,16 @@ class StorageComposerClient:
             return [d for d in doc if isinstance(d, dict)]
         return []
 
+    def storage_web_admin_url(self) -> str:
+        """URL de la capa web de administración de storage (CRUD), autenticada con token de servicio."""
+        token = ""
+        if self._admin_token_provider is not None:
+            try:
+                token = self._admin_token_provider.token(("storage:admin",))
+            except Exception:  # noqa: BLE001
+                token = ""
+        return f"{self._base_url.rstrip('/')}/admin?token={urllib.parse.quote(token)}"
+
     # -- helpers -------------------------------------------------------------
 
     def _call(

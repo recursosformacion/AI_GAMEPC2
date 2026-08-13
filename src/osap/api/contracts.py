@@ -286,6 +286,7 @@ class SourceSuggestionResolveRequest(_Frozen):
 class AdminOverviewResponse(_Frozen):
     composers: dict[str, int] = {}
     source_suggestions_pending: int = 0
+    source_suggestions: dict[str, int] = {}
 
 
 class UpsertProviderRequest(_Frozen):

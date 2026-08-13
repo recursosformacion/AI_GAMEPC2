@@ -661,7 +661,19 @@ class PlatformApi:
         return self.composers().review_composer(token, composer_id, review_status)
 
     def composer_review_stats(self, token: str | None) -> dict[str, int]:
-        return self.composers().composer_review_stats(token)
+        stats = self.composers().composer_review_stats(token)
+        correct = int(stats.get("correct") or 0)
+        incorrect = int(stats.get("incorrect") or 0)
+        not_reviewed = int(stats.get("not_reviewed") or 0)
+        # Criterio: los estados son correct / incorrect / not_reviewed.
+        # revisados = correctos + incorrectos; total = suma de todos.
+        return {
+            "total": correct + incorrect + not_reviewed,
+            "correct": correct,
+            "incorrect": incorrect,
+            "reviewed": correct + incorrect,
+            "not_reviewed": not_reviewed,
+        }
 
     def catalogues(self, prefix: str | None = None, composer: str | None = None) -> list[CatalogueRead]:
         rows = self.composers().catalogues(prefix, composer)
@@ -679,10 +691,18 @@ class PlatformApi:
             )
         return out
 
+    def storage_web(self, token: str | None) -> str:
+        self._require_admin(token)
+        return self.composers().storage_web_admin_url()
+
     def admin_overview(self, token: str | None) -> dict[str, object]:
-        stats = self.composers().composer_review_stats(token)
-        pending = self._store.pending_suggestion_count()
-        return {"composers": stats, "source_suggestions_pending": pending}
+        stats = self.composer_review_stats(token)
+        suggestions = self._store.suggestion_counts()
+        return {
+            "composers": stats,
+            "source_suggestions_pending": suggestions.get("pending", 0),
+            "source_suggestions": suggestions,
+        }
 
     # --- proveedores dinámicos + config (BD operativa) -----------------------
 

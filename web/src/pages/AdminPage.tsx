@@ -50,26 +50,46 @@ export function AdminPage() {
       <h1 className="text-xl font-semibold">{t("admin.title")}</h1>
 
       {adminOverview !== null && (
-        <div className="rounded border border-osap-border bg-osap-surface p-4">
-          <h2 className="mb-2 text-sm font-semibold">{t("admin.composersReview")}</h2>
-          <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
-            <div>
-              <p className="text-osap-muted">{t("admin.total")}</p>
-              <p className="text-xl font-bold">{adminOverview.composers.total ?? 0}</p>
-            </div>
-            {REVIEW_KEYS.map((r) => (
-              <div key={r.key}>
-                <p className="text-osap-muted">{t(r.labelKey)}</p>
-                <p className="text-xl font-bold">{adminOverview.composers[r.key] ?? 0}</p>
+        <div className="space-y-4">
+          <div className="rounded border border-osap-border bg-osap-surface p-4">
+            <h2 className="mb-2 text-sm font-semibold">{t("admin.composersReview")}</h2>
+            <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-5">
+              <div>
+                <p className="text-osap-muted">{t("admin.total")}</p>
+                <p className="text-xl font-bold">{adminOverview.composers.total ?? 0}</p>
               </div>
-            ))}
+              {REVIEW_KEYS.map((r) => (
+                <div key={r.key}>
+                  <p className="text-osap-muted">{t(r.labelKey)}</p>
+                  <p className="text-xl font-bold">{adminOverview.composers[r.key] ?? 0}</p>
+                </div>
+              ))}
+            </div>
           </div>
-          <Link
-            to="/admin/source-suggestions"
-            className="mt-3 inline-block rounded bg-osap-accent px-3 py-1 text-sm text-white"
-          >
-            {t("admin.sourceSuggestions")} · {adminOverview.source_suggestions_pending}
-          </Link>
+
+          <div className="rounded border border-osap-border bg-osap-surface p-4">
+            <h2 className="mb-2 text-sm font-semibold">{t("admin.sourceSuggestions")}</h2>
+            <div className="grid grid-cols-3 gap-2 text-sm">
+              <div>
+                <p className="text-osap-muted">{t("sources.approved")}</p>
+                <p className="text-xl font-bold">{adminOverview.source_suggestions?.approved ?? 0}</p>
+              </div>
+              <div>
+                <p className="text-osap-muted">{t("sources.rejected")}</p>
+                <p className="text-xl font-bold">{adminOverview.source_suggestions?.cancelled ?? 0}</p>
+              </div>
+              <div>
+                <p className="text-osap-muted">{t("sources.pending")}</p>
+                <p className="text-xl font-bold">{adminOverview.source_suggestions?.pending ?? 0}</p>
+              </div>
+            </div>
+            <Link
+              to="/admin/source-suggestions"
+              className="mt-3 inline-block rounded bg-osap-accent px-3 py-1 text-sm text-white"
+            >
+              {t("admin.sourceSuggestions")} → {t("sources.manage")}
+            </Link>
+          </div>
         </div>
       )}
 
@@ -120,10 +140,6 @@ export function AdminPage() {
               </p>
             </section>
           )}
-
-          <Link to="/composers" className="inline-block rounded bg-osap-accent px-4 py-1.5 text-sm text-white">
-            {t("admin.composers")}
-          </Link>
         </>
       )}
     </div>
