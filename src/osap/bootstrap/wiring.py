@@ -56,13 +56,13 @@ DEFAULT_PROVIDER_ORDER = (
 
 _LOCAL_ROUTES = {
     "storage": "http://127.0.0.1:8000",
-    "auth_token": "http://127.0.0.1:8200/oauth/token",
-    "auth_base": "http://127.0.0.1:8200",
+    "auth_token": "http://osap-auth/auth-api/oauth/token",
+    "auth_base": "http://osap-auth/auth-api",
 }
 _REAL_ROUTES = {
     "storage": "https://storage.openmusicrepository.com",
-    "auth_token": "https://auth.openmusicrepository.com/oauth/token",
-    "auth_base": "https://auth.openmusicrepository.com",
+    "auth_token": "https://auth.openmusicrepository.com/auth-api/oauth/token",
+    "auth_base": "https://auth.openmusicrepository.com/auth-api",
 }
 
 
