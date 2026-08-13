@@ -16,7 +16,7 @@ export async function searchAndGo(navigate: NavigateFunction, payload: SearchReq
   }
   if (intent.type === "composer") {
     // Single structured search by the extracted composer name (intent.label).
-    await useSearches.getState().create({ query: "", composer: intent.label, limit: 50 });
+    await useSearches.getState().create({ query: "", composer: intent.label, limit: 30 });
     navigate("/composer");
   } else if (intent.type === "catalogue") {
     await useSearches.getState().create(payload);

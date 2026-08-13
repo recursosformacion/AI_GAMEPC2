@@ -465,6 +465,80 @@ class MergeComposersResultResponse(_Frozen):
     merge_operation_id: str | None = None
 
 
+# --- resolución de identidad de compositor (v1) -------------------------------
+
+
+class ComposerResolveComposer(_Frozen):
+    name: str
+
+
+class ComposerResolveWork(_Frozen):
+    title: str
+    catalog: str | None = None
+    year: int | None = None
+
+
+class ComposerResolveSource(_Frozen):
+    provider: str | None = None
+    source_work_id: str | None = None
+
+
+class ComposerResolveRepresentation(_Frozen):
+    title: str
+    provider: str
+    format: str
+
+
+class ComposerResolveRequest(_Frozen):
+    model_config = ConfigDict(
+        frozen=True,
+        json_schema_extra={
+            "examples": [
+                {
+                    "work": {"title": "Song to the Auspicious Cloud - Second Version", "catalog": "192128"},
+                    "composer": {"name": "ä æ R Z H çèª"},
+                },
+                {"work": {"title": "Song to the Auspicious Cloud - Second Version"}},
+            ]
+        },
+    )
+    # La obra es la señal principal: `work.title` es obligatorio.
+    work: ComposerResolveWork
+    composer: ComposerResolveComposer | None = None
+    source: ComposerResolveSource | None = None
+    representations: list[ComposerResolveRepresentation] = []
+
+
+class ResolvedComposerResponse(_Frozen):
+    name: str
+    aliases: list[str] = []
+    external_ids: dict[str, str] = {}
+
+
+class ComposerResolveEvidenceResponse(_Frozen):
+    provider: str
+    type: str
+    confidence: float
+    work_title: str | None = None
+    work_catalog: str | None = None
+
+
+class ComposerResolveCandidateResponse(_Frozen):
+    name: str
+    confidence: float
+    aliases: list[str] = []
+    external_ids: dict[str, str] = {}
+
+
+class ComposerResolveResponse(_Frozen):
+    status: str  # resolved | ambiguous | not_found
+    composer: ResolvedComposerResponse | None = None
+    confidence: float = 0.0
+    input_quality: str = "normal"  # normal | suspicious | corrupt_or_suspicious
+    candidates: list[ComposerResolveCandidateResponse] = []
+    evidence: list[ComposerResolveEvidenceResponse] = []
+
+
 class SuccessEnvelope(_Frozen, Generic[T]):  # noqa: UP046
     success: bool
     request_id: str

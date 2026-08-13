@@ -41,6 +41,7 @@ from src.osap.api.contracts import (
     WorkRelationships,
 )
 from src.osap.application.canonicalizer import Canonicalizer
+from src.osap.application.composer_resolution_engine import ResolutionDecision
 from src.osap.application.composers_service import ComposersService
 from src.osap.application.jobs import DefaultJob
 from src.osap.application.votes_service import VotesService
@@ -51,6 +52,7 @@ from src.osap.domain.principal import Principal
 from src.osap.domain.resolve_request import ResolveRequestBuilder
 from src.osap.domain.votes import ComposerStats, WorkStats, WorkVote
 from src.osap.infrastructure.state.op_store import build_op_store
+from src.osap.ports.composer_resolver import ResolverRepresentation
 
 VERSION = "3.1"
 
@@ -659,6 +661,31 @@ class PlatformApi:
 
     def review_composer(self, token: str | None, composer_id: str, review_status: str) -> dict[str, object]:
         return self.composers().review_composer(token, composer_id, review_status)
+
+    async def resolve_composer(
+        self,
+        work_title: str,
+        composer: str | None = None,
+        work_catalog: str | None = None,
+        work_year: int | None = None,
+        source_provider: str | None = None,
+        source_work_id: str | None = None,
+        representations: list[dict[str, str]] | None = None,
+    ) -> ResolutionDecision:
+        reps = [
+            ResolverRepresentation(title=r["title"], provider=r["provider"], format=r["format"])
+            for r in representations or []
+        ]
+        use_case = self._container.composer_resolution()
+        return await use_case.execute(
+            composer=composer,
+            work_title=work_title,
+            work_catalog=work_catalog,
+            work_year=work_year,
+            source_provider=source_provider,
+            source_work_id=source_work_id,
+            representations=reps,
+        )
 
     def composer_review_stats(self, token: str | None) -> dict[str, int]:
         stats = self.composers().composer_review_stats(token)

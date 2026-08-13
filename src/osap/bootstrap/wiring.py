@@ -40,6 +40,9 @@ from src.osap.infrastructure.providers.fetchers import (
     OmrStorageFetcher,
 )
 from src.osap.infrastructure.rankings import DefaultRankingEngine
+from src.osap.infrastructure.resolvers.canonical_resolver import CanonicalComposerResolver
+from src.osap.infrastructure.resolvers.stub_resolvers import CPDLResolver, MusicBrainzResolver, WikidataResolver
+from src.osap.infrastructure.resolvers.work_match import WorkComposerMatcher
 from src.osap.infrastructure.state.op_store import build_op_store
 from src.osap.infrastructure.storage.storage_composer_client import StorageComposerClient
 from src.osap.infrastructure.storage.work_store import StorageWorkStore
@@ -281,4 +284,15 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
         votes_service.handle_user_deleted(str(event.payload.get("user_id")))
 
     event_bus.subscribe("user.deleted", _on_user_deleted)
+
+    # --- resolución de identidad de compositor (v1) --------------------------
+    # Fase obra: reutiliza WorkResolutionEngine (catálogos existentes) para encontrar
+    # la obra y extraer sus compositores. Fase identidad: canonical es funcional;
+    # CPDL/MusicBrainz/Wikidata son stubs desactivados hasta disponer de fuente.
+    container.set_composer_work_matcher(WorkComposerMatcher(container.work_resolution_engine()).match)
+    container.register_composer_resolver(CanonicalComposerResolver())
+    container.register_composer_resolver(CPDLResolver())
+    container.register_composer_resolver(MusicBrainzResolver())
+    container.register_composer_resolver(WikidataResolver())
+
     return container

@@ -231,6 +231,15 @@ function RepresentationsTab({
             >
               {t("work.view")}
             </a>
+            <a
+              href={`/api/v1/representations/${sel.id}/download`}
+              download={downloadFileName(sel)}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded border border-osap-border px-3 py-1 text-sm text-osap-accent"
+            >
+              {t("work.download")}
+            </a>
           </div>
         </div>
       ) : null}
@@ -278,6 +287,13 @@ function ProvidersTab({ byProvider }: { byProvider: Map<string, RepresentationIn
 function providerAbbrev(name: string): string {
   const clean = name.trim();
   return clean.length <= 5 ? clean : clean.slice(0, 5);
+}
+
+function downloadFileName(rep: RepresentationInfo): string {
+  const ext = ({ musicxml: "mxl", pdf: "pdf", midi: "mid" } as Record<string, string>)[rep.format] ?? rep.format;
+  const base = rep.title || rep.id || "representation";
+  const safe = base.replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, "_");
+  return `${safe}.${ext}`;
 }
 
 function Meta({ label, value }: { label: string; value: string }) {

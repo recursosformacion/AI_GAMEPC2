@@ -22,6 +22,10 @@ from src.osap.api.contracts import (
     ComposerCreationEvidenceResponse,
     ComposerDetailResponse,
     ComposerListResponse,
+    ComposerResolveCandidateResponse,
+    ComposerResolveEvidenceResponse,
+    ComposerResolveRequest,
+    ComposerResolveResponse,
     ComposerStatisticsResponse,
     ComposerSummaryResponse,
     ComposerWorkRefResponse,
@@ -42,6 +46,7 @@ from src.osap.api.contracts import (
     RegisterRequest,
     RepositorySource,
     RepositorySourceSummary,
+    ResolvedComposerResponse,
     ReviewComposerRequest,
     SearchModel,
     SearchRequest,
@@ -84,6 +89,7 @@ if TYPE_CHECKING:
     from collections.abc import Iterator
 
     from src.osap.api.platform import KnowledgeStore
+    from src.osap.application.composer_resolution_engine import ResolutionDecision, ResolvedComposer
 
 
 _EXTENSION = {"musicxml": ".musicxml", "pdf": ".pdf", "midi": ".mid"}
@@ -437,6 +443,42 @@ def _composer_work_ref(d: dict[str, object]) -> ComposerWorkRefResponse:
         title=cast("str | None", d.get("title")),
         composer_id=cast("str | None", d.get("composer_id")),
         tags=cast("str | None", d.get("tags")),
+    )
+
+
+def _composer_resolve_dto(d: ResolutionDecision) -> ComposerResolveResponse:
+    return ComposerResolveResponse(
+        status=d.status,
+        composer=_resolved_composer_dto(d.composer) if d.composer is not None else None,
+        confidence=d.confidence,
+        input_quality=d.input_quality,
+        candidates=[
+            ComposerResolveCandidateResponse(
+                name=c.composer.name,
+                confidence=c.confidence,
+                aliases=list(c.composer.aliases),
+                external_ids=dict(c.composer.external_ids),
+            )
+            for c in d.candidates
+        ],
+        evidence=[
+            ComposerResolveEvidenceResponse(
+                provider=e.provider,
+                type=e.kind,
+                confidence=e.confidence,
+                work_title=e.work_title,
+                work_catalog=e.work_catalog,
+            )
+            for e in d.evidence
+        ],
+    )
+
+
+def _resolved_composer_dto(c: ResolvedComposer) -> ResolvedComposerResponse:
+    return ResolvedComposerResponse(
+        name=c.name,
+        aliases=list(c.aliases),
+        external_ids=dict(c.external_ids),
     )
 
 
@@ -1615,5 +1657,49 @@ def create_platform_app(
                 503, response, "ADMIN_SERVICE_UNAVAILABLE", "Composer admin service is not configured"
             )
         return ok(_composer_detail_dto(composer))
+
+    @app.post(
+        "/api/v1/composers/resolve",
+        status_code=200,
+        tags=["Composers"],
+        summary="Resolve a composer identity (read-only)",
+        description="Resuelve la identidad de un compositor a partir del contexto (nombre + obra "
+        "opcional + fuente + representaciones). No modifica nada en storage: devuelve un veredicto "
+        "`resolved | ambiguous | not_found` con confianza, evidencia y candidatos. Nunca inventa "
+        "un compositor. No se envía ni devuelve `composer_id`.",
+        response_model=SuccessEnvelope[ComposerResolveResponse] | ErrorEnvelope,
+        responses={
+            200: _resp(
+                "Resolved composer identity",
+                _example(
+                    {
+                        "status": "resolved",
+                        "composer": {"name": "Wolfgang Amadeus Mozart", "aliases": [], "external_ids": {}},
+                        "confidence": 0.9,
+                        "input_quality": "normal",
+                        "candidates": [],
+                        "evidence": [],
+                    }
+                ),
+            ),
+            **_standard_errors(422),
+        },
+    )
+    async def resolve_composer(
+        payload: ComposerResolveRequest,
+        response: Response,
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        source = payload.source
+        reps = [{"title": r.title, "provider": r.provider, "format": r.format} for r in payload.representations]
+        decision = await api.resolve_composer(
+            composer=payload.composer.name if payload.composer else None,
+            work_title=payload.work.title,
+            work_catalog=payload.work.catalog,
+            work_year=payload.work.year,
+            source_provider=source.provider if source else None,
+            source_work_id=source.source_work_id if source else None,
+            representations=reps,
+        )
+        return ok(_composer_resolve_dto(decision))
 
     return app

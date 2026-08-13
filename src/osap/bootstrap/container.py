@@ -1,9 +1,11 @@
 from src.osap.application.catalog_manager import CatalogManager
+from src.osap.application.composer_resolution_engine import ComposerResolutionEngine, WorkMatcher
 from src.osap.application.composers_service import ComposersService
 from src.osap.application.evidence_engine import EvidenceEngine
 from src.osap.application.export_manager import ExportManager
 from src.osap.application.library_manager import LibraryManager
 from src.osap.application.provider_orchestrator import ProviderOrchestrator
+from src.osap.application.use_cases.resolve_composer import ResolveComposerUseCase
 from src.osap.application.votes_service import VotesService
 from src.osap.application.work_merge_service import WorkMergeService
 from src.osap.application.work_resolution_engine import WorkResolutionEngine
@@ -21,6 +23,7 @@ from src.osap.infrastructure.pipeline import PipelineEngine
 from src.osap.infrastructure.user_profile import InMemoryUserProfileStore
 from src.osap.ports.cache import ICache
 from src.osap.ports.catalog_provider import ICatalogProvider
+from src.osap.ports.composer_resolver import IComposerResolver
 from src.osap.ports.duplicate_resolver import IDuplicateResolver
 from src.osap.ports.event_bus import IEventBus
 from src.osap.ports.library_provider import ILibraryProvider
@@ -56,6 +59,9 @@ class Container:
         self._authenticator: IAuthenticator | None = None
         self._votes_service: VotesService | None = None
         self._composers_service: ComposersService | None = None
+        self._resolvers: list[IComposerResolver] = []
+        self._composer_resolution: ResolveComposerUseCase | None = None
+        self._composer_work_matcher: WorkMatcher | None = None
         self._auth_proxy: AuthProxyClient | None = None
         self._oidc_client: OidcRpClient | None = None
         self._storage_target: str | None = None
@@ -96,6 +102,26 @@ class Container:
         if self._composers_service is None:
             raise RuntimeError("ComposersService not wired")
         return self._composers_service
+
+    def register_composer_resolver(self, resolver: IComposerResolver) -> None:
+        self._resolvers.append(resolver)
+        self._composer_resolution = None
+
+    def set_composer_work_matcher(self, matcher: WorkMatcher) -> None:
+        self._composer_work_matcher = matcher
+        self._composer_resolution = None
+
+    def set_composer_resolution(self, use_case: ResolveComposerUseCase) -> None:
+        self._composer_resolution = use_case
+
+    def composer_resolution(self) -> ResolveComposerUseCase:
+        if self._composer_resolution is None:
+            engine = ComposerResolutionEngine(
+                list(self._resolvers),
+                work_matcher=self._composer_work_matcher,
+            )
+            self._composer_resolution = ResolveComposerUseCase(engine)
+        return self._composer_resolution
 
     def set_auth_proxy(self, client: AuthProxyClient) -> None:
         self._auth_proxy = client
