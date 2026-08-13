@@ -442,6 +442,15 @@ class CreateComposerRequest(_Frozen):
     name: str
 
 
+class CatalogueRead(_Frozen):
+    id: int
+    prefix: str
+    composer: str
+    catalogue_name: str
+    creator: str
+    ordering_criterion: str
+
+
 class ReviewComposerRequest(_Frozen):
     review_status: str
 

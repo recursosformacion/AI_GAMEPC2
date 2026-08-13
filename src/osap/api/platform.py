@@ -14,6 +14,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from src.osap.api.contracts import (
+    CatalogueRead,
     DiscoverSource,
     IntentResponse,
     JobResponse,
@@ -661,6 +662,22 @@ class PlatformApi:
 
     def composer_review_stats(self, token: str | None) -> dict[str, int]:
         return self.composers().composer_review_stats(token)
+
+    def catalogues(self, prefix: str | None = None, composer: str | None = None) -> list[CatalogueRead]:
+        rows = self.composers().catalogues(prefix, composer)
+        out: list[CatalogueRead] = []
+        for row in rows:
+            out.append(
+                CatalogueRead(
+                    id=int(str(row.get("id") or 0)),
+                    prefix=str(row.get("prefix") or ""),
+                    composer=str(row.get("composer") or ""),
+                    catalogue_name=str(row.get("catalogue_name") or ""),
+                    creator=str(row.get("creator") or ""),
+                    ordering_criterion=str(row.get("ordering_criterion") or ""),
+                )
+            )
+        return out
 
     def admin_overview(self, token: str | None) -> dict[str, object]:
         stats = self.composers().composer_review_stats(token)

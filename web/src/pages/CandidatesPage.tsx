@@ -119,7 +119,6 @@ export function CandidatesPage() {
                     representations={reps}
                     score={c.score}
                     evidence={c.items[0]?.evidence}
-                    relationships={c.items[0]?.relationships}
                   />
                 </div>
               ) : null}

@@ -18,6 +18,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 
 from src.osap.api.contracts import (
     AdminOverviewResponse,
+    CatalogueRead,
     ComposerCreationEvidenceResponse,
     ComposerDetailResponse,
     ComposerListResponse,
@@ -1431,6 +1432,25 @@ def create_platform_app(
         if detail is None:
             return fail(404, response, "NOT_FOUND", "Composer not found")
         return ok(_composer_detail_dto(detail))
+
+    @app.get(
+        "/api/v1/catalogues",
+        tags=["Composers"],
+        summary="List catalogues",
+        description="Lista los catálogos (Köchel, BWV, …) desde osap-storage. Se puede filtrar "
+        "por prefijo de sigla (?prefix=K) o por compositor (?composer=mozart).",
+        response_model=SuccessEnvelope[list[CatalogueRead]] | ErrorEnvelope,
+        responses={200: _resp("Catalogues", _example([])), 503: _resp("Storage unavailable", _example({}))},
+    )
+    def list_catalogues(
+        response: Response,
+        prefix: str | None = Query(default=None),
+        composer: str | None = Query(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            return ok(api.catalogues(prefix, composer))
+        except StorageComposerError:
+            return fail(503, response, "SERVICE_UNAVAILABLE", "Storage service is not configured")
 
     @app.get(
         "/api/v1/composers/{composer_id}/works",

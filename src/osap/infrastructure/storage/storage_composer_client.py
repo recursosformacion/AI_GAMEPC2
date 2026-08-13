@@ -147,6 +147,23 @@ class StorageComposerClient:
             return {str(k): int(v) for k, v in doc.items()}
         return {"total": 0, "correct": 0, "incorrect": 0, "reviewed": 0, "not_reviewed": 0}
 
+    def catalogues(self, prefix: str | None = None, composer: str | None = None) -> list[dict[str, object]]:
+        query = {}
+        if prefix:
+            query["prefix"] = prefix
+        if composer:
+            query["composer"] = composer
+        suffix = f"?{urllib.parse.urlencode(query)}" if query else ""
+        status, doc = self._call(
+            "GET",
+            f"/api/v1/catalogues{suffix}",
+            scope="storage:read",
+            provider=self._token_provider,
+        )
+        if 200 <= status < 300 and isinstance(doc, list):
+            return [d for d in doc if isinstance(d, dict)]
+        return []
+
     # -- helpers -------------------------------------------------------------
 
     def _call(

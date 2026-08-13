@@ -156,7 +156,6 @@ export function ComposerPage() {
                       representations={reps}
                       score={w.score}
                       evidence={w.items[0]?.evidence}
-                      relationships={w.items[0]?.relationships}
                     />
                   </div>
                 ) : null}
