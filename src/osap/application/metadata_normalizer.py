@@ -2,10 +2,32 @@ import re
 import unicodedata
 from pathlib import Path
 
+import yaml  # type: ignore[import-untyped]
+
 from src.osap.application.canonicalizer import Canonicalizer
 from src.osap.application.metadata_parser import extract_metadata
 from src.osap.application.normalized_metadata import NormalizedMetadata
 from src.osap.domain.music_query_normalizer import MusicQueryNormalizer
+
+# Transliteración cirílica → latina (lexicon/transliteration.yaml), para que títulos y
+# compositores cirílicos sean comparables/buscables en alfabeto latino.
+_CYRILLIC_TO_LATIN: dict[str, str] = {}
+try:
+    _tr_doc = yaml.safe_load(
+        (Path(__file__).resolve().parents[3] / "lexicon" / "transliteration.yaml").read_text(encoding="utf-8")
+    ) or {}
+    _map = _tr_doc.get("cyrillic_to_latin") if isinstance(_tr_doc, dict) else None
+    if isinstance(_map, dict):
+        _CYRILLIC_TO_LATIN = {str(k): str(v) for k, v in _map.items()}
+except Exception:  # noqa: BLE001
+    _CYRILLIC_TO_LATIN = {}
+
+
+def transliterate_cyrillic(text: str) -> str:
+    """Convierte caracteres cirílicos a su equivalencia latina (si hay mapeo)."""
+    if not _CYRILLIC_TO_LATIN or not any("\u0400" <= ch <= "\u04FF" for ch in text):
+        return text
+    return "".join(_CYRILLIC_TO_LATIN.get(ch, ch) for ch in text)
 
 _TITLE_NOISE = re.compile(
     r"\b(WIP|Draft|Version\s*\d*|Rev\.?|Copy|Reduction|Preliminary|Unfinished|Fragment)\b",
@@ -52,6 +74,17 @@ _KNOWN_COMPOSERS: dict[str, str] = {
     "toldra": "Eduard Toldrà",
     "franz liszt": "Franz Liszt",
     "liszt": "Franz Liszt",
+    # Transliteraciones cirílicas de compositores conocidos (para cruzar alfabetos).
+    "shopen": "Frédéric Chopin",
+    "motsart": "Wolfgang Amadeus Mozart",
+    "chaykovskiy": "Pyotr Ilyich Tchaikovsky",
+    "rakhmaninov": "Sergei Rachmaninoff",
+    "prokofev": "Sergei Prokofiev",
+    "shostakovich": "Dmitri Shostakovich",
+    "mussorgskiy": "Modest Mussorgsky",
+    "rimskiy-korsakov": "Nikolai Rimsky-Korsakov",
+    "rubinshteyn": "Anton Rubinstein",
+    "skryabin": "Alexander Scriabin",
 }
 
 _KNOWN_LAST_NAMES = {canonical.split()[-1].lower() for canonical in _KNOWN_COMPOSERS.values()}
@@ -85,7 +118,7 @@ class MetadataNormalizer:
 
     @staticmethod
     def canonical_composer(raw: str) -> str:
-        text = MetadataNormalizer._clean_text(raw)
+        text = transliterate_cyrillic(MetadataNormalizer._clean_text(raw))
         # Quitar contenido entre paréntesis (años, notas, "alleged").
         text = re.sub(r"\([^)]*\)", " ", text)
         # Quitar prefijos de catálogo incrustados en el campo compositor ("KV 618 - ...").
@@ -118,7 +151,7 @@ class MetadataNormalizer:
         composer, then lowercases and collapses punctuation/whitespace. It never
         destroys meaningful words ("Symphony", "Dances", "Requiem" are kept).
         """
-        text = MetadataNormalizer._clean_text(title)
+        text = transliterate_cyrillic(MetadataNormalizer._clean_text(title))
         text = _REMOVE_CATALOGUE.sub("", text)
         text = _REMOVE_NUMBER.sub("", text)
         text = _REMOVE_KEY.sub("", text)

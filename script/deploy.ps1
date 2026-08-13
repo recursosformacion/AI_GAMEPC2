@@ -34,7 +34,7 @@ Write-Host "== [2/5] Empaquetando backend y SPA ==" -ForegroundColor Cyan
 Push-Location $root
 tar -czf (Join-Path $tmp "backend.tar.gz") `
     --exclude="__pycache__" --exclude="*.pyc" `
-    src providers resources pyproject.toml
+    src providers resources lexicon pyproject.toml
 if ($LASTEXITCODE -ne 0) { Fail "tar backend falló" }
 tar -czf (Join-Path $tmp "dist.tar.gz") -C (Join-Path $root "web\dist") .
 if ($LASTEXITCODE -ne 0) { Fail "tar dist falló" }
