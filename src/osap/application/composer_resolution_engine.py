@@ -160,14 +160,14 @@ class ComposerResolutionEngine:
                     providers=tuple(sorted(providers)),
                     evidence=tuple(
                         ResolutionEvidence(
-                            provider=provider,
+                            provider=prov,
                             kind=e.kind,
                             confidence=e.confidence,
                             work_title=e.work_title,
                             work_catalog=e.work_catalog,
                         )
-                        for _, candidate in entries
-                        for e in candidate.evidence
+                        for prov, cand in entries
+                        for e in cand.evidence
                     ),
                 )
             )

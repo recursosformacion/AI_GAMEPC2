@@ -91,6 +91,7 @@ def test_resolved_merges_duplicate_candidates() -> None:
     assert decision.composer is not None
     assert decision.composer.name == "Wolfgang Amadeus Mozart"
     assert decision.candidates[0].providers == ("cpdl", "wikidata")
+    assert {e.provider for e in decision.evidence} == {"cpdl", "wikidata"}
 
 
 def _fake_work_matcher(query: ResolverQuery) -> list[tuple[str, ResolverCandidate]]:
