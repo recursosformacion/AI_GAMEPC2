@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Envelope } from "../components/Envelope";
 import { useI18n } from "../i18n/I18n";
 import { useSources } from "../state/repositorySources";
@@ -19,12 +20,19 @@ export function SourceCatalogPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-xl font-semibold">Source Catalog</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-semibold">{t("nav.sources")}</h1>
+        <Link to="/sources" className="rounded bg-osap-accent px-4 py-1.5 text-sm text-white">
+          {t("sources.add")}
+        </Link>
+      </div>
 
       <Envelope loading={list.loading} error={list.error} data={list.data} emptyMessage={t("states.empty")}>
-        {(sources) => (
-          <ul className="grid gap-4 sm:grid-cols-2">
-            {sources.map((s) => (
+        {(sources) => {
+          const wired = sources.filter((s) => s.status === "Online");
+          return (
+            <ul className="grid gap-4 sm:grid-cols-2">
+              {wired.map((s) => (
               <li key={s.source_id}>
                 <button
                   type="button"
@@ -49,8 +57,9 @@ export function SourceCatalogPage() {
                 </button>
               </li>
             ))}
-          </ul>
-        )}
+            </ul>
+          );
+        }}
       </Envelope>
 
       {selected !== null ? (
