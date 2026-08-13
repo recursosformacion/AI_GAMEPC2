@@ -61,6 +61,7 @@ class Container:
         self._storage_target: str | None = None
         self._storage_read_only: bool = False
         self._dev_auth_bypass: bool = False
+        self._storage_web_base: str | None = None
         self._op_store_config: dict[str, str] = {
             "host": "127.0.0.1",
             "user": "osap2027",
@@ -116,6 +117,12 @@ class Container:
 
     def dev_auth_bypass(self) -> bool:
         return self._dev_auth_bypass
+
+    def set_storage_web_base(self, base: str | None) -> None:
+        self._storage_web_base = base
+
+    def storage_web_base(self) -> str | None:
+        return self._storage_web_base
 
     def storage_info(self) -> tuple[str, bool]:
         return self._storage_target or "unknown", self._storage_read_only

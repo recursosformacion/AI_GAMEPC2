@@ -263,6 +263,7 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     )
     container.set_storage_info(target, storage_read_only)
     container.set_dev_auth_bypass(config.dev_auth_bypass)
+    container.set_storage_web_base(config.storage_web_base)
     composer_client = StorageComposerClient(
         base_url=storage_base,
         token_provider=service_token_provider,

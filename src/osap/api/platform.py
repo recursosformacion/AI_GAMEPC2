@@ -693,7 +693,7 @@ class PlatformApi:
 
     def storage_web(self, token: str | None) -> str:
         self._require_admin(token)
-        base = self.composers().storage_base_url().rstrip("/")
+        base = (self._container.storage_web_base() or self.composers().storage_base_url()).rstrip("/")
         if self._container.dev_auth_bypass():
             # Dev: token de desarrollo (el storage local no valida auth en desarrollo).
             service_token = "dev-storage-token"
