@@ -154,6 +154,11 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
         password=config.osap_api_db_password,
         database=config.osap_api_db_name,
     )
+    service_token_provider = ClientCredentialsServiceTokenProvider(
+        client_id=config.service_client_id or "osap-api",
+        client_secret=config.service_client_secret or "",
+        token_url=auth_token_url,
+    )
     container.register_catalog_provider(
         RemoteCatalogProvider(
             definition=_provider_definition(op_store, "imslp", providers_root / "imslp"),
@@ -170,7 +175,7 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
         RemoteCatalogProvider(
             definition=_provider_definition(op_store, "omr", providers_root / "omr", base_url=storage_base),
             base_url=storage_base,
-            fetcher=OmrStorageFetcher(base_url=storage_base),
+            fetcher=OmrStorageFetcher(base_url=storage_base, token_provider=service_token_provider),
         )
     )
     container.register_catalog_provider(
@@ -239,11 +244,6 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     # --- votes & statistics (v1) --------------------------------------------
     # Los votos y las estadísticas viven en osap-storage (no en una BD de osap-api).
     # osap-api se autentica frente a storage con identidad de servicio (least privilege).
-    service_token_provider = ClientCredentialsServiceTokenProvider(
-        client_id=config.service_client_id or "osap-api",
-        client_secret=config.service_client_secret or "",
-        token_url=auth_token_url,
-    )
     vote_store = StorageVoteStore(base_url=storage_base, token_provider=service_token_provider)
     work_store = StorageWorkStore(base_url=storage_base, token_provider=service_token_provider)
     authenticator = JwtAuthenticator()

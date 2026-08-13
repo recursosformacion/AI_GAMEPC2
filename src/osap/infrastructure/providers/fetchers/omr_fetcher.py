@@ -7,6 +7,7 @@ parameter. This fetcher calls that endpoint and normalizes each record into a Wo
 same way `MediaWikiFetcher` / `GitHubFetcher` do.
 """
 
+import contextlib
 import hashlib
 import json
 import urllib.parse
@@ -18,6 +19,7 @@ from src.osap.infrastructure.providers.adapters.generic_provider_adapter import 
     ProviderFetcher,
     ProviderQuery,
 )
+from src.osap.ports.service_token import IServiceTokenProvider
 
 _USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
@@ -32,9 +34,11 @@ class OmrStorageFetcher(ProviderFetcher):
         self,
         base_url: str = "https://storage.openmusicrepository.com",
         timeout: int = 15,
+        token_provider: IServiceTokenProvider | None = None,
     ) -> None:
         self._base_url = base_url.rstrip("/")
         self._timeout = timeout
+        self._token_provider = token_provider
 
     def fetch(
         self,
@@ -46,10 +50,11 @@ class OmrStorageFetcher(ProviderFetcher):
         if not q:
             return {"works": []}
         url = f"{self._base_url}/api/v1/search?q={urllib.parse.quote(q)}"
-        request = urllib.request.Request(
-            url,
-            headers={"Accept": "application/json", "User-Agent": _USER_AGENT},
-        )
+        headers: dict[str, str] = {"Accept": "application/json", "User-Agent": _USER_AGENT}
+        if self._token_provider is not None:
+            with contextlib.suppress(Exception):
+                headers["Authorization"] = f"Bearer {self._token_provider.token(('storage:read',))}"
+        request = urllib.request.Request(url, headers=headers)
         try:
             with urllib.request.urlopen(request, timeout=self._timeout) as response:  # noqa: S310 (provider endpoint)
                 data = json.loads(response.read())
