@@ -1,422 +1,87 @@
-# ROADMAP OSAP — V2
+# ROADMAP — osap-api (Puerta pública de aplicación)
 
-> Reinicio de OSAP. El punto de partida es la **Architecture Audit 2026**
-> (`docs/osap/v2/architecture-audit.md`, congelada). Los hitos aquí son **versiones de
-> plataforma**, no sprints; cada versión tiene criterios de salida verificables.
->
-> El contrato de proveedores se define en `docs/osap/v2/provider-contract.md` y es el
-> documento más importante de la V2: todos los proveedores obedecen el mismo contrato.
+Rol en la arquitectura: **única puerta pública**. API del Web, búsqueda, obras,
+compositores, votos, valoración, administración, integración con osap-auth y osap-storage,
+gestión de proveedores y estado operativo propio.
 
-Principios de V2:
-- **OMR es un proveedor más.** Para OSAP, IMSLP, MuseScore, CPDL, OpenScore,
-  Open Music Repository, Filesystem y PDMX son exactamente iguales: todos
-  implementan `ICatalogProvider`. No existe un camino especial para OMR. Eso
-  mantiene a OSAP independiente.
-- **Freeze primero, código después.** Los contratos se escriben antes de
-  implementar. IMSLP, MuseScore, OMR... todos obedecen el mismo contrato.
-- **Búsqueda en dos fases (ADR-0019).** OSAP responde preguntas **musicales**;
-  OMR responde preguntas sobre **sus recursos**. El flujo es siempre
-  `Usuario → OSAP Search → Work → Resolve → Provider → Download`. Nunca se
-  preguntan cosas complejas directamente a OMR. Esto mantiene ambos proyectos
-  independientes y permite sustituir OMR por otro proveedor sin tocar el núcleo.
-- **Primero el contrato en acción, luego la prueba de estrés.** OMR (V2.0.5)
-  demuestra que el contrato funciona **sin casos especiales**; IMSLP (V2.0.6)
-  prueba que el mismo contrato generaliza a un proveedor completamente distinto.
+Roadmap global de referencia: `_docs/roadmap.md` (raíz del proyecto).
 
-Leyenda de impacto (de la auditoría):
-- 🔒 **Núcleo** = se queda.
-- 📦 **OMR** = se mueve a Open Music Repository (la aplicación repositorio).
-- 🗑️ **Eliminar** = se retira.
-- ⏳ **Aplazar** = no se toca todavía.
+> El ROADMAP histórico V2–V4 (dominio OSAP único) quedó superado por la división en
+> osap-auth / osap-api / osap-storage.
 
 ---
 
-## Resumen de la hoja de ruta
+## Fase B — OIDC (P1)
 
-```
-V2  Dominio          V3  Plataforma          V4  Inteligencia Musical
-─────────────────    ─────────────────      ─────────────────────────
-✔ Núcleo             ✔ API REST             ✔ Relaciones entre obras
-✔ Search             ✔ OpenAPI              ✔ Versiones
-✔ Evidence           ✔ Web                  ✔ Movimientos
-✔ Merge              ✔ Dashboard            ✔ Familias
-✔ Jobs               ✔ Auth                 ✔ Recomendaciones
-✔ Knowledge Mining   ✔ Administración       ✔ Inferencias
-                                              ✔ Knowledge Graph
-```
+| Tarea | Estado |
+|---|---|
+| RP OIDC: PKCE, state, nonce, discovery desde issuer | ✅ |
+| Callback backend (`/api/v1/auth/oidc/callback`) y canje del code | ✅ |
+| Web → login en popup (centrado, sin URL) con `postMessage` | ✅ |
+| `JwtAuthenticator` (valida `token_use=user`, `aud=osap-api`) | ✅ |
+| Respaldo email/password cuando OIDC no está configurado | ✅ |
+| Eliminar definitivamente el login paralelo del Web (OIDC único) | 🟡 Pendiente |
 
-- **V2 — Dominio**: núcleo funcional completo (cerrado con `v2.2.0`).
-- **V3 — Plataforma**: exponer el dominio (API, web, herramientas de administración),
-  manteniendo el núcleo estable.
-- **V4 — Inteligencia Musical**: relaciones, versiones, movimientos, familias,
-  recomendaciones, inferencias y Knowledge Graph (conocimiento declarativo, sin IA para
-  identidad).
+## Fase C — BD propia de osap-api (P2, P3)
 
----
+| Tarea | Estado |
+|---|---|
+| BD MySQL operativa (tablas `providers`, `source_suggestions`, `app_config`) | ✅ |
+| Migrar `source_suggestions` (JSON → BD) | ✅ |
+| Endpoints operativos proveedores/config (admin) | ✅ |
+| Tabla `audit_log` (auditoría de decisiones) | 🟡 Pendiente |
+| UI de proveedores distinguiendo configurados/activos/disponibles/pendientes/sugeridos/no conectados | 🟡 Pendiente |
+| Revisar estado operativo restante (`_searches`, `_representations`, `_jobs`, `KnowledgeStore`, métricas) | 🟡 Pendiente |
 
-## V2.0.0 — Auditoría + limpieza + contratos públicos
+Criterio: reiniciar osap-api no pierde estado operativo que deba persistir; la BD no contiene catálogo.
 
-**Alcance**
-- Architecture Audit 2026 (`docs/osap/v2/architecture-audit.md`), congelada.
-- Limpieza del árbol (código muerto fuera, OMR separado, `docs/osap/old/`).
-- `docs/osap/v2/provider-contract.md` como especificación de contratos públicos.
-- ADR-0018 (todos los proveedores son iguales), ADR-0019 (búsqueda en dos fases).
+## Fase D — Catálogo (P5, P8)
 
-**Estado:** ✅ **Hecho**
+- Consistencia `composer_id` → obras de storage → representaciones/proveedores (búsqueda por identidad, no solo texto).
+- Detalle de obra rico (identidad, representaciones, recursos, valoración).
+- Fallback de obras de storage en el detalle de compositor: ✅ aplicado.
 
----
+## Fase F — Web / UX (P7, P9, P10)
 
-## V2.0.1 — Congelar contratos públicos
+- `/about` — "Cómo funciona OSAP" (Descubrir → Entender → Actuar).
+- Sistema `<Hint />` reutilizable (i18n 5 idiomas).
+- Ayuda contextual (búsqueda, representaciones, proveedor, voto, valoración, compositores, registro, login, administración).
+- Mejorar flujo de compositores y detalle de obra.
+- Administración consolidada (revisar/fusionar compositores, proveedores, sugerencias, auditoría, estado operativo).
 
-**Alcance**
-- Contratos de dominio congelados: `SearchRequest`, `ResolveRequest`, `CostLevel`,
-  `CatalogCapabilities`, `CandidateRepresentation`, `AcquisitionResult`, `Evidence`.
-- El núcleo piensa con estos tipos (`SearchRequest` circula en el sistema).
+## Fase G — Operación (P11–P15)
 
-**Estado:** ✅ **Hecho**
-
----
-
-## V2.0.2 — Provider Orchestrator
-
-El cerebro que decide:
-- qué proveedores consultar
-- en qué orden (por coste de consulta)
-- coste (`FREE/CHEAP/NORMAL/EXPENSIVE`)
-- caché (reutilizar búsquedas recientes)
-- parada temprana (no consultar un proveedor caro si uno barato basta)
-
-**Estado:** ✅ **Hecho**
+| Tarea | Prioridad | Estado |
+|---|---|---|
+| Observabilidad (latencia, errores, llamadas a storage/auth, proveedores, búsquedas, jobs, rate limits) | P11 | 🟡 En evolución |
+| Rate limiting (búsqueda, registro, OIDC/login, verify, sugerencias, costosos) | P12 | 🟡 En evolución |
+| Tests de contrato Web ↔ api y api ↔ storage | P13 | 🟡 Pendiente |
+| Despliegue separado (Servidor A/B/C) | P14 | 🟡 En evolución |
+| Limpieza de configuración (Código/YAML · Environment/secretos · BD estado operativo) | P15 | 🟡 Pendiente |
 
 ---
 
-## V2.0.3 — Provider Result Aggregator
+## Estado actual
 
-Responsable de:
-- unificar resultados multiproveedor
-- deduplicar (mismo proveedor + `remote_id` / `checksum`)
-- agrupar por obra (`WorkDescriptor`)
-- entregar una colección homogénea al ranking
-- conservar diagnósticos y procedencia
-
-**Estado:** ✅ **Hecho**
-
----
-
-## ADR-0020 — Provider Search Strategy (previo)
-
-Documento **muy pequeño (2–3 páginas)** que congela el comportamiento del orquestador
-antes de conectar cualquier proveedor real. Responde de forma definitiva:
-
-- ¿Cuándo se detiene el `ProviderOrchestrator`?
-- ¿Cuándo merece la pena consultar un proveedor caro?
-- ¿Cuándo se reutiliza la caché?
-- ¿Cuándo se ejecuta en paralelo?
-- ¿Qué significa que una búsqueda está "satisfecha"?
-
-No cambia código: congela el comportamiento. `docs/osap/adr/0020-provider-search-strategy.md`.
+| Área | Estado |
+|---|---|
+| Búsqueda multi-proveedor + pipeline | ✅ |
+| Registro / verificación email (vía osap-auth) | ✅ |
+| Fusión dirigida de compositores + inspección profunda | ✅ |
+| BD operativa (providers, source_suggestions, app_config) | ✅ |
+| OIDC RP (popup login/registro) | 🟡 Funcionando en dev; prod listo |
+| Proveedores dinámicos (endpoints) | 🟡 Parcial |
+| `audit_log` | 🟡 Pendiente |
+| Consistencia composer → works/pipeline | 🟡 Fallback; ruta por `composer_id` pendiente |
+| Ayuda Web + Hints | 🟡 Pendiente |
+| Observabilidad / rate limiting | 🟡 En evolución |
 
 ---
 
-## V2.0.5 — OMR Provider
+## Criterio de cierre
 
-**Alcance**
-- Open Music Repository como `ICatalogProvider` estándar.
-- Implementa únicamente `search()`, `resolve()`, `download()`, `metadata()`,
-  `capabilities()`.
-- **Sin hacks, sin excepciones, sin `if provider == "omr"` por ninguna parte.**
-  Si hay que escribir eso, la arquitectura está mal.
-- No es especial: demuestra que el contrato funciona tal cual.
+- El Web solo habla con osap-api; osap-api es la única puerta pública (auth/storage no
+  accesibles desde Internet).
+- Reiniciar osap-api no pierde el estado operativo que debe persistir.
 
-**Criterios de salida**
-- `osap search/resolve` consulta OMR como un proveedor más.
-- No existe ninguna referencia a "omr" especializada en el núcleo.
-
----
-
-## V2.0.6 — IMSLP
-
-**Alcance**
-- Adaptar `catalogs/imslp` al contrato (hoy adaptador real pero parcial).
-- IMSLP es la **prueba de estrés**: búsqueda compleja, múltiples ediciones,
-  licencias, varias representaciones, MediaWiki, errores, páginas ambiguas,
-  descargas manuales.
-- `mediawiki/MediaWikiClient` y `auth/*` a producción (credenciales por proveedor).
-
-**Criterios de salida**
-- Si el **mismo contrato** que sirve a OMR sirve a IMSLP, significa que acertamos.
-- `resolve` y `download` con IMSLP de extremo a extremo, con metadata-first.
-- Cualquier hueco del contrato se corrige **en el contrato**, no con excepciones.
-
----
-
-## V2.0 Freeze
-
-**El núcleo de resolución queda congelado.**
-
-- V2.0.0–V2.0.6 ✅ completadas y verificadas (contratos, SearchRequest, Orchestrator,
-  Aggregator, Evidence, OMR, IMSLP).
-- Validado el caso más importante de OSAP: **varios proveedores describiendo la misma
-  obra** → un solo `WorkGroup` con sus representaciones.
-- OMR e IMSLP funcionan simultáneamente bajo el mismo `ICatalogProvider`, sin casos
-  especiales y sin tocar el núcleo.
-
-**Regla desde aquí:** los siguientes desarrollos (Search Engine, MuseScore, YouTube...)
-se **adaptan** a este núcleo. Solo se modifica si un proveedor real demuestra una
-**limitación general** del contrato. Este freeze marca el momento en que se deja de
-rediseñar arquitectura y se empieza a construir producto.
-
----
-
-## V2.1 — Search Intelligence (Nuevo Search Engine)
-
-> **Diseño antes que código.** La V2.1 no empieza implementando: empieza con un
-> documento de diseño (`docs/osap/v2/search-engine-design.md`, el **4º documento fundamental**,
-> junto a la Auditoría, el ROADMAP y el Provider Contract) que responda, de forma estable:
-
-- ¿Qué significa **buscar una obra**?
-- ¿Qué diferencia hay entre **búsqueda libre** y **resolución**?
-- ¿Cómo se **combinan** los resultados de varios proveedores?
-- ¿Cómo se **ordenan**? ¿Qué peso tienen compositor, catálogo, género, instrumentación...?
-- ¿Qué hace OSAP cuando una búsqueda devuelve **cientos de candidatos**?
-
-> **El Search Engine ya existe** (`SearchRequest → Orchestrator → Providers →
-> Aggregator → WorkGroups`). V2.1 no construye infraestructura: la hace **inteligente**
-> (Search Intelligence). Se divide en tres bloques de algoritmos:
-
-| Sub | Bloque | Contenido |
-|-----|--------|-----------|
-| **V2.1.1** | Normalización | `Lexicon` creciente, catálogos (BWV/KV), nombres, acentos, transliteraciones |
-
-> **Normalización explicable** (`docs/osap/v2/normalization-explorable.md`) + **ADR-0021**
-> (Separation of Classification and Canonicalization): el `Lexicon` clasifica (se
-> mantiene igual); un **Canonicalizer** transforma alias → canónico con reglas
-> declarativas (`catalogue_aliases.yaml`, ...); el `WorkMatcher` compara solo formas
-> ya normalizadas. Es la **única incorporación antes de escribir código de V2.1.1**.
-| **V2.1.2** | Matching | `WorkMatcher` real, `WorkMerge`, coincidencias, puntuación explicable |
-
-> **V2.1.2 ✅ Hecho.** Contrato congelado en `docs/osap/v2/work-matcher-design.md` e
-> implementado: `MatchLevel` (SAME/POSSIBLE/DIFFERENT), `field_score` continuo
-> (título parcial 0.6), `MatchReason` tipado sin `matched`, `FieldComparison.SKIPPED`,
-> el matcher itera `config.weights` (campos desactivables sin código) y las reglas de
-> veto (catálogo → DIFFERENT) y coincidencia segura (authority → SAME) viven en
-> `MatchingConfig`, no en el código. El `WorkMatcher` V2.0 se renombró a
-> `WorkGroupingMatcher` para eliminar la colisión.
-| **V2.1.3** | Ranking | pesos **medidos** (no decididos), ranking de obras, paginación, filtros |
-
-> **V2.1.3 ✅ Hecho.** Contrato en `docs/osap/v2/ranking-design.md` (ADR-0023 cierra V2.1).
-> Principio: **el Ranking nunca cambia la identidad de una obra; solo ordena las
-> alternativas**. Se rankean **obras** (`WorkGroup`); criterios por familia
-> (`RELEVANCE_*`, `QUALITY_*`, `PREFERENCE_*`, `COVERAGE`), sin ejes fijos; contrato
-> tipado paralelo a V2.1.2 (`RankingCriterion`, `RankingReason`, `RankingScore`,
-> `RankingResult`), sin `str` ni `dict[str,…]`; `RankingContext` mínimo (no el
-> `SearchRequest`); **Ranking ≠ Sorting** (`SortingPolicy`); `enabled_criteria` en
-> `RankingConfig`. Evaluación (`MRR`/`NDCG`, golden ranking) en documento separado.
-
-> **V2.1 Freeze.** `Canonicalizer`, `WorkMatcher`, `WorkGrouping` y `Ranking` forman el
-> **Search Intelligence Pipeline**, validado de extremo a extremo con un test de
-> integración del dominio. **`domain/` y `ports/` son API pública congelada**: cambiar
-> un contrato requiere un ADR. (ADR-0022 y ADR-0023.)
-
-**Alcance**
-- Con OMR e IMSLP funcionando (V2.0.5/0.6), mejorar: sinónimos, transliteración,
-  búsquedas por catálogo, normalización y ranking textual.
-- Motor de búsqueda definitivo sobre `WorkMatcher` / `WorkGrouper` / `Lexicon`.
-- Aprovechar el subsistema de datasets (PDMX) e IMSLP como fuentes indexadas.
-
-**Criterios de salida**
-- Documento de diseño estable antes de la implementación.
-- `osap search` consistente entre proveedores (OpenScore, PDMX, IMSLP).
-- Búsqueda correcta en acentos/mayúsculas/parcial.
-- Sin IA / embeddings / LLM / búsqueda semántica: solo conocimiento musicológico.
-
----
-
-## V2.2 — Evidence definitivo → Dedup/Merge → Jobs
-
-Orden: primero se termina la **inteligencia del dominio** (Evidence, Dedup/Merge);
-después la **infraestructura** (Jobs).
-
-### V2.2.a — Evidence definitivo
-
-**Alcance**
-- Responde a una única pregunta: **¿por qué OSAP ha elegido esta representación?**
-- Modelo **completamente estructurado** (sin IA, sin lenguaje natural): `Evidence`
-  con `reasons` (confidence, format, public_domain, quality, completeness, checksum),
-  `metrics`, `provider`, `checksum`, `ranking_score`. Asociado al `ResolveResult`.
-- El propio ranking es explicable (`RankingReason`); un renderer los convierte a texto.
-
-> **Diseño**: `docs/osap/v2/evidence-design.md`. **Evidence genera hechos, no frases.**
-> `EvidenceCollector` recibe `MatchResult` + `RankingResult` + `SelectionResult` →
-> `EvidenceResult(items, summary, confidence)` con `EvidenceItem(source, code, score,
-> payload)` tipados (`EvidenceSource`: MATCHER/RANKER/SELECTION; `EvidenceCode` estable).
-> El renderer (texto/JSON/HTML) es trabajo posterior.
-
-**Estado:** ✅ **Hecho** (V2.2.a): `EvidenceCollector` + `IEvidenceContributor`
-implementados. `Evidence` se produce como hechos estructurados, sin renderer en el
-dominio (ADR-0025). Pendiente V2.2.x: ampliar `EvidenceCode` para cobertura 1:1
-`Reason → EvidenceItem` (decisión ADR-0025, opción A).
-
-### V2.2.b — Dedup / Merge (dominio)
-
-**Alcance**
-- Verificación de deduplicación/fusión (`Dedup`/`Merge`) sobre los `WorkGroup`.
-- Aplicar dedup/fusión de forma **verificable** (sin romper la identidad decidida por
-  el WorkMatcher).
-
-> **Diseño**: `docs/osap/v2/dedup-merge-design.md`. Principio: **"Merge nunca decide
-> identidad; solo consolida conocimiento."** Merge recibe un `WorkGroup` (identidad ya
-> decidida), enriquece **solo campos descriptivos**, confirma o expone como conflicto
-> los de identidad, y produce un descriptor consolidado con `MergeProvenance` +
-> `MergeConflicts` (inmutable, determinista, independiente del orden). La estrategia
-> (qué fuente gana) es **política** (`MergePolicy`), no contrato. Contribuye hechos a
-> Evidence.
-
-### V2.2.c — Jobs (infraestructura)
-
-**Alcance**
-- Motor de jobs asíncronos definitivo (hoy `InMemoryJobEngine` mínimo) para
-  adquisición y validación no bloqueante.
-- Se entra por **último**: es infraestructura, no dominio.
-
-**Criterios de salida (V2.2)**
-- Cada `ResolveResult` con candidato elegido incluye `Evidence` trazable.
-- Deduplicación/fusión se aplica de forma verificable.
-- Jobs asíncronos funcionando (tras Evidence y Dedup/Merge).
-
-### V2.2.d — Knowledge Mining (puente a V3)
-
-**Alcance**
-- Observar el funcionamiento de OSAP y generar **propuestas** (`knowledge/proposals/`).
-- Puente natural hacia V3 (conocimiento declarativo, sin IA).
-
-> **Diseño congelado**: `docs/osap/v2/knowledge-mining-design.md`. Knowledge Mining
-> **nunca modifica el sistema; solo transforma observaciones repetidas en sugerencias
-> verificables**; siempre decide un humano (ADR-0027).
-
-**Estado:** ✅ **Hecho** (V2.2.d): `IKnowledgeCollector` / `IKnowledgeMiner`,
-`KnowledgeObservation` / `KnowledgeFact` / `KnowledgeSuggestion` / `KnowledgeBase`
-(Value Objects inmutables), deterministas, reproducibles y con monotonicidad. Los
-componentes del dominio no conocen Knowledge Mining; no se modificó el núcleo.
-
----
-
-## V2.2.5 — Cierre del dominio (V2.2)
-
-- Commit de cierre.
-- Tag `v2.2.0`.
-- ADR-0027 (cierre del dominio).
-- ROADMAP actualizado.
-
-> **V2.2 completa el dominio funcional de OSAP.**
-> A partir de V3 el trabajo se centra en **exponer** el dominio mediante API, interfaz
-> web y herramientas de administración, manteniendo el núcleo estable.
-
-**Estado:** ✅ **Hecho**
-
----
-
-## V3 — Productización
-
-El dominio ya responde prácticamente todo. V3 no implementa lógica nueva: **expone** la
-existente. La web no tendrá que pensar, solo preguntar.
-
-### V3.1 — API REST ✅
-
-- FastAPI expone el dominio; **DTOs públicos** independientes del modelo de dominio.
-- `POST /api/v1/searches` (búsqueda como recurso) · `/jobs` · `/providers` ·
-  `/knowledge` (solo lectura) · `/system`.
-- Envelope uniforme (`success` + `request_id` + `data`/`error`), versionado `/api/v1/`.
-- **Contrato congelado** (ADR-0028): `docs/osap/v3/api-design.md`.
-- **Estado:** ✅ Implementado (V3.1.b).
-
-### V3.2 — OpenAPI ✅
-
-- **OpenAPI 3.1.x** generado automáticamente; constituye el **contrato oficial** de la API.
-- `/openapi.json`, `/docs` (Swagger UI), `/redoc`; tags Searches/Jobs/Providers/Knowledge/System.
-- **ADR-0029**: OpenAPI es un artefacto derivado, nunca fuente de verdad.
-- `docs/osap/v3/openapi-design.md`.
-- **Estado:** ✅ Implementado.
-
-### V3.3 — Cliente Web ✅
-
-- React 19 + TypeScript + Vite + React Router + Zustand + Tailwind.
-- **`ApiClient`** como único punto HTTP (interpreta el envelope; páginas sin `fetch`/`axios`).
-- 5 áreas simétricas con REST: Dashboard, Searches, Jobs, Knowledge, Administration.
-- Estados Loading / Ready / Empty / Error; Design System centralizado.
-- `docs/osap/v3/web-client-design.md`.
-- **Estado:** ✅ Implementado y **desplegado**.
-
-> **Despliegue**: `https://app.openmusicrepository.com` (producción, servidor `remotoIA`
-> 91.134.255.134). SPA estática en `~/openmusicrepository.com/app`; API OSAP V3.1 como
-> servicio `osap-api` (uvicorn, `127.0.0.1:8001`); nginx proxya `/api/` y
-> `/docs|/openapi.json|/redoc` a la API. Local (dev Apache): vhosts `osap-app`
-> (SPA `web/dist`) y `osap-api` (→ uvicorn `127.0.0.1:8001`); `osap-storage` ya existía.
-
-### V3.4 — Autenticación
-
-- Auth preparada (`Authorization: Bearer ...`) y deshabilitada en V3.1; se activa aquí.
-
-### V3.5 — Administración / Knowledge Review
-
-- Dashboard, Jobs, Knowledge, Sugerencias, Proveedores.
-- Pantalla para aceptar/rechazar sugerencias (`✓` / `✗`).
-- `IKnowledgeRepository` (V3.2 nota) para persistir el conocimiento
-  (`API → Knowledge Service → Repository → SQLite/Postgres`).
-
----
-
-## V2.3 — MuseScore
-
-**Alcance**
-- Nuevo adaptador `catalogs/musescore` sobre el catálogo MuseScore/OpenScore.
-- Cliente HTTP dedicado; gestión de licencias y de la API de MuseScore.
-- `IResourceProvider` aplicado a los recursos que MuseScore declare.
-
-**Criterios de salida**
-- `osap search/resolve` incluyen MuseScore con el mismo contrato que IMSLP/OpenScore.
-
----
-
-## V2.4 — YouTube
-
-**Alcance**
-- Adquisición audiovisual: `catalogs/youtube` (audio/referencia), no como fuente
-  principal de partituras sino como evidencia y referencia de interpretación.
-- Integración en `ResolveResult` como fuente auxiliar (no compite con las partituras).
-
-**Criterios de salida**
-- OSAP enlaza/obtiene la interpretación de referencia de una obra cuando existe.
-
----
-
-## V4 — Inteligencia musical
-
-**Alcance** (todo lo ⏳ de la auditoría)
-- Knowledge Base (`knowledge_base/*`) y aprendizaje de la plataforma.
-- **Relaciones entre obras**, **Versiones**, **Movimientos** y **Familias**.
-- **Knowledge Graph**: relaciones declarativas entre obras y recursos.
-- **Recomendaciones** e **Inferencias** derivadas del conocimiento acumulado.
-- IA avanzada: embeddings, aprendizaje automático, análisis armónico profundo,
-  OMR/IA asistida (Audiveris ya presente como adaptador).
-- Personalización con `user_profile/*`.
-
-**Criterios de salida**
-- OSAP mejora la resolución con conocimiento acumulado y asiste la conversión
-  cuando no hay datos estructurados.
-
----
-
-## Qué NO está en el roadmap
-
-- No se reinventa la arquitectura (dominio/puertos/aplicación/infraestructura).
-- No se construye IA (embeddings, ML, armónico profundo) antes de V4.
-- No se tocan `knowledge_base`, `pipeline` definitivo ni `user_profile` hasta su versión.
-- No se implementa exportación/CDN dentro de OSAP: eso es OMR.
-- No hay camino especial para OMR: es un `ICatalogProvider` más.
-- No se consultan cosas complejas directamente a OMR: siempre búsqueda en dos fases (ADR-0019).
-- **El núcleo ya está maduro.** No se tocan `ProviderOrchestrator`, `Evidence`,
-  `Aggregator`, `Ranking`, `SearchRequest` ni `ResolveRequest` salvo que un proveedor
-  real obligue a cambiarlos. No se cambia el diseño por nuevas posibilidades.
-- **Contratos congelados (API pública):** `domain/` y `ports/` (V2.1) no cambian sin
-  un ADR.
+*Fuente: `_docs/roadmap.md` (fases B, C, D, F, G).*
