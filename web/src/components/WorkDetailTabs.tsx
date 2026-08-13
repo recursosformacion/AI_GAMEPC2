@@ -171,40 +171,33 @@ function RepresentationsTab({
         {t("work.foundReps").replace("{n}", String(representations.length)).replace("{p}", String(byProvider.size))}
       </p>
 
-      <div className="grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-2 border-b border-osap-border px-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-osap-muted">
+      <div className="flex items-center justify-between border-b border-osap-border px-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-osap-muted">
         <span>{t("work.title")}</span>
-        <span className="w-12 text-right">{t("work.provider")}</span>
-        <span className="w-12 text-right">{t("work.format")}</span>
-        <span className="w-9 text-right">{t("work.confidence")}</span>
-        <span className="w-24 text-right">{t("work.action")}</span>
+        <span>{t("work.action")}</span>
       </div>
 
       <ul className="divide-y divide-osap-border">
         {representations.map((rep, i) => (
           <li
             key={`${rep.provider}-${rep.format}-${i}`}
-            className={`grid grid-cols-[1fr_auto_auto_auto_auto] items-center gap-2 px-1 py-1.5 text-sm hover:bg-osap-accent-soft ${
+            className={`flex items-center gap-2 px-1 py-1.5 text-sm hover:bg-osap-accent-soft ${
               selected === rep.id ? "bg-osap-accent-soft" : ""
             }`}
             onClick={() => setSelected(rep.id)}
           >
-            <span title={rep.title || rep.provider} className="truncate">
-              <span className="font-medium">{rep.title || rep.provider}</span>
+            <span className="min-w-0 flex-1 cursor-pointer text-left">
+              <span className="block truncate font-medium">{rep.title || rep.provider}</span>
+              <span className="block text-xs text-osap-muted">
+                {rep.provider} · {rep.format} · {(rep.confidence * 100).toFixed(0)}%
+              </span>
             </span>
-            <span title={rep.provider} className="w-12 truncate text-right text-xs text-osap-muted">
-              {providerAbbrev(rep.provider)}
-            </span>
-            <span title={rep.format} className="w-12 text-right text-xs text-osap-muted">
-              {rep.format}
-            </span>
-            <span className="w-9 text-right text-xs text-osap-muted">{(rep.confidence * 100).toFixed(0)}%</span>
-            <span className="flex w-24 items-center justify-end gap-1.5">
+            <span className="flex shrink-0 items-center gap-1.5">
               <a
                 href={`/api/v1/representations/${rep.id}/download?view=1`}
                 target="_blank"
                 rel="noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="rounded border border-osap-border px-1.5 py-0.5 text-xs text-osap-accent hover:bg-osap-accent-soft"
+                className="rounded border border-osap-border px-2 py-0.5 text-xs text-osap-accent hover:bg-osap-accent-soft"
               >
                 {t("work.view")}
               </a>
@@ -214,7 +207,7 @@ function RepresentationsTab({
                 target="_blank"
                 rel="noreferrer"
                 onClick={(e) => e.stopPropagation()}
-                className="rounded border border-osap-border px-1.5 py-0.5 text-xs text-osap-accent hover:bg-osap-accent-soft"
+                className="rounded border border-osap-border px-2 py-0.5 text-xs text-osap-accent hover:bg-osap-accent-soft"
               >
                 {t("work.download")}
               </a>
@@ -235,7 +228,7 @@ function RepresentationsTab({
             <Meta label={t("work.providerId")} value={sel.id} />
           </dl>
           <div className="mt-3 flex flex-wrap gap-2">
-            {sel.url ? (
+            {sel.url && sel.provider !== "osap-storage" ? (
               <a
                 href={sel.url}
                 target="_blank"
@@ -304,11 +297,6 @@ function ProvidersTab({ byProvider }: { byProvider: Map<string, RepresentationIn
       </ul>
     </div>
   );
-}
-
-function providerAbbrev(name: string): string {
-  const clean = name.trim();
-  return clean.length <= 5 ? clean : clean.slice(0, 5);
 }
 
 function downloadFileName(rep: RepresentationInfo): string {
