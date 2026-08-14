@@ -39,8 +39,21 @@ def resolve_batch(base: str, works: list[dict], concurrency: int) -> dict:
         },
         method="POST",
     )
-    with urllib.request.urlopen(req, timeout=180) as resp:  # noqa: S310
+    with urllib.request.urlopen(req, timeout=240) as resp:  # noqa: S310
         return json.loads(resp.read().decode("utf-8"))
+
+
+def resolve_chunked(base: str, works: list[dict], concurrency: int, chunk: int = 20) -> list[dict]:
+    """Divide en lotes para no superar el timeout del proxy y agrega resultados."""
+    all_results: list[dict] = []
+    for i in range(0, len(works), chunk):
+        batch = works[i : i + chunk]
+        data = resolve_batch(base, batch, concurrency)
+        payload = data.get("data", {}) if isinstance(data, dict) else {}
+        all_results.extend(payload.get("results", []))
+        done = min(i + chunk, len(works))
+        print(f"  ... {done}/{len(works)}", file=sys.stderr)
+    return all_results
 
 
 def main() -> None:
@@ -49,6 +62,7 @@ def main() -> None:
     parser.add_argument("--base", default=DEFAULT_BASE, help="API base URL (default %(default)s)")
     parser.add_argument("--concurrency", type=int, default=4)
     parser.add_argument("--samples", type=int, default=5, help="samples per status to print")
+    parser.add_argument("--chunk", type=int, default=20, help="works per API call (default %(default)s)")
     args = parser.parse_args()
 
     works = json.loads(Path(args.works_file).read_text("utf-8")).get("works", [])
@@ -56,10 +70,17 @@ def main() -> None:
         print("No works in file", file=sys.stderr)
         return
 
-    data = resolve_batch(args.base, works, args.concurrency)
-    payload = data.get("data", {}) if isinstance(data, dict) else {}
-    results = payload.get("results", [])
-    summary = payload.get("summary", {})
+    results = resolve_chunked(args.base, works, args.concurrency, args.chunk)
+    out_path = Path(args.works_file).with_suffix(".results.json")
+    out_path.write_text(json.dumps({"works": works, "results": results}, ensure_ascii=False, indent=1), "utf-8")
+    print(f"\nResultados completos guardados en: {out_path}", file=sys.stderr)
+    status_counts = Counter(r["status"] for r in results)
+    summary = {
+        "total": len(results),
+        "resolved": status_counts.get("resolved", 0),
+        "ambiguous": status_counts.get("ambiguous", 0),
+        "not_found": status_counts.get("not_found", 0),
+    }
 
     status_counts = Counter(r["status"] for r in results)
     composer_null = sum(1 for r in results if (r.get("resolved") or {}).get("composer") is None)

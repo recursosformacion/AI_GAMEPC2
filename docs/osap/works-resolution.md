@@ -126,12 +126,32 @@ Mide: `resolved` / `ambiguous` / `not_found`, `composer null` (obra sin autor),
 una muestra por estado para revisión manual. Ejemplo de muestra:
 `script/works_resolve_sample.json`.
 
-### Hallazgos iniciales (muestra de 10)
+### Hallazgos iniciales (250 obras reales de osap-storage, concurrency 4)
 
-- Muchas obras bien conocidas quedan `ambiguous` con `composer: null`: el `work_match`
-  devuelve varios compositores a **confianza plana 0.9**, sin margen → no decide el autor.
-  Falta gradar la confianza por la calidad del emparejamiento (fase posterior).
-- Un `resolved` puede ser **incorrecto** (Bach BWV 565 → BWV 862): revisar manualmente
-  cada `resolved` es imprescindible; un `resolved` erróneo es peor que un `ambiguous`.
-- El caso pdmx ("Song to the Auspicious Cloud") da `not_found`: no está en los catálogos
-  actuales (honesto, no inventa).
+```
+total             : 250
+resolved          : 73  (29%)
+ambiguous         : 99  (40%)
+not_found         : 78  (31%)
+composer null     : 177 (71%)  -> obra identificada pero autor no resuelto
+input corrupt     : 2
+input suspicious  : 1
+```
+
+Proveedores que aportan evidencia: IMSLP (463), OMR (442), MusicBrainz (143), Mutopia (43),
+Wikidata (38), OpenScore (3), canonical (2).
+
+**Revisión manual de la muestra:**
+- Muchos `resolved` son **incorrectos** (ej. "John Roy Stewart a Strathspey" → "Hamilton's
+  Universal Tune-Book / Various"; "Roslyn Castle" → "Fantasia on 'Roslyn Castle'" de otro
+  compositor). Confirma que un `resolved` erróneo es peor que un `ambiguous`: **hay que
+  revisar manualmente cada `resolved`**.
+- Los `ambiguous` suelen tener la **obra bien identificada** pero `composer: null` (caso
+  "obra resuelta, autor no"): falta evidencia para decidir el autor.
+- `not_found` son obras que los catálogos actuales no tienen (honesto).
+- Muy pocos inputs corruptos en datos de storage limpio (esperable).
+
+**Conclusión:** el motor identifica bien la obra en muchos casos, pero la confianza del
+`work_match` es **plana (0.9)**, lo que provoca (a) empates → `ambiguous` y (b) `resolved`
+con obra/compositor equivocados. La siguiente fase debería **gradar la confianza por la
+calidad del emparejamiento** y **filtrar/rankejar la obra** antes de decidir.

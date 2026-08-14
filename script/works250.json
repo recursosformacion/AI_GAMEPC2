@@ -1,0 +1,1786 @@
+{
+ "works": [
+  {
+   "id": "1",
+   "work": {
+    "title": "I shall be no stranger there - William J. Kirkpatrick"
+   },
+   "composer": {
+    "name": "William James Kirkpatrick"
+   }
+  },
+  {
+   "id": "2",
+   "work": {
+    "title": "Let us away - George T. Kirkpatrick"
+   },
+   "composer": {
+    "name": "George T. Kirkpatrick"
+   }
+  },
+  {
+   "id": "3",
+   "work": {
+    "title": "Helvic Head"
+   }
+  },
+  {
+   "id": "4",
+   "work": {
+    "title": "The Lady On The Island"
+   }
+  },
+  {
+   "id": "5",
+   "work": {
+    "title": "JOHN ROY STEWART. a Strathspey."
+   }
+  },
+  {
+   "id": "6",
+   "work": {
+    "title": "Oddfellows Holiday. HS.09"
+   },
+   "composer": {
+    "name": "Set of QuadrillesNo3"
+   }
+  },
+  {
+   "id": "7",
+   "work": {
+    "title": "Roslyn Castle"
+   }
+  },
+  {
+   "id": "8",
+   "work": {
+    "title": "The Humours Of Lissadell"
+   }
+  },
+  {
+   "id": "9",
+   "work": {
+    "title": "Ffidl Ffadl"
+   }
+  },
+  {
+   "id": "10",
+   "work": {
+    "title": "The Welch Jig"
+   }
+  },
+  {
+   "id": "11",
+   "work": {
+    "title": "The Bear Dance"
+   }
+  },
+  {
+   "id": "12",
+   "work": {
+    "title": "French Slow March JBut.866 A"
+   }
+  },
+  {
+   "id": "13",
+   "work": {
+    "title": "Paddies Evermore (air) 0262"
+   },
+   "composer": {
+    "name": "after Chief F. O'Neillwith spirit"
+   }
+  },
+  {
+   "id": "14",
+   "work": {
+    "title": "Allegro"
+   }
+  },
+  {
+   "id": "15",
+   "work": {
+    "title": "Like a star of the morning - Edmund S. Lorenz"
+   },
+   "composer": {
+    "name": "Edmund Simon Lorenz"
+   }
+  },
+  {
+   "id": "16",
+   "work": {
+    "title": "The Little Bag of Potatoes"
+   }
+  },
+  {
+   "id": "17",
+   "work": {
+    "title": "Ye servants of god - Edward P. Crawford"
+   },
+   "composer": {
+    "name": "Edward Patrick Crawford (1846-1912)"
+   }
+  },
+  {
+   "id": "18",
+   "work": {
+    "title": "Urheber unbekannt - [ID 9-11b]"
+   },
+   "composer": {
+    "name": "Urheber unbekanntDatum in der hier transkribierten schriftlichen Quelle: 1796"
+   }
+  },
+  {
+   "id": "19",
+   "work": {
+    "title": "Attwood - Together then we'd fondly stray"
+   },
+   "composer": {
+    "name": "Attwood"
+   }
+  },
+  {
+   "id": "20",
+   "work": {
+    "title": "Infinite god to thee we raise - Thomas W. Staniforth"
+   },
+   "composer": {
+    "name": "Thomas Worsley Staniforth (1845-1909)"
+   }
+  },
+  {
+   "id": "21",
+   "work": {
+    "title": "In my heart there rings a song of gladness - Grant Colfax Tullar"
+   }
+  },
+  {
+   "id": "22",
+   "work": {
+    "title": "COQUETTE SETT (tune 3)"
+   }
+  },
+  {
+   "id": "23",
+   "work": {
+    "title": "The Regency Waltz"
+   }
+  },
+  {
+   "id": "24",
+   "work": {
+    "title": "Lashley's March"
+   }
+  },
+  {
+   "id": "25",
+   "work": {
+    "title": "the Crusaders"
+   }
+  },
+  {
+   "id": "26",
+   "work": {
+    "title": "for my cat"
+   }
+  },
+  {
+   "id": "27",
+   "work": {
+    "title": "Crimson Peak - Edith's Theme"
+   },
+   "composer": {
+    "name": "Fernando Velazquez"
+   }
+  },
+  {
+   "id": "28",
+   "work": {
+    "title": "Come Thou fount of every blessing"
+   }
+  },
+  {
+   "id": "29",
+   "work": {
+    "title": "Trip to Aberdeen"
+   }
+  },
+  {
+   "id": "30",
+   "work": {
+    "title": "Kemp's jig"
+   },
+   "composer": {
+    "name": "anon."
+   }
+  },
+  {
+   "id": "31",
+   "work": {
+    "title": "Come my soul thy suit prepare - Carl M. von Weber"
+   },
+   "composer": {
+    "name": "From Carl Maria von Weber 1826"
+   }
+  },
+  {
+   "id": "32",
+   "work": {
+    "title": "Trunch Wassail Song"
+   }
+  },
+  {
+   "id": "33",
+   "work": {
+    "title": "Ø¹ÙÙÙÙ ØÙ ØÙÙÙ ØµØÙØªØ ÙÙØ - Paul Danial ØÙÙ ØØÙÙØÙ"
+   }
+  },
+  {
+   "id": "34",
+   "work": {
+    "title": "OLD SHIP OF ZION (Spiritual)"
+   }
+  },
+  {
+   "id": "35",
+   "work": {
+    "title": "Etudes for A Trumpet 2"
+   }
+  },
+  {
+   "id": "36",
+   "work": {
+    "title": "Maggie in the Wood"
+   }
+  },
+  {
+   "id": "37",
+   "work": {
+    "title": "california-blue"
+   }
+  },
+  {
+   "id": "38",
+   "work": {
+    "title": "Raccoon on a Rail"
+   }
+  },
+  {
+   "id": "39",
+   "work": {
+    "title": "Mr. Riley"
+   }
+  },
+  {
+   "id": "40",
+   "work": {
+    "title": "Molly Mogg"
+   }
+  },
+  {
+   "id": "41",
+   "work": {
+    "title": "Peter I. Tchaikovsky - Italian Song (Orchestra) Orchestrated by Alex Nuñez"
+   },
+   "composer": {
+    "name": "Peter I. Tchaikovsky"
+   }
+  },
+  {
+   "id": "42",
+   "work": {
+    "title": "Great king of nations hear our prayer - Frederick James"
+   },
+   "composer": {
+    "name": "Frederick James 1889"
+   }
+  },
+  {
+   "id": "43",
+   "work": {
+    "title": "Have you room for the king? - Maude A. Hart"
+   },
+   "composer": {
+    "name": "Maude Anita Hart"
+   }
+  },
+  {
+   "id": "44",
+   "work": {
+    "title": "Col. McBain"
+   },
+   "composer": {
+    "name": "anon."
+   }
+  },
+  {
+   "id": "45",
+   "work": {
+    "title": "Jackson's Mistake"
+   }
+  },
+  {
+   "id": "46",
+   "work": {
+    "title": "Far from Home"
+   }
+  },
+  {
+   "id": "47",
+   "work": {
+    "title": "Lady Maxwell's Reel"
+   }
+  },
+  {
+   "id": "48",
+   "work": {
+    "title": "Genevan 136 - Pierre Davantès"
+   },
+   "composer": {
+    "name": "77 77GENEVAN 136www.hymnary.org/text/let_us_with_a_gladsome_mind"
+   }
+  },
+  {
+   "id": "49",
+   "work": {
+    "title": "Picking up Sticks"
+   }
+  },
+  {
+   "id": "50",
+   "work": {
+    "title": "The High Reel 2x"
+   }
+  },
+  {
+   "id": "51",
+   "work": {
+    "title": "Ave maris stella - Josep Navarro i Solves"
+   }
+  },
+  {
+   "id": "52",
+   "work": {
+    "title": "The NEW RIGG'D SHIP. A Jigg."
+   }
+  },
+  {
+   "id": "53",
+   "work": {
+    "title": "Untitled Air"
+   }
+  },
+  {
+   "id": "54",
+   "work": {
+    "title": "The Golden Keyboard"
+   }
+  },
+  {
+   "id": "55",
+   "work": {
+    "title": "Under the Boardwalk"
+   },
+   "composer": {
+    "name": "Artie Resnick and Kenny Young"
+   }
+  },
+  {
+   "id": "56",
+   "work": {
+    "title": "DreamThe. WM063"
+   }
+  },
+  {
+   "id": "57",
+   "work": {
+    "title": "the Rattlin' Bog"
+   }
+  },
+  {
+   "id": "58",
+   "work": {
+    "title": "Northampton Frolick. Ru1.020"
+   }
+  },
+  {
+   "id": "59",
+   "work": {
+    "title": "D'r Maia"
+   }
+  },
+  {
+   "id": "60",
+   "work": {
+    "title": "Follow Me Up"
+   }
+  },
+  {
+   "id": "61",
+   "work": {
+    "title": "Amazing Grace! (Folk Process Accretions)"
+   }
+  },
+  {
+   "id": "62",
+   "work": {
+    "title": "Trip up Stairs"
+   }
+  },
+  {
+   "id": "63",
+   "work": {
+    "title": "Ahi et e dunque - Enrico Radesca"
+   },
+   "composer": {
+    "name": "Enrico Radesca di Foggia"
+   }
+  },
+  {
+   "id": "64",
+   "work": {
+    "title": "The Picnic"
+   }
+  },
+  {
+   "id": "65",
+   "work": {
+    "title": "The Humours of Glen. CJS.43(ii)"
+   }
+  },
+  {
+   "id": "66",
+   "work": {
+    "title": "Welcome the quiet sabbath dawn - J. S. Boyd"
+   },
+   "composer": {
+    "name": "J. S. Boyd 1881"
+   }
+  },
+  {
+   "id": "67",
+   "work": {
+    "title": "The New Tariff Hunt"
+   }
+  },
+  {
+   "id": "68",
+   "work": {
+    "title": "Morgan Rattler"
+   },
+   "composer": {
+    "name": "anon."
+   }
+  },
+  {
+   "id": "69",
+   "work": {
+    "title": "Hot Ashpelt"
+   }
+  },
+  {
+   "id": "70",
+   "work": {
+    "title": "Puss in the Corner -- Jig"
+   }
+  },
+  {
+   "id": "71",
+   "work": {
+    "title": "Emperor of the Moon"
+   }
+  },
+  {
+   "id": "72",
+   "work": {
+    "title": "Bonny Kate. Roose.0242"
+   }
+  },
+  {
+   "id": "73",
+   "work": {
+    "title": "SCOTIA'S REEL"
+   },
+   "composer": {
+    "name": "Composed by W.B. Laybourn"
+   }
+  },
+  {
+   "id": "74",
+   "work": {
+    "title": "We would see Jesus the babe in the manger - Jay Ford"
+   },
+   "composer": {
+    "name": "Jay A. Ford"
+   }
+  },
+  {
+   "id": "75",
+   "work": {
+    "title": "Over The Hills And Far Away. HA.168"
+   }
+  },
+  {
+   "id": "76",
+   "work": {
+    "title": "Schubert Franz - Die schöne Müllerin (D.795) No.7 - Ungeduld"
+   },
+   "composer": {
+    "name": "Franz Schubert"
+   }
+  },
+  {
+   "id": "77",
+   "work": {
+    "title": "Op.2769 åãå¼å_Winter Breathing"
+   },
+   "composer": {
+    "name": "Yohei Kato åè æå¹³"
+   }
+  },
+  {
+   "id": "78",
+   "work": {
+    "title": "Ap Shenkin"
+   }
+  },
+  {
+   "id": "79",
+   "work": {
+    "title": "The Silver Bell Schottische"
+   }
+  },
+  {
+   "id": "80",
+   "work": {
+    "title": "Super Mario Athletic Theme"
+   },
+   "composer": {
+    "name": "Koji Kondo / xMrPianox (Arranger)"
+   }
+  },
+  {
+   "id": "81",
+   "work": {
+    "title": "I cannot tell how wonderful - Arthur Wilton"
+   }
+  },
+  {
+   "id": "82",
+   "work": {
+    "title": "Lady St. John"
+   },
+   "composer": {
+    "name": "Turlough O'Connor (1670-1738)"
+   }
+  },
+  {
+   "id": "83",
+   "work": {
+    "title": "Arthur Seat"
+   },
+   "composer": {
+    "name": "J. Scott Skinner"
+   }
+  },
+  {
+   "id": "84",
+   "work": {
+    "title": "Victoria Christe resurgenti - François Couperin"
+   }
+  },
+  {
+   "id": "85",
+   "work": {
+    "title": "Just Because 1"
+   }
+  },
+  {
+   "id": "86",
+   "work": {
+    "title": "Meu caro amigo"
+   },
+   "composer": {
+    "name": "Chico Buarque"
+   }
+  },
+  {
+   "id": "87",
+   "work": {
+    "title": "Master on Calvary we see Thee in anguish - J. Lincoln Hall"
+   }
+  },
+  {
+   "id": "88",
+   "work": {
+    "title": "Paddy Fahey's"
+   }
+  },
+  {
+   "id": "89",
+   "work": {
+    "title": "Round O"
+   }
+  },
+  {
+   "id": "90",
+   "work": {
+    "title": "Traditional music - Vallafield"
+   },
+   "composer": {
+    "name": "trad Shetland"
+   }
+  },
+  {
+   "id": "91",
+   "work": {
+    "title": "Father's Day In The Beech Grove"
+   }
+  },
+  {
+   "id": "92",
+   "work": {
+    "title": "Gladstone's Reel"
+   },
+   "composer": {
+    "name": "J. Scott Skinner"
+   }
+  },
+  {
+   "id": "93",
+   "work": {
+    "title": "God Bless You and Bugger Me"
+   }
+  },
+  {
+   "id": "94",
+   "work": {
+    "title": "Trip it up Stairs. JJo4.133"
+   }
+  },
+  {
+   "id": "95",
+   "work": {
+    "title": "Heyr Himna Smiður (TTBB)"
+   },
+   "composer": {
+    "name": "Þorkell Sigurbjörnsson"
+   }
+  },
+  {
+   "id": "96",
+   "work": {
+    "title": "Kirkmichael Ploughs"
+   }
+  },
+  {
+   "id": "97",
+   "work": {
+    "title": "Lebenslust - Franz Schubert"
+   }
+  },
+  {
+   "id": "98",
+   "work": {
+    "title": "Humphrey's -- Hornpipe"
+   }
+  },
+  {
+   "id": "99",
+   "work": {
+    "title": "Lord be thy word my rule; SATB"
+   },
+   "composer": {
+    "name": "Oswald Mosley Feilden 1863"
+   }
+  },
+  {
+   "id": "100",
+   "work": {
+    "title": "Hiding in thee - Ira D. Sankey"
+   },
+   "composer": {
+    "name": "Ira David Sankey 1877"
+   }
+  },
+  {
+   "id": "101",
+   "work": {
+    "title": "Calm It"
+   },
+   "composer": {
+    "name": "Clifford C. Roberts III"
+   }
+  },
+  {
+   "id": "102",
+   "work": {
+    "title": "The Galty Rangers"
+   }
+  },
+  {
+   "id": "103",
+   "work": {
+    "title": "Shot in the dark"
+   },
+   "composer": {
+    "name": "Henry Mancini"
+   }
+  },
+  {
+   "id": "104",
+   "work": {
+    "title": "Strauss - BEAUTIFUL DANUBE -- Waltz 4"
+   },
+   "composer": {
+    "name": "Strauss"
+   }
+  },
+  {
+   "id": "105",
+   "work": {
+    "title": "TRUE LOVE CAN NE'ER FORGET"
+   }
+  },
+  {
+   "id": "106",
+   "work": {
+    "title": "A virgin most pure - Anonymous (Traditional)"
+   },
+   "composer": {
+    "name": "English traditional carolarr. Charles Wood (1866 - 1926)"
+   }
+  },
+  {
+   "id": "107",
+   "work": {
+    "title": "Thadelo's"
+   }
+  },
+  {
+   "id": "108",
+   "work": {
+    "title": "The star of morn has risen - John Naylor"
+   },
+   "composer": {
+    "name": "John Naylor 1873"
+   }
+  },
+  {
+   "id": "109",
+   "work": {
+    "title": "random song"
+   }
+  },
+  {
+   "id": "110",
+   "work": {
+    "title": "The Fashion which the Lasses have"
+   }
+  },
+  {
+   "id": "111",
+   "work": {
+    "title": "Fantasia X"
+   },
+   "composer": {
+    "name": "Dirk A.Van gysel"
+   }
+  },
+  {
+   "id": "112",
+   "work": {
+    "title": "Wonderful night! Wonderful night - John F. Young"
+   },
+   "composer": {
+    "name": "Composer Unknown 1866"
+   }
+  },
+  {
+   "id": "113",
+   "work": {
+    "title": "the BLATH'RIE O'T"
+   }
+  },
+  {
+   "id": "114",
+   "work": {
+    "title": "The Joys of Wedlock"
+   }
+  },
+  {
+   "id": "115",
+   "work": {
+    "title": "The Sicilian Dance. GS.067"
+   },
+   "composer": {
+    "name": "1831"
+   }
+  },
+  {
+   "id": "116",
+   "work": {
+    "title": "The Basso"
+   }
+  },
+  {
+   "id": "117",
+   "work": {
+    "title": "Glory Sher"
+   }
+  },
+  {
+   "id": "118",
+   "work": {
+    "title": "Counted in - John M. Whyte"
+   },
+   "composer": {
+    "name": "John Marchant Whyte"
+   }
+  },
+  {
+   "id": "119",
+   "work": {
+    "title": "Darling Lovely Sue"
+   }
+  },
+  {
+   "id": "120",
+   "work": {
+    "title": "Rodman - Lowell Mason"
+   },
+   "composer": {
+    "name": "Lowell Mason (1792-1872)"
+   }
+  },
+  {
+   "id": "121",
+   "work": {
+    "title": "Allen's Bar"
+   }
+  },
+  {
+   "id": "122",
+   "work": {
+    "title": "Flow gently sweet Afton"
+   },
+   "composer": {
+    "name": "Comp.Alexander Hume"
+   }
+  },
+  {
+   "id": "123",
+   "work": {
+    "title": "Hand of James Lishman - Sailor's Topsail. BF11.46"
+   },
+   "composer": {
+    "name": "Hand of James Lishman"
+   }
+  },
+  {
+   "id": "124",
+   "work": {
+    "title": "MA CHERE AMIE"
+   }
+  },
+  {
+   "id": "125",
+   "work": {
+    "title": "The Pearl of the White Breast"
+   }
+  },
+  {
+   "id": "126",
+   "work": {
+    "title": "Introibo ad altare - Heinrich Isaac"
+   },
+   "composer": {
+    "name": "Heinrich Isaac (c.1450-1517)Choralis Constantinus 1550"
+   }
+  },
+  {
+   "id": "127",
+   "work": {
+    "title": "Auretti's Dutch Skipper"
+   }
+  },
+  {
+   "id": "128",
+   "work": {
+    "title": "A Moment of Madness"
+   }
+  },
+  {
+   "id": "129",
+   "work": {
+    "title": "My Love is But a Lassie Yet (A)"
+   }
+  },
+  {
+   "id": "130",
+   "work": {
+    "title": "Traditional music - Ton double plin"
+   },
+   "composer": {
+    "name": "Traditionnel"
+   }
+  },
+  {
+   "id": "131",
+   "work": {
+    "title": "Roys Wife. Le4.114"
+   }
+  },
+  {
+   "id": "132",
+   "work": {
+    "title": "Such as in God the Lord do trust - Giles Farnaby"
+   },
+   "composer": {
+    "name": "Psalm 125 - Farnaby"
+   }
+  },
+  {
+   "id": "133",
+   "work": {
+    "title": "Contre Danze / De klapperman (2) (HS.dGJ.103)"
+   },
+   "composer": {
+    "name": "Bij een vergaedert ende op gestelt door Ioannes de Grúijtters"
+   }
+  },
+  {
+   "id": "134",
+   "work": {
+    "title": "Jerry's beaver hat"
+   },
+   "composer": {
+    "name": "anon."
+   }
+  },
+  {
+   "id": "135",
+   "work": {
+    "title": "Watch and pray day by day - Wilfred Robertson"
+   }
+  },
+  {
+   "id": "136",
+   "work": {
+    "title": "Rogero"
+   }
+  },
+  {
+   "id": "137",
+   "work": {
+    "title": "Salve festa dies IV"
+   }
+  },
+  {
+   "id": "138",
+   "work": {
+    "title": "Lady Carbury"
+   }
+  },
+  {
+   "id": "139",
+   "work": {
+    "title": "Le ROSSIGNOL WALTZ"
+   }
+  },
+  {
+   "id": "140",
+   "work": {
+    "title": "Welcome to Vulf Records"
+   },
+   "composer": {
+    "name": "Joey Dosik"
+   }
+  },
+  {
+   "id": "141",
+   "work": {
+    "title": "Felton (or Pelton) Lonnin'"
+   }
+  },
+  {
+   "id": "142",
+   "work": {
+    "title": "GOD SAVE THE KING"
+   }
+  },
+  {
+   "id": "143",
+   "work": {
+    "title": "Miss Charlotte Ann Lowe"
+   }
+  },
+  {
+   "id": "144",
+   "work": {
+    "title": "Traditional music - Suo Gan"
+   },
+   "composer": {
+    "name": "Traditional"
+   }
+  },
+  {
+   "id": "145",
+   "work": {
+    "title": "Light of the Seven"
+   },
+   "composer": {
+    "name": "Ramin Djawadi"
+   }
+  },
+  {
+   "id": "146",
+   "work": {
+    "title": "the Lads are all Come Back Again"
+   }
+  },
+  {
+   "id": "147",
+   "work": {
+    "title": "Transport"
+   },
+   "composer": {
+    "name": "Wyeth's Repository Part Second 1813C major Arranged by William Hauser 1848"
+   }
+  },
+  {
+   "id": "148",
+   "work": {
+    "title": "Mrs.Mitford's Fancy. Tho24CDs1792.05"
+   },
+   "composer": {
+    "name": "77"
+   }
+  },
+  {
+   "id": "149",
+   "work": {
+    "title": "Disconnected"
+   },
+   "composer": {
+    "name": "Inspired by ( ''_'' )"
+   }
+  },
+  {
+   "id": "150",
+   "work": {
+    "title": "Milan by ear"
+   }
+  },
+  {
+   "id": "151",
+   "work": {
+    "title": "Patsy Tuohey's"
+   }
+  },
+  {
+   "id": "152",
+   "work": {
+    "title": "Seven Nation Army - The White Stripes"
+   }
+  },
+  {
+   "id": "153",
+   "work": {
+    "title": "ROCKY ROAD TO DUBLIN -- JIG."
+   }
+  },
+  {
+   "id": "154",
+   "work": {
+    "title": "reel de Bellechasse"
+   }
+  },
+  {
+   "id": "155",
+   "work": {
+    "title": "The Derry"
+   }
+  },
+  {
+   "id": "156",
+   "work": {
+    "title": "Horrible for Piano in g minor"
+   },
+   "composer": {
+    "name": "Ville Räisänenvsrvsr.name"
+   }
+  },
+  {
+   "id": "157",
+   "work": {
+    "title": "True and loyal to our Lord above - C. Harold Lowden"
+   }
+  },
+  {
+   "id": "158",
+   "work": {
+    "title": "Hero's Life (Compact Score) Update"
+   },
+   "composer": {
+    "name": "By: Marc Johnson"
+   }
+  },
+  {
+   "id": "159",
+   "work": {
+    "title": "In meiner not - Adam Gumpelzhaimer"
+   },
+   "composer": {
+    "name": "Adam Gumpelzhaimer"
+   }
+  },
+  {
+   "id": "160",
+   "work": {
+    "title": "Miss Jessie Scott"
+   }
+  },
+  {
+   "id": "161",
+   "work": {
+    "title": "The Brown Maid"
+   }
+  },
+  {
+   "id": "162",
+   "work": {
+    "title": "Neil Gow - General MacDonald"
+   },
+   "composer": {
+    "name": "Neil Gow"
+   }
+  },
+  {
+   "id": "163",
+   "work": {
+    "title": "West Street Assembly. Ru1.015"
+   }
+  },
+  {
+   "id": "164",
+   "work": {
+    "title": "Amazing Grace"
+   },
+   "composer": {
+    "name": "Music: James P. Carell David S. Clayton 1831"
+   }
+  },
+  {
+   "id": "165",
+   "work": {
+    "title": "Postman's Knock (Adderbury) in D"
+   }
+  },
+  {
+   "id": "166",
+   "work": {
+    "title": "Up in the Morning Early"
+   }
+  },
+  {
+   "id": "167",
+   "work": {
+    "title": "Joy-bells - Charles H. Gabriel"
+   },
+   "composer": {
+    "name": "Charles Hutchinson Gabriel"
+   }
+  },
+  {
+   "id": "168",
+   "work": {
+    "title": "Sorry (Justin Bieber) Arranged by Ishbah Cox - Timpani"
+   },
+   "composer": {
+    "name": "Arranged by Ishbah Cox"
+   }
+  },
+  {
+   "id": "169",
+   "work": {
+    "title": "Glory in the highest (ford) - Mrs. H. A. Farnsworth"
+   },
+   "composer": {
+    "name": "Mrs. H. A. Fansworth 1909"
+   }
+  },
+  {
+   "id": "170",
+   "work": {
+    "title": "SMG2 - Cloud Garden - Flute & Clarinet"
+   },
+   "composer": {
+    "name": "Mahito Yokota"
+   }
+  },
+  {
+   "id": "171",
+   "work": {
+    "title": "Bill Sutherland's March"
+   }
+  },
+  {
+   "id": "172",
+   "work": {
+    "title": "Annie O'Brien"
+   }
+  },
+  {
+   "id": "173",
+   "work": {
+    "title": "The Mountaineers"
+   }
+  },
+  {
+   "id": "174",
+   "work": {
+    "title": "Fingall's Lamentation"
+   }
+  },
+  {
+   "id": "175",
+   "work": {
+    "title": "Tielman Susato - Pass et medio"
+   },
+   "composer": {
+    "name": "Tielman Susato"
+   }
+  },
+  {
+   "id": "176",
+   "work": {
+    "title": "O Hush Thee My Babie - Arthur Sullivan"
+   },
+   "composer": {
+    "name": "O hush thee my babie - Sullivan"
+   }
+  },
+  {
+   "id": "177",
+   "work": {
+    "title": "The Green Tree"
+   }
+  },
+  {
+   "id": "178",
+   "work": {
+    "title": "SlipThe. (p)1651.PLFD.093"
+   }
+  },
+  {
+   "id": "179",
+   "work": {
+    "title": "Seven Years"
+   }
+  },
+  {
+   "id": "180",
+   "work": {
+    "title": "Trip to Winchcomb A"
+   }
+  },
+  {
+   "id": "181",
+   "work": {
+    "title": "The Little Bold Fox"
+   }
+  },
+  {
+   "id": "182",
+   "work": {
+    "title": "William Marshall - Cullen House a Strathspey"
+   },
+   "composer": {
+    "name": "William Marshall"
+   }
+  },
+  {
+   "id": "183",
+   "work": {
+    "title": "Dad's Favourite"
+   }
+  },
+  {
+   "id": "184",
+   "work": {
+    "title": "Lord Cathcart. JMT088"
+   }
+  },
+  {
+   "id": "185",
+   "work": {
+    "title": "Tana"
+   }
+  },
+  {
+   "id": "186",
+   "work": {
+    "title": "Hornpipe. RDO.09"
+   }
+  },
+  {
+   "id": "187",
+   "work": {
+    "title": "Croppy Boy"
+   }
+  },
+  {
+   "id": "188",
+   "work": {
+    "title": "Jefferson and Liberty"
+   }
+  },
+  {
+   "id": "189",
+   "work": {
+    "title": "Said the Father to the Daughter"
+   }
+  },
+  {
+   "id": "190",
+   "work": {
+    "title": "Catholic Boys"
+   }
+  },
+  {
+   "id": "191",
+   "work": {
+    "title": "Teton Sioux band - A Prairie Fire"
+   },
+   "composer": {
+    "name": "Teton Sioux band 1911-1914"
+   }
+  },
+  {
+   "id": "192",
+   "work": {
+    "title": "The Rights of Man"
+   }
+  },
+  {
+   "id": "193",
+   "work": {
+    "title": "Kail Pot"
+   }
+  },
+  {
+   "id": "194",
+   "work": {
+    "title": "Dan O'Connell's"
+   }
+  },
+  {
+   "id": "195",
+   "work": {
+    "title": "The Saviour of the world is born (HOLST) SATB+org"
+   },
+   "composer": {
+    "name": "Gustav Holst"
+   }
+  },
+  {
+   "id": "196",
+   "work": {
+    "title": "Hole In My Pocket"
+   }
+  },
+  {
+   "id": "197",
+   "work": {
+    "title": "The Pride of March"
+   },
+   "composer": {
+    "name": "Crynd (Pablo Albasanz García)"
+   }
+  },
+  {
+   "id": "198",
+   "work": {
+    "title": "El bint el chalabiya ØÙØÙØª ØÙØÙØÙØ"
+   },
+   "composer": {
+    "name": "Rahbani Brothers ØÙØØÙÙÙ ØØØØÙÙ"
+   }
+  },
+  {
+   "id": "199",
+   "work": {
+    "title": "Seven Bridges Road"
+   },
+   "composer": {
+    "name": "Original by The Eagles Rendition by Home Free Arranged by Mitchell Lazarow Adopted to SATB by Frank Wilke"
+   }
+  },
+  {
+   "id": "200",
+   "work": {
+    "title": "Bear Creek Hop"
+   }
+  },
+  {
+   "id": "201",
+   "work": {
+    "title": "The Black Dance"
+   }
+  },
+  {
+   "id": "202",
+   "work": {
+    "title": "Charming Maid. PFD2.297"
+   }
+  },
+  {
+   "id": "203",
+   "work": {
+    "title": "Judith"
+   },
+   "composer": {
+    "name": "Joe Buchanan's Scottish Tome - Page 580.0"
+   }
+  },
+  {
+   "id": "204",
+   "work": {
+    "title": "When faint and weary toiling - Robert Lowry"
+   },
+   "composer": {
+    "name": "Robert Lowry"
+   }
+  },
+  {
+   "id": "205",
+   "work": {
+    "title": "The Orphan"
+   }
+  },
+  {
+   "id": "206",
+   "work": {
+    "title": "Belledune Quickstep"
+   }
+  },
+  {
+   "id": "207",
+   "work": {
+    "title": "Burke's"
+   }
+  },
+  {
+   "id": "208",
+   "work": {
+    "title": "Milledgeville"
+   }
+  },
+  {
+   "id": "209",
+   "work": {
+    "title": "Highland Laddy"
+   }
+  },
+  {
+   "id": "210",
+   "work": {
+    "title": "I belong to the king - J. Lincoln Hall"
+   },
+   "composer": {
+    "name": "Joseph Lincoln Hall"
+   }
+  },
+  {
+   "id": "211",
+   "work": {
+    "title": "Old Nick's Lumber Room or the Pawnbroker's Warehouse"
+   }
+  },
+  {
+   "id": "212",
+   "work": {
+    "title": "Buckley's Fancy"
+   }
+  },
+  {
+   "id": "213",
+   "work": {
+    "title": "Hark What Mean Those Holy Voices - Stuttgart"
+   }
+  },
+  {
+   "id": "214",
+   "work": {
+    "title": "The Highway to Dublin"
+   }
+  },
+  {
+   "id": "215",
+   "work": {
+    "title": "There Is Joy In My Soul - Fanny Crosby"
+   }
+  },
+  {
+   "id": "216",
+   "work": {
+    "title": "Shall we meet? - Elihu S. Rice"
+   },
+   "composer": {
+    "name": "Elihu S. Rice 1866"
+   }
+  },
+  {
+   "id": "217",
+   "work": {
+    "title": "B Mates - Hornpipe. Le4.048"
+   },
+   "composer": {
+    "name": "B Mates"
+   }
+  },
+  {
+   "id": "218",
+   "work": {
+    "title": "One there is above all others Well deserves the name of Friend - John Newton"
+   },
+   "composer": {
+    "name": "Gesangbuch (Darmstadt German"
+   }
+  },
+  {
+   "id": "219",
+   "work": {
+    "title": "Handel - Trumpet Minuet"
+   },
+   "composer": {
+    "name": "HandelJohn Young c.1719"
+   }
+  },
+  {
+   "id": "220",
+   "work": {
+    "title": "The Banks Of The Nile (hornpipe) 1625"
+   },
+   "composer": {
+    "name": "after Chief O'Neill"
+   }
+  },
+  {
+   "id": "221",
+   "work": {
+    "title": "Now the Savior invites you to come - Fanny J. Crosby"
+   }
+  },
+  {
+   "id": "222",
+   "work": {
+    "title": "Just Friends (John Kienner) Lau Gabriela"
+   },
+   "composer": {
+    "name": "Music: John Kienner"
+   }
+  },
+  {
+   "id": "223",
+   "work": {
+    "title": "La Marianne"
+   }
+  },
+  {
+   "id": "224",
+   "work": {
+    "title": "Jesus guide our way - T. J. Cook"
+   }
+  },
+  {
+   "id": "225",
+   "work": {
+    "title": "Johnny Henry's"
+   }
+  },
+  {
+   "id": "226",
+   "work": {
+    "title": "Sweet Molly (air) 0377"
+   },
+   "composer": {
+    "name": "after Chief F. O'Neillwith feeling"
+   }
+  },
+  {
+   "id": "227",
+   "work": {
+    "title": "Waltz2voices. WHG.042"
+   }
+  },
+  {
+   "id": "228",
+   "work": {
+    "title": "Madelon Friquet"
+   }
+  },
+  {
+   "id": "229",
+   "work": {
+    "title": "The Bells of Osley"
+   }
+  },
+  {
+   "id": "230",
+   "work": {
+    "title": "The Frost Is All Over"
+   }
+  },
+  {
+   "id": "231",
+   "work": {
+    "title": "Alastair of the Dun"
+   }
+  },
+  {
+   "id": "232",
+   "work": {
+    "title": "Traditional music - Clawdd Offa"
+   },
+   "composer": {
+    "name": "Trad"
+   }
+  },
+  {
+   "id": "233",
+   "work": {
+    "title": "Giga di Rocca Grimalda (A)"
+   }
+  },
+  {
+   "id": "234",
+   "work": {
+    "title": "The Reel Of Tully"
+   }
+  },
+  {
+   "id": "235",
+   "work": {
+    "title": "Otto Langey 055 Tutor for Flute (C. Scholl)"
+   },
+   "composer": {
+    "name": "C. Scholl"
+   }
+  },
+  {
+   "id": "236",
+   "work": {
+    "title": "Hence Care thou art too cruel - Thomas Weelkes"
+   },
+   "composer": {
+    "name": "Hence Care thou art too cruel - Weelkes"
+   }
+  },
+  {
+   "id": "237",
+   "work": {
+    "title": "Padoana / Pavane Thysius f149r (LHS.Th.10.326)"
+   },
+   "composer": {
+    "name": "Handschrift uit de bibliotheekvan verzamelaar Thysius (1595-1630)"
+   }
+  },
+  {
+   "id": "238",
+   "work": {
+    "title": "Ned Kendall's Favorite -- Reel"
+   }
+  },
+  {
+   "id": "239",
+   "work": {
+    "title": "Die Woaf (Menuett Version)"
+   },
+   "composer": {
+    "name": "Volksweise / Autor unbekannt"
+   }
+  },
+  {
+   "id": "240",
+   "work": {
+    "title": "Un Bravo Lupo"
+   }
+  },
+  {
+   "id": "241",
+   "work": {
+    "title": "Andy McGann's"
+   }
+  },
+  {
+   "id": "242",
+   "work": {
+    "title": "Resting in jesus arms - Scott Werdebaugh"
+   },
+   "composer": {
+    "name": "Scott Werdebaugh 2018"
+   }
+  },
+  {
+   "id": "243",
+   "work": {
+    "title": "Wandering afar from my home above - Barney Elliott Warren"
+   }
+  },
+  {
+   "id": "244",
+   "work": {
+    "title": "Musette in D Major"
+   },
+   "composer": {
+    "name": "Anonymous BWV 126"
+   }
+  },
+  {
+   "id": "245",
+   "work": {
+    "title": "The Athole Cummers"
+   }
+  },
+  {
+   "id": "246",
+   "work": {
+    "title": "An einem Bächlein - Hubert Waelrant"
+   },
+   "composer": {
+    "name": "Hubert Waelrant 1550"
+   }
+  },
+  {
+   "id": "247",
+   "work": {
+    "title": "Schubert (53344) - Franz Schubert"
+   },
+   "composer": {
+    "name": "Arr from Franz Schubert by W.W. Gilchrist 1895"
+   }
+  },
+  {
+   "id": "248",
+   "work": {
+    "title": "Second Composition"
+   },
+   "composer": {
+    "name": "Anne Brauer"
+   }
+  },
+  {
+   "id": "249",
+   "work": {
+    "title": "Seymour's Whim"
+   }
+  },
+  {
+   "id": "250",
+   "work": {
+    "title": "Trip to Carlisle House"
+   }
+  }
+ ]
+}
