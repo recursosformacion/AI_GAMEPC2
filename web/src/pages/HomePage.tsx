@@ -31,7 +31,7 @@ export function HomePage() {
     event.preventDefault();
     const payload = {
       query,
-      limit: 50,
+      limit: 30,
       composer: composer || null,
       title: title || null,
       catalogue: catalogue || null,

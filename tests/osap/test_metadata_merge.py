@@ -48,6 +48,16 @@ class TestWorkMatcher:
         labels = decision.evidence_labels()
         assert {"composer", "title_similarity"} <= set(labels)
 
+    def test_embedded_composer_merges(self) -> None:
+        # El compositor incrustado en el título ("W. A. Mozart") no debe impedir la fusión.
+        matcher = WorkGroupingMatcher()
+        decision = matcher.compare(
+            _candidate("c1", "Ave Verum Corpus", "Wolfgang Amadeus Mozart", "omr"),
+            _candidate("c2", "Ave Verum Corpus W. A. Mozart (K. 618)", "Wolfgang Amadeus Mozart", "imslp"),
+        )
+        assert decision.merged
+        assert decision.score >= 0.5
+
     def test_catalog_equivalent_evidence(self) -> None:
         matcher = WorkGroupingMatcher()
         decision = matcher.compare(

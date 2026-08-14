@@ -83,7 +83,7 @@ export function SearchStudioPage() {
     };
     void useSearches.getState().create({
       query: payload.query as string,
-      limit: 50,
+      limit: 30,
       composer: payload.composer as string | null,
       title: payload.title as string | null,
       catalogue: payload.catalogue as string | null,

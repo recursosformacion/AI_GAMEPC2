@@ -15,7 +15,7 @@ export function GlobalSearch() {
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     if (!query.trim()) return;
-    void searchAndGo(navigate, { query, limit: 50 });
+    void searchAndGo(navigate, { query, limit: 30 });
   };
 
   return (

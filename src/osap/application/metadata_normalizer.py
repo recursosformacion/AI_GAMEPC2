@@ -161,6 +161,11 @@ class MetadataNormalizer:
             text = re.sub(rf"\s*\([^)]*{re.escape(last)}[^)]*\)", "", text, flags=re.IGNORECASE)
             text = re.sub(rf"[,\s-]+{re.escape(last)}\s*$", "", text, flags=re.IGNORECASE)
             text = _strip_trailing_composer(text, canonical)
+            # Quitar el compositor incrustado en cualquier posición, no solo al final:
+            # "Ave Verum Corpus W. A. Mozart (K. 618)" -> "Ave Verum Corpus (K. 618)".
+            text = re.sub(rf"\b{re.escape(canonical)}\b", " ", text, flags=re.IGNORECASE)
+            text = re.sub(rf"\b{re.escape(last)}\b", " ", text, flags=re.IGNORECASE)
+            text = re.sub(_composer_initials_regex(canonical), " ", text)
         # Drop parenthetical subtitles/comments ("Requiem (Officium defunctorum)")
         # for comparison; they are not part of the core identity.
         text = re.sub(r"\([^)]*\)", " ", text)
@@ -255,3 +260,17 @@ def _strip_trailing_composer(title: str, composer: str) -> str:
     if last and lowered_title.endswith(last.lower()):
         return title[: len(title) - len(last)].strip(" .-,")
     return title
+
+
+def _composer_initials_regex(canonical: str) -> re.Pattern[str]:
+    """Regex para el compositor en forma de iniciales + apellido, p. ej.
+
+    "Wolfgang Amadeus Mozart" -> W. A. Mozart / W.A. Mozart / W A Mozart.
+    Solo nombres compuestos (más de una palabra); si es un solo nombre, nunca matchea.
+    """
+    parts = canonical.split()
+    if len(parts) <= 1:
+        return re.compile(r"(?!x)x")
+    initials = "".join(f"{re.escape(p[0])}\\.?\\s*" for p in parts[:-1])
+    last = re.escape(parts[-1])
+    return re.compile(rf"\b{initials}{last}\b", re.IGNORECASE)
