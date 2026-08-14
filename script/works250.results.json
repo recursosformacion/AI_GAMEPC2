@@ -1789,7 +1789,7 @@
    "status": "ambiguous",
    "normalized": {
     "title_raw": "I shall be no stranger there - William J. Kirkpatrick",
-    "title": "i shall be no stranger there william j",
+    "title": "i shall be no stranger there",
     "composer_raw": "William James Kirkpatrick",
     "composer": "william james kirkpatrick",
     "catalog": null
@@ -1917,7 +1917,7 @@
    "status": "ambiguous",
    "normalized": {
     "title_raw": "Let us away - George T. Kirkpatrick",
-    "title": "let us away george t",
+    "title": "let us away",
     "composer_raw": "George T. Kirkpatrick",
     "composer": "george t. kirkpatrick",
     "catalog": null
@@ -3412,7 +3412,7 @@
    "status": "ambiguous",
    "normalized": {
     "title_raw": "Like a star of the morning - Edmund S. Lorenz",
-    "title": "like a star of the morning edmund s",
+    "title": "like a star of the morning",
     "composer_raw": "Edmund Simon Lorenz",
     "composer": "edmund simon lorenz",
     "catalog": null
@@ -3529,7 +3529,7 @@
    "status": "resolved",
    "normalized": {
     "title_raw": "Ye servants of god - Edward P. Crawford",
-    "title": "ye servants of god edward p",
+    "title": "ye servants of god",
     "composer_raw": "Edward Patrick Crawford (1846-1912)",
     "composer": "edward patrick crawford (1846-1912)",
     "catalog": null
@@ -3611,7 +3611,7 @@
    "status": "ambiguous",
    "normalized": {
     "title_raw": "Attwood - Together then we'd fondly stray",
-    "title": "",
+    "title": "together then we d fondly stray",
     "composer_raw": "Attwood",
     "composer": "attwood",
     "catalog": null
@@ -3852,7 +3852,7 @@
    "status": "resolved",
    "normalized": {
     "title_raw": "Infinite god to thee we raise - Thomas W. Staniforth",
-    "title": "infinite god to thee we raise thomas w",
+    "title": "infinite god to thee we raise",
     "composer_raw": "Thomas Worsley Staniforth (1845-1909)",
     "composer": "thomas worsley staniforth (1845-1909)",
     "catalog": null
@@ -3976,7 +3976,7 @@
    },
    "resolved": {
     "work": {
-     "title": "I Lombardi alla prima crociata (Verdi, Giuseppe)",
+     "title": "The Crusaders",
      "catalog": null
     },
     "composer": null
@@ -3984,6 +3984,12 @@
    "confidence": 0.9,
    "input_quality": "normal",
    "candidates": [
+    {
+     "name": "Ennio Morricone",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
     {
      "name": "Giuseppe Verdi",
      "confidence": 0.9,
@@ -4045,9 +4051,38 @@
      "confidence": 0.9,
      "aliases": [],
      "external_ids": {}
+    },
+    {
+     "name": "Graeme Revell",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
+    {
+     "name": "Sergey Sergeevich Prokofev",
+     "confidence": 0.9,
+     "aliases": [
+      "Сергей Сергеевич Прокофьев"
+     ],
+     "external_ids": {}
+    },
+    {
+     "name": "Aleksandr Konstantinovich Glazunov",
+     "confidence": 0.9,
+     "aliases": [
+      "Александр Константинович Глазунов"
+     ],
+     "external_ids": {}
     }
    ],
    "evidence": [
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "The Crusaders",
+     "work_catalog": null
+    },
     {
      "provider": "imslp",
      "type": "work_match",
@@ -4116,6 +4151,27 @@
      "type": "work_match",
      "confidence": 0.9,
      "work_title": "Traditional music - THE CRUSADERS'",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Charge of the Crusaders",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Alexander Nevsky, op. 78: III. The Crusaders in Pskov",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "From the Middle Ages, op. 79: IV. Finale. The Crusaders",
      "work_catalog": null
     }
    ]
@@ -4270,6 +4326,12 @@
      "external_ids": {}
     },
     {
+     "name": "[unknown]",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
+    {
      "name": "Edwin Othello Excell",
      "confidence": 0.9,
      "aliases": [],
@@ -4304,6 +4366,12 @@
      "confidence": 0.9,
      "aliases": [],
      "external_ids": {}
+    },
+    {
+     "name": "Carolyn Surrick",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
     }
    ],
    "evidence": [
@@ -4316,6 +4384,13 @@
     },
     {
      "provider": "omr",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Come Thou Fount of Every Blessing",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
      "type": "work_match",
      "confidence": 0.9,
      "work_title": "Come Thou Fount of Every Blessing",
@@ -4361,6 +4436,13 @@
      "type": "work_match",
      "confidence": 0.9,
      "work_title": "Come thou fount of every blessing - George F. Root",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Come Thou Fount of Every Blessing / Sjungar‐lars visa",
      "work_catalog": null
     }
    ]
@@ -5017,12 +5099,6 @@
      "confidence": 0.9,
      "aliases": [],
      "external_ids": {}
-    },
-    {
-     "name": "Roy Orbison",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
     }
    ],
    "evidence": [
@@ -5143,13 +5219,6 @@
      "type": "work_match",
      "confidence": 0.9,
      "work_title": "Solos for Treble Instrument, Especially Soprano Recorder (Kimberling, Clark)",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "California Blue",
      "work_catalog": null
     }
    ]
@@ -5373,7 +5442,7 @@
    "status": "resolved",
    "normalized": {
     "title_raw": "Peter I. Tchaikovsky - Italian Song (Orchestra) Orchestrated by Alex Nuñez",
-    "title": "peter i italian song orchestrated by alex nu ez",
+    "title": "italian song orchestrated by alex nu ez",
     "composer_raw": "Peter I. Tchaikovsky",
     "composer": "peter i. tchaikovsky",
     "catalog": null
@@ -5459,7 +5528,7 @@
    "status": "resolved",
    "normalized": {
     "title_raw": "Have you room for the king? - Maude A. Hart",
-    "title": "have you room for the king maude a",
+    "title": "have you room for the king",
     "composer_raw": "Maude Anita Hart",
     "composer": "maude anita hart",
     "catalog": null
@@ -5666,188 +5735,6 @@
      "external_ids": {}
     },
     {
-     "name": "Neil Young",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Maclaine Diemer",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Paul Blackford",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Lea Bernard Roger Moulds",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Richard Harvey",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Dieter Birr",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Loz Contreras",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Alexander Pfeffer",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Boney James",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Murat Nagoev",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Colin Hay",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Raven Paradox",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Alexandre Svezia",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Keane Wang",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Benjamin Karp",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Brandon Hartt",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Brian Seeman",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Damjan Mravunac",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "iamalex",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Toonorth",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "[traditional]",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Jackson Slaybaugh",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Yuforia",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Mick Giacchino",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "John R. Graham",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Scott Marcussen",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Debbie Wiseman",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "niv",
-     "confidence": 0.9,
-     "aliases": [
-      "niv."
-     ],
-     "external_ids": {}
-    },
-    {
-     "name": "Lo‐Fi Tigers",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Gazelle Twin",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
      "name": "Franz Abt",
      "confidence": 0.9,
      "aliases": [],
@@ -5938,12 +5825,6 @@
      "confidence": 0.9,
      "aliases": [],
      "external_ids": {}
-    },
-    {
-     "name": "Robbie van Leeuwen",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
     }
    ],
    "evidence": [
@@ -5956,216 +5837,6 @@
     },
     {
      "provider": "omr",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far from Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far from Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "far from home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far from Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "far from home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far from Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Far From Home",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
      "type": "work_match",
      "confidence": 0.9,
      "work_title": "Far From Home",
@@ -6274,13 +5945,6 @@
      "type": "work_match",
      "confidence": 0.9,
      "work_title": "How far from home? - Tis Midnight Hour",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "So Far From Home",
      "work_catalog": null
     }
    ]
@@ -6431,12 +6095,6 @@
      "external_ids": {}
     },
     {
-     "name": "Paul Weller",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
      "name": "Cecil Sharp",
      "confidence": 0.9,
      "aliases": [],
@@ -6446,13 +6104,6 @@
    "evidence": [
     {
      "provider": "omr",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Picking Up Sticks",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
      "type": "work_match",
      "confidence": 0.9,
      "work_title": "Picking Up Sticks",
@@ -6857,7 +6508,7 @@
   },
   {
    "id": "57",
-   "status": "resolved",
+   "status": "ambiguous",
    "normalized": {
     "title_raw": "the Rattlin' Bog",
     "title": "the rattlin bog",
@@ -6870,17 +6521,19 @@
      "title": "Rare Bog the Rattlin Bog",
      "catalog": null
     },
-    "composer": {
-     "name": "Traditional",
-     "aliases": [],
-     "external_ids": {}
-    }
+    "composer": null
    },
    "confidence": 0.9,
    "input_quality": "normal",
    "candidates": [
     {
      "name": "Traditional",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
+    {
+     "name": "[traditional]",
      "confidence": 0.9,
      "aliases": [],
      "external_ids": {}
@@ -6892,6 +6545,13 @@
      "type": "work_match",
      "confidence": 0.9,
      "work_title": "Rare Bog the Rattlin Bog",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "The Rattlin’ Bog",
      "work_catalog": null
     }
    ]
@@ -7094,7 +6754,7 @@
    },
    "resolved": {
     "work": {
-     "title": "King Arthur, Z.628 (Purcell, Henry)",
+     "title": "Follow Me Up",
      "catalog": null
     },
     "composer": null
@@ -7102,6 +6762,12 @@
    "confidence": 0.9,
    "input_quality": "normal",
    "candidates": [
+    {
+     "name": "Xandy Barry",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
     {
      "name": "Henry Purcell",
      "confidence": 0.9,
@@ -7197,9 +6863,22 @@
      "confidence": 0.9,
      "aliases": [],
      "external_ids": {}
+    },
+    {
+     "name": "[traditional]",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
     }
    ],
    "evidence": [
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Follow Me Up",
+     "work_catalog": null
+    },
     {
      "provider": "imslp",
      "type": "work_match",
@@ -7310,6 +6989,13 @@
      "type": "work_match",
      "confidence": 0.9,
      "work_title": "Traditional music - Follow Me Up",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Follow Me Up to Carlow",
      "work_catalog": null
     }
    ]
@@ -7427,7 +7113,7 @@
    },
    "resolved": {
     "work": {
-     "title": "Nowruz (Saboohi, Ehsan)",
+     "title": "The Picnic",
      "catalog": null
     },
     "composer": null
@@ -7435,6 +7121,60 @@
    "confidence": 0.9,
    "input_quality": "normal",
    "candidates": [
+    {
+     "name": "Jerry Goldsmith",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
+    {
+     "name": "Martin Orford",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
+    {
+     "name": "James Newton Howard",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
+    {
+     "name": "George Fenton",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
+    {
+     "name": "Patrick Doyle",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
+    {
+     "name": "Johnny Mandel",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
+    {
+     "name": "Rachel Portman",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
+    {
+     "name": "Alex North",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
+    {
+     "name": "Luis Bacalov",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
     {
      "name": "Ehsan Saboohi",
      "confidence": 0.9,
@@ -7524,9 +7264,96 @@
      "confidence": 0.9,
      "aliases": [],
      "external_ids": {}
+    },
+    {
+     "name": "[traditional]",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
+    {
+     "name": "Stephen Warbeck",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
+    {
+     "name": "Jerome Moross",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
+    {
+     "name": "Alfred Newman",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
     }
    ],
    "evidence": [
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "The Picnic",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "The Picnic",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "The Picnic",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "The Picnic",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "The Picnic",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "The Picnic",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "The Picnic",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "The Picnic",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "The Picnic",
+     "work_catalog": null
+    },
     {
      "provider": "imslp",
      "type": "work_match",
@@ -7574,6 +7401,13 @@
      "type": "work_match",
      "confidence": 0.9,
      "work_title": "By Footpath and Stile, Op.2 (Finzi, Gerald)",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "By Footpath and Stile, op. 2: II. Where the Picnic Was",
      "work_catalog": null
     },
     {
@@ -7630,6 +7464,34 @@
      "type": "work_match",
      "confidence": 0.9,
      "work_title": "THE PICNIC IN THE WILDWOOD",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "The Picnic Reel",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "After the Picnic",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "The Picnic Table",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Fisherman’s Wharf – San Francisco / The Picnic / The Cable Car",
      "work_catalog": null
     }
    ]
@@ -8075,7 +7937,7 @@
    "status": "ambiguous",
    "normalized": {
     "title_raw": "We would see Jesus the babe in the manger - Jay Ford",
-    "title": "we would see jesus the babe in the manger jay",
+    "title": "we would see jesus the babe in the manger",
     "composer_raw": "Jay A. Ford",
     "composer": "jay a. ford",
     "catalog": null
@@ -8507,12 +8369,6 @@
      "confidence": 0.9,
      "aliases": [],
      "external_ids": {}
-    },
-    {
-     "name": "Alun Hoddinott",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
     }
    ],
    "evidence": [
@@ -8542,13 +8398,6 @@
      "type": "work_match",
      "confidence": 0.9,
      "work_title": "Ap Shenkin TS.229",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "6 Welsh Folksongs: 4. Ap Shenkin: Allegro",
      "work_catalog": null
     }
    ]
@@ -9039,7 +8888,7 @@
   },
   {
    "id": "86",
-   "status": "ambiguous",
+   "status": "resolved",
    "normalized": {
     "title_raw": "Meu caro amigo",
     "title": "meu caro amigo",
@@ -9052,17 +8901,18 @@
      "title": "Meu caro amigo",
      "catalog": null
     },
-    "composer": null
+    "composer": {
+     "name": "Chico Buarque",
+     "aliases": [],
+     "external_ids": {
+      "musicbrainz": "3a5d1cc7-627e-48ea-aba3-fdd20d782c33",
+      "viaf": "102377585"
+     }
+    }
    },
-   "confidence": 0.9,
+   "confidence": 0.875,
    "input_quality": "normal",
    "candidates": [
-    {
-     "name": "Francis Hime",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
     {
      "name": "Chico Buarque",
      "confidence": 0.875,
@@ -9074,13 +8924,6 @@
     }
    ],
    "evidence": [
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Meu caro amigo",
-     "work_catalog": null
-    },
     {
      "provider": "wikidata",
      "type": "external_id",
@@ -10233,7 +10076,7 @@
    "status": "ambiguous",
    "normalized": {
     "title_raw": "Strauss - BEAUTIFUL DANUBE -- Waltz 4",
-    "title": "",
+    "title": "beautiful danube waltz 4",
     "composer_raw": "Strauss",
     "composer": "strauss",
     "catalog": null
@@ -11324,7 +11167,7 @@
    "status": "ambiguous",
    "normalized": {
     "title_raw": "Counted in - John M. Whyte",
-    "title": "counted in john m",
+    "title": "counted in",
     "composer_raw": "John Marchant Whyte",
     "composer": "john marchant whyte",
     "catalog": null
@@ -11428,7 +11271,7 @@
    "status": "ambiguous",
    "normalized": {
     "title_raw": "Rodman - Lowell Mason",
-    "title": "rodman lowell",
+    "title": "rodman",
     "composer_raw": "Lowell Mason (1792-1872)",
     "composer": "lowell mason (1792-1872)",
     "catalog": null
@@ -11766,7 +11609,7 @@
    "status": "resolved",
    "normalized": {
     "title_raw": "Hand of James Lishman - Sailor's Topsail. BF11.46",
-    "title": "",
+    "title": "sailor s topsail bf11 46",
     "composer_raw": "Hand of James Lishman",
     "composer": "hand of james lishman",
     "catalog": null
@@ -12010,7 +11853,7 @@
   },
   {
    "id": "128",
-   "status": "not_found",
+   "status": "ambiguous",
    "normalized": {
     "title_raw": "A Moment of Madness",
     "title": "a moment of madness",
@@ -12019,13 +11862,44 @@
     "catalog": null
    },
    "resolved": {
-    "work": null,
+    "work": {
+     "title": "A Moment of Madness",
+     "catalog": null
+    },
     "composer": null
    },
-   "confidence": 0.0,
+   "confidence": 0.9,
    "input_quality": "normal",
-   "candidates": [],
-   "evidence": []
+   "candidates": [
+    {
+     "name": "Cy Coleman",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
+    {
+     "name": "Katie Melua",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    }
+   ],
+   "evidence": [
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "A Moment of Madness",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "A Moment of Madness",
+     "work_catalog": null
+    }
+   ]
   },
   {
    "id": "129",
@@ -13280,7 +13154,7 @@
    "status": "ambiguous",
    "normalized": {
     "title_raw": "Traditional music - Suo Gan",
-    "title": "",
+    "title": "music suo gan",
     "composer_raw": "Traditional",
     "composer": "traditional",
     "catalog": null
@@ -13543,6 +13417,16 @@
    "input_quality": "normal",
    "candidates": [
     {
+     "name": "Ramin Djawadi",
+     "confidence": 0.9,
+     "aliases": [
+      "Composed by Ramin Djawadi",
+      "RAMIN DJAWADI",
+      "by Ramin Djawadi"
+     ],
+     "external_ids": {}
+    },
+    {
      "name": "Stephen B Alan Sylvestry Ramin Djawadi Craig Armstrong Ozzy Osbourne Patrick Doyle",
      "confidence": 0.9,
      "aliases": [],
@@ -13672,22 +13556,44 @@
       "Ramin Djawadi Arr. by Gabe Russell"
      ],
      "external_ids": {}
-    },
-    {
-     "name": "Ramin Djawadi",
-     "confidence": 0.89,
-     "aliases": [
-      "Composed by Ramin Djawadi",
-      "RAMIN DJAWADI",
-      "by Ramin Djawadi"
-     ],
-     "external_ids": {
-      "musicbrainz": "f089f636-6b85-4e0e-a192-0d30ed2b44d1",
-      "viaf": "85762981"
-     }
     }
    ],
    "evidence": [
+    {
+     "provider": "omr",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Light of the Seven",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Light of the Seven",
+     "work_catalog": null
+    },
+    {
+     "provider": "omr",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "The Night King Game of Thrones",
+     "work_catalog": null
+    },
+    {
+     "provider": "omr",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Westworld - Main Theme",
+     "work_catalog": null
+    },
+    {
+     "provider": "omr",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Westworld Theme",
+     "work_catalog": null
+    },
     {
      "provider": "omr",
      "type": "work_match",
@@ -13819,48 +13725,6 @@
      "type": "work_match",
      "confidence": 0.9,
      "work_title": "The Rains of Castamere Solo Clarinet with Accompaniment",
-     "work_catalog": null
-    },
-    {
-     "provider": "wikidata",
-     "type": "external_id",
-     "confidence": 0.85,
-     "work_title": null,
-     "work_catalog": null
-    },
-    {
-     "provider": "wikidata",
-     "type": "external_id",
-     "confidence": 0.85,
-     "work_title": null,
-     "work_catalog": null
-    },
-    {
-     "provider": "omr",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Light of the Seven",
-     "work_catalog": null
-    },
-    {
-     "provider": "omr",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "The Night King Game of Thrones",
-     "work_catalog": null
-    },
-    {
-     "provider": "omr",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Westworld - Main Theme",
-     "work_catalog": null
-    },
-    {
-     "provider": "omr",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Westworld Theme",
      "work_catalog": null
     }
    ]
@@ -14261,6 +14125,12 @@
      "confidence": 0.9,
      "aliases": [],
      "external_ids": {}
+    },
+    {
+     "name": "Wattie Buchan",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
     }
    ],
    "evidence": [
@@ -14318,6 +14188,13 @@
      "type": "work_match",
      "confidence": 0.9,
      "work_title": "As Lucy Went A-Walking, Op.121 (Gibbs, Cecil Armstrong)",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Scaling the Derry Wall",
      "work_catalog": null
     }
    ]
@@ -14432,7 +14309,7 @@
    "status": "ambiguous",
    "normalized": {
     "title_raw": "In meiner not - Adam Gumpelzhaimer",
-    "title": "in meiner not adam",
+    "title": "in meiner not",
     "composer_raw": "Adam Gumpelzhaimer",
     "composer": "adam gumpelzhaimer",
     "catalog": null
@@ -14720,7 +14597,7 @@
    "status": "ambiguous",
    "normalized": {
     "title_raw": "Neil Gow - General MacDonald",
-    "title": "",
+    "title": "general macdonald",
     "composer_raw": "Neil Gow",
     "composer": "neil gow",
     "catalog": null
@@ -15035,6 +14912,12 @@
      "confidence": 0.9,
      "aliases": [],
      "external_ids": {}
+    },
+    {
+     "name": "Joseph Haydn",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
     }
    ],
    "evidence": [
@@ -15114,6 +14997,13 @@
      "confidence": 0.9,
      "work_title": "Up in the Morning Early Dix.23",
      "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Up in the morning early, Hob. XXXIa:28a",
+     "work_catalog": null
     }
    ]
   },
@@ -15122,7 +15012,7 @@
    "status": "ambiguous",
    "normalized": {
     "title_raw": "Joy-bells - Charles H. Gabriel",
-    "title": "joy bells charles h",
+    "title": "joy bells",
     "composer_raw": "Charles Hutchinson Gabriel",
     "composer": "charles hutchinson gabriel",
     "catalog": null
@@ -15947,7 +15837,7 @@
    "status": "ambiguous",
    "normalized": {
     "title_raw": "Tielman Susato - Pass et medio",
-    "title": "",
+    "title": "pass et medio",
     "composer_raw": "Tielman Susato",
     "composer": "tielman susato",
     "catalog": null
@@ -16333,90 +16223,6 @@
      "external_ids": {}
     },
     {
-     "name": "崎元仁",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "אסף שתיל",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Lee Alexander",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Natalie Merchant",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Mark King",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Andy Cutting",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Curtis Mayfield",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Kenneth Graham",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Andrew Burdall",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Sebastian Herzfeld",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Samuel Lardeau",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Avi & Celia",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Jeff Kelly",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Stephan Becker",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
      "name": "Aleksandr Dargomyzhsky",
      "confidence": 0.9,
      "aliases": [],
@@ -16507,132 +16313,6 @@
      "confidence": 0.9,
      "aliases": [],
      "external_ids": {}
-    },
-    {
-     "name": "Kevin Kiner",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "岸谷香",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "David Bowie",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Buck Sanders",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Aberdeen City",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Andreas Hommelsheim",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Gerald Cleaver",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Clara Maddux",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "John Williams",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Andy MacFarlane",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Bobby James",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Brendt Allman",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Dor Rozen",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Anne Dudley",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Michael Cretu",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Trent Reznor",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Rev. Roland W. Davis",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Stan Coster",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Paul Schütze",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "John Debney",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Joseph Haydn",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
     }
    ],
    "evidence": [
@@ -16641,104 +16321,6 @@
      "type": "work_match",
      "confidence": 0.9,
      "work_title": "Requiem in D minor, K.626 (Mozart, Wolfgang Amadeus)",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years",
      "work_catalog": null
     },
     {
@@ -16845,153 +16427,6 @@
      "confidence": 0.9,
      "work_title": "Leonora Overture No.3, Op.72b (Beethoven, Ludwig van)",
      "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years!",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "SEVEN YEARS AFTER",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years in Tibet",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years Later",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Another Seven Years",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "After Seven Years",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years In",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "seven years different",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years in Tibet",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years of Letters",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "The Past Seven Years",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Act IV: Seven Years",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Held for Seven Years",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years Bad Luck",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "On the Tray (Seven Years)",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years of Bad Luck",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years With a Wonderful Woman",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years Is a Big Price to Pay",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "I Have Observed And Measured For Seven Years",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Seven Years Later / Steve Jobs the Gardner",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Tho' for seven years and mair, Hob. XXXIa:146",
-     "work_catalog": null
     }
    ]
   },
@@ -17095,7 +16530,7 @@
    "status": "resolved",
    "normalized": {
     "title_raw": "William Marshall - Cullen House a Strathspey",
-    "title": "",
+    "title": "cullen house a strathspey",
     "composer_raw": "William Marshall",
     "composer": "william marshall",
     "catalog": null
@@ -17271,7 +16706,7 @@
    },
    "resolved": {
     "work": {
-     "title": "Tana",
+     "title": "Alcina, HWV 34 (Handel, George Frideric)",
      "catalog": null
     },
     "composer": null
@@ -17279,18 +16714,6 @@
    "confidence": 0.9,
    "input_quality": "normal",
    "candidates": [
-    {
-     "name": "Christian Lemaître",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Mikk Siemer",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
     {
      "name": "George Frideric Handel",
      "confidence": 0.9,
@@ -17478,173 +16901,14 @@
      "confidence": 0.9,
      "aliases": [],
      "external_ids": {}
-    },
-    {
-     "name": "Tero Vaara",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Henry Mancini",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Hendrik Sal-Saller",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Tarcisio Bratto",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Paul Oja",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Pekka Ruuska",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Sanjeev Darshan",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "米米CLUB",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Franky",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Sandeep Shirodkar",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "SHUNE",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Jenni Vartiainen",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Xaverius Taek",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Kosmikud",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Suman Chatterjee",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Genialistid",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Ardo Ran Varres",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Ashwini Bhide Deshpande",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Suresh Kumar",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Fabio Frizzi",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Veljo Tormis",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Jaan Rääts",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
-    },
-    {
-     "name": "Kuldar Sink",
-     "confidence": 0.9,
-     "aliases": [],
-     "external_ids": {}
     }
    ],
    "evidence": [
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Tana",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Täna",
-     "work_catalog": null
-    },
     {
      "provider": "imslp",
      "type": "work_match",
      "confidence": 0.9,
      "work_title": "Alcina, HWV 34 (Handel, George Frideric)",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Alcina, HWV 34: Atto III, Scena III, IX. Aria “Sta nell’ircana pietrosa tana” (Ruggiero)",
      "work_catalog": null
     },
     {
@@ -17834,167 +17098,6 @@
      "type": "work_match",
      "confidence": 0.9,
      "work_title": "Chiara fontana - Orlando di Lasso",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Tänä aamuna",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Tana's Theme",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Täna õhtul",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Dalla tana",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Miks mitte täna?",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Ehkä tänä iltana",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Tinak Tin Tana",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "MATA（C）TANA",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Yksin tänä yönä",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Tan Tana Tan Tan",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "La tana del granchio",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "En haluu kuolla tänä yönä",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Tana Timor Lebe Bae",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Kellelgi täna on valus",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Rang Dhanu Tana Setu",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Täna ma ei skoori",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Helsingi on täna haige",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Deem Tadeem Tanana Tana Derena",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Vhala Bhakto Tana Chho Aadhar",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Più che una casa una... tana",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Vepsa rajad: IX. Kus sa täna magasid?",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Muusika dokumentaalfilmile „Eile, täna, homme”, op. 20",
-     "work_catalog": null
-    },
-    {
-     "provider": "musicbrainz",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Viis haikut: Nr. 2. Õeke, kas sa tead, mitu pääsukest täna lendama õppis?",
      "work_catalog": null
     }
    ]
@@ -18331,7 +17434,7 @@
    "status": "resolved",
    "normalized": {
     "title_raw": "Teton Sioux band - A Prairie Fire",
-    "title": "",
+    "title": "a prairie fire",
     "composer_raw": "Teton Sioux band 1911-1914",
     "composer": "teton sioux band 1911-1914",
     "catalog": null
@@ -18810,16 +17913,6 @@
    "input_quality": "normal",
    "candidates": [
     {
-     "name": "Gustav Holst",
-     "confidence": 0.9,
-     "aliases": [
-      "Composed by Gustav Holst",
-      "GUSTAV HOLST",
-      "Gustav Holst Op. 32"
-     ],
-     "external_ids": {}
-    },
-    {
      "name": "Traditional",
      "confidence": 0.9,
      "aliases": [],
@@ -18928,37 +18021,22 @@
      "confidence": 0.9,
      "aliases": [],
      "external_ids": {}
+    },
+    {
+     "name": "Gustav Holst",
+     "confidence": 0.89,
+     "aliases": [
+      "Composed by Gustav Holst",
+      "GUSTAV HOLST",
+      "Gustav Holst Op. 32"
+     ],
+     "external_ids": {
+      "musicbrainz": "3ba68671-e3b5-4263-81dc-76b16b29bbc6",
+      "viaf": "76500370"
+     }
     }
    ],
    "evidence": [
-    {
-     "provider": "omr",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "The Saviour of the world is born (HOLST) SATB+org",
-     "work_catalog": null
-    },
-    {
-     "provider": "omr",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Bring us in good ale - Gustav Holst",
-     "work_catalog": null
-    },
-    {
-     "provider": "omr",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Holst The Planets-Neptune (Excerpt) Choral Finale with Piano",
-     "work_catalog": null
-    },
-    {
-     "provider": "omr",
-     "type": "work_match",
-     "confidence": 0.9,
-     "work_title": "Fantasia on the Dargason",
-     "work_catalog": null
-    },
     {
      "provider": "mutopia",
      "type": "work_match",
@@ -19077,12 +18155,54 @@
      "confidence": 0.9,
      "work_title": "Jupiter I vow to thee my county",
      "work_catalog": null
+    },
+    {
+     "provider": "wikidata",
+     "type": "external_id",
+     "confidence": 0.85,
+     "work_title": null,
+     "work_catalog": null
+    },
+    {
+     "provider": "wikidata",
+     "type": "external_id",
+     "confidence": 0.85,
+     "work_title": null,
+     "work_catalog": null
+    },
+    {
+     "provider": "omr",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "The Saviour of the world is born (HOLST) SATB+org",
+     "work_catalog": null
+    },
+    {
+     "provider": "omr",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Bring us in good ale - Gustav Holst",
+     "work_catalog": null
+    },
+    {
+     "provider": "omr",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Holst The Planets-Neptune (Excerpt) Choral Finale with Piano",
+     "work_catalog": null
+    },
+    {
+     "provider": "omr",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Fantasia on the Dargason",
+     "work_catalog": null
     }
    ]
   },
   {
    "id": "196",
-   "status": "not_found",
+   "status": "ambiguous",
    "normalized": {
     "title_raw": "Hole In My Pocket",
     "title": "hole in my pocket",
@@ -19091,13 +18211,70 @@
     "catalog": null
    },
    "resolved": {
-    "work": null,
+    "work": {
+     "title": "Hole in My Pocket",
+     "catalog": null
+    },
     "composer": null
    },
-   "confidence": 0.0,
+   "confidence": 0.9,
    "input_quality": "normal",
-   "candidates": [],
-   "evidence": []
+   "candidates": [
+    {
+     "name": "Joey Tempest",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
+    {
+     "name": "Mickey Jupp",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
+    {
+     "name": "Lance Ferguson",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
+    {
+     "name": "Jule Styne",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    }
+   ],
+   "evidence": [
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Hole in My Pocket",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Hole in My Pocket",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Hole in My Pocket",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Money Burns a Hole in My Pocket",
+     "work_catalog": null
+    }
+   ]
   },
   {
    "id": "197",
@@ -19503,7 +18680,7 @@
    "status": "ambiguous",
    "normalized": {
     "title_raw": "When faint and weary toiling - Robert Lowry",
-    "title": "when faint and weary toiling robert",
+    "title": "when faint and weary toiling",
     "composer_raw": "Robert Lowry",
     "composer": "robert lowry",
     "catalog": null
@@ -20384,7 +19561,7 @@
    "status": "ambiguous",
    "normalized": {
     "title_raw": "I belong to the king - J. Lincoln Hall",
-    "title": "i belong to the king j lincoln",
+    "title": "i belong to the king",
     "composer_raw": "Joseph Lincoln Hall",
     "composer": "joseph lincoln hall",
     "catalog": null
@@ -20759,7 +19936,7 @@
    "status": "resolved",
    "normalized": {
     "title_raw": "B Mates - Hornpipe. Le4.048",
-    "title": "",
+    "title": "hornpipe le4 048",
     "composer_raw": "B Mates",
     "composer": "b mates",
     "catalog": null
@@ -21102,6 +20279,18 @@
      "confidence": 0.9,
      "aliases": [],
      "external_ids": {}
+    },
+    {
+     "name": "Léon Trafiers",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
+    {
+     "name": "Christophe Moyreau",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
     }
    ],
    "evidence": [
@@ -21197,6 +20386,13 @@
      "work_catalog": null
     },
     {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Pièces en trio, suite no. 4 in B-flat major: La Marianne",
+     "work_catalog": null
+    },
+    {
      "provider": "imslp",
      "type": "work_match",
      "confidence": 0.9,
@@ -21215,6 +20411,20 @@
      "type": "work_match",
      "confidence": 0.9,
      "work_title": "Traditional music - la Mariane",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "La Marianne de 1883",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "Pièces de clavecin, op. 2, Suite in A major and A minor: VI. La Marianne",
      "work_catalog": null
     }
    ]
@@ -21525,6 +20735,12 @@
      "external_ids": {}
     },
     {
+     "name": "[traditional]",
+     "confidence": 0.9,
+     "aliases": [],
+     "external_ids": {}
+    },
+    {
      "name": "Aleksandr Glazunov",
      "confidence": 0.9,
      "aliases": [],
@@ -21598,6 +20814,13 @@
      "type": "work_match",
      "confidence": 0.9,
      "work_title": "The frost is all over",
+     "work_catalog": null
+    },
+    {
+     "provider": "musicbrainz",
+     "type": "work_match",
+     "confidence": 0.9,
+     "work_title": "The Frost Is All Over",
      "work_catalog": null
     },
     {
@@ -22437,7 +21660,7 @@
    "status": "resolved",
    "normalized": {
     "title_raw": "Schubert (53344) - Franz Schubert",
-    "title": "franz",
+    "title": "",
     "composer_raw": "Arr from Franz Schubert by W.W. Gilchrist 1895",
     "composer": "arr from franz schubert by w.w. gilchrist 1895",
     "catalog": null
