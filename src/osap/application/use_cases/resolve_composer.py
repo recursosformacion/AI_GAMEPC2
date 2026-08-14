@@ -29,16 +29,19 @@ class ResolveComposerUseCase:
         source_work_id: str | None = None,
         representations: list[ResolverRepresentation] | None = None,
     ) -> ResolutionDecision:
+        # El nombre del compositor es evidencia secundaria y puede faltar: sin nombre no hay
+        # calidad de entrada que juzgar.
+        input_quality = classify_input_quality(composer) if composer else "normal"
+        # Un compositor sospechoso/corrupto NO debe condicionar la búsqueda de obra: se
+        # resuelve la obra por título/catálogo y el compositor sale de las fuentes.
+        effective_composer = composer if input_quality == "normal" else None
         query = ResolverQuery(
             work_title=work_title,
-            composer=composer,
+            composer=effective_composer,
             work_catalog=work_catalog,
             work_year=work_year,
             source_provider=source_provider,
             source_work_id=source_work_id,
             representations=tuple(representations or ()),
         )
-        # El nombre del compositor es evidencia secundaria y puede faltar: sin nombre no hay
-        # calidad de entrada que juzgar.
-        input_quality = classify_input_quality(composer) if composer else "normal"
         return await self.engine.resolve(query, input_quality)

@@ -161,6 +161,25 @@ def _build_client_with_work_matcher(matcher) -> TestClient:
     return TestClient(create_platform_app(container=container))
 
 
+def test_corrupt_composer_not_used_as_work_filter() -> None:
+    seen: dict[str, str | None] = {}
+
+    def matcher(query: ResolverQuery) -> list[tuple[str, ResolverCandidate]]:
+        seen["composer"] = query.composer
+        if query.work_title and "Auspicious" in query.work_title:
+            candidate = ResolverCandidate(
+                name="Xiao Youmei",
+                confidence=0.95,
+                evidence=(ResolverEvidence(kind="work_match", confidence=0.95),),
+            )
+            return [("imslp", candidate)]
+        return []
+
+    engine = ComposerResolutionEngine([], work_matcher=matcher)
+    _run(ResolveComposerUseCase(engine).execute(composer="ä æ R Z H çèª", work_title="Song to the Auspicious Cloud"))
+    assert seen["composer"] is None
+
+
 def test_works_resolve_endpoint_normalizes_and_resolves() -> None:
     client = _build_client_with_work_matcher(_fake_work_matcher)
     resp = client.post(
