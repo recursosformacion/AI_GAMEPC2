@@ -6,6 +6,7 @@ from src.osap.application.export_manager import ExportManager
 from src.osap.application.library_manager import LibraryManager
 from src.osap.application.provider_orchestrator import ProviderOrchestrator
 from src.osap.application.use_cases.resolve_composer import ResolveComposerUseCase
+from src.osap.application.use_cases.resolve_works import ResolveWorksUseCase
 from src.osap.application.votes_service import VotesService
 from src.osap.application.work_merge_service import WorkMergeService
 from src.osap.application.work_resolution_engine import WorkResolutionEngine
@@ -122,6 +123,9 @@ class Container:
             )
             self._composer_resolution = ResolveComposerUseCase(engine)
         return self._composer_resolution
+
+    def works_resolution(self) -> ResolveWorksUseCase:
+        return ResolveWorksUseCase(self.composer_resolution())
 
     def set_auth_proxy(self, client: AuthProxyClient) -> None:
         self._auth_proxy = client

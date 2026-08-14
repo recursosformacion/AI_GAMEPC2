@@ -69,6 +69,13 @@ from src.osap.api.contracts import (
     VoteRequest,
     VoteResponse,
     VotesOverviewResponse,
+    WorksNormalized,
+    WorksResolved,
+    WorksResolvedWork,
+    WorksResolveItemResponse,
+    WorksResolveRequest,
+    WorksResolveResponse,
+    WorksResolveSummary,
     WorkStatisticsResponse,
 )
 from src.osap.api.platform import VERSION, PlatformApi
@@ -90,6 +97,7 @@ if TYPE_CHECKING:
 
     from src.osap.api.platform import KnowledgeStore
     from src.osap.application.composer_resolution_engine import ResolutionDecision, ResolvedComposer
+    from src.osap.application.use_cases.resolve_works import ResolvedWorkItem
 
 
 _EXTENSION = {"musicxml": ".musicxml", "pdf": ".pdf", "midi": ".mid"}
@@ -483,6 +491,77 @@ def _resolved_composer_dto(c: ResolvedComposer) -> ResolvedComposerResponse:
         aliases=list(c.aliases),
         external_ids=dict(c.external_ids),
     )
+
+
+def _works_resolve_dto(results: list[ResolvedWorkItem], requested: int) -> WorksResolveResponse:
+    from src.osap.application.input_quality import classify_input_quality
+    from src.osap.application.metadata_normalizer import MetadataNormalizer
+
+    counts = {"resolved": 0, "ambiguous": 0, "not_found": 0}
+    items: list[WorksResolveItemResponse] = []
+    for item in results:
+        decision = item.decision
+        status = "not_found" if item.error else decision.status
+        counts[status] = counts.get(status, 0) + 1
+
+        raw_title = item.input.work_title or ""
+        raw_composer = item.input.composer or ""
+        normalized = WorksNormalized(
+            title_raw=raw_title,
+            title=MetadataNormalizer.comparison_title(raw_title, item.input.composer) if raw_title else "",
+            composer_raw=raw_composer,
+            composer=_normalize_composer(raw_composer),
+            catalog=item.input.work_catalog,
+        )
+        resolved = WorksResolved(
+            work=WorksResolvedWork(title=decision.work.title, catalog=decision.work.catalog)
+            if decision.work is not None
+            else None,
+            composer=_resolved_composer_dto(decision.composer) if decision.composer is not None else None,
+        )
+        items.append(
+            WorksResolveItemResponse(
+                id=item.id,
+                status=status,
+                normalized=normalized,
+                resolved=resolved,
+                confidence=decision.confidence,
+                input_quality=decision.input_quality or classify_input_quality(raw_composer),
+                candidates=[
+                    ComposerResolveCandidateResponse(
+                        name=c.composer.name,
+                        confidence=c.confidence,
+                        aliases=list(c.composer.aliases),
+                        external_ids=dict(c.composer.external_ids),
+                    )
+                    for c in decision.candidates
+                ],
+                evidence=[
+                    ComposerResolveEvidenceResponse(
+                        provider=e.provider,
+                        type=e.kind,
+                        confidence=e.confidence,
+                        work_title=e.work_title,
+                        work_catalog=e.work_catalog,
+                    )
+                    for e in decision.evidence
+                ],
+            )
+        )
+    return WorksResolveResponse(
+        results=items,
+        summary=WorksResolveSummary(
+            total=len(items),
+            resolved=counts["resolved"],
+            ambiguous=counts["ambiguous"],
+            not_found=counts["not_found"],
+        ),
+    )
+
+
+def _normalize_composer(raw: str) -> str:
+    # Normalización determinista del texto recibido (NO resolución).
+    return " ".join((raw or "").lower().split())
 
 
 def _merge_result_dto(d: dict[str, object]) -> MergeComposersResultResponse:
@@ -1704,5 +1783,25 @@ def create_platform_app(
             representations=reps,
         )
         return ok(_composer_resolve_dto(decision))
+
+    @app.post(
+        "/api/v1/works/resolve",
+        status_code=200,
+        tags=["Works"],
+        summary="Resolve works in batch (read-only)",
+        description="Resuelve una lista de obras: normaliza, resuelve la obra, obtiene el "
+        "compositor candidato, resuelve su identidad y devuelve evidencia + confianza + "
+        "estado por obra. No modifica storage. `composer` puede ser null si la obra se "
+        "identificó pero no se pudo determinar el compositor.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={200: _resp("Resolved works", _example({})), **_standard_errors(422)},
+    )
+    async def resolve_works(
+        payload: WorksResolveRequest,
+        response: Response,
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        works = [w.model_dump() for w in payload.works]
+        results = await api.works_resolve(works, payload.concurrency)
+        return ok(_works_resolve_dto(results, len(payload.works)))
 
     return app

@@ -6,12 +6,15 @@ internals directly) and produces the public contract DTOs. Pure orchestration; n
 
 import json
 import logging
+import os
 import re
+import threading
 import urllib.parse
 import urllib.request
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import cast
 
 from src.osap.api.contracts import (
     CatalogueRead,
@@ -44,6 +47,7 @@ from src.osap.application.canonicalizer import Canonicalizer
 from src.osap.application.composer_resolution_engine import ResolutionDecision
 from src.osap.application.composers_service import ComposersService
 from src.osap.application.jobs import DefaultJob
+from src.osap.application.use_cases.resolve_works import ResolvedWorkItem, WorkResolveInput
 from src.osap.application.votes_service import VotesService
 from src.osap.bootstrap.container import Container
 from src.osap.domain.jobs import JobContext, JobTrigger
@@ -331,6 +335,10 @@ class PlatformApi:
         self._representations: dict[str, dict[str, object]] = {}
         self._job_counter = 0
         self._oidc_pending: dict[str, dict[str, object]] = {}
+        self._oidc_pending_path = os.environ.get("OSAP_OIDC_STATE_FILE") or ""
+        self._oidc_pending_lock = threading.Lock()
+        if self._oidc_pending_path:
+            self._oidc_pending = self._load_oidc_pending()
         self._suggestion_counter = 0
         self._store = build_op_store(**self._container.op_store_config())
         highest = 0
@@ -689,6 +697,29 @@ class PlatformApi:
             representations=reps,
         )
 
+    async def works_resolve(
+        self,
+        works: list[dict[str, object]],
+        concurrency: int = 4,
+    ) -> list[ResolvedWorkItem]:
+        inputs: list[WorkResolveInput] = []
+        for w in works:
+            work = cast("dict[str, object]", w.get("work") or {})
+            composer = cast("dict[str, object]", w.get("composer") or {})
+            source = cast("dict[str, object]", w.get("source") or {})
+            inputs.append(
+                WorkResolveInput(
+                    id=str(w["id"]) if w.get("id") is not None else None,
+                    composer=cast("str | None", composer.get("name")) if composer else None,
+                    work_title=cast("str | None", work.get("title")),
+                    work_catalog=cast("str | None", work.get("catalog")),
+                    work_year=cast("int | None", work.get("year")),
+                    source_provider=cast("str | None", source.get("provider")) if source else None,
+                    source_work_id=cast("str | None", source.get("source_work_id")) if source else None,
+                )
+            )
+        return await self._container.works_resolution().execute(inputs, concurrency)
+
     def composer_review_stats(self, token: str | None) -> dict[str, int]:
         stats = self.composers().composer_review_stats(token)
         correct = int(stats.get("correct") or 0)
@@ -861,6 +892,25 @@ class PlatformApi:
 
     # --- OIDC (login vía osap-auth como IdP) --------------------------------
 
+    def _load_oidc_pending(self) -> dict[str, dict[str, object]]:
+        """Recupera los estados OIDC pendientes desde disco (sobreviven a reinicios)."""
+        try:
+            with open(self._oidc_pending_path, encoding="utf-8") as fh:
+                data = json.load(fh)
+            return {k: v for k, v in data.items() if isinstance(v, dict)} if isinstance(data, dict) else {}
+        except (OSError, ValueError):
+            return {}
+
+    def _persist_oidc_pending(self) -> None:
+        """Persiste los estados pendientes en disco (best-effort, nunca bloquea el login)."""
+        if not self._oidc_pending_path:
+            return
+        try:
+            with open(self._oidc_pending_path, "w", encoding="utf-8") as fh:
+                json.dump(self._oidc_pending, fh)
+        except OSError:
+            pass
+
     def oidc_start(self) -> dict[str, object]:
         from src.osap.infrastructure.auth.oidc_rp_client import OidcError
 
@@ -870,11 +920,13 @@ class PlatformApi:
         verifier, challenge = oidc.generate_pkce()
         state = oidc.generate_state()
         nonce = oidc.generate_state()
-        self._oidc_pending[state] = {
-            "verifier": verifier,
-            "nonce": nonce,
-            "created_at": datetime.now(UTC).timestamp(),
-        }
+        with self._oidc_pending_lock:
+            self._oidc_pending[state] = {
+                "verifier": verifier,
+                "nonce": nonce,
+                "created_at": datetime.now(UTC).timestamp(),
+            }
+            self._persist_oidc_pending()
         authorize_url = oidc.build_authorize_url(state, nonce, challenge)
         return {"authorize_url": authorize_url, "configured": True}
 
@@ -885,11 +937,13 @@ class PlatformApi:
         from src.osap.infrastructure.auth.oidc_rp_client import OidcError
 
         oidc = self._container.oidc_client()
-        if not state or state not in self._oidc_pending:
-            raise OidcError("OIDC state inválido o ausente")
-        pending = self._oidc_pending.pop(state)
+        with self._oidc_pending_lock:
+            if not state or state not in self._oidc_pending:
+                raise OidcError("OIDC state inválido o ausente")
+            pending = self._oidc_pending.pop(state)
+            self._persist_oidc_pending()
         created = float(str(pending.get("created_at") or 0))
-        if datetime.now(UTC).timestamp() - created > 600:
+        if datetime.now(UTC).timestamp() - created > 1800:
             raise OidcError("OIDC state caducado")
         if not code:
             raise OidcError("OIDC code ausente")

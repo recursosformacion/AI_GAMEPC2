@@ -96,6 +96,8 @@ def test_resolved_merges_duplicate_candidates() -> None:
 
 def _fake_work_matcher(query: ResolverQuery) -> list[tuple[str, ResolverCandidate]]:
     # Simula la fase de obra: un catálogo encuentra la obra y asocia un compositor.
+    if query.work_title and "Auspicious" not in query.work_title:
+        return []
     candidate = ResolverCandidate(
         name="Xiao Youmei",
         confidence=0.95,
@@ -150,6 +152,47 @@ def test_wikidata_resolver_builds_identity() -> None:
     assert "Monteverdi" in candidate.aliases
     assert candidate.external_ids["cpdl"] == "794"
     assert candidate.external_ids["musicbrainz"] == "9a75168c-..."
+
+
+def _build_client_with_work_matcher(matcher) -> TestClient:
+    container = Container()
+    container.set_composer_work_matcher(matcher)
+    container.register_composer_resolver(CanonicalComposerResolver())
+    return TestClient(create_platform_app(container=container))
+
+
+def test_works_resolve_endpoint_normalizes_and_resolves() -> None:
+    client = _build_client_with_work_matcher(_fake_work_matcher)
+    resp = client.post(
+        "/api/v1/works/resolve",
+        json={
+            "works": [
+                {
+                    "id": "w1",
+                    "composer": {"name": "ä æ R Z H çèª"},
+                    "work": {"title": "Song to the Auspicious Cloud - Second Version", "catalog": "192128"},
+                },
+                {"id": "w2", "work": {"title": "Some Unmatched Work"}},
+            ],
+            "concurrency": 2,
+        },
+    )
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["summary"]["total"] == 2
+    assert data["summary"]["resolved"] == 1
+    assert data["summary"]["not_found"] == 1
+
+    w1 = next(r for r in data["results"] if r["id"] == "w1")
+    assert w1["status"] == "resolved"
+    assert w1["normalized"]["title_raw"] == "Song to the Auspicious Cloud - Second Version"
+    assert w1["normalized"]["composer"] == "ä æ r z h çèª"
+    assert w1["resolved"]["composer"]["name"] == "Xiao Youmei"
+    assert w1["resolved"]["work"]["title"] == "Song to the Auspicious Cloud - Second Version"
+
+    w2 = next(r for r in data["results"] if r["id"] == "w2")
+    assert w2["status"] == "not_found"
+    assert w2["resolved"]["composer"] is None
 
 
 def _build_client(resolvers: list[IComposerResolver]) -> TestClient:

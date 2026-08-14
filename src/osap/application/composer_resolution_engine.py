@@ -39,6 +39,14 @@ class ResolvedComposer:
 
 
 @dataclass(frozen=True)
+class ResolvedWork:
+    """The best matched work from the work phase (title/catalog)."""
+
+    title: str | None = None
+    catalog: str | None = None
+
+
+@dataclass(frozen=True)
 class ResolutionEvidence:
     """A merged evidence item, tagged with the provider that produced it."""
 
@@ -65,6 +73,7 @@ class ResolutionDecision:
     composer: ResolvedComposer | None
     confidence: float
     input_quality: str
+    work: ResolvedWork | None = None
     candidates: tuple[ResolutionCandidate, ...] = ()
     evidence: tuple[ResolutionEvidence, ...] = ()
 
@@ -86,6 +95,7 @@ class ComposerResolutionEngine:
         raw: list[WorkMatchPair] = self._flatten(await self._run_all(query))
         if self._work_matcher is not None and query.work_title:
             raw.extend(await asyncio.to_thread(self._work_matcher, query))
+        resolved_work = self._best_work(raw)
         merged = self._merge(raw)
         merged.sort(key=lambda c: c.confidence, reverse=True)
         evidence = self._collect_evidence(merged)
@@ -96,6 +106,7 @@ class ComposerResolutionEngine:
                 composer=None,
                 confidence=0.0,
                 input_quality=input_quality,
+                work=resolved_work,
                 candidates=(),
                 evidence=evidence,
             )
@@ -114,9 +125,23 @@ class ComposerResolutionEngine:
             composer=top.composer if status == "resolved" else None,
             confidence=top.confidence if status != "not_found" else 0.0,
             input_quality=input_quality,
+            work=resolved_work,
             candidates=tuple(merged),
             evidence=evidence,
         )
+
+    @staticmethod
+    def _best_work(raw: list[WorkMatchPair]) -> ResolvedWork | None:
+        best_title: str | None = None
+        best_catalog: str | None = None
+        best_conf = -1.0
+        for _, candidate in raw:
+            for e in candidate.evidence:
+                if e.kind == "work_match" and e.work_title and e.confidence > best_conf:
+                    best_conf = e.confidence
+                    best_title = e.work_title
+                    best_catalog = e.work_catalog
+        return ResolvedWork(title=best_title, catalog=best_catalog) if best_title else None
 
     async def _run_all(self, query: ResolverQuery) -> list[ResolverResult]:
         async def one(resolver: IComposerResolver) -> ResolverResult:

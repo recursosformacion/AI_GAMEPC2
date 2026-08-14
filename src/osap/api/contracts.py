@@ -540,6 +540,66 @@ class ComposerResolveResponse(_Frozen):
     evidence: list[ComposerResolveEvidenceResponse] = []
 
 
+# --- resolución de obras en lote (v1) ----------------------------------------
+
+
+class WorksNormalized(_Frozen):
+    """Transformación determinista del texto recibido (no es resolución)."""
+
+    title_raw: str
+    title: str
+    composer_raw: str | None = None
+    composer: str | None = None
+    catalog: str | None = None
+
+
+class WorksResolvedWork(_Frozen):
+    title: str | None = None
+    catalog: str | None = None
+
+
+class WorksResolved(_Frozen):
+    """Conclusión obtenida mediante fuentes/evidencias. `composer` puede ser null."""
+
+    work: WorksResolvedWork | None = None
+    composer: ResolvedComposerResponse | None = None
+
+
+class WorksResolveItemRequest(_Frozen):
+    id: str | None = None
+    composer: ComposerResolveComposer | None = None
+    work: ComposerResolveWork
+    source: ComposerResolveSource | None = None
+
+
+class WorksResolveRequest(_Frozen):
+    works: list[WorksResolveItemRequest]
+    concurrency: int = 4
+
+
+class WorksResolveItemResponse(_Frozen):
+    id: str | None = None
+    status: str
+    normalized: WorksNormalized
+    resolved: WorksResolved
+    confidence: float = 0.0
+    input_quality: str = "normal"
+    candidates: list[ComposerResolveCandidateResponse] = []
+    evidence: list[ComposerResolveEvidenceResponse] = []
+
+
+class WorksResolveSummary(_Frozen):
+    total: int
+    resolved: int
+    ambiguous: int
+    not_found: int
+
+
+class WorksResolveResponse(_Frozen):
+    results: list[WorksResolveItemResponse]
+    summary: WorksResolveSummary
+
+
 class SuccessEnvelope(_Frozen, Generic[T]):  # noqa: UP046
     success: bool
     request_id: str

@@ -189,7 +189,18 @@ def test_five_tags_grouped() -> None:
         for operation in path.values()
         if isinstance(operation, dict)
     }
-    assert tags == {"Searches", "Jobs", "Providers", "Knowledge", "Votes", "Composers", "System", "Auth", "Sources"}
+    assert tags == {
+        "Searches",
+        "Jobs",
+        "Providers",
+        "Knowledge",
+        "Votes",
+        "Composers",
+        "System",
+        "Auth",
+        "Sources",
+        "Works",
+    }
 
 
 def test_examples_in_all_endpoints() -> None:
