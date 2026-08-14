@@ -159,13 +159,13 @@ class MetadataNormalizer:
             canonical = MetadataNormalizer.canonical_composer(composer)
             last = canonical.split()[-1].strip(" .,")
             text = re.sub(rf"\s*\([^)]*{re.escape(last)}[^)]*\)", "", text, flags=re.IGNORECASE)
+            # Quitar el compositor (nombre completo + iniciales + apellido) en cualquier
+            # posición, antes de quitar el apellido suelto: "I shall be no stranger there
+            # - William J. Kirkpatrick" -> "I shall be no stranger there".
+            text = re.sub(_composer_name_regex(canonical), " ", text)
+            text = re.sub(rf"\b{re.escape(last)}\b", " ", text, flags=re.IGNORECASE)
             text = re.sub(rf"[,\s-]+{re.escape(last)}\s*$", "", text, flags=re.IGNORECASE)
             text = _strip_trailing_composer(text, canonical)
-            # Quitar el compositor incrustado en cualquier posición, no solo al final:
-            # "Ave Verum Corpus W. A. Mozart (K. 618)" -> "Ave Verum Corpus (K. 618)".
-            text = re.sub(rf"\b{re.escape(canonical)}\b", " ", text, flags=re.IGNORECASE)
-            text = re.sub(rf"\b{re.escape(last)}\b", " ", text, flags=re.IGNORECASE)
-            text = re.sub(_composer_initials_regex(canonical), " ", text)
         # Drop parenthetical subtitles/comments ("Requiem (Officium defunctorum)")
         # for comparison; they are not part of the core identity.
         text = re.sub(r"\([^)]*\)", " ", text)
@@ -262,15 +262,21 @@ def _strip_trailing_composer(title: str, composer: str) -> str:
     return title
 
 
-def _composer_initials_regex(canonical: str) -> re.Pattern[str]:
-    """Regex para el compositor en forma de iniciales + apellido, p. ej.
+def _composer_name_regex(canonical: str) -> re.Pattern[str]:
+    """Regex para el nombre completo del compositor, tolerando nombre o iniciales.
 
-    "Wolfgang Amadeus Mozart" -> W. A. Mozart / W.A. Mozart / W A Mozart.
-    Solo nombres compuestos (más de una palabra); si es un solo nombre, nunca matchea.
+    "William James Kirkpatrick" -> William J. Kirkpatrick / W. J. Kirkpatrick /
+    William Kirkpatrick / Wm. Kirkpatrick. Los nombres de pila pueden ser completos o
+    iniciales y los del medio son opcionales.
     """
     parts = canonical.split()
-    if len(parts) <= 1:
-        return re.compile(r"(?!x)x")
-    initials = "".join(f"{re.escape(p[0])}\\.?\\s*" for p in parts[:-1])
     last = re.escape(parts[-1])
-    return re.compile(rf"\b{initials}{last}\b", re.IGNORECASE)
+    if len(parts) == 1:
+        return re.compile(rf"\b{last}\b", re.IGNORECASE)
+
+    def alt(part: str) -> str:
+        return rf"(?:{re.escape(part)}|{re.escape(part[0])}\.)"
+
+    first = alt(parts[0])
+    middles = "".join(rf"(?:{alt(p)}\.?\s*)?" for p in parts[1:-1])
+    return re.compile(rf"\b{first}\.?\s*{middles}{last}\b", re.IGNORECASE)

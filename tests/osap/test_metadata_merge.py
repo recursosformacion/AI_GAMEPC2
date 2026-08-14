@@ -21,6 +21,21 @@ class TestMetadataNormalizer:
         assert nm.normalized_composer == "wolfgang amadeus mozart"
         assert nm.normalized_catalog == "k 618"
 
+    def test_full_composer_name_stripped_from_title(self) -> None:
+        # El nombre completo del compositor (no solo el apellido) se quita del título.
+        assert (
+            MetadataNormalizer.comparison_title(
+                "I shall be no stranger there - William J. Kirkpatrick", "William James Kirkpatrick"
+            )
+            == "i shall be no stranger there"
+        )
+        assert (
+            MetadataNormalizer.comparison_title(
+                "William J. Kirkpatrick - I shall be no stranger", "William James Kirkpatrick"
+            )
+            == "i shall be no stranger"
+        )
+
     def test_work_key_is_removed(self) -> None:
         assert not hasattr(MetadataNormalizer, "work_key")
         assert not hasattr(MetadataNormalizer, "clean_title")
