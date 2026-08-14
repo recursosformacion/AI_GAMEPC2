@@ -171,11 +171,6 @@ function RepresentationsTab({
         {t("work.foundReps").replace("{n}", String(representations.length)).replace("{p}", String(byProvider.size))}
       </p>
 
-      <div className="flex items-center justify-between border-b border-osap-border px-1 pb-1 text-[10px] font-semibold uppercase tracking-wide text-osap-muted">
-        <span>{t("work.title")}</span>
-        <span>{t("work.action")}</span>
-      </div>
-
       <ul className="divide-y divide-osap-border">
         {representations.map((rep, i) => (
           <li

@@ -21,7 +21,12 @@ export function SourceCatalogPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">{t("nav.sources")}</h1>
+        <div>
+          <h1 className="text-xl font-semibold">{t("nav.sources")}</h1>
+          <p className="text-sm text-osap-muted">
+            {t("sources.connected").replace("{n}", String((list.data ?? []).filter((s) => s.status === "Online").length))}
+          </p>
+        </div>
         <Link to="/sources" className="rounded bg-osap-accent px-4 py-1.5 text-sm text-white">
           {t("sources.add")}
         </Link>

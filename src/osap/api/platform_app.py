@@ -103,7 +103,10 @@ def _download_filename(info: dict[str, object]) -> str:
     if catalogue:
         base = f"{base} {catalogue}".strip()
     ext = _EXTENSION.get(str(info.get("format") or ""), ".bin")
-    return re.sub(r'[\\/:*?"<>|]+', "_", base) + ext
+    # El nombre va en la cabecera Content-Disposition (latin-1): sanear a ASCII seguro.
+    safe = re.sub(r'[\\/:*?"<>|\u201c\u201d\u2018\u2019\u2013\u2014]+', "_", base)
+    safe = safe.encode("ascii", "ignore").decode("ascii").strip(" .")
+    return (safe or "representation") + ext
 
 
 _MEDIA_TYPES: dict[str, str] = {
