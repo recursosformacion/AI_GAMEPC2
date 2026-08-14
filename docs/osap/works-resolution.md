@@ -110,3 +110,28 @@ no del nombre corrupto.
 - Los resultados servirán para decidir si el concepto correcto es **Work Resolution**
   (frente al `composer/resolve` actual) antes de cerrar contratos.
 - Se mantiene `composer/resolve` sin cambios mientras tanto.
+- `/works/resolve` **no escribe** en storage: el flujo es storage → API → resolver →
+  resultado → storage decide. La escritura/aceptación sería una segunda fase.
+
+### Cómo ejecutar el experimento
+
+```bash
+python script/works_resolve_experiment.py <works.json> --base https://app.openmusicrepository.com/api/v1 --concurrency 4
+```
+
+`works.json` = `{ "works": [ { "id": "...", "composer": {"name": "..."}, "work": {"title": "...", "catalog": "..."} } ] }`.
+
+Mide: `resolved` / `ambiguous` / `not_found`, `composer null` (obra sin autor),
+`input_quality = corrupt_or_suspicious`, y proveedores que aportan evidencia, además de
+una muestra por estado para revisión manual. Ejemplo de muestra:
+`script/works_resolve_sample.json`.
+
+### Hallazgos iniciales (muestra de 10)
+
+- Muchas obras bien conocidas quedan `ambiguous` con `composer: null`: el `work_match`
+  devuelve varios compositores a **confianza plana 0.9**, sin margen → no decide el autor.
+  Falta gradar la confianza por la calidad del emparejamiento (fase posterior).
+- Un `resolved` puede ser **incorrecto** (Bach BWV 565 → BWV 862): revisar manualmente
+  cada `resolved` es imprescindible; un `resolved` erróneo es peor que un `ambiguous`.
+- El caso pdmx ("Song to the Auspicious Cloud") da `not_found`: no está en los catálogos
+  actuales (honesto, no inventa).

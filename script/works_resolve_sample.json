@@ -1,0 +1,14 @@
+{
+  "works": [
+    { "id": "s01", "composer": { "name": "Wolfgang Amadeus Mozart" }, "work": { "title": "Ave Verum Corpus, K. 618" } },
+    { "id": "s02", "composer": { "name": "ä æ R Z H çèª" }, "work": { "title": "Ave Verum Corpus, K. 618" } },
+    { "id": "s03", "composer": { "name": "Claudio Monteverdi" }, "work": { "title": "L Orfeo" } },
+    { "id": "s04", "composer": { "name": "Mozart" }, "work": { "title": "Requiem in D minor, K. 626" } },
+    { "id": "s05", "composer": { "name": "J. S. Bach" }, "work": { "title": "Toccata and Fugue in D minor, BWV 565" } },
+    { "id": "s06", "work": { "title": "Zzzz This Work Does Not Exist 88776655" } },
+    { "id": "s07", "composer": { "name": "pdmx corrupt!\"#$%" }, "work": { "title": "Song to the Auspicious Cloud" } },
+    { "id": "s08", "composer": { "name": "Ludwig van Beethoven" }, "work": { "title": "Symphony No. 5 in C minor, Op. 67" } },
+    { "id": "s09", "composer": { "name": "Frédéric Chopin" }, "work": { "title": "Nocturne in E-flat major, Op. 9 No. 2" } },
+    { "id": "s10", "composer": { "name": "Franz Schubert" }, "work": { "title": "Ave Maria, D. 839" } }
+  ]
+}
