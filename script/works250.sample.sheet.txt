@@ -1,0 +1,593 @@
+=== [10] status=resolved conf=0.9 ===
+  input title_raw   : The Welch Jig
+  input title (norm): the welch jig
+  input composer    : ''
+  input catalog     : None
+  -> elegido work   : '24 Country Dances for the Year 1791 (Various)'
+  -> elegido comp   : 'Various'
+  candidatos:
+    0. name='Various' conf=0.9 aliases=[] ids={}
+  evidencia:
+    provider=imslp kind=None conf=0.9 work_title='24 Country Dances for the Year 1791 (Various)' work_catalog=None
+
+=== [13] status=resolved conf=0.9 ===
+  input title_raw   : Paddies Evermore (air) 0262
+  input title (norm): paddies evermore 0262
+  input composer    : "after Chief F. O'Neillwith spirit"
+  input catalog     : None
+  -> elegido work   : 'Paddies Evermore (air) 0262'
+  -> elegido comp   : "after Chief F. O'Neillwith spirit"
+  candidatos:
+    0. name="after Chief F. O'Neillwith spirit" conf=0.9 aliases=["after Chief F. O'Neillwith SPIRIT"] ids={}
+  evidencia:
+    provider=omr kind=None conf=0.9 work_title='Paddies Evermore (air) 0262' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='The Fairy Cobbler (air) 0252' work_catalog=None
+
+=== [15] status=ambiguous conf=0.9 ===
+  input title_raw   : Like a star of the morning - Edmund S. Lorenz
+  input title (norm): like a star of the morning
+  input composer    : 'Edmund Simon Lorenz'
+  input catalog     : None
+  -> elegido work   : 'Like a star of the morning - Edmund S. Lorenz'
+  -> elegido comp   : None
+  candidatos:
+    0. name='Edmund Simon Lorenz' conf=0.9 aliases=[] ids={}
+    1. name='Edmund Simon Lorenz 1886' conf=0.9 aliases=[] ids={}
+    2. name='Edmund Simon Lorenz 1887' conf=0.9 aliases=[] ids={}
+    3. name='Edmund Simon Lorenz 1883' conf=0.9 aliases=[] ids={}
+  evidencia:
+    provider=omr kind=None conf=0.9 work_title='Like a star of the morning - Edmund S. Lorenz' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='GOD IS LOVE (Lorenz) - Edmund S. Lorenz' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='O weary pilgrim lift your head - Edmund S. Lorenz' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Give me the bible - Edmund S. Lorenz' work_catalog=None
+
+=== [16] status=resolved conf=0.9 ===
+  input title_raw   : The Little Bag of Potatoes
+  input title (norm): the little bag of potatoes
+  input composer    : ''
+  input catalog     : None
+  -> elegido work   : 'Haiku, Book 6 (Patterson, Graham)'
+  -> elegido comp   : 'Graham Patterson'
+  candidatos:
+    0. name='Graham Patterson' conf=0.9 aliases=[] ids={}
+  evidencia:
+    provider=imslp kind=None conf=0.9 work_title='Haiku, Book 6 (Patterson, Graham)' work_catalog=None
+
+=== [18] status=resolved conf=0.9 ===
+  input title_raw   : Urheber unbekannt - [ID 9-11b]
+  input title (norm): urheber unbekannt id 9 11b
+  input composer    : 'Urheber unbekanntDatum in der hier transkribierten schriftlichen Quelle: 1796'
+  input catalog     : None
+  -> elegido work   : 'Urheber unbekannt - [ID 9-11b]'
+  -> elegido comp   : 'Urheber unbekanntDatum in der hier transkribierten schriftlichen Quelle: 1796'
+  candidatos:
+    0. name='Urheber unbekanntDatum in der hier transkribierten schriftlichen Quelle: 1796' conf=0.9 aliases=[] ids={}
+  evidencia:
+    provider=omr kind=None conf=0.9 work_title='Urheber unbekannt - [ID 9-11b]' work_catalog=None
+
+=== [19] status=ambiguous conf=0.9 ===
+  input title_raw   : Attwood - Together then we'd fondly stray
+  input title (norm): together then we d fondly stray
+  input composer    : 'Attwood'
+  input catalog     : None
+  -> elegido work   : "Attwood - Together then we'd fondly stray"
+  -> elegido comp   : None
+  candidatos:
+    0. name='Attwood' conf=0.9 aliases=['Attwood.'] ids={}
+    1. name='Thomas Atwood 1831' conf=0.9 aliases=[] ids={}
+    2. name='Turn Thee again - Attwood' conf=0.9 aliases=[] ids={}
+    3. name='James Hill' conf=0.9 aliases=[] ids={}
+    4. name='Thomas Attwood' conf=0.9 aliases=['Thomas ATTWOOD'] ids={}
+    5. name='Not unto us O Lord - Walmisley' conf=0.9 aliases=[] ids={}
+    6. name='Turn thy face from my sins - Attwood' conf=0.9 aliases=[] ids={}
+    7. name='Thomas F. Walmisley' conf=0.9 aliases=[] ids={}
+    8. name='Thomas Attwood Walmisley ca. 1853' conf=0.9 aliases=[] ids={}
+    9. name='Come Holy Ghost - Attwood' conf=0.9 aliases=[] ids={}
+    10. name='Evening service in D minor - Walmisley' conf=0.9 aliases=[] ids={}
+    11. name='Thomas Attwood Walmisley' conf=0.9 aliases=[] ids={}
+    12. name='Teach me O Lord - Attwood' conf=0.9 aliases=[] ids={}
+    13. name='Attributed to James Hill Thomas Armstrong' conf=0.9 aliases=['Attributed to James Hill by Thomas Armstrong'] ids={}
+    14. name='O God who the leading of a star - Attwood' conf=0.9 aliases=['O God who by the leading of a star - Attwood'] ids={}
+  evidencia:
+    provider=omr kind=None conf=0.9 work_title="Attwood - Together then we'd fondly stray" work_catalog=None
+    provider=omr kind=None conf=0.9 work_title="Attwood - I'M AS SMART A LAD AS YOU'D WISH TO SEE." work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Creator spirit by whose aid - Thomas Attwood' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Turn Thee again O Lord - Thomas Attwood' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='James Hill - Attwood' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Sonatina in G Major' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Andante' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Not unto us oh Lord - Thomas Attwood Walmisley' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Turn thy face from my sins - Thomas Attwood' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Music all powerful - Thomas Attwood Walmisley' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='O perfect god thy love - Thomas A. Walmisley' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Come Holy Ghost - Thomas Attwood' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Magnificat and Nunc dimittis in d minor - Thomas Attwood Walmisley' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Ponder my Words - Thomas Attwood Walmisley' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Teach Me O Lord - Thomas Attwood' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Attributed to James Hill by Thomas Armstrong - Charles Attwood. WHL.[204]' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='O God who by the leading of a star - Thomas Attwood' work_catalog=None
+
+=== [23] status=not_found conf=0.0 ===
+  input title_raw   : The Regency Waltz
+  input title (norm): the regency waltz
+  input composer    : ''
+  input catalog     : None
+  -> elegido work   : None
+  -> elegido comp   : None
+  candidatos:
+    (sin candidatos)
+  evidencia:
+    (sin evidencia)
+
+=== [24] status=not_found conf=0.0 ===
+  input title_raw   : Lashley's March
+  input title (norm): lashley s march
+  input composer    : ''
+  input catalog     : None
+  -> elegido work   : None
+  -> elegido comp   : None
+  candidatos:
+    (sin candidatos)
+  evidencia:
+    (sin evidencia)
+
+=== [25] status=ambiguous conf=0.9 ===
+  input title_raw   : the Crusaders
+  input title (norm): the crusaders
+  input composer    : ''
+  input catalog     : None
+  -> elegido work   : 'The Crusaders'
+  -> elegido comp   : None
+  candidatos:
+    0. name='Ennio Morricone' conf=0.9 aliases=[] ids={}
+    1. name='Giuseppe Verdi' conf=0.9 aliases=[] ids={}
+    2. name='Ciro Pinsuti' conf=0.9 aliases=[] ids={}
+    3. name='Sergey cantata Prokofiev' conf=0.9 aliases=['Sergey cantata), Op.78 (Prokofiev'] ids={}
+    4. name='Edward MacDowell' conf=0.9 aliases=[] ids={}
+    5. name='Louis Antoine Jullien' conf=0.9 aliases=[] ids={}
+    6. name='Carl Theodor Hassloch' conf=0.9 aliases=[] ids={}
+    7. name='John Stepan Zamecnik' conf=0.9 aliases=[] ids={}
+    8. name='Various' conf=0.9 aliases=[] ids={}
+    9. name='The Crusaders - Pinsuti' conf=0.9 aliases=[] ids={}
+    10. name='Traditional' conf=0.9 aliases=[] ids={}
+    11. name='Graeme Revell' conf=0.9 aliases=[] ids={}
+    12. name='Sergey Sergeevich Prokofev' conf=0.9 aliases=['Сергей Сергеевич Прокофьев'] ids={}
+    13. name='Aleksandr Konstantinovich Glazunov' conf=0.9 aliases=['Александр Константинович Глазунов'] ids={}
+  evidencia:
+    provider=musicbrainz kind=None conf=0.9 work_title='The Crusaders' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='I Lombardi alla prima crociata (Verdi, Giuseppe)' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='The Crusaders (Pinsuti, Ciro)' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='Alexander Nevsky (cantata), Op.78 (Prokofiev, Sergey)' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='3 Choruses for Male Voices, Op.52 (MacDowell, Edward)' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='The Crusaders Quadrille (Jullien, Louis Antoine)' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='The Crusaders (Hassloch, Carl Theodor)' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='Wings (Zamecnik, John Stepan)' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='Capitol Photoplay Series (Various)' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='The Crusaders - Ciro Pinsuti' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title="Traditional music - THE CRUSADERS'" work_catalog=None
+    provider=musicbrainz kind=None conf=0.9 work_title='Charge of the Crusaders' work_catalog=None
+    provider=musicbrainz kind=None conf=0.9 work_title='Alexander Nevsky, op. 78: III. The Crusaders in Pskov' work_catalog=None
+    provider=musicbrainz kind=None conf=0.9 work_title='From the Middle Ages, op. 79: IV. Finale. The Crusaders' work_catalog=None
+
+=== [32] status=not_found conf=0.0 ===
+  input title_raw   : Trunch Wassail Song
+  input title (norm): trunch wassail song
+  input composer    : ''
+  input catalog     : None
+  -> elegido work   : None
+  -> elegido comp   : None
+  candidatos:
+    (sin candidatos)
+  evidencia:
+    (sin evidencia)
+
+=== [39] status=ambiguous conf=0.9 ===
+  input title_raw   : Mr. Riley
+  input title (norm): mr riley
+  input composer    : ''
+  input catalog     : None
+  -> elegido work   : 'The Essex Harmony (Arnold, John)'
+  -> elegido comp   : None
+  candidatos:
+    0. name='John Arnold' conf=0.9 aliases=[] ids={}
+    1. name='Henry Roberts' conf=0.9 aliases=[] ids={}
+    2. name='William Riley' conf=0.9 aliases=[] ids={}
+    3. name='Albert S. Bowman' conf=0.9 aliases=[] ids={}
+    4. name='Samuel Hosfeld' conf=0.9 aliases=[] ids={}
+    5. name='Anonymous' conf=0.9 aliases=[] ids={}
+    6. name='Francis Roome' conf=0.9 aliases=[] ids={}
+    7. name='Thomas Costellow' conf=0.9 aliases=[] ids={}
+    8. name='James Sanderson' conf=0.9 aliases=[] ids={}
+    9. name='Kenny Wheeler' conf=0.9 aliases=[] ids={}
+  evidencia:
+    provider=imslp kind=None conf=0.9 work_title='The Essex Harmony (Arnold, John)' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='Clio and Euterpe (Roberts, Henry)' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='Parochial Music Corrected (Riley, William)' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='Mr. Riley (Bowman, Albert S.)' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='Bon-Bons Medley Overture (Hosfeld, Samuel)' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title="Durang's Hornpipe (Anonymous)" work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='The Harmony of Sion (Roome, Francis)' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='Variations on an Air from Harlequin Amulet (Costellow, Thomas)' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='The Cottage on the Moor (Sanderson, James)' work_catalog=None
+    provider=musicbrainz kind=None conf=0.9 work_title='Watts Parker Beckett to Me Mr Riley?' work_catalog=None
+
+=== [55] status=resolved conf=0.9 ===
+  input title_raw   : Under the Boardwalk
+  input title (norm): under the boardwalk
+  input composer    : 'Artie Resnick and Kenny Young'
+  input catalog     : None
+  -> elegido work   : 'Under the Boardwalk'
+  -> elegido comp   : 'Artie Resnick and Kenny Young'
+  candidatos:
+    0. name='Artie Resnick and Kenny Young' conf=0.9 aliases=[] ids={}
+  evidencia:
+    provider=omr kind=None conf=0.9 work_title='Under the Boardwalk' work_catalog=None
+
+=== [58] status=not_found conf=0.0 ===
+  input title_raw   : Northampton Frolick. Ru1.020
+  input title (norm): northampton frolick ru1 020
+  input composer    : ''
+  input catalog     : None
+  -> elegido work   : None
+  -> elegido comp   : None
+  candidatos:
+    (sin candidatos)
+  evidencia:
+    (sin evidencia)
+
+=== [62] status=resolved conf=0.9 ===
+  input title_raw   : Trip up Stairs
+  input title (norm): trip up stairs
+  input composer    : ''
+  input catalog     : None
+  -> elegido work   : 'The Songs of England (Hatton, John Liptrot)'
+  -> elegido comp   : 'John Liptrot Hatton'
+  candidatos:
+    0. name='John Liptrot Hatton' conf=0.9 aliases=[] ids={}
+  evidencia:
+    provider=imslp kind=None conf=0.9 work_title='The Songs of England (Hatton, John Liptrot)' work_catalog=None
+
+=== [83] status=ambiguous conf=0.9 ===
+  input title_raw   : Arthur Seat
+  input title (norm): arthur seat
+  input composer    : 'J. Scott Skinner'
+  input catalog     : None
+  -> elegido work   : 'Arthur Seat'
+  -> elegido comp   : None
+  candidatos:
+    0. name='J. Scott Skinner' conf=0.9 aliases=[] ids={}
+    1. name="Joe Buchanan's Scottish Tome - Page 192.3J. Scott Skinner" conf=0.9 aliases=[] ids={}
+    2. name="Joe Buchanan's Scottish Tome - Page 111.0J. Scott Skinner" conf=0.9 aliases=[] ids={}
+  evidencia:
+    provider=omr kind=None conf=0.9 work_title='Arthur Seat' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Archie Broton' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title="Dr. Morrison's Seven Thistles" work_catalog=None
+
+=== [94] status=not_found conf=0.0 ===
+  input title_raw   : Trip it up Stairs. JJo4.133
+  input title (norm): trip it up stairs jjo4 133
+  input composer    : ''
+  input catalog     : None
+  -> elegido work   : None
+  -> elegido comp   : None
+  candidatos:
+    (sin candidatos)
+  evidencia:
+    (sin evidencia)
+
+=== [102] status=not_found conf=0.0 ===
+  input title_raw   : The Galty Rangers
+  input title (norm): the galty rangers
+  input composer    : ''
+  input catalog     : None
+  -> elegido work   : None
+  -> elegido comp   : None
+  candidatos:
+    (sin candidatos)
+  evidencia:
+    (sin evidencia)
+
+=== [108] status=resolved conf=0.9 ===
+  input title_raw   : The star of morn has risen - John Naylor
+  input title (norm): the star of morn has risen john naylor
+  input composer    : 'John Naylor 1873'
+  input catalog     : None
+  -> elegido work   : 'The star of morn has risen - John Naylor'
+  -> elegido comp   : 'John Naylor 1873'
+  candidatos:
+    0. name='John Naylor 1873' conf=0.9 aliases=[] ids={}
+  evidencia:
+    provider=omr kind=None conf=0.9 work_title='The star of morn has risen - John Naylor' work_catalog=None
+
+=== [109] status=ambiguous conf=0.9 ===
+  input title_raw   : random song
+  input title (norm): random song
+  input composer    : ''
+  input catalog     : None
+  -> elegido work   : 'Concert-Etudes, Op.55 (Popper, David)'
+  -> elegido comp   : None
+  candidatos:
+    0. name='David Popper' conf=0.9 aliases=[] ids={}
+    1. name='Charles Lenschow' conf=0.9 aliases=[] ids={}
+  evidencia:
+    provider=imslp kind=None conf=0.9 work_title='Concert-Etudes, Op.55 (Popper, David)' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='The Rose, Op.16 (Lenschow, Charles)' work_catalog=None
+
+=== [112] status=resolved conf=0.9 ===
+  input title_raw   : Wonderful night! Wonderful night - John F. Young
+  input title (norm): wonderful night wonderful night john f young
+  input composer    : 'Composer Unknown 1866'
+  input catalog     : None
+  -> elegido work   : 'Wonderful night! Wonderful night - John F. Young'
+  -> elegido comp   : 'Composer Unknown 1866'
+  candidatos:
+    0. name='Composer Unknown 1866' conf=0.9 aliases=['Composer unknown 1866'] ids={}
+  evidencia:
+    provider=omr kind=None conf=0.9 work_title='Wonderful night! Wonderful night - John F. Young' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Wonderful night! - Composer unknown.' work_catalog=None
+
+=== [130] status=ambiguous conf=0.9 ===
+  input title_raw   : Traditional music - Ton double plin
+  input title (norm): traditional music ton double plin
+  input composer    : 'Traditionnel'
+  input catalog     : None
+  -> elegido work   : 'Traditional music - Ton double plin'
+  -> elegido comp   : None
+  candidatos:
+    0. name='Traditionnel' conf=0.9 aliases=['traditionnel'] ids={}
+    1. name='Paroles et musique traditionnelle' conf=0.9 aliases=[] ids={}
+    2. name="air traditionnel d'Ecosse XVIIème siècle" conf=0.9 aliases=[] ids={}
+    3. name='Chanson traditionnelle basque Arrangé par S C Standen' conf=0.9 aliases=[] ids={}
+    4. name='Traditionnel Anglais' conf=0.9 aliases=[] ids={}
+    5. name='adaptation Nicole GALLET sur traditionnel' conf=0.9 aliases=[] ids={}
+    6. name='Traditionnel americain' conf=0.9 aliases=[] ids={}
+    7. name='Paroles traditionnelles du début du XIX siècle sur un air du XVIIe' conf=0.9 aliases=[] ids={}
+    8. name='Paroles et musiques traditionnelles' conf=0.9 aliases=[] ids={}
+    9. name='Afrique du Sud Traditionnel Zoulou' conf=0.9 aliases=[] ids={}
+    10. name='Traditionnel Berry' conf=0.9 aliases=[] ids={}
+    11. name='Traditionnel abc file Bernard Loffet' conf=0.9 aliases=['Traditionnel abc file by Bernard Loffet'] ids={}
+    12. name='Traditionnel Bretagne fichier abc : Bernard Loffet' conf=0.9 aliases=[] ids={}
+    13. name='Chanson traditionnelle' conf=0.9 aliases=[] ids={}
+    14. name='Traditionnel Bretagne' conf=0.9 aliases=[] ids={}
+    15. name='Traditionnel du Béarn' conf=0.9 aliases=[] ids={}
+    16. name='Traditionnel de Wallonie fichier abc : Bernard Loffet' conf=0.9 aliases=[] ids={}
+    17. name='Frédéric Bérat Traditionnel' conf=0.9 aliases=[] ids={}
+    18. name='Gospel traditionnel' conf=0.9 aliases=[] ids={}
+    19. name='Traditionnel irlandais - Transcription René AMBERG' conf=0.9 aliases=[] ids={}
+  evidencia:
+    provider=omr kind=None conf=0.9 work_title='Traditional music - Ton double plin' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title="Isabeau s'y promène" work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Traditional music - Le roi a fait battre tambour' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='The water is wide' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Maitea Non Zira?' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Scarborough Fair' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Armstrong 2' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Oh when the saints' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Traditional music - La mère Michel' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Traditional music - Aux marches du palais' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title="Tshotsholoza s'timela" work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Traditional music - Valse \\a 15 sous' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Traditional music - Mixer' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title="Traditional music - Gavotte d'Honneur" work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Hirondelle messagère de nos amours' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Andro de Keratry' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title="L'aulhada" work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Traditional music - Passe-pî del neure poye' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Traditional music - Ma Normandie' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='When the saints go marching in' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='March of the King of Laois' work_catalog=None
+
+=== [138] status=not_found conf=0.0 ===
+  input title_raw   : Lady Carbury
+  input title (norm): lady carbury
+  input composer    : ''
+  input catalog     : None
+  -> elegido work   : None
+  -> elegido comp   : None
+  candidatos:
+    (sin candidatos)
+  evidencia:
+    (sin evidencia)
+
+=== [142] status=ambiguous conf=0.9 ===
+  input title_raw   : GOD SAVE THE KING
+  input title (norm): god save the king
+  input composer    : ''
+  input catalog     : None
+  -> elegido work   : 'God Save the King'
+  -> elegido comp   : None
+  candidatos:
+    0. name='[unknown]' conf=0.9 aliases=[] ids={}
+    1. name='Robert Fripp' conf=0.9 aliases=[] ids={}
+    2. name='Jacques Revaux' conf=0.9 aliases=[] ids={}
+    3. name='Francisco Becker' conf=0.9 aliases=[] ids={}
+    4. name='Ludwig van Beethoven' conf=0.9 aliases=[] ids={}
+    5. name='Johann Nepomuk Hummel' conf=0.9 aliases=[] ids={}
+    6. name='George Frideric Handel' conf=0.9 aliases=[] ids={}
+    7. name='Christian Heinrich Rinck' conf=0.9 aliases=[] ids={}
+    8. name='Carl Maria von Weber' conf=0.9 aliases=[] ids={}
+    9. name='Friedrich Wilhelm Kalkbrenner' conf=0.9 aliases=[] ids={}
+    10. name='Henry Carey' conf=0.9 aliases=[] ids={}
+    11. name='Carl Czerny' conf=0.9 aliases=[] ids={}
+    12. name='Various' conf=0.9 aliases=[] ids={}
+    13. name='Niccolò Paganini' conf=0.9 aliases=[] ids={}
+    14. name='Friedrich Schwindl' conf=0.9 aliases=[] ids={}
+    15. name='Thomas Ravenscroft' conf=0.9 aliases=[] ids={}
+    16. name='Traditional' conf=0.9 aliases=[] ids={}
+    17. name='Charles Wesley' conf=0.9 aliases=[] ids={}
+    18. name='Max Reger' conf=0.9 aliases=[] ids={}
+    19. name='Samuel Wesley' conf=0.9 aliases=[] ids={}
+    20. name='Adrien-François Servais' conf=0.9 aliases=[] ids={}
+    21. name='César Franck' conf=0.9 aliases=[] ids={}
+    22. name='Florian Uhlig' conf=0.9 aliases=[] ids={}
+  evidencia:
+    provider=musicbrainz kind=None conf=0.9 work_title='God Save the King' work_catalog=None
+    provider=musicbrainz kind=None conf=0.9 work_title='God Save the King' work_catalog=None
+    provider=musicbrainz kind=None conf=0.9 work_title='God Save the King' work_catalog=None
+    provider=musicbrainz kind=None conf=0.9 work_title='God Save the King' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title="7 Variations on 'God Save the King', WoO 78 (Beethoven, Ludwig van)" work_catalog=None
+    provider=musicbrainz kind=None conf=0.9 work_title='7 Variations for Piano in C major on “God Save the King”, WoO 78' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title="Variations sur 'God Save the King', Op.10 (Hummel, Johann Nepomuk)" work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='Esther, HWV 50b (Handel, George Frideric)' work_catalog=None
+    provider=musicbrainz kind=None conf=0.9 work_title='Coronation Anthem no. 1, HWV 258 “Zadok the Priest”: III. God Save the King!' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='Practische Orgelschule, Op.55 (Rinck, Christian Heinrich)' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='Jubel-Ouvertüre, Op.59 (Weber, Carl Maria von)' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title="Bravura Variations on 'God Save the King', Op.99 (Kalkbrenner, Friedrich Wilhelm)" work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='God Save the King (Carey, Henry)' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title="My Country 'Tis of Thee aka America my country 'tis of thee - Anonymous melody derived from the British national anthem God Save the King" work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='Erster Clavier-Unterricht in 100 Erholungen (Czerny, Carl)' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='National Anthems (Various)' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title="Variations on 'God Save the King', Op.9 (Paganini, Niccolò)" work_catalog=None
+    provider=musicbrainz kind=None conf=0.9 work_title='God Save the King per violino solo, op. 9, MS 56' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='6 Quintets or Trios, Op.10 (Schwindl, Friedrich)' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title='The Whole Booke of Psalmes (Ravenscroft, Thomas)' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='God Save the Queen' work_catalog=None
+    provider=musicbrainz kind=None conf=0.9 work_title='God Save the King with New Variations' work_catalog=None
+    provider=musicbrainz kind=None conf=0.9 work_title='Variations and Fugue on "God Save the King"' work_catalog=None
+    provider=musicbrainz kind=None conf=0.9 work_title='Three Variations in D on “God Save the King”' work_catalog=None
+    provider=musicbrainz kind=None conf=0.9 work_title='Variations brillantes et concertantes sur l’air God Save the King, op. 38' work_catalog=None
+    provider=musicbrainz kind=None conf=0.9 work_title='Premier Duo à quatre mains sur God Save the King, op. 4' work_catalog=None
+    provider=musicbrainz kind=None conf=0.9 work_title='Cadenza for 7 Variations for Piano in C major on "God Save the King", WoO 78' work_catalog=None
+
+=== [145] status=ambiguous conf=0.9 ===
+  input title_raw   : Light of the Seven
+  input title (norm): light of the seven
+  input composer    : 'Ramin Djawadi'
+  input catalog     : None
+  -> elegido work   : 'Light of the Seven'
+  -> elegido comp   : None
+  candidatos:
+    0. name='Ramin Djawadi' conf=0.9 aliases=['Composed by Ramin Djawadi', 'RAMIN DJAWADI', 'by Ramin Djawadi'] ids={}
+    1. name='Stephen B Alan Sylvestry Ramin Djawadi Craig Armstrong Ozzy Osbourne Patrick Doyle' conf=0.9 aliases=[] ids={}
+    2. name='Ramin DjawadiPiano arrangement Nicolas Del GalloFull playthrough and more athttps://www.youtube.com/c/NDGmusicIf you want to donate please check out my Patreon âohttps://www.patreon.com/ndg' conf=0.9 aliases=['Composed by Ramin DjawadiPiano arrangement by Nicolas Del GalloFull playthrough and more athttps://www.youtube.com/c/NDGmusicIf you want to donate please check out my Patreon âºhttps://www.patreon.com/ndg'] ids={}
+    3. name='Music Ramin Djawadi' conf=0.9 aliases=['Music By Ramin Djawadi', 'Music by Ramin Djawadi'] ids={}
+    4. name='Music byRamin Djawadi' conf=0.9 aliases=[] ids={}
+    5. name='Ramin DjawadiArrangement Nicolas Del Gallo & Matthieu Bennett Full playthrough and more athttps://www.youtube.com/c/NDGmusicIf you want to donate please check out my Patreon âohttps://www.patreon.com/ndg' conf=0.9 aliases=['Composed by Ramin DjawadiArrangement by Nicolas Del Gallo & Matthieu Bennett Full playthrough and more athttps://www.youtube.com/c/NDGmusicIf you want to donate please check out my Patreon âºhttps://www.patreon.com/ndg'] ids={}
+    6. name='Ramin Djawadi Arr. Daniel Roberts' conf=0.9 aliases=[] ids={}
+    7. name='Musique de Ramin Djawadi Adapté par Marc-Antoine Mauny' conf=0.9 aliases=[] ids={}
+    8. name='The Rolling Stones & Ramin DjawadiPiano arrangement Nicolas Del GalloFull playthrough and more athttps://www.youtube.com/c/NDGmusicIf you want to donate please check out my Patreon âohttps://www.patreon.com/ndg' conf=0.9 aliases=['Composed by The Rolling Stones & Ramin DjawadiPiano arrangement by Nicolas Del GalloFull playthrough and more athttps://www.youtube.com/c/NDGmusicIf you want to donate please check out my Patreon âºhttps://www.patreon.com/ndg'] ids={}
+    9. name='Ramin Djawadi Adaptation Alessandra Münger' conf=0.9 aliases=['Ramin Djawadi Adaptation by Alessandra Münger'] ids={}
+    10. name='Ramin Djawadi Harp Adaptation Alessandra Münger' conf=0.9 aliases=['Ramin Djawadi Harp Adaptation by Alessandra Münger'] ids={}
+    11. name='Ramin Djawadi Arr: Jean Michael Courtois' conf=0.9 aliases=['By Ramin Djawadi Arr: Jean Michael Courtois'] ids={}
+    12. name='Composer: Ramin Djawadi' conf=0.9 aliases=[] ids={}
+    13. name='Ramin Djawadi Arranged Julia Habibi' conf=0.9 aliases=['Ramin Djawadi Arranged by Julia Habibi'] ids={}
+    14. name='Ramin DjawadiArr. Kaleb Norton' conf=0.9 aliases=[] ids={}
+    15. name='Ramin Djawadi Arr: Marja van Kaam' conf=0.9 aliases=[] ids={}
+    16. name='Kurt Cobain & Ramin DjawadiPiano arrangement Nicolas Del GalloFull playthrough and more athttps://www.youtube.com/c/NDGmusicIf you want to donate please check out my Patreon âohttps://www.patreon.com/ndg' conf=0.9 aliases=['Composed by Kurt Cobain & Ramin DjawadiPiano arrangement by Nicolas Del GalloFull playthrough and more athttps://www.youtube.com/c/NDGmusicIf you want to donate please check out my Patreon âºhttps://www.patreon.com/ndg'] ids={}
+    17. name='Ramin Djawadi Arranged Monisieja' conf=0.9 aliases=['Composed by Ramin Djawadi Arranged by Monisieja'] ids={}
+    18. name='Ramin Djawadi Arr. Gabe Russell' conf=0.9 aliases=['Ramin Djawadi Arr. by Gabe Russell'] ids={}
+  evidencia:
+    provider=omr kind=None conf=0.9 work_title='Light of the Seven' work_catalog=None
+    provider=musicbrainz kind=None conf=0.9 work_title='Light of the Seven' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='The Night King Game of Thrones' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Westworld - Main Theme' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Westworld Theme' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='The Hand of Thanos mvt 1' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='The Children (Advanced Piano & Vocals Duo)' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Game Of Thrones Theme' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='The Rains Of Castamere (HARP Celtic) - Lannister Song' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Game Of Thrones' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='A Lannister Always Pays His Debts (Advanced Piano & Violin Duet)' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title="The Queen's Justice / Fall of Highgarden" work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='The Rains Of Castamere' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Paint It Black (Advanced Piano Solo)' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Game of Thrones - Main Theme' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='The Rains of Castamere' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='The Rains of Castamere' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Game of Thrones (Main Theme)' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Game of Thrones' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='THE IRON THRONE (GAME OF THRONES) (DAENERYS TARGARYEN) (USE AUDIO SOURCE)' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='ÐÑÐ ÐÑÐµÑÑÐ¾ÐÑÐ² flute sax' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Heart-Shaped Box (Advanced Piano Solo)' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Game of Thrones' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='The Rains of Castamere Solo Clarinet with Accompaniment' work_catalog=None
+
+=== [150] status=not_found conf=0.0 ===
+  input title_raw   : Milan by ear
+  input title (norm): milan by ear
+  input composer    : ''
+  input catalog     : None
+  -> elegido work   : None
+  -> elegido comp   : None
+  candidatos:
+    (sin candidatos)
+  evidencia:
+    (sin evidencia)
+
+=== [167] status=ambiguous conf=0.9 ===
+  input title_raw   : Joy-bells - Charles H. Gabriel
+  input title (norm): joy bells
+  input composer    : 'Charles Hutchinson Gabriel'
+  input catalog     : None
+  -> elegido work   : 'Joy-bells - Charles H. Gabriel'
+  -> elegido comp   : None
+  candidatos:
+    0. name='Charles Hutchinson Gabriel' conf=0.9 aliases=[] ids={}
+    1. name='Edwin Othello Excell' conf=0.9 aliases=[] ids={}
+    2. name='Charles Hutchinson Gabriel 1902' conf=0.9 aliases=[] ids={}
+    3. name='Charles Hutchinson Gabriel 1901' conf=0.9 aliases=[] ids={}
+    4. name='Charles Hutchinson Gabriel Jr' conf=0.9 aliases=['Charles Hutchinson Gabriel Jr.'] ids={}
+    5. name='Charles Hutchinson Gabriel 1912' conf=0.9 aliases=[] ids={}
+    6. name='Charles Hutchinson Gabriel 1906' conf=0.9 aliases=[] ids={}
+    7. name='Charles Hutchinson Gabriel 1900' conf=0.9 aliases=[] ids={}
+  evidencia:
+    provider=omr kind=None conf=0.9 work_title='Joy-bells - Charles H. Gabriel' work_catalog=None
+    provider=imslp kind=None conf=0.9 work_title="Excell's Anthems (Excell, Edwin Othello)" work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='There is a lamp whose steady light - Charles Hutchinson Gabriel' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Promise Mercies' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='He loves me - Charles H. Gabriel Jr.' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='Ye gates lift your heads - Charles H. Gabriel' work_catalog=None
+    provider=omr kind=None conf=0.9 work_title="There's One who can comfort when all else fails (Gabriel) - Chas. H. Gabriel" work_catalog=None
+    provider=omr kind=None conf=0.9 work_title='A home all bright and fair - Charles H. Gabriel' work_catalog=None
+
+=== [211] status=ambiguous conf=0.9 ===
+  input title_raw   : Old Nick's Lumber Room or the Pawnbroker's Warehouse
+  input title (norm): old nick s lumber room or the pawnbroker s warehouse
+  input composer    : ''
+  input catalog     : None
+  -> elegido work   : "Old Nick's Lumber Room"
+  -> elegido comp   : None
+  candidatos:
+    0. name='anon' conf=0.9 aliases=['anon.'] ids={}
+    1. name='Trad' conf=0.9 aliases=['Trad.'] ids={}
+  evidencia:
+    provider=omr kind=None conf=0.9 work_title="Old Nick's Lumber Room" work_catalog=None
+    provider=omr kind=None conf=0.9 work_title="Traditional music - Old Nick's Lumber Room" work_catalog=None
+
+=== [212] status=ambiguous conf=0.9 ===
+  input title_raw   : Buckley's Fancy
+  input title (norm): buckley s fancy
+  input composer    : ''
+  input catalog     : None
+  -> elegido work   : "Buckley's fancy"
+  -> elegido comp   : None
+  candidatos:
+    0. name='anon' conf=0.9 aliases=['anon.'] ids={}
+    1. name='after Mr. McFadden' conf=0.9 aliases=[] ids={}
+  evidencia:
+    provider=omr kind=None conf=0.9 work_title="Buckley's fancy" work_catalog=None
+    provider=omr kind=None conf=0.9 work_title="Buckley's Fancy (reel) 1211" work_catalog=None
+
+=== [233] status=not_found conf=0.0 ===
+  input title_raw   : Giga di Rocca Grimalda (A)
+  input title (norm): giga di rocca grimalda
+  input composer    : ''
+  input catalog     : None
+  -> elegido work   : None
+  -> elegido comp   : None
+  candidatos:
+    (sin candidatos)
+  evidencia:
+    (sin evidencia)
+
+=== [243] status=not_found conf=0.0 ===
+  input title_raw   : Wandering afar from my home above - Barney Elliott Warren
+  input title (norm): wandering afar from my home above barney elliott warren
+  input composer    : ''
+  input catalog     : None
+  -> elegido work   : None
+  -> elegido comp   : None
+  candidatos:
+    (sin candidatos)
+  evidencia:
+    (sin evidencia)

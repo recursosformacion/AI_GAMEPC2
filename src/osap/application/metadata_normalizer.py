@@ -1,5 +1,7 @@
 import re
 import unicodedata
+from dataclasses import dataclass, field
+from difflib import SequenceMatcher
 from pathlib import Path
 
 import yaml  # type: ignore[import-untyped]
@@ -29,6 +31,20 @@ def transliterate_cyrillic(text: str) -> str:
         return text
     return "".join(_CYRILLIC_TO_LATIN.get(ch, ch) for ch in text)
 
+
+def title_key(title: str) -> str:
+    """Clave canónica de identidad de obra (FASE 5.7.2), sin dependencias de api/wiring."""
+    return MetadataNormalizer.normalize_title_with_trace(title or "").key
+
+
+def title_similarity(a_key: str, b_key: str) -> float:
+    """Similitud de dos claves de título (0..1), para ranking de búsqueda."""
+    if not a_key or not b_key:
+        return 0.0
+    if a_key == b_key:
+        return 1.0
+    return SequenceMatcher(None, a_key, b_key).ratio()
+
 _TITLE_NOISE = re.compile(
     r"\b(WIP|Draft|Version\s*\d*|Rev\.?|Copy|Reduction|Preliminary|Unfinished|Fragment)\b",
     re.IGNORECASE,
@@ -40,6 +56,26 @@ _MOJIBAKE = re.compile(r"[\uFFFD]|\\x[0-9a-fA-F]{2}|\\u[0-9a-fA-F]{4}")
 _REMOVE_CATALOGUE = re.compile(
     r"\b(?:KV|Köchel|Koechel|K\.?|BWV|Hob\.?|D\.?|Op\.?)\s*\.?\s*[0-9]+[A-Za-z]?\b", re.IGNORECASE
 )
+
+# FASE 5.7.2 — shelfmark/referencia de colección final (. Ru1.183 A, . HSJJ.188, JBut.311).
+_CATALOG_SUFFIX = re.compile(r"\.?\s+[A-Za-z]{1,5}[.0-9/]+(?:\s+[A-Za-z])?\s*$", re.IGNORECASE)
+# FASE 5.7.2 — artículo inicial (The/A/An).
+_LEADING_ARTICLE = re.compile(r"^(?:a|an|the)\s+", re.IGNORECASE)
+
+
+@dataclass
+class TitleNormalization:
+    """Resultado trazable de normalizar un título (FASE 5.7.2).
+
+    `key`: clave canónica de identidad de obra (para agrupar en el matcher).
+    `removed`: transformaciones aplicadas (segmento + razón), no destructivas.
+    `attribution`: compositor usado como evidencia (regla 3), nunca destructivo del título.
+    """
+
+    raw: str
+    key: str
+    removed: tuple[dict[str, object], ...] = field(default_factory=tuple)
+    attribution: str | None = None
 _REMOVE_NUMBER = re.compile(r"\b(?:No\.?|Number|Nº)\s*[0-9]+[A-Za-z]?\b", re.IGNORECASE)
 _REMOVE_KEY = re.compile(r"\bin\s+[A-H](?:-?flat|b|#|sharp)?(?:\s+(?:major|minor|maj|min))?\b", re.IGNORECASE)
 _REMOVE_TRAILING_VOICES = re.compile(r"\s+(?:SATB|SSAATTBB|TTBB|SSA|TTB|SAB)\s*$", re.IGNORECASE)
@@ -143,6 +179,69 @@ class MetadataNormalizer:
         return text
 
     @staticmethod
+    def extract_composer_from_title(title: str) -> tuple[str, str | None]:
+        """Extrae el compositor incrustado en el título, devolviendo (título_limpio, compositor).
+
+        Patrones: "Título - Compositor", "Título — Compositor", "Título by Compositor".
+        El compositor incrustado es una señal fuerte (p. ej. "Joy-bells - Charles H. Gabriel").
+        Nunca asume anónimo: si no hay patrón, devuelve el título intacto y compositor None.
+        """
+        text = MetadataNormalizer._clean_text(title)
+        for sep in (" — ", " – ", " - "):
+            if sep in text:
+                head, tail = text.rsplit(sep, 1)
+                tail = tail.strip(" .,;")
+                head = head.strip(" .,;-")
+                if head and tail:
+                    return head, tail
+        m = re.search(r"\bby\s+(.+?)\s*$", text, re.IGNORECASE)
+        if m:
+            head = text[: m.start()].strip(" .,;-")
+            tail = m.group(1).strip(" .,;")
+            if head and tail:
+                return head, tail
+        return title, None
+
+    @staticmethod
+    def comparison_composer(raw: str) -> str:
+        """Clave determinista de compositor SOLO para comparar/matching.
+
+        Separa la forma de mostrar (`canonical_composer`) de la clave de igualdad:
+        colapsa iniciales/nombres de pila, elimina años sueltos y unifica marcadores
+        genéricos (`anon`, `Trad`, `Traditional`, `Anonymous` → `anonymous`). Así
+        "Edmund Simon Lorenz", "Edmund S. Lorenz" y "Edmund Simon Lorenz 1886" son la
+        misma clave, y "anon"/"Trad" colapsan con "Anonymous".
+        """
+        text = (MetadataNormalizer.canonical_composer(raw) or "").strip()
+        if not text:
+            return ""
+        low = text.lower()
+        if low in (
+            "anon",
+            "anon.",
+            "anonymous",
+            "trad",
+            "trad.",
+            "traditional",
+            "attrib.",
+            "attributed",
+            "attrib",
+            "unknown",
+            "author unknown",
+            "urheber unbekannt",
+            "urheber unbek.",
+        ) or low.startswith("urheber unbekannt"):
+            return "anonymous"
+        # Quitar año(s) sueltos al final ("Edmund Simon Lorenz 1886" -> "...Lorenz").
+        text = re.sub(r"\s+\d{3,4}\s*$", "", text)
+        tokens = [t for t in text.split() if t]
+        if not tokens:
+            return ""
+        last = tokens[-1].lower()
+        firsts = "".join(t[0].lower() for t in tokens[:-1] if t[0].isalnum())
+        return f"{firsts} {last}".strip()
+
+    @staticmethod
     def comparison_title(title: str, composer: str | None = None) -> str:
         """Normalized title used ONLY for comparison.
 
@@ -179,6 +278,41 @@ class MetadataNormalizer:
         text = text.lower()
         text = re.sub(r"[^a-z0-9 ]+", " ", text)
         return re.sub(r"\s+", " ", text).strip()
+
+    @staticmethod
+    def normalize_title_with_trace(
+        title: str, composer: str | None = None
+    ) -> TitleNormalization:
+        """Normaliza el título de forma **trazable y no destructiva** (FASE 5.7.2).
+
+        Produce SOLO la identidad textual de la obra (`key`), registrando qué se eliminó
+        y por qué (`removed`). NO decide atribución: la atribución queda en la capa de
+        compositor y solo se usa aquí como *evidencia* (rule 3, conservadora).
+
+        Reglas (independientes, ordenadas):
+          1. catalog_reference  — shelfmark/ref. de colección final (. Ru1.183, . HSJJ.188).
+          2. leading_article    — artículo inicial (The/A/An).
+          3. attribution        — compositor dado: la elimina `comparison_title`; aquí solo
+                                  se registra (nunca destruye el título sin evidencia).
+        """
+        text = transliterate_cyrillic(MetadataNormalizer._clean_text(title))
+        removed: list[dict[str, object]] = []
+
+        # 1. catalog_reference (shelfmark de colección final).
+        m = _CATALOG_SUFFIX.search(text)
+        if m:
+            removed.append({"segment": m.group(0).strip(" ."), "reason": "catalog_reference"})
+            text = text[: m.start()]
+
+        # 2. leading_article.
+        m = _LEADING_ARTICLE.match(text)
+        if m:
+            removed.append({"segment": m.group(0).strip(), "reason": "leading_article"})
+            text = text[m.end() :]
+
+        # 3. attribution (evidencia = compositor dado); la eliminación la hace comparison_title.
+        key = MetadataNormalizer.comparison_title(text, composer)
+        return TitleNormalization(raw=title, key=key, removed=tuple(removed), attribution=composer)
 
     @staticmethod
     def normalize(title: str, composer: str | None) -> NormalizedMetadata:

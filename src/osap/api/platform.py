@@ -12,7 +12,7 @@ import threading
 import urllib.parse
 import urllib.request
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import cast
 
@@ -55,7 +55,11 @@ from src.osap.domain.knowledge import KnowledgeBase
 from src.osap.domain.principal import Principal
 from src.osap.domain.resolve_request import ResolveRequestBuilder
 from src.osap.domain.votes import ComposerStats, WorkStats, WorkVote
+from src.osap.infrastructure.resolution.acquisition_service import AcquisitionService
+from src.osap.infrastructure.resolution.provider_acquirer import IProviderAcquirer
+from src.osap.infrastructure.resolution.universe_matching import SimpleUniverseMatcher
 from src.osap.infrastructure.state.op_store import build_op_store
+from src.osap.infrastructure.state.resolution_store import build_resolution_store
 from src.osap.ports.composer_resolver import ResolverRepresentation
 
 VERSION = "3.1"
@@ -341,6 +345,8 @@ class PlatformApi:
             self._oidc_pending = self._load_oidc_pending()
         self._suggestion_counter = 0
         self._store = build_op_store(**self._container.op_store_config())
+        self._resolution_store = build_resolution_store(**self._container.op_store_config())
+        self._acquisition = AcquisitionService(self._resolution_store, {}, SimpleUniverseMatcher())
         highest = 0
         for item in self._store.list_suggestions():
             sid = str(item.get("id") or "")
@@ -719,6 +725,125 @@ class PlatformApi:
                 )
             )
         return await self._container.works_resolution().execute(inputs, concurrency)
+
+    # --- resolution sessions (ADR-0033) ---------------------------------------
+
+    _DEFAULT_PROVIDERS = ["omr", "imslp", "musicbrainz", "mutopia"]
+    _DEFAULT_POLICY = {
+        "max_results_to_acquire": 500,
+        "max_pages_per_provider": 20,
+        "max_duration_s": 120,
+        "ttl_s": 1800,
+    }
+
+    def create_resolution_session(
+        self,
+        query: str | None = None,
+        works: list[dict[str, object]] | None = None,
+        providers: list[str] | None = None,
+        policy: dict[str, object] | None = None,
+    ) -> dict[str, object]:
+        resolved_policy = {**self._DEFAULT_POLICY, **(policy or {})}
+        resolved_providers = providers or list(self._DEFAULT_PROVIDERS)
+        session_id = f"ses_{uuid.uuid4().hex}"
+        now = datetime.now(UTC)
+        ttl = int(cast("int", resolved_policy.get("ttl_s", 1800)))
+        created_at = now.isoformat()
+        expires_at = (now + timedelta(seconds=ttl)).isoformat()
+        query_json = json.dumps({"query": query, "works": works or []}, ensure_ascii=False)
+        providers_json = json.dumps(resolved_providers, ensure_ascii=False)
+        policy_json = json.dumps(resolved_policy, ensure_ascii=False)
+        self._resolution_store.create_session(
+            session_id, query_json, providers_json, policy_json, created_at, expires_at
+        )
+        return {
+            "session_id": session_id,
+            "status": "acquiring",
+            "created_at": created_at,
+            "expires_at": expires_at,
+        }
+
+    def set_acquisition_acquirers(self, acquirers: dict[str, IProviderAcquirer]) -> None:
+        """Inyecta los acquirers de proveedor (normalmente por wiring)."""
+        self._acquisition = AcquisitionService(self._resolution_store, acquirers, SimpleUniverseMatcher())
+
+    def resolve_session(self, session_id: str) -> str | None:
+        """Ejecuta una sesión hasta su estado terminal (completa adquisición + matching
+        definitivo). Devuelve el estado, o None si la sesión no existe."""
+        row = self._resolution_store.get_session(session_id)
+        if row is None:
+            return None
+        return self._acquisition.run_until_terminal(session_id)
+
+    def run_resolution_worker(self, max_sessions: int = 1) -> list[str]:
+        """Recoge y procesa sesiones `acquiring` (una unidad de trabajo por sesión)."""
+        statuses: list[str] = []
+        while len(statuses) < max_sessions:
+            session_id = self._acquisition.next_session_id()
+            if session_id is None:
+                break
+            statuses.append(self._acquisition.run_until_terminal(session_id))
+        return statuses
+
+    def get_resolution_session(self, session_id: str) -> dict[str, object] | None:
+        row = self._resolution_store.get_session(session_id)
+        if row is None:
+            return None
+        return self._resolution_session_row(row)
+
+    def list_resolution_results(
+        self, session_id: str, page: int = 1, per_page: int = 25
+    ) -> dict[str, object] | None:
+        row = self._resolution_store.get_session(session_id)
+        if row is None:
+            return None
+        offset = max(0, (int(page) - 1) * int(per_page))
+        rows, total = self._resolution_store.list_results(session_id, offset, int(per_page))
+        status = str(row.get("status") or "acquiring")
+        resolution_stage = "definitive" if status in ("complete", "partial", "failed", "expired") else "provisional"
+        revision = max((int(cast("int", r.get("revision") or 0)) for r in rows), default=0)
+        return {
+            "session_id": session_id,
+            "status": status,
+            "resolution_stage": resolution_stage,
+            "revision": revision,
+            "page": int(page),
+            "per_page": int(per_page),
+            "total": total,
+            "results": [self._resolution_item_row(r) for r in rows],
+        }
+
+    @staticmethod
+    def _resolution_session_row(row: dict[str, object]) -> dict[str, object]:
+        query_info = json.loads(str(row.get("query_json") or "{}"))
+        progress_raw = json.loads(str(row.get("progress_json") or "{}"))
+        return {
+            "session_id": str(row["session_id"]),
+            "status": str(row.get("status") or "acquiring"),
+            "query": query_info.get("query"),
+            "providers": json.loads(str(row.get("providers_json") or "[]")),
+            "policy": json.loads(str(row.get("policy_json") or "{}")),
+            "progress": {k: int(v) for k, v in progress_raw.items()},
+            "created_at": str(row.get("created_at") or ""),
+            "updated_at": str(row.get("updated_at") or ""),
+            "expires_at": str(row.get("expires_at") or ""),
+            "error": row.get("error"),
+        }
+
+    @staticmethod
+    def _resolution_item_row(row: dict[str, object]) -> dict[str, object]:
+        return {
+            "id": str(row["id"]),
+            "status": str(row.get("status") or "not_found"),
+            "resolution_stage": str(row.get("resolution_stage") or "provisional"),
+            "revision": int(cast("int", row.get("revision") or 1)),
+            "normalized": json.loads(str(row.get("normalized_json") or "null")) if row.get("normalized_json") else None,
+            "resolved": json.loads(str(row.get("resolved_json") or "null")) if row.get("resolved_json") else None,
+            "confidence": float(cast("float", row.get("confidence") or 0.0)),
+            "input_quality": str(row.get("input_quality") or "normal"),
+            "candidates": json.loads(str(row.get("candidates_json") or "[]")),
+            "evidence": json.loads(str(row.get("evidence_json") or "[]")),
+        }
 
     def composer_review_stats(self, token: str | None) -> dict[str, int]:
         stats = self.composers().composer_review_stats(token)

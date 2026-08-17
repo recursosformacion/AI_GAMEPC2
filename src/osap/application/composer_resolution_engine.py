@@ -8,6 +8,8 @@ The engine is the only place that knows about canonicalization and the decision 
 resolvers only return raw candidates and evidence.
 """
 
+from __future__ import annotations
+
 import asyncio
 import re
 from collections.abc import Callable
@@ -29,6 +31,20 @@ WorkMatcher = Callable[[ResolverQuery], list[WorkMatchPair]]
 
 RESOLVED_MIN = 0.8
 RESOLVED_MARGIN = 0.15
+
+# Identificadores que cuentan como "identidad fuerte" para decidir resolved.
+# Se exige ISNI/VIAF/MusicBrainz/IPI (NO basta QID) para evitar resolver falsos homónimos
+# (p. ej. "W.A. Mozart" -> un QID de un fotógrafo sin identidad real).
+_STRONG_ID = frozenset({"isni", "viaf", "musicbrainz", "mbid", "ipi"})
+
+
+def _strong_identity(candidate: ResolutionCandidate) -> str | None:
+    """Clave de identidad fuerte del candidato (isni/viaf/mb/ipi) o None."""
+    ids = candidate.composer.external_ids
+    for key in ("isni", "viaf", "musicbrainz", "mbid", "ipi"):
+        if ids.get(key):
+            return f"{key}:{ids[key]}"
+    return None
 
 
 @dataclass(frozen=True)
@@ -113,6 +129,33 @@ class ComposerResolutionEngine:
 
         top = merged[0]
         second = merged[1].confidence if len(merged) > 1 else 0.0
+
+        # Decisión por identidad fuerte: si hay UN candidato con identidad única y sólida
+        # (ISNI/VIAF/MBID/QID/IPI), resolved. Si hay varias identidades distintas → ambiguous.
+        strong = [_strong_identity(c) for c in merged]
+        strong_ids = {s for s in strong if s}
+        if len(strong_ids) == 1:
+            chosen = next(c for c in merged if _strong_identity(c) in strong_ids)
+            return ResolutionDecision(
+                status="resolved",
+                composer=chosen.composer,
+                confidence=chosen.confidence,
+                input_quality=input_quality,
+                work=resolved_work,
+                candidates=tuple(merged),
+                evidence=evidence,
+            )
+        if len(strong_ids) > 1:
+            return ResolutionDecision(
+                status="ambiguous",
+                composer=None,
+                confidence=top.confidence,
+                input_quality=input_quality,
+                work=resolved_work,
+                candidates=tuple(merged),
+                evidence=evidence,
+            )
+
         if top.confidence >= RESOLVED_MIN and top.confidence - second >= RESOLVED_MARGIN:
             status = "resolved"
         elif len(merged) >= 2:

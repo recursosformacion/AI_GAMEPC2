@@ -4,6 +4,7 @@ from .mediawiki_fetcher import MediaWikiFetcher
 from .musicbrainz_fetcher import MusicBrainzFetcher
 from .mutopia_fetcher import MutopiaFetcher
 from .omr_fetcher import OmrStorageFetcher
+from .rism_fetcher import RismFetcher
 
 __all__ = [
     "GitHubFetcher",
@@ -12,4 +13,5 @@ __all__ = [
     "MusicBrainzFetcher",
     "MutopiaFetcher",
     "OmrStorageFetcher",
+    "RismFetcher",
 ]

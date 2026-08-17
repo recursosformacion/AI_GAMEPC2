@@ -121,37 +121,32 @@ def test_engine_resolves_via_work_when_composer_corrupt() -> None:
     assert "imslp" in providers
 
 
-def test_wikidata_resolver_builds_identity() -> None:
+def test_wikidata_resolver_builds_identity(monkeypatch) -> None:
+    from src.osap.infrastructure.identifiers.archive import ComposerRecord
     from src.osap.infrastructure.resolvers.wikidata_resolver import WikidataIdentityResolver
 
     resolver = WikidataIdentityResolver()
 
-    async def run() -> ResolverResult:
-        original = WikidataIdentityResolver._query
-        WikidataIdentityResolver._query = staticmethod(
-            lambda name: [
-                {
-                    "item": "Q53068",
-                    "itemLabel": "Claudio Monteverdi",
-                    "cpdlId": "794",
-                    "mbid": "9a75168c-...",
-                    "viaf": None,
-                    "aliases": "Monteverdi|Monteverde",
-                }
-            ]
+    def fake(name: str) -> ComposerRecord | None:
+        return ComposerRecord(
+            composer_key="claudio monteverdi",
+            canonical_name="Claudio Monteverdi",
+            aliases=["Monteverdi", "Monteverde"],
+            wikidata="Q53068",
+            musicbrainz="9a75168c-...",
         )
-        try:
-            return await resolver.resolve(ResolverQuery(composer="Claudio Monteverdi"))
-        finally:
-            WikidataIdentityResolver._query = original
 
-    result = asyncio.run(run())
+    monkeypatch.setattr(
+        "src.osap.infrastructure.resolvers.wikidata_resolver.composer_identifiers", fake
+    )
+
+    result = asyncio.run(resolver.resolve(ResolverQuery(composer="Claudio Monteverdi")))
     assert len(result.candidates) == 1
     candidate = result.candidates[0]
     assert candidate.name == "Claudio Monteverdi"
     assert "Monteverdi" in candidate.aliases
-    assert candidate.external_ids["cpdl"] == "794"
     assert candidate.external_ids["musicbrainz"] == "9a75168c-..."
+    assert candidate.external_ids["qid"] == "Q53068"
 
 
 def _build_client_with_work_matcher(matcher) -> TestClient:
@@ -180,38 +175,31 @@ def test_corrupt_composer_not_used_as_work_filter() -> None:
     assert seen["composer"] is None
 
 
-def test_works_resolve_endpoint_normalizes_and_resolves() -> None:
+def test_works_resolve_creates_session_and_returns_202() -> None:
     client = _build_client_with_work_matcher(_fake_work_matcher)
-    resp = client.post(
-        "/api/v1/works/resolve",
-        json={
-            "works": [
-                {
-                    "id": "w1",
-                    "composer": {"name": "ä æ R Z H çèª"},
-                    "work": {"title": "Song to the Auspicious Cloud - Second Version", "catalog": "192128"},
-                },
-                {"id": "w2", "work": {"title": "Some Unmatched Work"}},
-            ],
-            "concurrency": 2,
-        },
-    )
-    assert resp.status_code == 200
+    resp = client.post("/api/v1/works/resolve", json={"query": "Mozart Ave Verum K.618"})
+    assert resp.status_code == 202
     data = resp.json()["data"]
-    assert data["summary"]["total"] == 2
-    assert data["summary"]["resolved"] == 1
-    assert data["summary"]["not_found"] == 1
+    assert data["status"] == "acquiring"
+    session_id = data["session_id"]
+    assert session_id.startswith("ses_")
 
-    w1 = next(r for r in data["results"] if r["id"] == "w1")
-    assert w1["status"] == "resolved"
-    assert w1["normalized"]["title_raw"] == "Song to the Auspicious Cloud - Second Version"
-    assert w1["normalized"]["composer"] == "ä æ r z h çèª"
-    assert w1["resolved"]["composer"]["name"] == "Xiao Youmei"
-    assert w1["resolved"]["work"]["title"] == "Song to the Auspicious Cloud - Second Version"
+    session = client.get(f"/api/v1/sessions/{session_id}")
+    assert session.status_code == 200
+    sdata = session.json()["data"]
+    assert sdata["session_id"] == session_id
+    assert sdata["status"] == "acquiring"
+    assert sdata["query"] == "Mozart Ave Verum K.618"
+    assert sdata["providers"] == ["omr", "imslp", "musicbrainz", "mutopia"]
 
-    w2 = next(r for r in data["results"] if r["id"] == "w2")
-    assert w2["status"] == "not_found"
-    assert w2["resolved"]["composer"] is None
+    results = client.get(f"/api/v1/sessions/{session_id}/results")
+    assert results.status_code == 200
+    rdata = results.json()["data"]
+    assert rdata["session_id"] == session_id
+    assert rdata["total"] == 0
+    assert rdata["results"] == []
+
+    assert client.get("/api/v1/sessions/does-not-exist").status_code == 404
 
 
 def _build_client(resolvers: list[IComposerResolver]) -> TestClient:

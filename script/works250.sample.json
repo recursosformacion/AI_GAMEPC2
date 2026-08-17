@@ -1,0 +1,787 @@
+{
+  "schema": "FASE 5.6 — muestreo de ground-truth. label: correct_resolved|false_resolved|correct_ambiguous|false_ambiguous|correct_not_found|false_not_found. correct_candidate: nombre exacto del candidato correcto (o '' si ninguno). error_class: candidate_missing|candidate_wrong_rank|candidate_correct_but_insufficient_evidence|provider_metadata_bad|genuine_ambiguity|genuine_not_found.",
+  "n": 30,
+  "seed": 7,
+  "items": {
+    "83": {
+      "label": "correct_ambiguous",
+      "reason": "",
+      "note": "Arthur Seat",
+      "correct_candidate": "",
+      "error_class": "",
+      "candidates": [
+        {
+          "name": "J. Scott Skinner",
+          "confidence": 0.9
+        },
+        {
+          "name": "Joe Buchanan's Scottish Tome - Page 192.3J. Scott Skinner",
+          "confidence": 0.9
+        },
+        {
+          "name": "Joe Buchanan's Scottish Tome - Page 111.0J. Scott Skinner",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "243": {
+      "label": "false_not_found",
+      "reason": "",
+      "note": "Wandering afar from my home above - Barney Elliott Warren",
+      "correct_candidate": " Barney Elliott Warren",
+      "error_class": "",
+      "candidates": []
+    },
+    "39": {
+      "label": "correct_ambiguous",
+      "reason": "",
+      "note": "Mr. Riley",
+      "correct_candidate": "",
+      "error_class": "",
+      "candidates": [
+        {
+          "name": "John Arnold",
+          "confidence": 0.9
+        },
+        {
+          "name": "Henry Roberts",
+          "confidence": 0.9
+        },
+        {
+          "name": "William Riley",
+          "confidence": 0.9
+        },
+        {
+          "name": "Albert S. Bowman",
+          "confidence": 0.9
+        },
+        {
+          "name": "Samuel Hosfeld",
+          "confidence": 0.9
+        },
+        {
+          "name": "Anonymous",
+          "confidence": 0.9
+        },
+        {
+          "name": "Francis Roome",
+          "confidence": 0.9
+        },
+        {
+          "name": "Thomas Costellow",
+          "confidence": 0.9
+        },
+        {
+          "name": "James Sanderson",
+          "confidence": 0.9
+        },
+        {
+          "name": "Kenny Wheeler",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "102": {
+      "label": "correct_not_found",
+      "reason": "",
+      "note": "The Galty Rangers",
+      "correct_candidate": "",
+      "error_class": "",
+      "candidates": []
+    },
+    "167": {
+      "label": "false_ambiguous",
+      "reason": "",
+      "note": "Joy-bells - Charles H. Gabriel",
+      "correct_candidate": "",
+      "error_class": "Charles Hutchinson Gabriel",
+      "candidates": [
+        {
+          "name": "Charles Hutchinson Gabriel",
+          "confidence": 0.9
+        },
+        {
+          "name": "Edwin Othello Excell",
+          "confidence": 0.9
+        },
+        {
+          "name": "Charles Hutchinson Gabriel 1902",
+          "confidence": 0.9
+        },
+        {
+          "name": "Charles Hutchinson Gabriel 1901",
+          "confidence": 0.9
+        },
+        {
+          "name": "Charles Hutchinson Gabriel Jr",
+          "confidence": 0.9
+        },
+        {
+          "name": "Charles Hutchinson Gabriel 1912",
+          "confidence": 0.9
+        },
+        {
+          "name": "Charles Hutchinson Gabriel 1906",
+          "confidence": 0.9
+        },
+        {
+          "name": "Charles Hutchinson Gabriel 1900",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "13": {
+      "label": "false_resolved",
+      "reason": "",
+      "note": "Paddies Evermore (air) 0262",
+      "correct_candidate": "",
+      "error_class": "",
+      "candidates": [
+        {
+          "name": "after Chief F. O'Neillwith spirit",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "19": {
+      "label": "correct_ambiguous",
+      "reason": "",
+      "note": "Attwood - Together then we'd fondly stray",
+      "correct_candidate": "",
+      "error_class": "",
+      "candidates": [
+        {
+          "name": "Attwood",
+          "confidence": 0.9
+        },
+        {
+          "name": "Thomas Atwood 1831",
+          "confidence": 0.9
+        },
+        {
+          "name": "Turn Thee again - Attwood",
+          "confidence": 0.9
+        },
+        {
+          "name": "James Hill",
+          "confidence": 0.9
+        },
+        {
+          "name": "Thomas Attwood",
+          "confidence": 0.9
+        },
+        {
+          "name": "Not unto us O Lord - Walmisley",
+          "confidence": 0.9
+        },
+        {
+          "name": "Turn thy face from my sins - Attwood",
+          "confidence": 0.9
+        },
+        {
+          "name": "Thomas F. Walmisley",
+          "confidence": 0.9
+        },
+        {
+          "name": "Thomas Attwood Walmisley ca. 1853",
+          "confidence": 0.9
+        },
+        {
+          "name": "Come Holy Ghost - Attwood",
+          "confidence": 0.9
+        },
+        {
+          "name": "Evening service in D minor - Walmisley",
+          "confidence": 0.9
+        },
+        {
+          "name": "Thomas Attwood Walmisley",
+          "confidence": 0.9
+        },
+        {
+          "name": "Teach me O Lord - Attwood",
+          "confidence": 0.9
+        },
+        {
+          "name": "Attributed to James Hill Thomas Armstrong",
+          "confidence": 0.9
+        },
+        {
+          "name": "O God who the leading of a star - Attwood",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "211": {
+      "label": "false_ambiguous",
+      "reason": "",
+      "note": "Old Nick's Lumber Room or the Pawnbroker's Warehouse",
+      "correct_candidate": "",
+      "error_class": "Anonimo",
+      "candidates": [
+        {
+          "name": "anon",
+          "confidence": 0.9
+        },
+        {
+          "name": "Trad",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "138": {
+      "label": "correct_not_found",
+      "reason": "",
+      "note": "Lady Carbury",
+      "correct_candidate": "",
+      "error_class": "",
+      "candidates": []
+    },
+    "25": {
+      "label": "correct_ambiguous",
+      "reason": "",
+      "note": "the Crusaders",
+      "correct_candidate": "",
+      "error_class": "",
+      "candidates": [
+        {
+          "name": "Ennio Morricone",
+          "confidence": 0.9
+        },
+        {
+          "name": "Giuseppe Verdi",
+          "confidence": 0.9
+        },
+        {
+          "name": "Ciro Pinsuti",
+          "confidence": 0.9
+        },
+        {
+          "name": "Sergey cantata Prokofiev",
+          "confidence": 0.9
+        },
+        {
+          "name": "Edward MacDowell",
+          "confidence": 0.9
+        },
+        {
+          "name": "Louis Antoine Jullien",
+          "confidence": 0.9
+        },
+        {
+          "name": "Carl Theodor Hassloch",
+          "confidence": 0.9
+        },
+        {
+          "name": "John Stepan Zamecnik",
+          "confidence": 0.9
+        },
+        {
+          "name": "Various",
+          "confidence": 0.9
+        },
+        {
+          "name": "The Crusaders - Pinsuti",
+          "confidence": 0.9
+        },
+        {
+          "name": "Traditional",
+          "confidence": 0.9
+        },
+        {
+          "name": "Graeme Revell",
+          "confidence": 0.9
+        },
+        {
+          "name": "Sergey Sergeevich Prokofev",
+          "confidence": 0.9
+        },
+        {
+          "name": "Aleksandr Konstantinovich Glazunov",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "94": {
+      "label": "correct_not_found",
+      "reason": "",
+      "note": "Trip it up Stairs. JJo4.133",
+      "correct_candidate": "",
+      "error_class": "",
+      "candidates": []
+    },
+    "150": {
+      "label": "correct_not_found",
+      "reason": "",
+      "note": "Milan by ear",
+      "correct_candidate": "",
+      "error_class": "",
+      "candidates": []
+    },
+    "15": {
+      "label": "false_ambiguous",
+      "reason": "",
+      "note": "Like a star of the morning - Edmund S. Lorenz",
+      "correct_candidate": "Edmund Simon Lorenz",
+      "error_class": "",
+      "candidates": [
+        {
+          "name": "Edmund Simon Lorenz",
+          "confidence": 0.9
+        },
+        {
+          "name": "Edmund Simon Lorenz 1886",
+          "confidence": 0.9
+        },
+        {
+          "name": "Edmund Simon Lorenz 1887",
+          "confidence": 0.9
+        },
+        {
+          "name": "Edmund Simon Lorenz 1883",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "233": {
+      "label": "correct_not_found",
+      "reason": "",
+      "note": "Giga di Rocca Grimalda (A)",
+      "correct_candidate": "",
+      "error_class": "",
+      "candidates": []
+    },
+    "130": {
+      "label": "false_ambiguous",
+      "reason": "",
+      "note": "Traditional music - Ton double plin",
+      "correct_candidate": "Anonimo/Tradicional",
+      "error_class": "",
+      "candidates": [
+        {
+          "name": "Traditionnel",
+          "confidence": 0.9
+        },
+        {
+          "name": "Paroles et musique traditionnelle",
+          "confidence": 0.9
+        },
+        {
+          "name": "air traditionnel d'Ecosse XVIIème siècle",
+          "confidence": 0.9
+        },
+        {
+          "name": "Chanson traditionnelle basque Arrangé par S C Standen",
+          "confidence": 0.9
+        },
+        {
+          "name": "Traditionnel Anglais",
+          "confidence": 0.9
+        },
+        {
+          "name": "adaptation Nicole GALLET sur traditionnel",
+          "confidence": 0.9
+        },
+        {
+          "name": "Traditionnel americain",
+          "confidence": 0.9
+        },
+        {
+          "name": "Paroles traditionnelles du début du XIX siècle sur un air du XVIIe",
+          "confidence": 0.9
+        },
+        {
+          "name": "Paroles et musiques traditionnelles",
+          "confidence": 0.9
+        },
+        {
+          "name": "Afrique du Sud Traditionnel Zoulou",
+          "confidence": 0.9
+        },
+        {
+          "name": "Traditionnel Berry",
+          "confidence": 0.9
+        },
+        {
+          "name": "Traditionnel abc file Bernard Loffet",
+          "confidence": 0.9
+        },
+        {
+          "name": "Traditionnel Bretagne fichier abc : Bernard Loffet",
+          "confidence": 0.9
+        },
+        {
+          "name": "Chanson traditionnelle",
+          "confidence": 0.9
+        },
+        {
+          "name": "Traditionnel Bretagne",
+          "confidence": 0.9
+        },
+        {
+          "name": "Traditionnel du Béarn",
+          "confidence": 0.9
+        },
+        {
+          "name": "Traditionnel de Wallonie fichier abc : Bernard Loffet",
+          "confidence": 0.9
+        },
+        {
+          "name": "Frédéric Bérat Traditionnel",
+          "confidence": 0.9
+        },
+        {
+          "name": "Gospel traditionnel",
+          "confidence": 0.9
+        },
+        {
+          "name": "Traditionnel irlandais - Transcription René AMBERG",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "55": {
+      "label": "correct_resolved",
+      "reason": "",
+      "note": "Under the Boardwalk",
+      "correct_candidate": "",
+      "error_class": "",
+      "candidates": [
+        {
+          "name": "Artie Resnick and Kenny Young",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "10": {
+      "label": "false_resolved",
+      "reason": "",
+      "note": "The Welch Jig",
+      "correct_candidate": "",
+      "error_class": "",
+      "candidates": [
+        {
+          "name": "Various",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "23": {
+      "label": "correct_not_found",
+      "reason": "",
+      "note": "The Regency Waltz",
+      "correct_candidate": "",
+      "error_class": "",
+      "candidates": []
+    },
+    "112": {
+      "label": "false_resolved",
+      "reason": "",
+      "note": "Wonderful night! Wonderful night - John F. Young",
+      "correct_candidate": "Frederick Meyer",
+      "error_class": "",
+      "candidates": [
+        {
+          "name": "Composer Unknown 1866",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "108": {
+      "label": "correct_resolved",
+      "reason": "",
+      "note": "The star of morn has risen - John Naylor",
+      "correct_candidate": "John Naylor",
+      "error_class": "",
+      "candidates": [
+        {
+          "name": "John Naylor 1873",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "18": {
+      "label": "correct_resolved",
+      "reason": "",
+      "note": "Urheber unbekannt - [ID 9-11b]",
+      "correct_candidate": "",
+      "error_class": "",
+      "candidates": [
+        {
+          "name": "Urheber unbekanntDatum in der hier transkribierten schriftlichen Quelle: 1796",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "62": {
+      "label": "correct_resolved",
+      "reason": "",
+      "note": "Trip up Stairs",
+      "correct_candidate": "John Liptrot Hatton",
+      "error_class": "",
+      "candidates": [
+        {
+          "name": "John Liptrot Hatton",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "24": {
+      "label": "correct_not_found",
+      "reason": "",
+      "note": "Lashley's March",
+      "correct_candidate": "",
+      "error_class": "",
+      "candidates": []
+    },
+    "142": {
+      "label": "correct_ambiguous",
+      "reason": "",
+      "note": "GOD SAVE THE KING",
+      "correct_candidate": "",
+      "error_class": "",
+      "candidates": [
+        {
+          "name": "[unknown]",
+          "confidence": 0.9
+        },
+        {
+          "name": "Robert Fripp",
+          "confidence": 0.9
+        },
+        {
+          "name": "Jacques Revaux",
+          "confidence": 0.9
+        },
+        {
+          "name": "Francisco Becker",
+          "confidence": 0.9
+        },
+        {
+          "name": "Ludwig van Beethoven",
+          "confidence": 0.9
+        },
+        {
+          "name": "Johann Nepomuk Hummel",
+          "confidence": 0.9
+        },
+        {
+          "name": "George Frideric Handel",
+          "confidence": 0.9
+        },
+        {
+          "name": "Christian Heinrich Rinck",
+          "confidence": 0.9
+        },
+        {
+          "name": "Carl Maria von Weber",
+          "confidence": 0.9
+        },
+        {
+          "name": "Friedrich Wilhelm Kalkbrenner",
+          "confidence": 0.9
+        },
+        {
+          "name": "Henry Carey",
+          "confidence": 0.9
+        },
+        {
+          "name": "Carl Czerny",
+          "confidence": 0.9
+        },
+        {
+          "name": "Various",
+          "confidence": 0.9
+        },
+        {
+          "name": "Niccolò Paganini",
+          "confidence": 0.9
+        },
+        {
+          "name": "Friedrich Schwindl",
+          "confidence": 0.9
+        },
+        {
+          "name": "Thomas Ravenscroft",
+          "confidence": 0.9
+        },
+        {
+          "name": "Traditional",
+          "confidence": 0.9
+        },
+        {
+          "name": "Charles Wesley",
+          "confidence": 0.9
+        },
+        {
+          "name": "Max Reger",
+          "confidence": 0.9
+        },
+        {
+          "name": "Samuel Wesley",
+          "confidence": 0.9
+        },
+        {
+          "name": "Adrien-François Servais",
+          "confidence": 0.9
+        },
+        {
+          "name": "César Franck",
+          "confidence": 0.9
+        },
+        {
+          "name": "Florian Uhlig",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "109": {
+      "label": "correct_ambiguous",
+      "reason": "",
+      "note": "random song",
+      "correct_candidate": "Popper, David ",
+      "error_class": "",
+      "candidates": [
+        {
+          "name": "David Popper",
+          "confidence": 0.9
+        },
+        {
+          "name": "Charles Lenschow",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "16": {
+      "label": "correct_resolved",
+      "reason": "",
+      "note": "The Little Bag of Potatoes",
+      "correct_candidate": "Graham Patterson",
+      "error_class": "",
+      "candidates": [
+        {
+          "name": "Graham Patterson",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "212": {
+      "label": "correct_ambiguous",
+      "reason": "",
+      "note": "Buckley's Fancy",
+      "correct_candidate": "Tradicional/anonimo",
+      "error_class": "",
+      "candidates": [
+        {
+          "name": "anon",
+          "confidence": 0.9
+        },
+        {
+          "name": "after Mr. McFadden",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "145": {
+      "label": "false_ambiguous",
+      "reason": "",
+      "note": "Light of the Seven",
+      "correct_candidate": "Ramin Djawadi",
+      "error_class": "",
+      "candidates": [
+        {
+          "name": "Ramin Djawadi",
+          "confidence": 0.9
+        },
+        {
+          "name": "Stephen B Alan Sylvestry Ramin Djawadi Craig Armstrong Ozzy Osbourne Patrick Doyle",
+          "confidence": 0.9
+        },
+        {
+          "name": "Ramin DjawadiPiano arrangement Nicolas Del GalloFull playthrough and more athttps://www.youtube.com/c/NDGmusicIf you want to donate please check out my Patreon âohttps://www.patreon.com/ndg",
+          "confidence": 0.9
+        },
+        {
+          "name": "Music Ramin Djawadi",
+          "confidence": 0.9
+        },
+        {
+          "name": "Music byRamin Djawadi",
+          "confidence": 0.9
+        },
+        {
+          "name": "Ramin DjawadiArrangement Nicolas Del Gallo & Matthieu Bennett Full playthrough and more athttps://www.youtube.com/c/NDGmusicIf you want to donate please check out my Patreon âohttps://www.patreon.com/ndg",
+          "confidence": 0.9
+        },
+        {
+          "name": "Ramin Djawadi Arr. Daniel Roberts",
+          "confidence": 0.9
+        },
+        {
+          "name": "Musique de Ramin Djawadi Adapté par Marc-Antoine Mauny",
+          "confidence": 0.9
+        },
+        {
+          "name": "The Rolling Stones & Ramin DjawadiPiano arrangement Nicolas Del GalloFull playthrough and more athttps://www.youtube.com/c/NDGmusicIf you want to donate please check out my Patreon âohttps://www.patreon.com/ndg",
+          "confidence": 0.9
+        },
+        {
+          "name": "Ramin Djawadi Adaptation Alessandra Münger",
+          "confidence": 0.9
+        },
+        {
+          "name": "Ramin Djawadi Harp Adaptation Alessandra Münger",
+          "confidence": 0.9
+        },
+        {
+          "name": "Ramin Djawadi Arr: Jean Michael Courtois",
+          "confidence": 0.9
+        },
+        {
+          "name": "Composer: Ramin Djawadi",
+          "confidence": 0.9
+        },
+        {
+          "name": "Ramin Djawadi Arranged Julia Habibi",
+          "confidence": 0.9
+        },
+        {
+          "name": "Ramin DjawadiArr. Kaleb Norton",
+          "confidence": 0.9
+        },
+        {
+          "name": "Ramin Djawadi Arr: Marja van Kaam",
+          "confidence": 0.9
+        },
+        {
+          "name": "Kurt Cobain & Ramin DjawadiPiano arrangement Nicolas Del GalloFull playthrough and more athttps://www.youtube.com/c/NDGmusicIf you want to donate please check out my Patreon âohttps://www.patreon.com/ndg",
+          "confidence": 0.9
+        },
+        {
+          "name": "Ramin Djawadi Arranged Monisieja",
+          "confidence": 0.9
+        },
+        {
+          "name": "Ramin Djawadi Arr. Gabe Russell",
+          "confidence": 0.9
+        }
+      ]
+    },
+    "32": {
+      "label": "correct_not_found",
+      "reason": "",
+      "note": "Trunch Wassail Song",
+      "correct_candidate": "",
+      "error_class": "",
+      "candidates": []
+    },
+    "58": {
+      "label": "correct_not_found",
+      "reason": "",
+      "note": "Northampton Frolick. Ru1.020",
+      "correct_candidate": "",
+      "error_class": "",
+      "candidates": []
+    }
+  }
+}

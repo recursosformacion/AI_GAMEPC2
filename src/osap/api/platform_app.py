@@ -21,6 +21,8 @@ from src.osap.api.contracts import (
     CatalogueRead,
     ComposerCreationEvidenceResponse,
     ComposerDetailResponse,
+    ComposerEvidenceResponse,
+    ComposerIdentifierResponse,
     ComposerListResponse,
     ComposerResolveCandidateResponse,
     ComposerResolveEvidenceResponse,
@@ -46,6 +48,13 @@ from src.osap.api.contracts import (
     RegisterRequest,
     RepositorySource,
     RepositorySourceSummary,
+    ResolutionItemResponse,
+    ResolutionPolicy,
+    ResolutionProgress,
+    ResolutionResultsResponse,
+    ResolutionSessionCreated,
+    ResolutionSessionCreateRequest,
+    ResolutionSessionResponse,
     ResolvedComposerResponse,
     ReviewComposerRequest,
     SearchModel,
@@ -71,11 +80,6 @@ from src.osap.api.contracts import (
     VotesOverviewResponse,
     WorksNormalized,
     WorksResolved,
-    WorksResolvedWork,
-    WorksResolveItemResponse,
-    WorksResolveRequest,
-    WorksResolveResponse,
-    WorksResolveSummary,
     WorkStatisticsResponse,
 )
 from src.osap.api.platform import VERSION, PlatformApi
@@ -97,7 +101,6 @@ if TYPE_CHECKING:
 
     from src.osap.api.platform import KnowledgeStore
     from src.osap.application.composer_resolution_engine import ResolutionDecision, ResolvedComposer
-    from src.osap.application.use_cases.resolve_works import ResolvedWorkItem
 
 
 _EXTENSION = {"musicxml": ".musicxml", "pdf": ".pdf", "midi": ".mid"}
@@ -397,15 +400,48 @@ def _composer_summary_dto(d: dict[str, object]) -> ComposerSummaryResponse:
         aliases_count=cast("int", d.get("aliases_count") or 0),
         works_count=cast("int", d.get("works_count") or 0),
         review_status=cast("str | None", d.get("review_status")),
+        visible=cast("bool", d.get("visible", True)),
+        birth_year=cast("str | None", d.get("birth_year")),
+        death_year=cast("str | None", d.get("death_year")),
     )
 
 
 def _composer_list_dto(d: dict[str, object]) -> ComposerListResponse:
     items = d.get("items")
     raw_items = items if isinstance(items, list) else []
+    # La consulta pública solo expone compositores visibles del Maestro.
+    visible_items = [dict(i) for i in raw_items if isinstance(i, dict)
+                     and bool(i.get("visible", True))]
     return ComposerListResponse(
-        items=[_composer_summary_dto(dict(i)) for i in raw_items if isinstance(i, dict)],
+        items=[_composer_summary_dto(i) for i in visible_items],
         total=cast("int", d.get("total") or 0),
+    )
+
+
+def _composer_identifier_dto(d: dict[str, object]) -> ComposerIdentifierResponse:
+    return ComposerIdentifierResponse(
+        composer_id=cast("str", d.get("composer_id") or ""),
+        id_type=cast("str", d.get("id_type") or ""),
+        id_value=cast("str", d.get("id_value") or ""),
+        is_identity_anchor=cast("bool", d.get("is_identity_anchor", False)),
+        source=cast("str", d.get("source") or "musicbrainz"),
+        strength=cast("str | None", d.get("strength")),
+        channels=_str_list(d.get("channels")),
+    )
+
+
+def _composer_build_evidence_dto(d: dict[str, object]) -> ComposerEvidenceResponse:
+    return ComposerEvidenceResponse(
+        composer_id=cast("str", d.get("composer_id") or ""),
+        rule=cast("str", d.get("rule") or ""),
+        decision=cast("str", d.get("decision") or ""),
+        reason=cast("str", d.get("reason") or ""),
+        anchor_type=cast("str", d.get("anchor_type") or "none"),
+        anchor_value=cast("str", d.get("anchor_value") or "none"),
+        channels=_list(d.get("channels")),
+        identifiers_used=_list(d.get("identifiers_used")),
+        matcher_version=cast("str", d.get("matcher_version") or ""),
+        created_at=_iso_or_none(d.get("created_at")),
     )
 
 
@@ -414,6 +450,10 @@ def _composer_detail_dto(d: dict[str, object]) -> ComposerDetailResponse:
     raw_aliases = aliases if isinstance(aliases, list) else []
     evidence = d.get("creation_evidence")
     raw_evidence = evidence if isinstance(evidence, list) else []
+    identifiers = d.get("identifiers")
+    raw_identifiers = identifiers if isinstance(identifiers, list) else []
+    build_evidence = d.get("evidence")
+    raw_build_evidence = build_evidence if isinstance(build_evidence, list) else []
     return ComposerDetailResponse(
         id=cast("str", d.get("id") or ""),
         name=cast("str", d.get("name") or ""),
@@ -425,6 +465,13 @@ def _composer_detail_dto(d: dict[str, object]) -> ComposerDetailResponse:
         creation_evidence=[_composer_evidence_dto(dict(e)) for e in raw_evidence if isinstance(e, dict)],
         review_status=cast("str | None", d.get("review_status")),
         reviewed_at=_iso_or_none(d.get("reviewed_at")),
+        visible=cast("bool", d.get("visible", True)),
+        birth_year=cast("str | None", d.get("birth_year")),
+        death_year=cast("str | None", d.get("death_year")),
+        cluster_id=cast("str | None", d.get("cluster_id")),
+        review_reason=cast("str | None", d.get("review_reason")),
+        identifiers=[_composer_identifier_dto(dict(i)) for i in raw_identifiers if isinstance(i, dict)],
+        evidence=[_composer_build_evidence_dto(dict(e)) for e in raw_build_evidence if isinstance(e, dict)],
     )
 
 
@@ -493,70 +540,104 @@ def _resolved_composer_dto(c: ResolvedComposer) -> ResolvedComposerResponse:
     )
 
 
-def _works_resolve_dto(results: list[ResolvedWorkItem], requested: int) -> WorksResolveResponse:
-    from src.osap.application.input_quality import classify_input_quality
-    from src.osap.application.metadata_normalizer import MetadataNormalizer
-
-    counts = {"resolved": 0, "ambiguous": 0, "not_found": 0}
-    items: list[WorksResolveItemResponse] = []
-    for item in results:
-        decision = item.decision
-        status = "not_found" if item.error else decision.status
-        counts[status] = counts.get(status, 0) + 1
-
-        raw_title = item.input.work_title or ""
-        raw_composer = item.input.composer or ""
-        normalized = WorksNormalized(
-            title_raw=raw_title,
-            title=MetadataNormalizer.comparison_title(raw_title, item.input.composer) if raw_title else "",
-            composer_raw=raw_composer,
-            composer=_normalize_composer(raw_composer),
-            catalog=item.input.work_catalog,
-        )
-        resolved = WorksResolved(
-            work=WorksResolvedWork(title=decision.work.title, catalog=decision.work.catalog)
-            if decision.work is not None
-            else None,
-            composer=_resolved_composer_dto(decision.composer) if decision.composer is not None else None,
-        )
-        items.append(
-            WorksResolveItemResponse(
-                id=item.id,
-                status=status,
-                normalized=normalized,
-                resolved=resolved,
-                confidence=decision.confidence,
-                input_quality=decision.input_quality or classify_input_quality(raw_composer),
-                candidates=[
-                    ComposerResolveCandidateResponse(
-                        name=c.composer.name,
-                        confidence=c.confidence,
-                        aliases=list(c.composer.aliases),
-                        external_ids=dict(c.composer.external_ids),
-                    )
-                    for c in decision.candidates
-                ],
-                evidence=[
-                    ComposerResolveEvidenceResponse(
-                        provider=e.provider,
-                        type=e.kind,
-                        confidence=e.confidence,
-                        work_title=e.work_title,
-                        work_catalog=e.work_catalog,
-                    )
-                    for e in decision.evidence
-                ],
-            )
-        )
-    return WorksResolveResponse(
-        results=items,
-        summary=WorksResolveSummary(
-            total=len(items),
-            resolved=counts["resolved"],
-            ambiguous=counts["ambiguous"],
-            not_found=counts["not_found"],
-        ),
+def _resolution_session_dto(data: dict[str, object]) -> ResolutionSessionResponse:
+    return ResolutionSessionResponse(
+        session_id=cast("str", data["session_id"]),
+        status=cast("str", data["status"]),
+        query=cast("str | None", data.get("query")),
+        providers=cast("list[str]", data.get("providers") or []),
+        policy=ResolutionPolicy.model_validate(data.get("policy") or {}),
+        progress=ResolutionProgress.model_validate(data.get("progress") or {}),
+        created_at=cast("str", data["created_at"]),
+        updated_at=cast("str", data["updated_at"]),
+        expires_at=cast("str", data["expires_at"]),
+        error=cast("str | None", data.get("error")),
     )
+
+
+def _resolution_item_dto(row: dict[str, object]) -> ResolutionItemResponse:
+    normalized = row.get("normalized")
+    resolved = row.get("resolved")
+    return ResolutionItemResponse(
+        id=cast("str", row["id"]),
+        status=cast("str", row["status"]),
+        resolution_stage=cast("str", row["resolution_stage"]),
+        revision=cast("int", row["revision"]),
+        normalized=WorksNormalized.model_validate(normalized) if isinstance(normalized, dict) else None,
+        resolved=WorksResolved.model_validate(resolved) if isinstance(resolved, dict) else None,
+        confidence=cast("float", row["confidence"]),
+        input_quality=cast("str", row["input_quality"]),
+        candidates=[
+            ComposerResolveCandidateResponse.model_validate(c)
+            for c in cast("list[dict[str, object]]", row.get("candidates") or [])
+        ],
+        evidence=[
+            ComposerResolveEvidenceResponse.model_validate(e)
+            for e in cast("list[dict[str, object]]", row.get("evidence") or [])
+        ],
+    )
+
+
+def _resolution_results_dto(data: dict[str, object]) -> ResolutionResultsResponse:
+    return ResolutionResultsResponse(
+        session_id=cast("str", data["session_id"]),
+        status=cast("str", data["status"]),
+        resolution_stage=cast("str", data["resolution_stage"]),
+        revision=cast("int", data["revision"]),
+        page=cast("int", data["page"]),
+        per_page=cast("int", data["per_page"]),
+        total=cast("int", data["total"]),
+        results=[_resolution_item_dto(r) for r in cast("list[dict[str, object]]", data.get("results") or [])],
+    )
+
+
+def _resolution_session_created_example() -> dict[str, object]:
+    return {
+        "session_id": "ses_9f2c0a1b",
+        "status": "acquiring",
+        "created_at": "2026-08-14T15:00:00.000000+00:00",
+        "expires_at": "2026-08-14T15:30:00.000000+00:00",
+    }
+
+
+def _resolution_session_example() -> dict[str, object]:
+    return {
+        "session_id": "ses_9f2c0a1b",
+        "status": "resolving",
+        "query": "Mozart Ave Verum K.618",
+        "providers": ["omr", "imslp", "musicbrainz", "mutopia"],
+        "policy": {
+            "max_results_to_acquire": 500,
+            "max_pages_per_provider": 20,
+            "max_duration_s": 120,
+            "ttl_s": 1800,
+        },
+        "progress": {
+            "acquired_pages": 12,
+            "acquired_works": 490,
+            "items_total": 127,
+            "items_resolved": 90,
+            "items_ambiguous": 20,
+            "items_not_found": 17,
+        },
+        "created_at": "2026-08-14T15:00:00.000000+00:00",
+        "updated_at": "2026-08-14T15:01:00.000000+00:00",
+        "expires_at": "2026-08-14T15:30:00.000000+00:00",
+        "error": None,
+    }
+
+
+def _resolution_results_example() -> dict[str, object]:
+    return {
+        "session_id": "ses_9f2c0a1b",
+        "status": "resolving",
+        "resolution_stage": "provisional",
+        "revision": 2,
+        "page": 1,
+        "per_page": 25,
+        "total": 127,
+        "results": [],
+    }
 
 
 def _normalize_composer(raw: str) -> str:
@@ -580,6 +661,18 @@ def _iso_or_none(value: object) -> str | None:
     if value is None:
         return None
     return str(value)
+
+
+def _str_list(value: object) -> list[str] | None:
+    if value is None:
+        return None
+    if isinstance(value, list):
+        return [str(v) for v in value if v is not None]
+    return None
+
+
+def _list(value: object) -> list[object] | None:
+    return value if isinstance(value, list) else None
 
 
 def _standard_errors(*codes: int) -> dict[int | str, dict[str, Any]]:
@@ -1574,7 +1667,8 @@ def create_platform_app(
             detail = api.get_composer(composer_id)
         except StorageComposerError:
             return fail(503, response, "SERVICE_UNAVAILABLE", "Composer service is not configured")
-        if detail is None:
+        # La consulta pública solo expone compositores visibles del Maestro.
+        if detail is None or not bool(detail.get("visible", True)):
             return fail(404, response, "NOT_FOUND", "Composer not found")
         return ok(_composer_detail_dto(detail))
 
@@ -1633,6 +1727,9 @@ def create_platform_app(
         offset: int = Query(0, ge=0),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
+            detail = api.get_composer(composer_id)
+            if detail is None or not bool(detail.get("visible", True)):
+                return fail(404, response, "NOT_FOUND", "Composer not found")
             return ok(_composer_works_dto(api.composer_works(composer_id, limit, offset)))
         except StorageComposerError:
             return fail(503, response, "SERVICE_UNAVAILABLE", "Composer service is not configured")
@@ -1786,22 +1883,80 @@ def create_platform_app(
 
     @app.post(
         "/api/v1/works/resolve",
-        status_code=200,
+        status_code=202,
         tags=["Works"],
-        summary="Resolve works in batch (read-only)",
-        description="Resuelve una lista de obras: normaliza, resuelve la obra, obtiene el "
-        "compositor candidato, resuelve su identidad y devuelve evidencia + confianza + "
-        "estado por obra. No modifica storage. `composer` puede ser null si la obra se "
-        "identificó pero no se pudo determinar el compositor.",
+        summary="Create a resolution session (non-blocking)",
+        description="Crea una ResolutionSession (ADR-0033) y devuelve session_id "
+        "inmediatamente (202). La adquisición/resolución ocurre en el worker de "
+        "domain/jobs en segundo plano. Se consulta el progreso con GET "
+        "/sessions/{id} y los resultados con GET /sessions/{id}/results. No modifica "
+        "storage y no es un catálogo.",
         response_model=SuccessEnvelope[object] | ErrorEnvelope,
-        responses={200: _resp("Resolved works", _example({})), **_standard_errors(422)},
+        responses={
+            202: _resp("Session created", _example(_resolution_session_created_example())),
+            **_standard_errors(422),
+        },
     )
     async def resolve_works(
-        payload: WorksResolveRequest,
+        payload: ResolutionSessionCreateRequest,
         response: Response,
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
-        works = [w.model_dump() for w in payload.works]
-        results = await api.works_resolve(works, payload.concurrency)
-        return ok(_works_resolve_dto(results, len(payload.works)))
+        works = [w.model_dump() for w in payload.works] if payload.works else None
+        created = api.create_resolution_session(
+            query=payload.query,
+            works=works,
+            providers=list(payload.providers) if payload.providers else None,
+            policy=payload.policy.model_dump() if payload.policy else None,
+        )
+        return ok(
+            ResolutionSessionCreated(
+                session_id=cast("str", created["session_id"]),
+                status=cast("str", created["status"]),
+                created_at=cast("str", created["created_at"]),
+                expires_at=cast("str", created["expires_at"]),
+            )
+        )
+
+    @app.get(
+        "/api/v1/sessions/{session_id}",
+        status_code=200,
+        tags=["Works"],
+        summary="Get resolution session state",
+        description="Estado + progreso + contadores de una ResolutionSession. `expired` "
+        "devuelve 200 (la sesión existió pero caducó); 404 solo si el session_id es "
+        "desconocido o fue eliminado por el TTL.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={200: _resp("Session state", _example(_resolution_session_example())), **_standard_errors(404)},
+    )
+    async def get_resolution_session(
+        session_id: str,
+        response: Response,
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        data = api.get_resolution_session(session_id)
+        if data is None:
+            return fail(404, response, "NOT_FOUND", "Resolution session not found")
+        return ok(_resolution_session_dto(data))
+
+    @app.get(
+        "/api/v1/sessions/{session_id}/results",
+        status_code=200,
+        tags=["Works"],
+        summary="List resolution session results",
+        description="Resultados de resolución (paginación de la Web, desacoplada de la de "
+        "proveedores). `resolution_stage` indica provisional/definitive; `revision` sube "
+        "cada vez que cambia un resultado.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={200: _resp("Results page", _example(_resolution_results_example())), **_standard_errors(404)},
+    )
+    async def get_resolution_results(
+        session_id: str,
+        response: Response,
+        page: int = Query(1, ge=1),
+        per_page: int = Query(25, ge=1, le=100),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        data = api.list_resolution_results(session_id, page=page, per_page=per_page)
+        if data is None:
+            return fail(404, response, "NOT_FOUND", "Resolution session not found")
+        return ok(_resolution_results_dto(data))
 
     return app

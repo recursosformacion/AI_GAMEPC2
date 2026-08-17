@@ -38,6 +38,7 @@ from src.osap.infrastructure.providers.fetchers import (
     MusicBrainzFetcher,
     MutopiaFetcher,
     OmrStorageFetcher,
+    RismFetcher,
 )
 from src.osap.infrastructure.rankings import DefaultRankingEngine
 from src.osap.infrastructure.resolvers.canonical_resolver import CanonicalComposerResolver
@@ -192,6 +193,12 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
         RemoteCatalogProvider(
             definition=_provider_definition(op_store, "musicbrainz", providers_root / "musicbrainz"),
             fetcher=MusicBrainzFetcher(),
+        )
+    )
+    container.register_catalog_provider(
+        RemoteCatalogProvider(
+            definition=_provider_definition(op_store, "rism", providers_root / "rism"),
+            fetcher=RismFetcher(),
         )
     )
     container.register_catalog_provider(LocalCatalogProvider(Path(config.library_root)))

@@ -1,0 +1,19 @@
+lookup:
+  method: GET
+  path: /rism/Search/Results
+  query:
+    lookfor: "{query}"
+    view: rss
+
+search:
+  method: GET
+  path: /rism/Search/Results
+  query:
+    lookfor: "{query}"
+    view: rss
+
+resource:
+  method: GET
+  path: /search
+  query:
+    query: "{id}"

@@ -8,7 +8,7 @@ FastAPI only serializes/validates them; they do not depend on the domain.
 
 from typing import Generic, TypeVar
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 T = TypeVar("T")
 
@@ -395,11 +395,37 @@ class ComposerSummaryResponse(_Frozen):
     aliases_count: int = 0
     works_count: int = 0
     review_status: str | None = None
+    visible: bool = True
+    birth_year: str | None = None
+    death_year: str | None = None
 
 
 class ComposerListResponse(_Frozen):
     items: list[ComposerSummaryResponse] = []
     total: int = 0
+
+
+class ComposerIdentifierResponse(_Frozen):
+    composer_id: str = ""
+    id_type: str = ""
+    id_value: str = ""
+    is_identity_anchor: bool = False
+    source: str = "musicbrainz"
+    strength: str | None = None
+    channels: list[str] | None = None
+
+
+class ComposerEvidenceResponse(_Frozen):
+    composer_id: str = ""
+    rule: str = ""
+    decision: str = ""
+    reason: str = ""
+    anchor_type: str = "none"
+    anchor_value: str = "none"
+    channels: list[object] | None = None
+    identifiers_used: list[object] | None = None
+    matcher_version: str = ""
+    created_at: str | None = None
 
 
 class ComposerCreationEvidenceResponse(_Frozen):
@@ -422,6 +448,13 @@ class ComposerDetailResponse(_Frozen):
     creation_evidence: list[ComposerCreationEvidenceResponse] = []
     review_status: str | None = None
     reviewed_at: str | None = None
+    visible: bool = True
+    birth_year: str | None = None
+    death_year: str | None = None
+    cluster_id: str | None = None
+    review_reason: str | None = None
+    identifiers: list[ComposerIdentifierResponse] = []
+    evidence: list[ComposerEvidenceResponse] = []
 
 
 class ComposerWorkRefResponse(_Frozen):
@@ -598,6 +631,80 @@ class WorksResolveSummary(_Frozen):
 class WorksResolveResponse(_Frozen):
     results: list[WorksResolveItemResponse]
     summary: WorksResolveSummary
+
+
+# --- resolución asíncrona por sesión (ADR-0033 / resolution-store-v1) ---------
+
+
+class ResolutionPolicy(_Frozen):
+    """Política configurable de la sesión. `max_duration_s` es límite de ejecución de la
+    adquisición; `ttl_s` es el TTL de conservación de la sesión (independientes)."""
+
+    max_results_to_acquire: int = 500
+    max_pages_per_provider: int = 20
+    max_duration_s: int = 120
+    ttl_s: int = 1800
+
+
+class ResolutionSessionCreateRequest(_Frozen):
+    query: str | None = None
+    works: list[WorksResolveItemRequest] | None = None
+    providers: list[str] | None = None
+    policy: ResolutionPolicy | None = None
+    resume_session_id: str | None = None
+
+
+class ResolutionSessionCreated(_Frozen):
+    session_id: str
+    status: str
+    created_at: str
+    expires_at: str
+
+
+class ResolutionProgress(_Frozen):
+    acquired_pages: int = 0
+    acquired_works: int = 0
+    items_total: int = 0
+    items_resolved: int = 0
+    items_ambiguous: int = 0
+    items_not_found: int = 0
+
+
+class ResolutionSessionResponse(_Frozen):
+    session_id: str
+    status: str
+    query: str | None = None
+    providers: list[str] = Field(default_factory=list)
+    policy: ResolutionPolicy = Field(default_factory=ResolutionPolicy)
+    progress: ResolutionProgress = Field(default_factory=ResolutionProgress)
+    created_at: str
+    updated_at: str
+    expires_at: str
+    error: str | None = None
+
+
+class ResolutionItemResponse(_Frozen):
+    id: str
+    status: str
+    resolution_stage: str
+    revision: int
+    normalized: WorksNormalized | None = None
+    resolved: WorksResolved | None = None
+    confidence: float = 0.0
+    input_quality: str = "normal"
+    candidates: list[ComposerResolveCandidateResponse] = []
+    evidence: list[ComposerResolveEvidenceResponse] = []
+
+
+class ResolutionResultsResponse(_Frozen):
+    session_id: str
+    status: str
+    resolution_stage: str
+    revision: int = 0
+    page: int = 1
+    per_page: int = 25
+    total: int = 0
+    results: list[ResolutionItemResponse] = []
 
 
 class SuccessEnvelope(_Frozen, Generic[T]):  # noqa: UP046

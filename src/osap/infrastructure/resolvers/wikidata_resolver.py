@@ -1,18 +1,19 @@
-"""Wikidata identity resolver (v1).
+"""Wikidata identity resolver (v2, alias-aware).
 
-Identity authority source via Wikidata SPARQL — block-free (no Cloudflare). Resolves a
-composer name to its canonical Wikidata item, aliases and stable external identifiers
-(CPDL P4712, MusicBrainz P434, VIAF P214). This addresses the 35k-composer identity
-problem: once a stable external id is found, OSAP stops depending on surface name variants.
+Resuelve un nombre de compositor (p. ej. "W.A. Mozart") a la persona real en Wikidata
+("Wolfgang Amadeus Mozart") y devuelve sus identificadores estables (QID, ISNI, VIAF,
+LCCN, MusicBrainz). Usa `composer_identifiers` (búsqueda alias-aware por canonical +
+apellido), reutilizando la infraestructura de identidad ya construida.
 
-Uses only the standard library (urllib) with a transparent User-Agent, per Wikidata policy.
+Antes: match por label exacto → "W.A. Mozart" no encontraba a Mozart ni adjuntaba IDs.
+Ahora: la identidad se enriquece y el motor puede decidir resolved por identidad fuerte.
 """
 
+from __future__ import annotations
+
 import asyncio
-from typing import cast
 
-import requests
-
+from src.osap.infrastructure.identifiers.open_sources import composer_identifiers
 from src.osap.ports.composer_resolver import (
     IComposerResolver,
     ResolverCandidate,
@@ -22,11 +23,7 @@ from src.osap.ports.composer_resolver import (
     ResolverResult,
 )
 
-_SPARQL_URL = "https://query.wikidata.org/sparql"
-_USER_AGENT = "osap-resolver/0.1 (contact: osap@example.com)"
-
-# Autoridad: coincidencia exacta de label. El motor pondera y cruza con otras fuentes.
-_EXACT_MATCH_CONFIDENCE = 0.85
+_IDENTITY_CONFIDENCE = 0.9
 
 
 class WikidataIdentityResolver(IComposerResolver):
@@ -38,68 +35,32 @@ class WikidataIdentityResolver(IComposerResolver):
         if not name:
             return ResolverResult(provider=self.provider_id, candidates=())
         try:
-            data = await asyncio.to_thread(self._query, name)
+            record = await asyncio.to_thread(composer_identifiers, name)
         except Exception:  # noqa: BLE001
             return ResolverResult(provider=self.provider_id, candidates=())
+        if record is None:
+            return ResolverResult(provider=self.provider_id, candidates=())
 
-        candidates: list[ResolverCandidate] = []
-        for row in data:
-            item = row.get("itemLabel") or row.get("item") or name
-            aliases = tuple(a for a in str(row.get("aliases") or "").split("|") if a)
-            external_ids: dict[str, str] = {}
-            for prop, label in (("cpdlId", "cpdl"), ("mbid", "musicbrainz"), ("viaf", "viaf")):
-                value = row.get(prop)
-                if value:
-                    external_ids[label] = str(value)
-            evidence = tuple(
-                ResolverEvidence(kind="external_id", confidence=_EXACT_MATCH_CONFIDENCE)
-                for prop in ("cpdlId", "mbid", "viaf")
-                if row.get(prop)
-            )
-            candidates.append(
-                ResolverCandidate(
-                    name=str(item),
-                    confidence=_EXACT_MATCH_CONFIDENCE,
-                    aliases=aliases,
-                    external_ids=external_ids,
-                    evidence=evidence,
-                )
-            )
-        return ResolverResult(provider=self.provider_id, candidates=tuple(candidates))
+        external_ids: dict[str, str] = {}
+        for attr, key in (
+            ("wikidata", "qid"),
+            ("isni", "isni"),
+            ("viaf", "viaf"),
+            ("lccn", "lccn"),
+            ("musicbrainz", "musicbrainz"),
+        ):
+            value = getattr(record, attr, None)
+            if value:
+                external_ids[key] = str(value)
 
-    @staticmethod
-    def _query(name: str) -> list[dict[str, object]]:
-        safe = name.replace('"', "").replace("\\", "")
-        query = f"""
-SELECT ?item ?itemLabel ?cpdlId ?mbid ?viaf
-       (GROUP_CONCAT(?alias; separator="|") AS ?aliases) WHERE {{
-  ?item rdfs:label "{safe}"@en .
-  ?item wdt:P31 wd:Q5 .
-  OPTIONAL {{ ?item wdt:P4712 ?cpdlId }}
-  OPTIONAL {{ ?item wdt:P434 ?mbid }}
-  OPTIONAL {{ ?item wdt:P214 ?viaf }}
-  OPTIONAL {{ ?item skos:altLabel ?alias . FILTER(LANG(?alias)="en") }}
-  SERVICE wikibase:label {{ bd:serviceParam wikibase:language "en". }}
-}}
-GROUP BY ?item ?itemLabel ?cpdlId ?mbid ?viaf
-LIMIT 10
-"""
-        url = _SPARQL_URL
-        response = requests.get(
-            url,
-            params={"query": query, "format": "json"},
-            headers={"User-Agent": _USER_AGENT},
-            timeout=30,
+        if not external_ids:
+            return ResolverResult(provider=self.provider_id, candidates=())
+
+        candidate = ResolverCandidate(
+            name=str(record.canonical_name or name),
+            confidence=_IDENTITY_CONFIDENCE,
+            aliases=tuple(record.aliases or ()),
+            external_ids=external_ids,
+            evidence=(ResolverEvidence(kind="external_id", confidence=_IDENTITY_CONFIDENCE),),
         )
-        response.raise_for_status()
-        payload = cast("dict[str, object]", response.json())
-        results = cast("dict[str, object]", payload.get("results", {}))
-        bindings = cast("list[object]", results.get("bindings", []))
-        out: list[dict[str, object]] = []
-        for binding in bindings:
-            row: dict[str, object] = {}
-            for key, val in cast("dict[str, object]", binding).items():
-                if isinstance(val, dict):
-                    row[key] = val.get("value")
-            out.append(row)
-        return out
+        return ResolverResult(provider=self.provider_id, candidates=(candidate,))

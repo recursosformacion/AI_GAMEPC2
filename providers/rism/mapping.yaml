@@ -1,0 +1,8 @@
+work:
+  id: id
+  title: title
+  composer: composer
+  catalogue: catalogue
+  license: license
+  public_domain: public_domain
+  array: resources

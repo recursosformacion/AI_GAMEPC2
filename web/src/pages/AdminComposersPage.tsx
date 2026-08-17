@@ -17,9 +17,15 @@ const REVIEW_OPTIONS: { value: string; key: TKey }[] = [
   { value: "not_reviewed", key: "composers.reviewNotReviewed" },
 ];
 
+const VISIBILITY_OPTIONS: { value: string; key: TKey }[] = [
+  { value: "visible", key: "composers.visibilityVisible" },
+  { value: "hidden", key: "composers.visibilityHidden" },
+  { value: "all", key: "composers.visibilityAll" },
+];
+
 export function AdminComposersPage() {
   const { t } = useI18n();
-  const { list, loading, error, q, setQuery, fetchList, review, setReview, merge, reviewComposer } = useComposers();
+  const { list, loading, error, q, setQuery, fetchList, review, setReview, visible, setVisible, merge, reviewComposer } = useComposers();
   const readOnly = useSystem((s) => s.health?.read_only ?? false);
   const [input, setInput] = useState(q);
   const [offset, setOffset] = useState(0);
@@ -27,8 +33,8 @@ export function AdminComposersPage() {
   const [target, setTarget] = useState<ComposerSummary | null>(null);
 
   useEffect(() => {
-    void fetchList(q, LIMIT, offset, review);
-  }, [fetchList, q, offset, review]);
+    void fetchList(q, LIMIT, offset, review, visible);
+  }, [fetchList, q, offset, review, visible]);
 
   const search = () => {
     setOffset(0);
@@ -38,6 +44,11 @@ export function AdminComposersPage() {
   const onReviewChange = (value: string) => {
     setOffset(0);
     setReview(value || null);
+  };
+
+  const onVisibilityChange = (value: string) => {
+    setOffset(0);
+    setVisible(value);
   };
 
   const toggleSelect = (id: string) => {
@@ -95,6 +106,21 @@ export function AdminComposersPage() {
       </div>
 
       <div className="flex items-center gap-2 text-sm">
+        <label htmlFor="visibility-filter" className="text-xs text-osap-muted">
+          {t("composers.visibilityFilter")}:
+        </label>
+        <select
+          id="visibility-filter"
+          value={visible}
+          onChange={(e) => onVisibilityChange(e.target.value)}
+          className="rounded border border-osap-border bg-osap-surface px-2 py-1 text-sm"
+        >
+          {VISIBILITY_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {t(o.key)}
+            </option>
+          ))}
+        </select>
         <label htmlFor="review-filter" className="text-xs text-osap-muted">
           {t("composers.reviewFilter")}:
         </label>

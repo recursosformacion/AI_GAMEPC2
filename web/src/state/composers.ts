@@ -16,9 +16,11 @@ interface ComposersState {
   limit: number;
   offset: number;
   review: string | null;
+  visible: string;
   setQuery: (q: string) => void;
   setReview: (review: string | null) => void;
-  fetchList: (q: string, limit: number, offset: number, review: string | null) => Promise<void>;
+  setVisible: (visible: string) => void;
+  fetchList: (q: string, limit: number, offset: number, review: string | null, visible?: string) => Promise<void>;
   fetchDetail: (id: string) => Promise<void>;
   fetchWorks: (id: string, limit: number, offset: number) => Promise<void>;
   merge: (targetId: string, sourceIds: string[]) => Promise<void>;
@@ -36,12 +38,14 @@ export const useComposers = create<ComposersState>((set, get) => ({
   limit: 50,
   offset: 0,
   review: null,
+  visible: "visible",
   setQuery: (q) => set({ q }),
   setReview: (review) => set({ review }),
-  fetchList: async (q, limit, offset, review) => {
+  setVisible: (visible) => set({ visible }),
+  fetchList: async (q, limit, offset, review, visible = "visible") => {
     set({ loading: true, error: null });
     try {
-      const list = await apiClient.getComposers(q, limit, offset, review ?? undefined);
+      const list = await apiClient.getComposers(q, limit, offset, review ?? undefined, visible);
       set({ list, loading: false, error: null });
     } catch (e) {
       set({ loading: false, error: e instanceof ApiError ? e : new ApiError("UNKNOWN", String(e)) });
@@ -83,8 +87,8 @@ export const useComposers = create<ComposersState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       await apiClient.reviewComposer(composerId, reviewStatus);
-      const { q, limit, offset, review } = get();
-      await get().fetchList(q, limit, offset, review);
+      const { q, limit, offset, review, visible } = get();
+      await get().fetchList(q, limit, offset, review, visible);
       set({ loading: false, error: null });
     } catch (e) {
       set({ loading: false, error: e instanceof ApiError ? e : new ApiError("UNKNOWN", String(e)) });

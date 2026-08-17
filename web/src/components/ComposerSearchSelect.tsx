@@ -27,7 +27,7 @@ export function ComposerSearchSelect({ placeholder, onSelect, excludeId }: Props
     let active = true;
     setLoading(true);
     apiClient
-      .getComposers(term, 20, 0)
+      .getComposers(term, 20, 0, undefined, "all")
       .then((r) => {
         if (active) setResults(r.items);
       })
