@@ -37,3 +37,10 @@ Frontend: `tsc --noEmit` y `vitest run` en `web/`.
 - Capa declarativa por YAML en `providers/{omr,imslp,openscore}/` (provider/endpoints/
   mapping/resources.yaml) + `RemoteCatalogProvider` genérico.
 - Ver `docs/osap/providers-layer.md` y `docs/osap/README.md`.
+
+## Regla permanente: documentación de scripts
+- Todo script que se quede en `script/` (o `scripts/` en osap-storage) y sea lanzable
+  debe llevar un **resumen corto al principio** (docstring en Python, comentario en
+  PowerShell) y estar **documentado en `docs/osap/scripts.md`** (propósito + uso).
+- Aplica a los scripts existentes y a los nuevos.
+

@@ -24,23 +24,24 @@ _USER_AGENT = "osap-identifiers/0.1 (reconstruction; read-only)"
 _COMPOSER_OCCUPATION = "Q36834"  # compositor
 
 
-def composer_identifiers(name: str) -> ComposerRecord | None:
+def composer_identifiers(name: str, timeout: int = 30) -> ComposerRecord | None:
     """ISNI/VIAF/LCCN/MusicBrainz de un compositor vía Wikidata (búsqueda + SPARQL).
 
     Alias-aware: entre los candidatos de Wikidata elige el que canonicamente coincide con
     el nombre (p. ej. "J. Scott Skinner" → "James Scott Skinner"), no solo el primero.
+    `timeout` en segundos por llamada (agresivo para no bloquear la pasada).
     """
     name = (name or "").strip()
     if not name:
         return None
     target = MetadataNormalizer.comparison_composer(name)
-    qid = _search_entity(name, target)
+    qid = _search_entity(name, target, timeout)
     if not qid and len(name.split()) > 1:
         # Fallback por apellido: "J. Scott Skinner" → buscar "Skinner" y matchear canónico.
-        qid = _search_entity(name.split()[-1], target)
+        qid = _search_entity(name.split()[-1], target, timeout)
     if not qid:
         return None
-    ids, aliases = _composer_ids(qid)
+    ids, aliases = _composer_ids(qid, timeout)
     if not ids:
         return None
     return ComposerRecord(
@@ -79,7 +80,7 @@ def work_wikidata(title: str) -> str | None:
 # --- Wikidata ---
 
 
-def _search_entity(text: str, target_key: str = "") -> str | None:
+def _search_entity(text: str, target_key: str = "", timeout: int = 30) -> str | None:
     params = {
         "action": "wbsearchentities",
         "search": text,
@@ -89,7 +90,7 @@ def _search_entity(text: str, target_key: str = "") -> str | None:
         "limit": "20",
     }
     try:
-        resp = requests.get(_WIKIDATA_API, params=params, headers={"User-Agent": _USER_AGENT}, timeout=30)
+        resp = requests.get(_WIKIDATA_API, params=params, headers={"User-Agent": _USER_AGENT}, timeout=timeout)
         resp.raise_for_status()
         results = resp.json().get("search", [])
     except Exception:  # noqa: BLE001
@@ -118,7 +119,7 @@ def _search_entity(text: str, target_key: str = "") -> str | None:
     return None
 
 
-def _composer_ids(qid: str) -> tuple[dict[str, str], list[str]]:
+def _composer_ids(qid: str, timeout: int = 30) -> tuple[dict[str, str], list[str]]:
     query = f"""
 SELECT ?itemLabel ?viaf ?isni ?lccn ?mbid ?alias WHERE {{
   wd:{qid} wdt:P31 wd:Q5 .
@@ -136,7 +137,7 @@ LIMIT 40
             _SPARQL,
             params={"query": query, "format": "json"},
             headers={"User-Agent": _USER_AGENT},
-            timeout=40,
+            timeout=timeout,
         )
         resp.raise_for_status()
         bindings = resp.json().get("results", {}).get("bindings", [])
