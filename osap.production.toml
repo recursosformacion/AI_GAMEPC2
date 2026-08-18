@@ -9,7 +9,6 @@ user = "osap"
 password = "osap2027"
 
 [osap]
-# Host convencional de storage al que apunta el navegador (subdominio público).
 storage_web_base = "https://storage.openmusicrepository.com"
 
 [oidc]
