@@ -17,7 +17,9 @@ from fastapi import FastAPI, Header, Query, Response
 from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
 
 from src.osap.api.contracts import (
+    AddAliasRequest,
     AdminOverviewResponse,
+    AliasResponse,
     CatalogueRead,
     ComposerCreationEvidenceResponse,
     ComposerDetailResponse,
@@ -44,6 +46,9 @@ from src.osap.api.contracts import (
     KnowledgeSuggestionDTO,
     MergeComposersRequest,
     MergeComposersResultResponse,
+    MoveAliasRequest,
+    MoveAliasResultResponse,
+    PromoteAliasResultResponse,
     ProviderResponse,
     RegisterRequest,
     RepositorySource,
@@ -62,6 +67,8 @@ from src.osap.api.contracts import (
     SearchResponse,
     SessionSource,
     SessionSourceCreate,
+    SetAttributionRequest,
+    SetAttributionResultResponse,
     SetOpConfigRequest,
     SetProviderWiredRequest,
     SourcePreviewRequest,
@@ -1836,6 +1843,173 @@ def create_platform_app(
                 503, response, "ADMIN_SERVICE_UNAVAILABLE", "Composer admin service is not configured"
             )
         return ok(_composer_detail_dto(composer))
+
+    @app.post(
+        "/api/v1/admin/composers/{composer_id}/aliases",
+        status_code=200,
+        tags=["Composers"],
+        summary="Add alias to a composer (admin)",
+        description="Añade un alias a un compositor (solo mejora el reconocimiento; no toca obras). "
+        "Exige role=admin; backend: osap-storage con storage:admin.",
+        response_model=SuccessEnvelope[AliasResponse] | ErrorEnvelope,
+        responses={
+            200: _resp("Added alias", _example({})),
+            401: _UNAUTHORIZED_401,
+            403: _FORBIDDEN_403,
+            404: _NOT_FOUND_404,
+            **_standard_errors(422),
+        },
+    )
+    def add_alias(
+        composer_id: str,
+        payload: AddAliasRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            alias = api.add_alias(authorization, composer_id, payload.alias)
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return fail(404, response, "NOT_FOUND", "Composer not found")
+        except StorageComposerError:
+            return fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", "Composer admin service is not configured")
+        return ok(AliasResponse.model_validate(alias))
+
+    @app.get(
+        "/api/v1/admin/composers/{composer_id}/aliases",
+        status_code=200,
+        tags=["Composers"],
+        summary="List composer aliases (admin)",
+        description="Devuelve los alias de un compositor (con id). Exige role=admin; "
+        "backend: osap-storage con storage:admin.",
+        response_model=SuccessEnvelope[list[AliasResponse]] | ErrorEnvelope,
+        responses={
+            200: _resp("Aliases", _example({})),
+            401: _UNAUTHORIZED_401,
+            403: _FORBIDDEN_403,
+            404: _NOT_FOUND_404,
+            **_standard_errors(422),
+        },
+    )
+    def list_aliases(
+        composer_id: str,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            aliases = api.list_aliases(authorization, composer_id)
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return fail(404, response, "NOT_FOUND", "Composer not found")
+        except StorageComposerError:
+            return fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", "Composer admin service is not configured")
+        return ok([AliasResponse.model_validate(a) for a in aliases])
+
+    @app.post(
+        "/api/v1/admin/composers/{composer_id}/aliases/{alias_id}/move",
+        status_code=200,
+        tags=["Composers"],
+        summary="Move an alias to another composer (admin)",
+        description="Mueve el alias (no se borra) y reasigna sus obras al compositor destino. "
+        "Exige role=admin; backend: osap-storage con storage:admin.",
+        response_model=SuccessEnvelope[MoveAliasResultResponse] | ErrorEnvelope,
+        responses={
+            200: _resp("Moved alias", _example({})),
+            401: _UNAUTHORIZED_401,
+            403: _FORBIDDEN_403,
+            404: _NOT_FOUND_404,
+            **_standard_errors(422),
+        },
+    )
+    def move_alias(
+        composer_id: str,
+        alias_id: int,
+        payload: MoveAliasRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            alias = api.move_alias(authorization, alias_id, payload.from_composer_id, payload.target_composer_id)
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return fail(404, response, "NOT_FOUND", "Composer or alias not found")
+        except StorageComposerError:
+            return fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", "Composer admin service is not configured")
+        return ok(MoveAliasResultResponse.model_validate(alias))
+
+    @app.post(
+        "/api/v1/admin/composers/{composer_id}/aliases/{alias_id}/promote",
+        status_code=200,
+        tags=["Composers"],
+        summary="Promote an alias to its own composer (admin)",
+        description="Crea un Composer desde el alias y reasigna sus obras. Exige role=admin; "
+        "backend: osap-storage con storage:admin.",
+        response_model=SuccessEnvelope[PromoteAliasResultResponse] | ErrorEnvelope,
+        responses={
+            200: _resp("Promoted alias", _example({})),
+            401: _UNAUTHORIZED_401,
+            403: _FORBIDDEN_403,
+            404: _NOT_FOUND_404,
+            **_standard_errors(422),
+        },
+    )
+    def promote_alias(
+        composer_id: str,
+        alias_id: int,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            composer = api.promote_alias(authorization, composer_id, alias_id)
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return fail(404, response, "NOT_FOUND", "Composer or alias not found")
+        except StorageComposerError:
+            return fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", "Composer admin service is not configured")
+        return ok(PromoteAliasResultResponse.model_validate(composer))
+
+    @app.post(
+        "/api/v1/admin/composers/set-attribution",
+        status_code=200,
+        tags=["Composers"],
+        summary="Convert composers to attribution (admin)",
+        description="Las obras de los compositores guardan attribution_type + attribution_note y se "
+        "les borra composer_id; los compositores se retiran. Exige role=admin; "
+        "backend: osap-storage con storage:admin.",
+        response_model=SuccessEnvelope[SetAttributionResultResponse] | ErrorEnvelope,
+        responses={
+            200: _resp("Set attribution", _example({})),
+            401: _UNAUTHORIZED_401,
+            403: _FORBIDDEN_403,
+            **_standard_errors(422),
+        },
+    )
+    def set_attribution(
+        payload: SetAttributionRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            result = api.set_attribution(authorization, payload.composer_ids, payload.attribution_type)
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+        except StorageComposerError:
+            return fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", "Composer admin service is not configured")
+        return ok(SetAttributionResultResponse.model_validate(result))
 
     @app.post(
         "/api/v1/composers/resolve",

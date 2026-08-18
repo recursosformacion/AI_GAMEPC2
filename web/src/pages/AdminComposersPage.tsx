@@ -25,12 +25,15 @@ const VISIBILITY_OPTIONS: { value: string; key: TKey }[] = [
 
 export function AdminComposersPage() {
   const { t } = useI18n();
-  const { list, loading, error, q, setQuery, fetchList, review, setReview, visible, setVisible, merge, reviewComposer } = useComposers();
+  const { list, loading, error, q, setQuery, fetchList, review, setReview, visible, setVisible, merge, reviewComposer, setAttribution } = useComposers();
   const readOnly = useSystem((s) => s.health?.read_only ?? false);
   const [input, setInput] = useState(q);
   const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [target, setTarget] = useState<ComposerSummary | null>(null);
+  const [attributionType, setAttributionType] = useState("TRADICIONAL");
+
+  const ATTRIBUTION_OPTIONS = ["ANONIMA", "TRADICIONAL", "DESCONOCIDO", "POPULAR", "ATRIBUIDA"];
 
   useEffect(() => {
     void fetchList(q, LIMIT, offset, review, visible);
@@ -84,6 +87,11 @@ export function AdminComposersPage() {
     void merge(target.id, sources);
     setSelected(new Set());
     setTarget(null);
+  };
+
+  const onSetAttribution = () => {
+    void setAttribution([...selected], attributionType);
+    setSelected(new Set());
   };
 
   const selectedCount = selected.size;
@@ -155,6 +163,29 @@ export function AdminComposersPage() {
               className="rounded bg-osap-accent px-4 py-1.5 text-sm text-white disabled:opacity-50"
             >
               {loading ? t("composers.merging") : `${t("composers.merge")} (${selectedCount - (target ? 1 : 0)})`}
+            </button>
+          </div>
+          <div className="mt-2 flex flex-wrap items-end gap-2">
+            <div className="flex-1">
+              <p className="mb-1 text-xs text-osap-muted">{t("composers.attributionType")}</p>
+              <select
+                value={attributionType}
+                onChange={(e) => setAttributionType(e.target.value)}
+                className="rounded border border-osap-border bg-osap-surface px-2 py-1.5 text-sm"
+              >
+                {ATTRIBUTION_OPTIONS.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={onSetAttribution}
+              disabled={loading || selectedCount === 0 || readOnly}
+              className="rounded border border-osap-accent px-4 py-1.5 text-sm text-osap-accent disabled:opacity-50"
+            >
+              {t("composers.markAttribution")} ({selectedCount})
             </button>
           </div>
         </div>

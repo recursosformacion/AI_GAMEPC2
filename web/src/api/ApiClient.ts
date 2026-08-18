@@ -15,8 +15,12 @@ import type {
   ComposerSummary,
   ComposerWorks,
   AdminOverview,
+  Alias,
   Envelope,
   MergeComposersResult,
+  MoveAliasResult,
+  PromoteAliasResult,
+  SetAttributionResult,
   SourcePreview,
   SourceSuggestion,
   RegisterResult,
@@ -120,6 +124,35 @@ export class ApiClient {
   async reviewComposer(composerId: string, reviewStatus: string): Promise<ComposerDetail> {
     return this.post<ComposerDetail>(`/admin/composers/${encodeURIComponent(composerId)}/review`, {
       review_status: reviewStatus,
+    });
+  }
+
+  async addAlias(composerId: string, alias: string): Promise<Alias> {
+    return this.post<Alias>(`/admin/composers/${encodeURIComponent(composerId)}/aliases`, { alias });
+  }
+
+  async listAliases(composerId: string): Promise<Alias[]> {
+    return this.get<Alias[]>(`/admin/composers/${encodeURIComponent(composerId)}/aliases`);
+  }
+
+  async moveAlias(composerId: string, aliasId: number, targetComposerId: string): Promise<MoveAliasResult> {
+    return this.post<MoveAliasResult>(
+      `/admin/composers/${encodeURIComponent(composerId)}/aliases/${aliasId}/move`,
+      { from_composer_id: composerId, target_composer_id: targetComposerId },
+    );
+  }
+
+  async promoteAlias(composerId: string, aliasId: number): Promise<PromoteAliasResult> {
+    return this.post<PromoteAliasResult>(
+      `/admin/composers/${encodeURIComponent(composerId)}/aliases/${aliasId}/promote`,
+      {},
+    );
+  }
+
+  async setAttribution(composerIds: string[], attributionType: string): Promise<SetAttributionResult> {
+    return this.post<SetAttributionResult>("/admin/composers/set-attribution", {
+      composer_ids: composerIds,
+      attribution_type: attributionType,
     });
   }
 

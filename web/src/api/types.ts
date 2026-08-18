@@ -296,6 +296,25 @@ export interface MergeComposersResult {
   merge_operation_id: string | null;
 }
 
+export interface Alias {
+  id: number;
+  alias: string;
+  normalized_alias: string;
+}
+
+export interface MoveAliasResult {
+  alias: Alias;
+}
+
+export interface PromoteAliasResult {
+  composer_id: string;
+  name: string;
+}
+
+export interface SetAttributionResult {
+  works_affected: number;
+}
+
 // --- identidad (navegación de autenticación) --------------------------------
 
 export interface FrontendUser {

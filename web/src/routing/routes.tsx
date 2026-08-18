@@ -5,6 +5,7 @@ import { AdminComposerDetailPage } from "../pages/AdminComposerDetailPage";
 import { AdminComposersPage } from "../pages/AdminComposersPage";
 import { AdminSourceSuggestionsPage } from "../pages/AdminSourceSuggestionsPage";
 import { AdminPage } from "../pages/AdminPage";
+import { AliasPage } from "../pages/AliasPage";
 import { AuthCallbackPage } from "../pages/AuthCallbackPage";
 import { HowItWorksPage } from "../pages/HowItWorksPage";
 import { CandidatesPage } from "../pages/CandidatesPage";
@@ -38,6 +39,7 @@ export function AppRoutes() {
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/admin/composers" element={<AdminComposersPage />} />
         <Route path="/admin/composers/:composerId" element={<AdminComposerDetailPage />} />
+        <Route path="/admin/aliases" element={<AliasPage />} />
         <Route path="/admin/source-suggestions" element={<AdminSourceSuggestionsPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/about/how-it-works" element={<HowItWorksPage />} />

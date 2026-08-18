@@ -71,6 +71,44 @@ class ComposersService:
             raise ForbiddenError(f"Storage rejected review (HTTP {status})")
         return doc
 
+    def add_alias(self, token: str | None, composer_id: str, alias: str) -> dict[str, object]:
+        self.require_admin(token)
+        self._ensure_writable()
+        doc = self._client.add_alias(composer_id, alias)
+        if doc is None:
+            raise ForbiddenError("Storage rejected alias creation")
+        return doc
+
+    def list_aliases(self, token: str | None, composer_id: str) -> list[dict[str, object]]:
+        self.require_admin(token)
+        return self._client.list_aliases(composer_id)
+
+    def move_alias(
+        self, token: str | None, alias_id: int, from_composer_id: str, target_composer_id: str
+    ) -> dict[str, object]:
+        self.require_admin(token)
+        self._ensure_writable()
+        doc = self._client.move_alias(alias_id, from_composer_id, target_composer_id)
+        if doc is None:
+            raise ForbiddenError("Storage rejected alias move")
+        return doc
+
+    def promote_alias(self, token: str | None, composer_id: str, alias_id: int) -> dict[str, object]:
+        self.require_admin(token)
+        self._ensure_writable()
+        doc = self._client.promote_alias(composer_id, alias_id)
+        if doc is None:
+            raise ForbiddenError("Storage rejected alias promote")
+        return doc
+
+    def set_attribution(self, token: str | None, composer_ids: list[str], attribution_type: str) -> dict[str, object]:
+        self.require_admin(token)
+        self._ensure_writable()
+        doc = self._client.set_attribution(composer_ids, attribution_type)
+        if doc is None:
+            raise ForbiddenError("Storage rejected set-attribution")
+        return doc
+
     def composer_review_stats(self, token: str | None) -> dict[str, int]:
         self.require_admin(token)
         return self._client.composer_review_stats()

@@ -25,6 +25,7 @@ const MAIN_NAV = [
 const ADMIN_MENU = [
   { to: "/admin", key: "admin.overview" },
   { to: "/admin/composers", key: "admin.composers" },
+  { to: "/admin/aliases", key: "admin.aliases" },
   { to: "/admin/source-suggestions", key: "admin.sourceSuggestions" },
   { to: "/providers", key: "providers" },
   { to: "/jobs", key: "jobs" },

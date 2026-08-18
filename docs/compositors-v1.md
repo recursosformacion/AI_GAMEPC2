@@ -294,3 +294,13 @@ Verificar (o añadir si falta):
 
 
 
+
+## Endpoints de administración de compositores (alias + atribución)
+
+- `POST /api/v1/admin/composers/{composer_id}/aliases` — añadir un alias (solo mejora el reconocimiento; no toca obras).
+- `GET /api/v1/admin/composers/{composer_id}/aliases` — listar alias de un compositor (con id, para mover/promover).
+- `POST /api/v1/admin/composers/{composer_id}/aliases/{alias_id}/move` — mover un alias a otro compositor (no se borra) y reasignar sus obras al destino.
+- `POST /api/v1/admin/composers/{composer_id}/aliases/{alias_id}/promote` — promover un alias a su propio Composer y reasignar sus obras.
+- `POST /api/v1/admin/composers/set-attribution` — convertir compositores a atribución (sus obras guardan `attribution_type` + `attribution_note` y se les borra `composer_id`; el compositor se retira).
+
+Reglas: los alias **nunca se borran** (se mueven o promueven). La fusión (merge) ya reasigna obras y añade los orígenes como alias al destino. Todos exigen `role=admin`.

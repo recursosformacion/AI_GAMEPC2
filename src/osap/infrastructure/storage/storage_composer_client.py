@@ -156,6 +156,60 @@ class StorageComposerClient:
             return {str(k): int(v) for k, v in doc.items()}
         return {"total": 0, "correct": 0, "incorrect": 0, "reviewed": 0, "not_reviewed": 0}
 
+    def add_alias(self, composer_id: str, alias: str) -> dict[str, object] | None:
+        status, doc = self._call(
+            "POST",
+            f"/api/admin/composers/{_q(composer_id)}/aliases",
+            payload={"alias": alias},
+            scope="storage:admin",
+            provider=self._admin_token_provider,
+        )
+        return doc if 200 <= status < 300 and isinstance(doc, dict) else None
+
+    def list_aliases(self, composer_id: str) -> list[dict[str, object]]:
+        status, doc = self._call(
+            "GET",
+            f"/api/admin/composers/{_q(composer_id)}/aliases",
+            scope="storage:admin",
+            provider=self._admin_token_provider,
+        )
+        if 200 <= status < 300 and isinstance(doc, list):
+            return [d for d in doc if isinstance(d, dict)]
+        return []
+
+    def move_alias(
+        self, alias_id: int, from_composer_id: str, target_composer_id: str
+    ) -> dict[str, object] | None:
+        status, doc = self._call(
+            "POST",
+            f"/api/admin/composers/{_q(from_composer_id)}/aliases/{alias_id}/move",
+            payload={"from_composer_id": from_composer_id, "target_composer_id": target_composer_id},
+            scope="storage:admin",
+            provider=self._admin_token_provider,
+        )
+        return doc if 200 <= status < 300 and isinstance(doc, dict) else None
+
+    def promote_alias(self, composer_id: str, alias_id: int) -> dict[str, object] | None:
+        status, doc = self._call(
+            "POST",
+            f"/api/admin/composers/{_q(composer_id)}/aliases/{alias_id}/promote",
+            payload={},
+            scope="storage:admin",
+            provider=self._admin_token_provider,
+        )
+        return doc if 200 <= status < 300 and isinstance(doc, dict) else None
+
+    def set_attribution(self, composer_ids: list[str], attribution_type: str) -> dict[str, object] | None:
+        status, doc = self._call(
+            "POST",
+            "/api/admin/composers/set-attribution",
+            payload={"composer_ids": composer_ids, "attribution_type": attribution_type},
+            scope="storage:admin",
+            provider=self._admin_token_provider,
+        )
+        return doc if 200 <= status < 300 and isinstance(doc, dict) else None
+
+
     def catalogues(self, prefix: str | None = None, composer: str | None = None) -> list[dict[str, object]]:
         query = {}
         if prefix:

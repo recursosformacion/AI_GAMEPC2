@@ -678,6 +678,23 @@ class PlatformApi:
     def review_composer(self, token: str | None, composer_id: str, review_status: str) -> dict[str, object]:
         return self.composers().review_composer(token, composer_id, review_status)
 
+    def add_alias(self, token: str | None, composer_id: str, alias: str) -> dict[str, object]:
+        return self.composers().add_alias(token, composer_id, alias)
+
+    def list_aliases(self, token: str | None, composer_id: str) -> list[dict[str, object]]:
+        return self.composers().list_aliases(token, composer_id)
+
+    def move_alias(
+        self, token: str | None, alias_id: int, from_composer_id: str, target_composer_id: str
+    ) -> dict[str, object]:
+        return self.composers().move_alias(token, alias_id, from_composer_id, target_composer_id)
+
+    def promote_alias(self, token: str | None, composer_id: str, alias_id: int) -> dict[str, object]:
+        return self.composers().promote_alias(token, composer_id, alias_id)
+
+    def set_attribution(self, token: str | None, composer_ids: list[str], attribution_type: str) -> dict[str, object]:
+        return self.composers().set_attribution(token, composer_ids, attribution_type)
+
     async def resolve_composer(
         self,
         work_title: str,

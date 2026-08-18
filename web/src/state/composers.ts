@@ -26,6 +26,10 @@ interface ComposersState {
   merge: (targetId: string, sourceIds: string[]) => Promise<void>;
   createComposer: (name: string) => Promise<ComposerSummary>;
   reviewComposer: (composerId: string, reviewStatus: string) => Promise<void>;
+  addAlias: (composerId: string, alias: string) => Promise<void>;
+  moveAlias: (composerId: string, aliasId: number, targetComposerId: string) => Promise<void>;
+  promoteAlias: (composerId: string, aliasId: number) => Promise<void>;
+  setAttribution: (composerIds: string[], attributionType: string) => Promise<number>;
 }
 
 export const useComposers = create<ComposersState>((set, get) => ({
@@ -92,6 +96,49 @@ export const useComposers = create<ComposersState>((set, get) => ({
       set({ loading: false, error: null });
     } catch (e) {
       set({ loading: false, error: e instanceof ApiError ? e : new ApiError("UNKNOWN", String(e)) });
+    }
+  },
+  addAlias: async (composerId, alias) => {
+    set({ loading: true, error: null });
+    try {
+      await apiClient.addAlias(composerId, alias);
+      await get().fetchDetail(composerId);
+      set({ loading: false, error: null });
+    } catch (e) {
+      set({ loading: false, error: e instanceof ApiError ? e : new ApiError("UNKNOWN", String(e)) });
+    }
+  },
+  moveAlias: async (composerId, aliasId, targetComposerId) => {
+    set({ loading: true, error: null });
+    try {
+      await apiClient.moveAlias(composerId, aliasId, targetComposerId);
+      await get().fetchDetail(composerId);
+      set({ loading: false, error: null });
+    } catch (e) {
+      set({ loading: false, error: e instanceof ApiError ? e : new ApiError("UNKNOWN", String(e)) });
+    }
+  },
+  promoteAlias: async (composerId, aliasId) => {
+    set({ loading: true, error: null });
+    try {
+      await apiClient.promoteAlias(composerId, aliasId);
+      await get().fetchDetail(composerId);
+      set({ loading: false, error: null });
+    } catch (e) {
+      set({ loading: false, error: e instanceof ApiError ? e : new ApiError("UNKNOWN", String(e)) });
+    }
+  },
+  setAttribution: async (composerIds, attributionType) => {
+    set({ loading: true, error: null });
+    try {
+      const result = await apiClient.setAttribution(composerIds, attributionType);
+      const { q, limit, offset, review, visible } = get();
+      await get().fetchList(q, limit, offset, review, visible);
+      set({ loading: false, error: null });
+      return result.works_affected;
+    } catch (e) {
+      set({ loading: false, error: e instanceof ApiError ? e : new ApiError("UNKNOWN", String(e)) });
+      return 0;
     }
   },
 }));

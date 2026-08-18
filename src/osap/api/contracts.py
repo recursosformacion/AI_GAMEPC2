@@ -491,6 +491,39 @@ class ReviewComposerRequest(_Frozen):
     review_status: str
 
 
+class AddAliasRequest(_Frozen):
+    alias: str
+
+
+class MoveAliasRequest(_Frozen):
+    target_composer_id: str
+    from_composer_id: str
+
+
+class SetAttributionRequest(_Frozen):
+    composer_ids: list[str]
+    attribution_type: str
+
+
+class AliasResponse(_Frozen):
+    id: int
+    alias: str
+    normalized_alias: str
+
+
+class MoveAliasResultResponse(_Frozen):
+    alias: AliasResponse
+
+
+class PromoteAliasResultResponse(_Frozen):
+    composer_id: str
+    name: str
+
+
+class SetAttributionResultResponse(_Frozen):
+    works_affected: int
+
+
 class MergeComposersResultResponse(_Frozen):
     target_id: str
     sources_merged: list[str] = []
