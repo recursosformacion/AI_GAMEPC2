@@ -1,10 +1,10 @@
-# osap.toml de DESARROLLO — SOLO conexión a la BD operativa de osap-api.
-# El resto de configuración (deployment, dev_mode, credenciales de servicio, etc.)
-# vive centralizado en la BD operativa (tabla app_config) y se puede sobreescribir
-# por variable de entorno (OSAP_*). Precedencia: entorno > BD > defaults.
+# osap.toml de DESARROLLO — único fichero de configuración de osap-api.
+# En dev se usa este osap.toml; en prod se despliega osap.production.toml como osap.toml.
+# Precedencia: entorno (OSAP_*) > osap.toml > BD (app_config) > defaults.
 #
-# NOTA: el fichero de PRODUCCIÓN es distinto y NO se sobrescribe en los deploys
-# (el paquete de deploy no incluye osap.toml). Ver osap.production.example.toml.
+# NOTA: este fichero es el de DEV. En PRODUCCIÓN NO se usa este (ni su client_secret):
+# prod usa osap.production.toml (con client_secret vacío) y el secret real va en el entorno
+# del servicio systemd (OSAP_OIDC_CLIENT_SECRET), que vence a osap.toml.
 
 [db]
 host = "127.0.0.1"
@@ -12,12 +12,17 @@ name = "osap-api"
 user = "osap2027"
 password = "2027osapdb"
 
+[osap]
+deployment = "dev"
+dev_auth_bypass = true
+storage_web_base = "http://osap-storage"
+
 [oidc]
 issuer = "http://osap-auth/auth-api"
 client_id = "osap-api"
 redirect_uri = "http://osap-app/api/v1/auth/oidc/callback"
 spa_origin = "http://osap-app"
 scope = "openid profile"
-# Pon aquí el client_secret real (o en la env OSAP_OIDC_CLIENT_SECRET, que tiene prioridad).
-# NO commitees un secreto real a git.
-client_secret = ""
+# client_secret de DEV (cliente OAuth registrado contra el osap-auth local).
+# En prod NO vale este; va vacío en osap.production.toml y el real en env (OSAP_OIDC_CLIENT_SECRET).
+client_secret = "NzA6X6FJ752DxGTa7dyvj5PUWG_9aHgWnpnCPk2OjInehjwLHKl73rWpqbE6GTf8"
