@@ -19,6 +19,7 @@ Convenciones:
 | Script | Propósito |
 |--------|-----------|
 | `backfill_works_pdmx.py` | Backfill de metadatos de obras desde `pdmx_index.db`. |
+| `backfill_attribution.py` | Mueve atribuciones no-persona (anónima/tradicional/popular/atribuida) de `works.composer` a `attribution_type`+`attribution_note`. |
 | `candidate_resolver.py` | Resuelve candidatos a Composer minimizando red: prolíficos (≥N obras) aceptados sin red; el resto solo con autoridad local. Propuestas en `composer_candidate`. |
 | `candidate_cleanup.py` | Clasifica los candidatos `unknown` (mojibake/no_persona/qualifier/real/review) y persiste los accionables en `composer_candidate`. |
 | `candidate_priority.py` | Prioriza los candidatos por impacto (nº de obras), agrupando por identidad (`name_key`). |
@@ -58,6 +59,15 @@ priorizados por nº de obras). Sirve para priorizar la siguiente fase sin tocar 
 ```
 python scripts/catalog_statistics.py --db osap_storage [--db-user U] [--db-password P] \
     [--test prod-10000-001]
+```
+
+### backfill_attribution.py
+Mueve las atribuciones no-persona de `works.composer` (anónima/tradicional/popular/atribuida)
+a los campos nuevos `attribution_type` (ANONIMA/TRADICIONAL/POPULAR/ATRIBUIDA) y
+`attribution_note` (texto original, ej. "Traditional English"), y limpia composer/composer_id.
+Idempotente.
+```
+python scripts/backfill_attribution.py --db osap_storage [--db-user U] [--db-password P] [--dry-run]
 ```
 
 ### backfill_works_pdmx.py
