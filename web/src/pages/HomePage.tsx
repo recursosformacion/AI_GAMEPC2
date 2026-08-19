@@ -46,12 +46,38 @@ export function HomePage() {
     <div className="space-y-8">
       {/* Hero */}
       <section className="py-8 text-center">
-        <h1 className="text-2xl font-bold text-osap-accent sm:text-3xl">{t("app.name")}</h1>
-        <p className="text-sm text-osap-muted">{t("app.subtitle")}</p>
-        <p className="mx-auto mt-3 max-w-xl font-medium text-osap-ink">{t("home.explain")}</p>
-        <p className="mx-auto mt-1 max-w-xl text-sm text-osap-muted">{t("home.explain2")}</p>
+        <h1 className="mx-auto max-w-2xl text-2xl font-bold text-osap-ink sm:text-3xl">
+          {t("home.headline")}
+        </h1>
+        <p className="mx-auto mt-3 max-w-2xl text-sm text-osap-muted">{t("home.subtitle")}</p>
 
-        <form onSubmit={submit} className="mx-auto mt-6 max-w-xl">
+        {/* Qué encontrarás */}
+        <div className="mx-auto mt-6 grid max-w-3xl gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded border border-osap-border bg-osap-surface p-3 text-center">
+            <div className="text-2xl">🎼</div>
+            <h3 className="mt-1 font-semibold text-osap-ink">MusicXML</h3>
+            <p className="mt-1 text-xs text-osap-muted">{t("home.formatMusicxml")}</p>
+          </div>
+          <div className="rounded border border-osap-border bg-osap-surface p-3 text-center">
+            <div className="text-2xl">📄</div>
+            <h3 className="mt-1 font-semibold text-osap-ink">PDF</h3>
+            <p className="mt-1 text-xs text-osap-muted">{t("home.formatPdf")}</p>
+          </div>
+          <div className="rounded border border-osap-border bg-osap-surface p-3 text-center">
+            <div className="text-2xl">🎵</div>
+            <h3 className="mt-1 font-semibold text-osap-ink">MIDI</h3>
+            <p className="mt-1 text-xs text-osap-muted">{t("home.formatMidi")}</p>
+          </div>
+          <div className="rounded border border-osap-border bg-osap-surface p-3 text-center">
+            <div className="text-2xl">💰</div>
+            <h3 className="mt-1 font-semibold text-osap-ink">{t("home.formatPaid")}</h3>
+            <p className="mt-1 text-xs text-osap-muted">{t("home.formatPaidDesc")}</p>
+          </div>
+        </div>
+
+        <p className="mx-auto mt-7 max-w-xl font-medium text-osap-ink">{t("home.cta")}</p>
+
+        <form onSubmit={submit} className="mx-auto mt-3 max-w-xl">
           <div className="flex gap-2">
             <input
               aria-label="home-search"
