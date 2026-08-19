@@ -48,6 +48,30 @@ export function ComposerPage() {
   if (loading) {
     return <Spinner label={t("states.loading")} />;
   }
+  const searching = data?.status === "running" || data?.status === undefined;
+  if (searching && (data?.results.length ?? 0) === 0) {
+    return (
+      <div className="space-y-2 py-16 text-center">
+        <Spinner label={t("search.searching")} />
+        <div className="mx-auto h-2 max-w-sm overflow-hidden rounded bg-osap-border">
+          <div className="h-full bg-osap-accent transition-all" style={{ width: `${data?.progress ?? 5}%` }} />
+        </div>
+        <p className="text-xs text-osap-muted">
+          {t("search.progress")} {data?.progress ?? 0}%
+        </p>
+        {data?.providers && data.providers.length > 0 ? (
+          <div className="mx-auto mt-3 flex max-w-md flex-wrap justify-center gap-1.5">
+            {data.providers.map((p) => (
+              <span key={p} className="inline-flex items-center gap-1 rounded-full border border-osap-border bg-osap-surface px-2 py-0.5 text-xs text-osap-ink">
+                <span className="text-green-600">✓</span>
+                {p}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
   if (error !== null || data === null || data.results.length === 0) {
     return (
       <div className="space-y-1 py-16 text-center">
@@ -99,6 +123,17 @@ export function ComposerPage() {
 
   return (
     <div className="space-y-4">
+      {searching ? (
+        <div className="rounded border border-osap-accent bg-osap-accent-soft p-2 text-sm">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-osap-ink">{t("search.searching")}</span>
+            <span className="text-xs text-osap-muted">{data.progress ?? 0}%</span>
+          </div>
+          <div className="mt-1 h-1.5 overflow-hidden rounded bg-osap-border">
+            <div className="h-full bg-osap-accent transition-all" style={{ width: `${data.progress ?? 5}%` }} />
+          </div>
+        </div>
+      ) : null}
       <h1 className="text-xl font-semibold">{composer}</h1>
       <p className="text-sm text-osap-muted">
         {rangeStart}–{rangeEnd} of {total} works
