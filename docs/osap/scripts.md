@@ -142,6 +142,7 @@ python scripts/test_authority_coverage.py [--db BD] [--limit 100] [--from-id 0]
 | `extract_composers_from_dump.py` | Extraer compositores del dump completo de Wikidata. |
 | `fichas_30.py` | Fichas de ground truth de los 30 (evidencia, procedencia, conflictos). |
 | `ground_truth_30.py` | Ground truth de resolución de los 30. |
+| `index_works.py` | Indexador local de obras (paso 1 del índice): lee el proveedor OMR (osap-storage) y puebla `index_works`+`index_representations` (osap-api) con normalización y dedupe. |
 | `identity_resolver.py` | **Resolver de identidad escalonado** (evidencia acumulada) sobre obras de storage. |
 | `inventory_title_noise.py` | Inventario de patrones de ruido en títulos (FASE 5.7.2). |
 | `process_250_batch.py` | Procesar 250 obras (`works250.json`) → resultados + resumen. |

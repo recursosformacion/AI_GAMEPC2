@@ -207,6 +207,45 @@ class _MysqlStore(_MemoryStore):
             )
             """
         )
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS index_works (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                title VARCHAR(1024) NOT NULL,
+                title_key VARCHAR(255) NOT NULL,
+                composer_name VARCHAR(255),
+                composer_id VARCHAR(36),
+                catalogue VARCHAR(255),
+                catalogue_key VARCHAR(128),
+                year SMALLINT,
+                instrumentation VARCHAR(255),
+                source_count TINYINT NOT NULL DEFAULT 0,
+                updated_at VARCHAR(64) NOT NULL,
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_idx_title_composer (title_key(191), composer_id),
+                KEY idx_idx_composer (composer_id),
+                KEY idx_idx_catalogue (catalogue_key),
+                KEY idx_idx_title (title_key)
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+            """
+        )
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS index_representations (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                work_id BIGINT UNSIGNED NOT NULL,
+                provider VARCHAR(64) NOT NULL,
+                format VARCHAR(32) NOT NULL,
+                download_url TEXT,
+                title_provider VARCHAR(1024),
+                available TINYINT NOT NULL DEFAULT 0,
+                quality TINYINT NOT NULL DEFAULT 0,
+                PRIMARY KEY (id),
+                KEY idx_idxrep_work (work_id),
+                UNIQUE KEY uq_idxrep (work_id, provider, format, title_provider(255))
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+            """
+        )
 
     def list_suggestions(self) -> list[dict[str, object]]:
         return self._run("SELECT * FROM source_suggestions ORDER BY created_at")
