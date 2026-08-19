@@ -77,7 +77,7 @@ class RemoteCatalogProvider(ICatalogProvider):
             composer=request.composer,
             catalogue=getattr(request, "catalogue", None),
             title=request.title,
-            limit=50,
+            limit=100,
         )
         works = self._adapter.search(query)
         candidates: list[CandidateRepresentation] = []

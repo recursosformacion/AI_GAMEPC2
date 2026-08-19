@@ -45,7 +45,29 @@ export function CandidatesPage() {
   if (loading) {
     return <Spinner label={t("states.loading")} />;
   }
-  if (error !== null || data === null || data.results.length === 0) {
+  if (error !== null || data === null) {
+    return (
+      <div className="space-y-1 py-16 text-center">
+        <p className="text-osap-ink">{t("empty.noWorksFound")}</p>
+        <p className="text-sm text-osap-muted">{t("empty.tryAnother")}</p>
+      </div>
+    );
+  }
+  const searching = data.status === "running" || data.status === undefined;
+  if (searching && data.results.length === 0) {
+    return (
+      <div className="space-y-2 py-16 text-center">
+        <Spinner label={t("search.searching")} />
+        <div className="mx-auto h-2 max-w-sm overflow-hidden rounded bg-osap-border">
+          <div className="h-full bg-osap-accent transition-all" style={{ width: `${data.progress ?? 5}%` }} />
+        </div>
+        <p className="text-xs text-osap-muted">
+          {t("search.progress")} {data.progress ?? 0}%
+        </p>
+      </div>
+    );
+  }
+  if (data.results.length === 0) {
     return (
       <div className="space-y-1 py-16 text-center">
         <p className="text-osap-ink">{t("empty.noWorksFound")}</p>

@@ -80,6 +80,8 @@ export interface SearchResponse {
   total?: number;
   page?: number;
   per_page?: number;
+  status?: "running" | "done" | "error";
+  progress?: number;
 }
 
 export interface JobCreateRequest {

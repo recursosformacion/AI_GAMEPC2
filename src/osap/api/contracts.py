@@ -84,6 +84,8 @@ class SearchResponse(_Frozen):
     total: int = 0
     page: int = 1
     per_page: int = 10
+    status: str = "done"  # running | done | error
+    progress: int = 100  # 0..100
 
 
 class JobCreateRequest(_Frozen):

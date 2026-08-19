@@ -12,6 +12,7 @@ import threading
 import urllib.parse
 import urllib.request
 import uuid
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import cast
@@ -321,6 +322,20 @@ def _seed_sources() -> tuple[RepositorySource, ...]:
     )
 
 
+def _search_signature(req: SearchRequest) -> str:
+    """Firma estable de una búsqueda para el cache local (campos normalizados)."""
+    return "|".join(
+        [
+            (req.query or "").strip().lower(),
+            (req.composer or "").strip().lower(),
+            (req.title or "").strip().lower(),
+            (req.catalogue or "").strip().lower(),
+            (req.instrumentation or "").strip().lower(),
+            (req.language or "").strip().lower(),
+        ]
+    )
+
+
 class PlatformApi:
     """Use cases of the OSAP Platform API, backed by existing application services."""
 
@@ -335,6 +350,7 @@ class PlatformApi:
         self._catalog = catalog or SourceCatalog()
         self._sessions = SessionSources()
         self._searches: dict[str, SearchResponse] = {}
+        self._search_cache: dict[str, SearchResponse] = {}
         self._jobs: dict[str, JobResponse] = {}
         self._representations: dict[str, dict[str, object]] = {}
         self._job_counter = 0
@@ -361,15 +377,40 @@ class PlatformApi:
 
     def create_search(self, req: SearchRequest) -> tuple[str, SearchResponse]:
         search_id = uuid.uuid4().hex
-        results, total = self._run_search(req)
-        response = SearchResponse(
-            search_id=search_id,
-            results=results,
-            total=total,
-            page=req.page,
-            per_page=req.limit,
-        )
+        signature = _search_signature(req)
+        cached = self._search_cache.get(signature)
+        if cached is not None:
+            self._searches[search_id] = cached
+            return search_id, cached
+        # Búsqueda asíncrona: devuelve ya un recurso en "running"; el hilo lo completa.
+        response = SearchResponse(search_id=search_id, status="running", progress=0)
         self._searches[search_id] = response
+
+        def _run() -> None:
+            def _progress(p: int) -> None:
+                self._searches[search_id] = SearchResponse(
+                    search_id=search_id, status="running", progress=p
+                )
+
+            try:
+                results, total = self._run_search(req, _progress)
+                done = SearchResponse(
+                    search_id=search_id,
+                    results=results,
+                    total=total,
+                    page=req.page,
+                    per_page=req.limit,
+                    status="done",
+                    progress=100,
+                )
+                self._searches[search_id] = done
+                self._search_cache[signature] = done
+            except Exception:  # noqa: BLE001
+                logger.exception("search %s failed in background thread", search_id)
+                failed = SearchResponse(search_id=search_id, status="error", progress=100)
+                self._searches[search_id] = failed
+
+        threading.Thread(target=_run, daemon=True).start()
         return search_id, response
 
     def get_search(self, search_id: str) -> SearchResponse | None:
@@ -457,7 +498,11 @@ class PlatformApi:
             ]
         )
 
-    def _run_search(self, req: SearchRequest) -> tuple[list[SearchResultItem], int]:
+    def _run_search(
+        self, req: SearchRequest, progress: Callable[[int], None] | None = None
+    ) -> tuple[list[SearchResultItem], int]:
+        if progress is not None:
+            progress(10)
         builder = ResolveRequestBuilder()
         if req.query:
             builder = builder.text(req.query)
@@ -481,6 +526,8 @@ class PlatformApi:
         )
         engine = self._container.work_resolution_engine()
         ranked = engine.rank(request)
+        if progress is not None:
+            progress(60)
         ranked_providers = sorted({c.provider_id.value for c in ranked})
         logger.info(
             "search ranked=%d providers=%s (openmusicrepository=%s)",
@@ -489,6 +536,8 @@ class PlatformApi:
             "openmusicrepository" in ranked_providers,
         )
         groups = list(self._container.work_merge_service().group(ranked))
+        if progress is not None:
+            progress(85)
         logger.info("search groups=%d", len(groups))
         # Strict entity filters (providers may return loose matches for free-text).
         if req.composer:

@@ -46,7 +46,7 @@ class MediaWikiFetcher(ProviderFetcher):
         text = _build_search(query)
         if not text:
             return {"works": []}
-        raw = self._mw.search(text, namespace=0, limit=25)
+        raw = self._mw.search(text, namespace=0, limit=100)
         works: list[dict[str, object]] = []
         for result in raw:
             title = str(result.get("title") or "")
