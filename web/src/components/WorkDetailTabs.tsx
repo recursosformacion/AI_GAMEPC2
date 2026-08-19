@@ -6,12 +6,6 @@ import { useAuth } from "../state/auth";
 import { VoteControl } from "./VoteControl";
 import { WorkRating } from "./WorkRating";
 
-// Avisa antes de salir de la app: la descarga/enlace abre una página o fichero externo
-// (se abrirá en una pestaña nueva). Devuelve false si el usuario cancela.
-export function confirmExternal(t: ReturnType<typeof useI18n>["t"], provider: string): boolean {
-  return window.confirm(t("download.externalWarning").replace("{p}", provider));
-}
-
 export type WorkDetailTab = "overview" | "representations" | "evidence" | "providers";
 
 const TABS: { id: WorkDetailTab; labelKey: string }[] = [
