@@ -86,6 +86,7 @@ class SearchResponse(_Frozen):
     per_page: int = 10
     status: str = "done"  # running | done | error
     progress: int = 100  # 0..100
+    providers: list[str] = []  # "provider: N candidato(s)" conforme se consultan
 
 
 class JobCreateRequest(_Frozen):
@@ -330,6 +331,7 @@ class SearchModel(_Frozen):
 class IntentResponse(_Frozen):
     type: str  # composer | work | catalogue | collection | source
     label: str
+    composer: str | None = None  # compositor detectado cuando la query mezcla título+compositor
 
 
 class RegisterRequest(_Frozen):

@@ -22,7 +22,11 @@ export async function searchAndGo(navigate: NavigateFunction, payload: SearchReq
     await useSearches.getState().create(payload);
     navigate("/resolution");
   } else {
-    await useSearches.getState().create(payload);
+    // work: si la query mezclaba título+compositor, busca con ambos ("ave verum mozart").
+    const req = intent.composer
+      ? { ...payload, query: intent.label || payload.query, composer: intent.composer }
+      : payload;
+    await useSearches.getState().create(req);
     navigate("/candidates");
   }
 }

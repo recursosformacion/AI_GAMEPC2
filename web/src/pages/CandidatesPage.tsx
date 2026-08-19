@@ -64,6 +64,16 @@ export function CandidatesPage() {
         <p className="text-xs text-osap-muted">
           {t("search.progress")} {data.progress ?? 0}%
         </p>
+        {data.providers && data.providers.length > 0 ? (
+          <div className="mx-auto mt-3 flex max-w-md flex-wrap justify-center gap-1.5">
+            {data.providers.map((p) => (
+              <span key={p} className="inline-flex items-center gap-1 rounded-full border border-osap-border bg-osap-surface px-2 py-0.5 text-xs text-osap-ink">
+                <span className="text-green-600">✓</span>
+                {p}
+              </span>
+            ))}
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -97,6 +107,27 @@ export function CandidatesPage() {
 
   return (
     <div className="space-y-4">
+      {searching ? (
+        <div className="rounded border border-osap-accent bg-osap-accent-soft p-2 text-sm">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-osap-ink">{t("search.searching")}</span>
+            <span className="text-xs text-osap-muted">{data.progress ?? 0}%</span>
+          </div>
+          <div className="mt-1 h-1.5 overflow-hidden rounded bg-osap-border">
+            <div className="h-full bg-osap-accent transition-all" style={{ width: `${data.progress ?? 5}%` }} />
+          </div>
+          {data.providers && data.providers.length > 0 ? (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {data.providers.map((p) => (
+                <span key={p} className="inline-flex items-center gap-1 rounded-full border border-osap-border bg-osap-surface px-2 py-0.5 text-xs">
+                  <span className="text-green-600">✓</span>
+                  {p}
+                </span>
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       <h1 className="text-xl font-semibold">{t("candidates.matchingWorks")}</h1>
       <p className="text-sm text-osap-muted">
         {t("candidates.range").replace("{start}", String(rangeStart)).replace("{end}", String(rangeEnd)).replace("{total}", String(total))}

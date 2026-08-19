@@ -82,6 +82,7 @@ export interface SearchResponse {
   per_page?: number;
   status?: "running" | "done" | "error";
   progress?: number;
+  providers?: string[];
 }
 
 export interface JobCreateRequest {
@@ -240,6 +241,7 @@ export interface SearchModel {
 export interface IntentResponse {
   type: string;
   label: string;
+  composer?: string | null;
 }
 
 // --- compositores (consulta pública + fusión admin) -------------------------

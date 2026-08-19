@@ -402,13 +402,35 @@ class PlatformApi:
         self._searches[search_id] = response
 
         def _run() -> None:
+            provider_msgs: list[str] = []
+
             def _progress(p: int) -> None:
                 self._searches[search_id] = SearchResponse(
-                    search_id=search_id, status="running", progress=p
+                    search_id=search_id, status="running", progress=p, providers=list(provider_msgs)
+                )
+
+            def _provider(msg: str) -> None:
+                if re.search(r"^\w+:\s*\d+ candidato", msg):
+                    provider_msgs.append(msg)
+                pv = min(60, 15 + len(provider_msgs) * 10)
+                self._searches[search_id] = SearchResponse(
+                    search_id=search_id, status="running", progress=pv, providers=list(provider_msgs)
+                )
+
+            def _partial(results: list[SearchResultItem], total: int) -> None:
+                self._searches[search_id] = SearchResponse(
+                    search_id=search_id,
+                    status="running",
+                    progress=85,
+                    results=results,
+                    total=total,
+                    page=req.page,
+                    per_page=req.limit,
+                    providers=list(provider_msgs),
                 )
 
             try:
-                results, total = self._run_search(req, _progress)
+                results, total = self._run_search(req, _progress, _provider, _partial)
                 done = SearchResponse(
                     search_id=search_id,
                     results=results,
@@ -417,12 +439,15 @@ class PlatformApi:
                     per_page=req.limit,
                     status="done",
                     progress=100,
+                    providers=list(provider_msgs),
                 )
                 self._searches[search_id] = done
                 self._search_cache[signature] = done
             except Exception:  # noqa: BLE001
                 logger.exception("search %s failed in background thread", search_id)
-                failed = SearchResponse(search_id=search_id, status="error", progress=100)
+                failed = SearchResponse(
+                    search_id=search_id, status="error", progress=100, providers=list(provider_msgs)
+                )
                 self._searches[search_id] = failed
 
         threading.Thread(target=_run, daemon=True).start()
@@ -462,9 +487,14 @@ class PlatformApi:
         if re.search(r"(^|[\s,;])(kv|k\.?\s?\d+|bwv|op\.?\s?\d+|hob\.?|d\s?\d{3})", q):
             return IntentResponse(type="catalogue", label=query.strip())
         for composer in self._COMPOSERS:
-            if composer in q:
-                # Return the canonical composer name (not the raw query), so the composer
-                # search can filter by composer alone instead of a free-text phrase.
+            if re.search(rf"\b{re.escape(composer)}\b", q):
+                # Quitar el compositor -> queda el título (si tiene palabras significativas).
+                title_part = re.sub(rf"\b{re.escape(composer)}\b", " ", q)
+                title_part = re.sub(r"\s+", " ", title_part).strip()
+                if title_part and any(len(w) > 2 for w in title_part.split()):
+                    return IntentResponse(
+                        type="work", label=title_part, composer=composer.title()
+                    )
                 return IntentResponse(type="composer", label=composer.title())
         if "collection" in q or "edition" in q:
             return IntentResponse(type="collection", label=query.strip())
@@ -514,7 +544,11 @@ class PlatformApi:
         )
 
     def _run_search(
-        self, req: SearchRequest, progress: Callable[[int], None] | None = None
+        self,
+        req: SearchRequest,
+        progress: Callable[[int], None] | None = None,
+        on_provider: Callable[[str], None] | None = None,
+        on_partial: Callable[[list[SearchResultItem], int], None] | None = None,
     ) -> tuple[list[SearchResultItem], int]:
         if progress is not None:
             progress(10)
@@ -540,7 +574,7 @@ class PlatformApi:
             req.catalogue,
         )
         engine = self._container.work_resolution_engine()
-        ranked = engine.rank(request)
+        ranked = engine.rank(request, on_progress=on_provider)
         if progress is not None:
             progress(60)
         ranked_providers = sorted({c.provider_id.value for c in ranked})
@@ -593,6 +627,8 @@ class PlatformApi:
                     relationships=self._work_relationships(work),
                 )
             )
+        if on_partial is not None:
+            on_partial(results, total)
         return self._enrich_search_results(results), total
 
     def _to_rep(self, m: object, work: object) -> RepresentationInfo:
