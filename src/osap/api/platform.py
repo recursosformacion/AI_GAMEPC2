@@ -408,8 +408,19 @@ class PlatformApi:
         signature = _search_signature(req)
         cached = self._search_cache.get(signature)
         if cached is not None:
-            self._searches[search_id] = cached
-            return search_id, cached
+            page_results = self._paginate(cached.results, cached.total, req.page, req.limit)
+            paginated = SearchResponse(
+                search_id=search_id,
+                results=page_results,
+                total=cached.total,
+                page=req.page,
+                per_page=req.limit,
+                status="done",
+                progress=100,
+                providers=list(cached.providers),
+            )
+            self._searches[search_id] = paginated
+            return search_id, paginated
         # Búsqueda asíncrona: devuelve ya un recurso en "running"; el hilo lo completa.
         response = SearchResponse(search_id=search_id, status="running", progress=0)
         self._searches[search_id] = response
@@ -431,11 +442,12 @@ class PlatformApi:
                 )
 
             def _partial(results: list[SearchResultItem], total: int) -> None:
+                page_results = self._paginate(results, total, req.page, req.limit)
                 self._searches[search_id] = SearchResponse(
                     search_id=search_id,
                     status="running",
                     progress=85,
-                    results=results,
+                    results=page_results,
                     total=total,
                     page=req.page,
                     per_page=req.limit,
@@ -444,9 +456,10 @@ class PlatformApi:
 
             try:
                 results, total = self._run_search(req, _progress, _provider, _partial)
+                page_results = self._paginate(results, total, req.page, req.limit)
                 done = SearchResponse(
                     search_id=search_id,
-                    results=results,
+                    results=page_results,
                     total=total,
                     page=req.page,
                     per_page=req.limit,
@@ -455,7 +468,17 @@ class PlatformApi:
                     providers=list(provider_msgs),
                 )
                 self._searches[search_id] = done
-                self._search_cache[signature] = done
+                # Cache del set COMPLETO (paginación instantánea y consistente).
+                self._search_cache[signature] = SearchResponse(
+                    search_id=search_id,
+                    results=results,
+                    total=total,
+                    page=1,
+                    per_page=max(1, total),
+                    status="done",
+                    progress=100,
+                    providers=list(provider_msgs),
+                )
             except Exception:  # noqa: BLE001
                 logger.exception("search %s failed in background thread", search_id)
                 failed = SearchResponse(
@@ -566,10 +589,11 @@ class PlatformApi:
         if progress is not None:
             progress(10)
         builder = ResolveRequestBuilder()
+        composer_canonical = _NORMALIZER.canonical_composer(req.composer) if req.composer else req.composer
         if req.query:
             builder = builder.text(req.query)
-        if req.composer:
-            builder = builder.composer(req.composer)
+        if composer_canonical:
+            builder = builder.composer(composer_canonical)
         if req.title:
             builder = builder.title(req.title)
         if req.catalogue:
@@ -602,8 +626,8 @@ class PlatformApi:
             progress(85)
         logger.info("search groups=%d", len(groups))
         # Strict entity filters (providers may return loose matches for free-text).
-        if req.composer:
-            groups = [g for g in groups if g.work.composer and req.composer.lower() in g.work.composer.lower()]
+        if composer_canonical:
+            groups = [g for g in groups if g.work.composer and composer_canonical.lower() in g.work.composer.lower()]
         if req.title:
             groups = [g for g in groups if g.work.title and req.title.lower() in g.work.title.lower()]
         if req.catalogue:
@@ -614,8 +638,7 @@ class PlatformApi:
             ]
         results: list[SearchResultItem] = []
         total = len(groups)
-        start = (req.page - 1) * req.limit
-        for group in groups[start : start + req.limit]:
+        for group in groups:
             work = group.work
             reps = []
             for m in group.representations:
@@ -644,6 +667,12 @@ class PlatformApi:
             on_partial(results, total)
         return self._enrich_search_results(results), total
 
+    def _paginate(
+        self, results: list[SearchResultItem], total: int, page: int, limit: int
+    ) -> list[SearchResultItem]:
+        start = (page - 1) * limit
+        return results[start : start + limit]
+
     def _to_rep(self, m: object, work: object) -> RepresentationInfo:
         """Construye una RepresentationInfo a partir de un candidato (y la registra)."""
         fmt = getattr(m, "format", None)
@@ -651,6 +680,11 @@ class PlatformApi:
         confidence = getattr(m, "confidence", None)
         descriptor = getattr(m, "work_descriptor", None)
         download = getattr(m, "download_url", None)
+        provider_id = provider.value if provider is not None else ""
+        # MusicBrainz solo tiene metadata (no fichero): no ofrecer descarga. El enlace
+        # (url) apunta a la página web humana para "abrir en MusicBrainz".
+        is_metadata_only = provider_id == "musicbrainz"
+        available = bool(download) and not is_metadata_only
         rep_id = f"r-{uuid.uuid4().hex[:10]}"
         self._representations[rep_id] = {
             "download_url": download,
@@ -661,12 +695,12 @@ class PlatformApi:
         }
         return RepresentationInfo(
             id=rep_id,
-            provider=provider.value if provider is not None else "",
+            provider=provider_id,
             format=fmt.value if fmt is not None else "musicxml",
             confidence=confidence.value if confidence is not None else 0.0,
             title=str(getattr(descriptor, "title", None) or ""),
             url=download,
-            available=bool(download),
+            available=available,
         )
 
     def _merge_same_work(self, results: list[SearchResultItem]) -> list[SearchResultItem]:
