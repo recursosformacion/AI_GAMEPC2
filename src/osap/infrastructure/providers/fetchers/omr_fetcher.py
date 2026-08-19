@@ -49,7 +49,9 @@ class OmrStorageFetcher(ProviderFetcher):
         q = _build_query(query)
         if not q:
             return {"works": []}
-        url = f"{self._base_url}/api/v1/search?q={urllib.parse.quote(q)}"
+        # Usa el CONTRATO de proveedor de storage (/api/search), no la búsqueda pública
+        # (/api/v1/search): devuelve {works:[...]} con resources[].links.download.
+        url = f"{self._base_url}/api/search?q={urllib.parse.quote(q)}"
         headers: dict[str, str] = {"Accept": "application/json", "User-Agent": _USER_AGENT}
         if self._token_provider is not None:
             with contextlib.suppress(Exception):
@@ -60,9 +62,12 @@ class OmrStorageFetcher(ProviderFetcher):
                 data = json.loads(response.read())
         except Exception:
             return {"works": []}
+        if isinstance(data, dict):
+            works = data.get("works") or []
+            data = works if isinstance(works, list) else []
         if not isinstance(data, list):
             return {"works": []}
-        return {"works": [_to_work(record) for record in data]}
+        return {"works": [_to_work(record, self._base_url) for record in data]}
 
     def fetch_resource(
         self,
@@ -73,9 +78,23 @@ class OmrStorageFetcher(ProviderFetcher):
         return None
 
 
-def _to_work(record: dict[str, object]) -> dict[str, object]:
+def _absolute(base_url: str, path: str | None) -> str | None:
+    if not path:
+        return None
+    if path.startswith("http://") or path.startswith("https://"):
+        return path
+    return f"{base_url.rstrip('/')}/{path.lstrip('/')}"
+
+
+def _to_work(record: dict[str, object], base_url: str) -> dict[str, object]:
     remote_id = _remote_id(record)
-    download = record.get("url")
+    resources_raw = record.get("resources")
+    resources = resources_raw if isinstance(resources_raw, list) else []
+    first = resources[0] if resources and isinstance(resources[0], dict) else {}
+    links_raw = first.get("links") if isinstance(first, dict) else None
+    links = links_raw if isinstance(links_raw, dict) else {}
+    download = _absolute(base_url, str(links.get("download") or ""))
+    available = bool(first.get("available", True)) if isinstance(first, dict) else True
     return {
         "id": remote_id,
         "title": str(record.get("title") or "Unknown"),
@@ -91,7 +110,7 @@ def _to_work(record: dict[str, object]) -> dict[str, object]:
                 "id": remote_id,
                 "format": "musicxml",
                 "mime_type": "application/vnd.recordare.musicxml+xml",
-                "available": bool(record.get("available", True)),
+                "available": available,
                 "license": None,
                 "links": {
                     "download": download,
