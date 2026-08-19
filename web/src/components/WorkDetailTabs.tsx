@@ -193,10 +193,12 @@ function RepresentationsTab({
                     href={rep.url}
                     target="_blank"
                     rel="noreferrer"
+                    title={t("work.openIn").replace("{p}", rep.provider)}
+                    aria-label={t("work.openIn").replace("{p}", rep.provider)}
                     onClick={(e) => e.stopPropagation()}
-                    className="rounded border border-osap-border px-2 py-0.5 text-xs text-osap-accent hover:bg-osap-accent-soft"
+                    className="px-1.5 text-osap-muted hover:text-osap-accent"
                   >
-                    {t("work.openIn").replace("{p}", rep.provider)}
+                    <_LinkIcon />
                   </a>
                 ) : (
                   <span className="px-1 text-xs text-osap-muted">—</span>
@@ -207,20 +209,24 @@ function RepresentationsTab({
                     href={`/api/v1/representations/${rep.id}/download?view=1`}
                     target="_blank"
                     rel="noreferrer"
+                    title={t("work.view")}
+                    aria-label={t("work.view")}
                     onClick={(e) => e.stopPropagation()}
-                    className="rounded border border-osap-border px-2 py-0.5 text-xs text-osap-accent hover:bg-osap-accent-soft"
+                    className="px-1.5 text-osap-muted hover:text-osap-accent"
                   >
-                    {t("work.view")}
+                    <_EyeIcon />
                   </a>
                   <a
                     href={`/api/v1/representations/${rep.id}/download`}
                     download={downloadFileName(rep)}
                     target="_blank"
                     rel="noreferrer"
+                    title={t("work.download")}
+                    aria-label={t("work.download")}
                     onClick={(e) => e.stopPropagation()}
-                    className="rounded border border-osap-border px-2 py-0.5 text-xs text-osap-accent hover:bg-osap-accent-soft"
+                    className="px-1.5 text-osap-muted hover:text-osap-accent"
                   >
-                    {t("work.download")}
+                    <_DownloadIcon />
                   </a>
                 </>
               )}
@@ -247,9 +253,9 @@ function RepresentationsTab({
                   href={sel.url}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded bg-osap-accent px-3 py-1 text-sm text-white"
+                  className="inline-flex items-center gap-1.5 rounded bg-osap-accent px-3 py-1 text-sm text-white"
                 >
-                  {t("work.openIn").replace("{p}", sel.provider)}
+                  <_LinkIcon /> {t("work.openIn").replace("{p}", sel.provider)}
                 </a>
               ) : (
                 <span className="text-sm text-osap-muted">—</span>
@@ -260,18 +266,18 @@ function RepresentationsTab({
                   href={`/api/v1/representations/${sel.id}/download?view=1`}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded border border-osap-border px-3 py-1 text-sm text-osap-accent"
+                  className="inline-flex items-center gap-1.5 rounded border border-osap-border px-3 py-1 text-sm text-osap-accent"
                 >
-                  {t("work.view")}
+                  <_EyeIcon /> {t("work.view")}
                 </a>
                 <a
                   href={`/api/v1/representations/${sel.id}/download`}
                   download={downloadFileName(sel)}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded border border-osap-border px-3 py-1 text-sm text-osap-accent"
+                  className="inline-flex items-center gap-1.5 rounded border border-osap-border px-3 py-1 text-sm text-osap-accent"
                 >
-                  {t("work.download")}
+                  <_DownloadIcon /> {t("work.download")}
                 </a>
               </>
             )}
@@ -306,9 +312,11 @@ function ProvidersTab({ byProvider }: { byProvider: Map<string, RepresentationIn
                   href={url}
                   target="_blank"
                   rel="noreferrer"
-                  className="rounded border border-osap-border px-2 py-0.5 text-xs text-osap-accent"
+                  title={t("work.seeSource")}
+                  aria-label={t("work.seeSource")}
+                  className="px-1.5 text-osap-muted hover:text-osap-accent"
                 >
-                  {t("work.seeSource")}
+                  <_LinkIcon />
                 </a>
               ) : null}
             </li>
@@ -332,5 +340,36 @@ function Meta({ label, value }: { label: string; value: string }) {
       <dt className="text-osap-muted">{label}</dt>
       <dd>{value}</dd>
     </div>
+  );
+}
+
+const _ICON_CLASS = "h-4 w-4";
+
+function _EyeIcon() {
+  return (
+    <svg className={_ICON_CLASS} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function _DownloadIcon() {
+  return (
+    <svg className={_ICON_CLASS} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  );
+}
+
+function _LinkIcon() {
+  return (
+    <svg className={_ICON_CLASS} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+      <polyline points="15 3 21 3 21 9" />
+      <line x1="10" y1="14" x2="21" y2="3" />
+    </svg>
   );
 }

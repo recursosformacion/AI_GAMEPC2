@@ -76,7 +76,8 @@ def _to_work(entry: dict[str, object]) -> dict[str, object]:
     work_id = str(entry.get("id") or "")
     title = str(entry.get("title") or "Unknown")
     composer = _composer_of(entry)
-    api_url = f"{_API_BASE}/work/{work_id}?fmt=json" if work_id else None
+    # MusicBrainz no tiene fichero de partitura: se expone como metadata con enlace a la
+    # PÁGINA web humana (no al JSON de la API). available=False -> la UI ofrece "abrir en MB".
     web_url = f"{_WEB_BASE}/work/{work_id}" if work_id else None
     return {
         "id": work_id or _stable_id(title + (composer or "")),
@@ -90,9 +91,9 @@ def _to_work(entry: dict[str, object]) -> dict[str, object]:
                 "id": work_id or _stable_id(title),
                 "format": "json",
                 "mime_type": "application/json",
-                "available": True,
+                "available": False,
                 "license": None,
-                "download_url": api_url,
+                "download_url": web_url,
                 "view_url": web_url,
                 "thumbnail_url": None,
             }
