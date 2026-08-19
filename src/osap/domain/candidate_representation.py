@@ -20,6 +20,7 @@ class CandidateRepresentation:
     quality: QualityLevel = QualityLevel.UNREADABLE
     confidence: Confidence = Confidence(0.0)
     download_url: str | None = None
+    view_url: str | None = None
     local_path: str | None = None
     edition: str | None = None
     public_domain: bool | None = None

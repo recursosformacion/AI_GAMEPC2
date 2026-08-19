@@ -87,7 +87,7 @@ def _to_work(title: str, result: dict[str, object]) -> dict[str, object]:
                 "id": remote_id,
                 "format": "pdf",
                 "mime_type": "application/pdf",
-                "available": True,
+                "available": False,
                 "license": "public domain" if public_domain is True else None,
                 "download_url": page_url,
                 "view_url": page_url,

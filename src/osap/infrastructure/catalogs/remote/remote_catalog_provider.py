@@ -103,6 +103,7 @@ class RemoteCatalogProvider(ICatalogProvider):
             confidence=Confidence(identity.confidence),
             remote_id=resource.id,
             download_url=resource.links.download,
+            view_url=resource.links.view,
             public_domain=work.metadata.public_domain,
             license=work.metadata.license,
         )

@@ -98,11 +98,13 @@ def _to_work(title: str, composer: str) -> dict[str, object]:
                 "id": work_id,
                 "format": "rss",
                 "mime_type": "application/rss+xml",
-                "available": True,
+                "available": False,
                 "license": None,
-                "download_url": None,
-                "view_url": f"https://opac.rism.info/search?query={urllib.parse.quote(title)}",
-                "thumbnail_url": None,
+                "links": {
+                    "download": None,
+                    "view": f"https://opac.rism.info/search?query={urllib.parse.quote(title)}",
+                    "thumbnail": None,
+                },
             }
         ],
     }

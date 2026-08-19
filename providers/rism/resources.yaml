@@ -1,1 +1,11 @@
-resources: []
+works:
+  fields:
+    id: id
+    format: format
+    mime_type: mime_type
+    available: available
+    license: license
+  links:
+    download: links.download
+    view: links.view
+    thumbnail: links.thumbnail

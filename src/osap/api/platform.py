@@ -680,14 +680,19 @@ class PlatformApi:
         confidence = getattr(m, "confidence", None)
         descriptor = getattr(m, "work_descriptor", None)
         download = getattr(m, "download_url", None)
+        view = getattr(m, "view_url", None)
         provider_id = provider.value if provider is not None else ""
         # MusicBrainz solo tiene metadata (no fichero): no ofrecer descarga. El enlace
         # (url) apunta a la página web humana para "abrir en MusicBrainz".
         is_metadata_only = provider_id == "musicbrainz"
+        # RISM/IMSLP/etc.: sin fichero directo -> available=False y url = página del
+        # registro (p. ej. opac.rism.info) para "abrir en el proveedor".
         available = bool(download) and not is_metadata_only
+        url = download or view
         rep_id = f"r-{uuid.uuid4().hex[:10]}"
         self._representations[rep_id] = {
             "download_url": download,
+            "view_url": view,
             "composer": getattr(work, "composer", None),
             "title": getattr(work, "title", None),
             "catalogue": getattr(work, "catalogue_number", None),
@@ -699,7 +704,7 @@ class PlatformApi:
             format=fmt.value if fmt is not None else "musicxml",
             confidence=confidence.value if confidence is not None else 0.0,
             title=str(getattr(descriptor, "title", None) or ""),
-            url=download,
+            url=url,
             available=available,
         )
 
