@@ -5,6 +5,18 @@
 > interno. El núcleo (Canonicalizer, Matcher, Ranking, Work Resolution, Relationships,
 > Knowledge Hub) nunca conoce cómo responde un proveedor.
 
+> **Estado actual (2026-08):** las definiciones de proveedores viven en la **BD de osap-api**
+> (tabla `providers`, cargadas en `wiring.py` vía `_provider_definition`). Los directorios
+> `providers/{id}/` YAML son la **plantilla de origen** que se importó; la BD es la fuente
+> de verdad. El `endpoints.yaml` de IMSLP (API.ISCR.php) es la definición Nivel 1 de
+> reserva: **la búsqueda real de IMSLP la hace el `MediaWikiFetcher`** (`api.php?action=query
+> &list=search`, índice completo, límite configurable), no `API.ISCR.php`.
+
+> **Búsqueda (2026-08):** `POST /api/v1/searches` es **asíncrono**: devuelve el recurso en
+> `status=running` con `progress` (0..100) y completa en un hilo en background; `GET
+> /api/v1/searches/{id}` devuelve progreso y resultados parciales. Las búsquedas repetidas
+> se sirven desde una **cache local** (firma normalizada de la petición).
+
 ## Flujo completo
 
 ```
