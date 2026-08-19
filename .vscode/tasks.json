@@ -2,12 +2,45 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "osap-api",
+      "label": "osap-api: uvicorn (:8001, reload)",
       "type": "shell",
-      "command": "python -m uvicorn --factory src.osap.api.platform_app:create_platform_app --host 127.0.0.1 --port 8001",
+      "command": "python -m uvicorn --factory src.osap.api.platform_app:create_platform_app --host 127.0.0.1 --port 8001 --reload",
       "options": { "cwd": "${workspaceFolder}" },
       "isBackground": true,
-      "presentation": { "reveal": "never", "panel": "dedicated", "group": "osap", "clear": false },
+      "presentation": { "reveal": "silent", "panel": "dedicated", "group": "servers", "clear": false },
+      "runOptions": { "runOn": "folderOpen" },
+      "problemMatcher": []
+    },
+    {
+      "label": "osap-storage: uvicorn (:8000, reload)",
+      "type": "shell",
+      "command": ".venv\\Scripts\\python.exe -m uvicorn api.main:app --host 127.0.0.1 --port 8000 --reload",
+      "options": {
+        "cwd": "D:\\Proyectos\\AI_OSAP\\osap-storage",
+        "env": { "OSAP_CONFIG": "config.test.yaml" }
+      },
+      "isBackground": true,
+      "presentation": { "reveal": "silent", "panel": "dedicated", "group": "servers", "clear": false },
+      "runOptions": { "runOn": "folderOpen" },
+      "problemMatcher": []
+    },
+    {
+      "label": "osap-auth: uvicorn (:8200, reload)",
+      "type": "shell",
+      "command": ".venv\\Scripts\\python.exe -m uvicorn api.main:create_app_from_settings --factory --host 127.0.0.1 --port 8200 --reload",
+      "options": { "cwd": "D:\\Proyectos\\AI_OSAP\\osap-auth" },
+      "isBackground": true,
+      "presentation": { "reveal": "silent", "panel": "dedicated", "group": "servers", "clear": false },
+      "runOptions": { "runOn": "folderOpen" },
+      "problemMatcher": []
+    },
+    {
+      "label": "web: build --watch (reconstruye al cambiar)",
+      "type": "shell",
+      "command": "node node_modules/vite/bin/vite.js build --watch",
+      "options": { "cwd": "${workspaceFolder}\\web" },
+      "isBackground": true,
+      "presentation": { "reveal": "silent", "panel": "dedicated", "group": "servers", "clear": false },
       "runOptions": { "runOn": "folderOpen" },
       "problemMatcher": []
     }
