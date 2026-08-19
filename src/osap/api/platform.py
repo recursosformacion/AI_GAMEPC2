@@ -324,6 +324,19 @@ def _seed_sources() -> tuple[RepositorySource, ...]:
     )
 
 
+_ARRANGEMENT_EXTRA = re.compile(
+    r"^(\d{4}|kv|k|op|op\.|s|bwv|hob|d|cor|pf|vl|vla|vlc|org|coro|strings|sketches|"
+    r"arr|arr\.|transcr|transc|ed|ed\.|v|vl|va|vc|fl|ob|cl|tr|hn|rec|guit|hp|accord|"
+    r"choir|organ|piano|violin|viola|cello|flute|oboe|clarinet|trumpet|horn|harps|guitar|"
+    r"satb|ssaa|ttbb|mixed|unison|st|nr|no|n)$"
+)
+
+
+def _is_arrangement_extra(extra: set[str]) -> bool:
+    """True si todos los tokens extra de un título son marcadores de arreglo/edición."""
+    return bool(extra) and all(bool(_ARRANGEMENT_EXTRA.match(t)) for t in extra)
+
+
 def _title_core_match(core_tokens: set[str], title: str) -> bool:
     """True si el título conserva al menos la mitad de los tokens del núcleo de la obra."""
     if not core_tokens:
@@ -656,6 +669,59 @@ class PlatformApi:
             available=bool(download),
         )
 
+    def _merge_same_work(self, results: list[SearchResultItem]) -> list[SearchResultItem]:
+        """Fusiona en una línea las obras del mismo compositor que son arreglos/ediciones
+        de la misma pieza ("Ave Verum Corpus" + "Ave Verum Corpus, Cor, Pf, KV 618, 1944").
+        Regla: mismo compositor canónico + el título corto es subconjunto del largo y los
+        tokens extra son marcadores de arreglo (año, catálogo, instrumentación, edición).
+        """
+        by_composer: dict[str, list[SearchResultItem]] = {}
+        for item in results:
+            comp = _NORMALIZER.canonical_composer(item.work.composer) if item.work.composer else ""
+            by_composer.setdefault(comp, []).append(item)
+
+        merged_out: list[SearchResultItem] = []
+        for _comp, items in by_composer.items():
+            items = list(items)
+            consumed: set[int] = set()
+            for i, a in enumerate(items):
+                if i in consumed:
+                    continue
+                a_tok = set(_NORMALIZER.comparison_title(a.work.title or "", a.work.composer).split())
+                union_reps = {r.id: r for r in a.representations}
+                canonical = a
+                for j in range(i + 1, len(items)):
+                    if j in consumed:
+                        continue
+                    b = items[j]
+                    b_tok = set(_NORMALIZER.comparison_title(b.work.title or "", b.work.composer).split())
+                    if not a_tok or not b_tok:
+                        continue
+                    if a_tok <= b_tok and _is_arrangement_extra(b_tok - a_tok):
+                        consumed.add(j)
+                        for r in b.representations:
+                            union_reps[r.id] = r
+                    elif b_tok <= a_tok and _is_arrangement_extra(a_tok - b_tok):
+                        consumed.add(j)
+                        for r in b.representations:
+                            union_reps[r.id] = r
+                        if len(b_tok) < len(a_tok):
+                            canonical = b
+                reps = list(union_reps.values())
+                best = max(reps, key=lambda r: r.confidence) if reps else canonical.representation
+                merged_out.append(
+                    SearchResultItem(
+                        work=canonical.work,
+                        representation=best,
+                        representations=reps,
+                        score=canonical.score,
+                        evidence=canonical.evidence,
+                        relationships=canonical.relationships,
+                    )
+                )
+        merged_out.sort(key=lambda r: (-len(r.representations), (r.work.title or "").lower()))
+        return merged_out
+
     def _work_key(self, title: str | None, composer: str | None) -> str:
         """Identidad normalizada de la obra (misma clave en cualquier query)."""
         core = _NORMALIZER.comparison_title(title or "", composer)
@@ -668,9 +734,10 @@ class PlatformApi:
         Una obra identificada (título+compositor normalizados) debe mostrar SIEMPRE las
         mismas representaciones, independientemente de la query ("mozart" == "ave verum").
         Las obras con representaciones de <5 providers se enriquecen con una búsqueda
-        enfocada título+compositor (una vez; el resultado queda cacheado). Se ordenan
+        enfocada por título (una vez; el resultado queda cacheado). Se ordenan
         por nº de providers (las más infrarrepresentadas primero) con un tope por búsqueda.
         """
+        results = self._merge_same_work(results)
         out: list[SearchResultItem] = []
         candidates_to_enrich: list[tuple[int, SearchResultItem]] = []
         for item in results:
