@@ -9,12 +9,11 @@ from __future__ import annotations
 
 import logging
 import re
-import urllib.request
 import uuid
 from typing import TYPE_CHECKING, Any, cast
 
 from fastapi import FastAPI, Header, Query, Response
-from fastapi.responses import HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from src.osap.api.contracts import (
     AddAliasRequest,
@@ -104,7 +103,6 @@ from src.osap.infrastructure.persistence.storage_vote_store import StorageUnavai
 from src.osap.infrastructure.storage.storage_composer_client import StorageComposerError
 
 if TYPE_CHECKING:
-    from collections.abc import Iterator
 
     from src.osap.api.platform import KnowledgeStore
     from src.osap.application.composer_resolution_engine import ResolutionDecision, ResolvedComposer
@@ -745,28 +743,10 @@ def create_platform_app(
         url = str(info.get("download_url") or "")
         if not url:
             return fail(404, response, "NOT_FOUND", "No download available")
-        filename = _download_filename(info)
-        request = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (OpenMusicRepository download)"})
-
-        def iter_chunks() -> Iterator[bytes]:
-            with urllib.request.urlopen(request, timeout=30) as source:  # noqa: S310 (trusted storage)
-                while True:
-                    chunk = source.read(65536)
-                    if not chunk:
-                        break
-                    yield chunk
-
-        media_type = "application/octet-stream"
-        disposition = f'attachment; filename="{filename}"'
-        if view == 1:
-            media_type = _media_type_for_format(str(info.get("format") or ""))
-            disposition = f'inline; filename="{filename}"'
-
-        return StreamingResponse(
-            iter_chunks(),
-            headers={"Content-Disposition": disposition},
-            media_type=media_type,
-        )
+        # Redirige (302) al navegador directamente a la URL del proveedor: el servidor NO
+        # proxya server-side porque IMSLP/MusicBrainz/Mutopia responden con challenge
+        # anti-bot a peticiones de servidor, pero el navegador del usuario sí las resuelve.
+        return RedirectResponse(url, status_code=302)
 
     # --- search model (Search Studio is driven by it) ------------------------
 
