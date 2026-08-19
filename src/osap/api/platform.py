@@ -48,6 +48,7 @@ from src.osap.application.canonicalizer import Canonicalizer
 from src.osap.application.composer_resolution_engine import ResolutionDecision
 from src.osap.application.composers_service import ComposersService
 from src.osap.application.jobs import DefaultJob
+from src.osap.application.metadata_normalizer import MetadataNormalizer
 from src.osap.application.use_cases.resolve_works import ResolvedWorkItem, WorkResolveInput
 from src.osap.application.votes_service import VotesService
 from src.osap.bootstrap.container import Container
@@ -68,6 +69,7 @@ VERSION = "3.1"
 logger = logging.getLogger("osap.api.platform")
 
 _CANONICALIZER: Canonicalizer | None
+_NORMALIZER = MetadataNormalizer()
 try:
     _CANONICALIZER = Canonicalizer(Path(__file__).resolve().parents[3] / "resources" / "canonical")
 except Exception:
@@ -322,6 +324,17 @@ def _seed_sources() -> tuple[RepositorySource, ...]:
     )
 
 
+def _title_core_match(core_tokens: set[str], title: str) -> bool:
+    """True si el título conserva al menos la mitad de los tokens del núcleo de la obra."""
+    if not core_tokens:
+        return True
+    title_tokens = set(str(title or "").lower().split())
+    if not title_tokens:
+        return False
+    inter = len(core_tokens & title_tokens)
+    return inter >= max(1, len(core_tokens) // 2)
+
+
 def _search_signature(req: SearchRequest) -> str:
     """Firma estable de una búsqueda para el cache local (campos normalizados)."""
     return "|".join(
@@ -351,6 +364,8 @@ class PlatformApi:
         self._sessions = SessionSources()
         self._searches: dict[str, SearchResponse] = {}
         self._search_cache: dict[str, SearchResponse] = {}
+        self._work_rep_cache: dict[str, list[RepresentationInfo]] = {}
+        self._work_rep_order: list[str] = []
         self._jobs: dict[str, JobResponse] = {}
         self._representations: dict[str, dict[str, object]] = {}
         self._job_counter = 0
@@ -558,25 +573,7 @@ class PlatformApi:
             reps = []
             for m in group.representations:
                 if m is not None:
-                    rep_id = f"r-{uuid.uuid4().hex[:10]}"
-                    self._representations[rep_id] = {
-                        "download_url": m.download_url,
-                        "composer": work.composer,
-                        "title": work.title,
-                        "catalogue": work.catalogue_number,
-                        "format": m.format.value,
-                    }
-                    reps.append(
-                        RepresentationInfo(
-                            id=rep_id,
-                            provider=m.provider_id.value,
-                            format=m.format.value,
-                            confidence=m.confidence.value,
-                            title=m.work_descriptor.title,
-                            url=m.download_url,
-                            available=bool(m.download_url),
-                        )
-                    )
+                    reps.append(self._to_rep(m, work))
             if not reps:
                 continue
             best = max(reps, key=lambda r: r.confidence)
@@ -596,7 +593,133 @@ class PlatformApi:
                     relationships=self._work_relationships(work),
                 )
             )
-        return results, total
+        return self._enrich_search_results(results), total
+
+    def _to_rep(self, m: object, work: object) -> RepresentationInfo:
+        """Construye una RepresentationInfo a partir de un candidato (y la registra)."""
+        fmt = getattr(m, "format", None)
+        provider = getattr(m, "provider_id", None)
+        confidence = getattr(m, "confidence", None)
+        descriptor = getattr(m, "work_descriptor", None)
+        download = getattr(m, "download_url", None)
+        rep_id = f"r-{uuid.uuid4().hex[:10]}"
+        self._representations[rep_id] = {
+            "download_url": download,
+            "composer": getattr(work, "composer", None),
+            "title": getattr(work, "title", None),
+            "catalogue": getattr(work, "catalogue_number", None),
+            "format": fmt.value if fmt is not None else None,
+        }
+        return RepresentationInfo(
+            id=rep_id,
+            provider=provider.value if provider is not None else "",
+            format=fmt.value if fmt is not None else "musicxml",
+            confidence=confidence.value if confidence is not None else 0.0,
+            title=str(getattr(descriptor, "title", None) or ""),
+            url=download,
+            available=bool(download),
+        )
+
+    def _work_key(self, title: str | None, composer: str | None) -> str:
+        """Identidad normalizada de la obra (misma clave en cualquier query)."""
+        core = _NORMALIZER.comparison_title(title or "", composer)
+        comp = _NORMALIZER.canonical_composer(composer) if composer else ""
+        return f"{core}|{comp}"
+
+    def _enrich_search_results(self, results: list[SearchResultItem]) -> list[SearchResultItem]:
+        """Iguala las representaciones de cada obra usando el cache por obra.
+
+        Una obra identificada (título+compositor normalizados) debe mostrar SIEMPRE las
+        mismas representaciones, independientemente de la query ("mozart" == "ave verum").
+        Las obras con representaciones de <5 providers se enriquecen con una búsqueda
+        enfocada título+compositor (una vez; el resultado queda cacheado). Se ordenan
+        por nº de providers (las más infrarrepresentadas primero) con un tope por búsqueda.
+        """
+        out: list[SearchResultItem] = []
+        candidates_to_enrich: list[tuple[int, SearchResultItem]] = []
+        for item in results:
+            key = self._work_key(item.work.title, item.work.composer)
+            current = {r.id: r for r in item.representations}
+            cached = self._work_rep_cache.get(key)
+            if cached is not None:
+                for r in cached:
+                    current[r.id] = r
+            else:
+                providers_now = {r.provider for r in item.representations}
+                if len(providers_now) < 5:
+                    candidates_to_enrich.append((len(providers_now), item))
+            reps = list(current.values())
+            best = max(reps, key=lambda r: r.confidence) if reps else item.representation
+            out.append(
+                SearchResultItem(
+                    work=item.work,
+                    representation=best,
+                    representations=reps,
+                    score=item.score,
+                    evidence=item.evidence,
+                    relationships=item.relationships,
+                )
+            )
+        candidates_to_enrich.sort(key=lambda x: (-len(x[1].representations), x[0]))
+        for _nprov, item in candidates_to_enrich[:12]:
+            key = self._work_key(item.work.title, item.work.composer)
+            if key in self._work_rep_cache:
+                continue
+            focused = self._focused_representations(item.work)
+            if not focused:
+                continue
+            merged = {r.id: r for r in item.representations}
+            for r in focused:
+                merged[r.id] = r
+            reps = list(merged.values())
+            self._cache_work_reps(key, reps)
+            for it in out:
+                if it.work.work_id == item.work.work_id:
+                    best = max(reps, key=lambda r: r.confidence)
+                    out[out.index(it)] = SearchResultItem(
+                        work=it.work, representation=best, representations=reps,
+                        score=it.score, evidence=it.evidence, relationships=it.relationships,
+                    )
+        return out
+
+    def _cache_work_reps(self, key: str, reps: list[RepresentationInfo]) -> None:
+        if key in self._work_rep_cache:
+            self._work_rep_order.remove(key)
+        self._work_rep_cache[key] = reps
+        self._work_rep_order.append(key)
+        if len(self._work_rep_order) > 2000:
+            old = self._work_rep_order.pop(0)
+            self._work_rep_cache.pop(old, None)
+
+    def _focused_representations(self, work: WorkInfo) -> list[RepresentationInfo]:
+        """Reúne las representaciones de una obra: búsqueda AMPLIA por título (sin
+        filtro de compositor en la query, para captar todo) y filtra por título+compositor."""
+        core = _NORMALIZER.comparison_title(work.title or "", work.composer)
+        ranked: tuple[object, ...] = ()
+        try:
+            request = ResolveRequestBuilder().title(core).build()
+            ranked = self._container.work_resolution_engine().rank(request)
+        except Exception:  # noqa: BLE001
+            return []
+        groups = list(self._container.work_merge_service().group(ranked))
+        core_tokens = set((core or "").split())
+        work_comp = _NORMALIZER.canonical_composer(work.composer) if work.composer else ""
+        reps: list[RepresentationInfo] = []
+        seen: set[tuple[str, str]] = set()
+        for group in groups:
+            for m in group.representations:
+                t = (m.provider_id.value, str(getattr(m.work_descriptor, "title", None) or ""))
+                if t in seen:
+                    continue
+                seen.add(t)
+                if not _title_core_match(core_tokens, t[1]):
+                    continue
+                rep_composer = getattr(m.work_descriptor, "composer", None)
+                rep_comp = _NORMALIZER.canonical_composer(rep_composer) if rep_composer else ""
+                if work_comp and rep_comp and rep_comp != work_comp:
+                    continue
+                reps.append(self._to_rep(m, work))
+        return reps
 
     def get_representation_download(self, representation_id: str) -> dict[str, object] | None:
         return self._representations.get(representation_id)
