@@ -144,3 +144,19 @@ incoherencia persistente.
 - Los cambios del Maestro **invalidan y se propagan** (transacción + sync).
 - Marcando proveedores **no basta**: el híbrido + enriquecimiento orgánico es lo que
   da valor.
+  La lógica de construcción debe ser idempotente: ejecutarla varias veces debe producir el mismo resultado
+  Crea un servicio IndexBuilder (o SyncService) que orqueste la consulta a proveedores, la normalización y el upsert en las tablas del índice. Este servicio debe ser invocado por un scheduler (cron, sistema de tareas) y también debe poder ejecutarse bajo demanda (ej. desde CLI para la carga inicial).
+  Gestión de Errores y Resiliencia: La sincronización con proveedores externos fallará. El sistema debe ser resiliente:
+
+Registrar qué proveedores han fallado.
+
+Reintentar con backoff.
+
+Continuar con los proveedores que sí funcionan.
+
+Tener un estado de "última sincronización exitosa" por proveedor.
+
+Estrategia de "Cacheo Orgánico": Para el modo híbrido, el cacheo de resultados de búsqueda en vivo debe ser una función separada pero integrada. No es solo guardar la URL, es guardar el resultado normalizado de esa búsqueda en el índice, para que futuras búsquedas idénticas o similares se beneficien.
+Feature Flag: Implementar un flag para activar/desactivar el uso del índice en producción. Así se puede desplegar, construir el índice, probar y, una vez verificado, activar la nueva búsqueda sin downtime.
+Inversión de Dependencias: Asegurar que los nuevos servicios (IndexBuilder, SyncService) dependan de los puertos/interfaces existentes (ICatalogProvider, IWorkMatcher, ICanonicalizer, etc.), siguiendo la arquitectura limpia.
+
