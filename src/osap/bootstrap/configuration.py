@@ -29,7 +29,7 @@ class Configuration:
     conexión a la BD ([db]). `deployment` (prod/dev) y `dev_mode` deciden las rutas.
     """
 
-    deployment: str = "prod"  # "prod" (real, escribible) | "dev" (dev_mode decide rutas)
+    deployment: str = "development"  # "prod" | "development" (default)
     dev_mode: int = 0  # 0 = local, 1 = real (solo lectura) — solo en dev
     confidence_threshold: float = 0.8
     max_processing_time: float = 300.0
@@ -51,10 +51,10 @@ class Configuration:
     service_client_secret: str | None = None
     admin_client_id: str | None = None
     admin_client_secret: str | None = None
-    osap_api_db_host: str = "127.0.0.1"
-    osap_api_db_user: str = "osap2027"
-    osap_api_db_password: str = "2027osapdb"
-    osap_api_db_name: str = "osap-api"
+    osap_api_db_host: str | None = None
+    osap_api_db_user: str | None = None
+    osap_api_db_password: str | None = None
+    osap_api_db_name: str | None = None
     dev_auth_bypass: bool = False
     storage_web_base: str | None = None
     oidc_issuer: str | None = None
@@ -136,8 +136,9 @@ _SERVICE_REQUIRED_SECTIONS: dict[str, dict[str, list[str]]] = {
     },
 }
 
-# Valores por defecto considerados inseguros en producción.
-_DEFAULT_INSECURE_DB = {
+# Valores por defecto inseguros detectados en producción.
+# Se mantienen como referencia para la validación, pero no se usan como defaults de la dataclass.
+_INSECURE_DB_DEFAULTS = {
     "host": "127.0.0.1",
     "user": "osap2027",
     "password": "2027osapdb",
@@ -210,14 +211,14 @@ def load_configuration(path: str | Path | None = None, service_name: str | None 
             data = tomllib.load(handle)
     db = data.get("db", {}) if isinstance(data.get("db", None), dict) else {}
 
-    def conn(env: str, key: str, default: str) -> str:
-        return os.environ.get(env, str(db.get(key, default)))
+    def conn(env: str, key: str) -> str | None:
+        return os.environ.get(env) or db.get(key)
 
     base = Configuration(
-        osap_api_db_host=conn("OSAP_API_DB_HOST", "host", "127.0.0.1"),
-        osap_api_db_user=conn("OSAP_API_DB_USER", "user", "osap2027"),
-        osap_api_db_password=conn("OSAP_API_DB_PASSWORD", "password", "2027osapdb"),
-        osap_api_db_name=conn("OSAP_API_DB_NAME", "name", "osap-api"),
+        osap_api_db_host=conn("OSAP_API_DB_HOST", "host"),
+        osap_api_db_user=conn("OSAP_API_DB_USER", "user"),
+        osap_api_db_password=conn("OSAP_API_DB_PASSWORD", "password"),
+        osap_api_db_name=conn("OSAP_API_DB_NAME", "name"),
     )
 
     overrides: dict[str, Any] = _load_db_overrides(base)
@@ -288,19 +289,18 @@ def _validate_strict(
             if raw_value is None or (isinstance(raw_value, str) and not raw_value.strip()):
                 errors.append(f"Campo obligatorio '{section}.{field}' vacío o faltante en {config_ref}")
 
-    # Validar que no se usen defaults inseguros de BD en producción
-    for key, insecure_default in _DEFAULT_INSECURE_DB.items():
+    # Validar que los campos de BD estén definidos en producción
+    db_fields = {
+        "host": "OSAP_API_DB_HOST",
+        "user": "OSAP_API_DB_USER",
+        "password": "OSAP_API_DB_PASSWORD",
+        "name": "OSAP_API_DB_NAME",
+    }
+    for key, env_var in db_fields.items():
         actual = getattr(config, "osap_api_db_" + key, None)
-        env_var = {
-            "host": "OSAP_API_DB_HOST",
-            "user": "OSAP_API_DB_USER",
-            "password": "OSAP_API_DB_PASSWORD",
-            "name": "OSAP_API_DB_NAME",
-        }[key]
-        if actual == insecure_default and not os.environ.get(env_var):
+        if not actual:
             errors.append(
-                f"Campo 'db.{key}' usa el valor por defecto inseguro '{insecure_default}' en producción. "
-                f"Defina {env_var} o actualice {config_ref}."
+                f"Campo 'db.{key}' no definido. Defina {env_var} o actualice {config_ref}."
             )
 
     if config.dev_auth_bypass:
@@ -336,6 +336,17 @@ def _validate_lenient(
             raw_value = section_data.get(field)
             if raw_value is None or (isinstance(raw_value, str) and not raw_value.strip()):
                 warnings_list.append(f"Campo '{section}.{field}' vacío o faltante en {config_ref}")
+
+    db_fields = {
+        "host": "OSAP_API_DB_HOST",
+        "user": "OSAP_API_DB_USER",
+        "password": "OSAP_API_DB_PASSWORD",
+        "name": "OSAP_API_DB_NAME",
+    }
+    for key, env_var in db_fields.items():
+        actual = getattr(config, "osap_api_db_" + key, None)
+        if not actual:
+            warnings_list.append(f"Campo 'db.{key}' no definido (defina {env_var} o actualice {config_ref})")
 
     for warning_msg in warnings_list:
         warnings.warn(

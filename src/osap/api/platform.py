@@ -8,6 +8,7 @@ import json
 import logging
 import os
 import re
+import secrets
 import threading
 import urllib.parse
 import urllib.request
@@ -388,8 +389,8 @@ class PlatformApi:
         if self._oidc_pending_path:
             self._oidc_pending = self._load_oidc_pending()
         self._suggestion_counter = 0
-        self._store = build_op_store(**self._container.op_store_config())
-        self._resolution_store = build_resolution_store(**self._container.op_store_config())
+        self._store = build_op_store(**(self._container.op_store_config() or {}))
+        self._resolution_store = build_resolution_store(**(self._container.op_store_config() or {}))
         self._acquisition = AcquisitionService(self._resolution_store, {}, SimpleUniverseMatcher())
         highest = 0
         for item in self._store.list_suggestions():
@@ -1211,8 +1212,7 @@ class PlatformApi:
         self._require_admin(token)
         base = (self._container.storage_web_base() or self.composers().storage_base_url()).rstrip("/")
         if self._container.dev_auth_bypass():
-            # Dev: token de desarrollo (el storage local no valida auth en desarrollo).
-            service_token = "dev-storage-token"
+            service_token = secrets.token_urlsafe(16)
         else:
             service_token = self.composers().storage_admin_token()
         return f"{base}/admin?token={urllib.parse.quote(service_token)}"

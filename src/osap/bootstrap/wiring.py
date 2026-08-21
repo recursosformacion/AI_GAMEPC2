@@ -132,14 +132,24 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     storage_base = routes["storage"]
     auth_token_url = routes["auth_token"]
     auth_base = routes["auth_base"]
-    container.set_op_store_config(
-        {
-            "host": config.osap_api_db_host,
-            "user": config.osap_api_db_user,
-            "password": config.osap_api_db_password,
-            "database": config.osap_api_db_name,
-        }
-    )
+    def _db_value(field: str, fallback: str) -> str:
+        val = getattr(config, field, None)
+        if val:
+            return str(val)
+        if config.deployment != "prod":
+            return fallback
+        raise ConfigurationError(
+            service="osap-api",
+            message=f"Configuración requerida faltante: {field}. Defínala en osap.toml o por variable de entorno.",
+        )
+
+    db_config = {
+        "host": _db_value("osap_api_db_host", "127.0.0.1"),
+        "user": _db_value("osap_api_db_user", "osap2027"),
+        "password": _db_value("osap_api_db_password", "2027osapdb"),
+        "database": _db_value("osap_api_db_name", "osap-api"),
+    }
+    container.set_op_store_config(db_config)
 
     github = GitHubClient(
         token=config.github_token,
@@ -153,12 +163,7 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     # YAML en prod). Level 2 providers añaden un fetcher (MediaWiki, GitHub) que
     # devuelve JSON normalizado por el mismo mapping.
     providers_root = Path(__file__).resolve().parents[3] / "providers"
-    op_store = build_op_store(
-        host=config.osap_api_db_host,
-        user=config.osap_api_db_user,
-        password=config.osap_api_db_password,
-        database=config.osap_api_db_name,
-    )
+    op_store = build_op_store(**db_config)
     service_token_provider = ClientCredentialsServiceTokenProvider(
         client_id=config.service_client_id or "osap-api",
         client_secret=config.service_client_secret or "",
