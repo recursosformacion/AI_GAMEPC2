@@ -24,4 +24,6 @@ htmlcov/
 .env
 .env.production
 .env.*
+osap.production.toml
+osap.toml
 data/authority/

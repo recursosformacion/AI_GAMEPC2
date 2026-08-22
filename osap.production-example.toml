@@ -4,9 +4,9 @@
 
 [db]
 host = "127.0.0.1"
-name = "osap_api"
-user = "osap"
-password = "osap2027"
+name = ""
+user = ""
+password = ""
 
 [osap]
 storage_web_base = "https://storage.openmusicrepository.com"

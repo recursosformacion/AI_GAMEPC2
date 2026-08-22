@@ -89,6 +89,7 @@ from src.osap.api.contracts import (
     WorkStatisticsResponse,
 )
 from src.osap.api.platform import VERSION, PlatformApi
+from src.osap.bootstrap.configuration import load_configuration
 from src.osap.bootstrap.container import Container
 from src.osap.bootstrap.wiring import wire
 from src.osap.domain.votes import (
@@ -698,7 +699,8 @@ def create_platform_app(
     knowledge: KnowledgeStore | None = None,
 ) -> FastAPI:
     """Build the OSAP Platform API (V3.1) over application services."""
-    container = container or wire(Container())
+    config = load_configuration(service_name="osap-api")
+    container = container or wire(Container(), configuration=config)
     api = PlatformApi(container, knowledge)
     _configure_osap_logging()
     app = FastAPI(
@@ -2114,3 +2116,4 @@ def create_platform_app(
         return ok(_resolution_results_dto(data))
 
     return app
+ 

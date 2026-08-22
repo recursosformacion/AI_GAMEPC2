@@ -1,8 +1,23 @@
 import os
 import tomllib
+import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+
+
+class ConfigurationError(Exception):
+    """Error de configuración que impide el arranque del servicio."""
+
+    def __init__(self, service: str, message: str) -> None:
+        super().__init__(f"[{service}] {message}")
+        self.service = service
+        self.message = message
+
+
+class ConfigurationWarning(UserWarning):
+    """Warning de configuración en desarrollo (no bloquea el arranque)."""
+    pass
 
 
 @dataclass(frozen=True)
@@ -14,7 +29,7 @@ class Configuration:
     conexión a la BD ([db]). `deployment` (prod/dev) y `dev_mode` deciden las rutas.
     """
 
-    deployment: str = "prod"  # "prod" (real, escribible) | "dev" (dev_mode decide rutas)
+    deployment: str = "development"  # "prod" | "development" (default)
     dev_mode: int = 0  # 0 = local, 1 = real (solo lectura) — solo en dev
     confidence_threshold: float = 0.8
     max_processing_time: float = 300.0
@@ -36,10 +51,10 @@ class Configuration:
     service_client_secret: str | None = None
     admin_client_id: str | None = None
     admin_client_secret: str | None = None
-    osap_api_db_host: str = "127.0.0.1"
-    osap_api_db_user: str = "osap2027"
-    osap_api_db_password: str = "2027osapdb"
-    osap_api_db_name: str = "osap-api"
+    osap_api_db_host: str | None = None
+    osap_api_db_user: str | None = None
+    osap_api_db_password: str | None = None
+    osap_api_db_name: str | None = None
     dev_auth_bypass: bool = False
     storage_web_base: str | None = None
     oidc_issuer: str | None = None
@@ -104,6 +119,35 @@ _TOML_SECTIONS: dict[str, tuple[str, str]] = {
     "storage_web_base": ("osap", "storage_web_base"),
 }
 
+# Reglas de validación por servicio.
+# Cada entrada es: sección TOML -> lista de campos obligatorios.
+_SERVICE_REQUIRED_SECTIONS: dict[str, dict[str, list[str]]] = {
+    "osap-api": {
+        "db": ["host", "name", "user", "password"],
+        "oidc": ["issuer", "client_id", "redirect_uri", "client_secret"],
+    },
+    "osap-storage": {
+        "db": ["host", "name", "user", "password"],
+        "repository": ["provider"],
+    },
+    "osap-auth": {
+        "db": ["host", "name", "user", "password"],
+        "jwt": ["private_key_path", "public_key_path", "kid"],
+    },
+}
+
+# Valores por defecto inseguros detectados en producción.
+# Se mantienen como referencia para la validación, pero no se usan como defaults de la dataclass.
+_INSECURE_DB_DEFAULTS = {
+    "host": "127.0.0.1",
+    "user": "osap2027",
+    "password": "2027osapdb",
+    "name": "osap-api",
+}
+
+
+# -- helpers -------------------------------------------------------------
+
 
 def _coerce(field: str, raw: Any) -> Any:
     _, conv = _CONFIG_FIELDS.get(field, ("", str))
@@ -143,12 +187,15 @@ def _load_db_overrides(cfg: Configuration) -> dict[str, Any]:
         return {}
 
 
-def load_configuration(path: str | Path | None = None) -> Configuration:
+def load_configuration(path: str | Path | None = None, service_name: str | None = None) -> Configuration:
     """Carga la configuración: .env > osap.toml (secciones) > BD > entorno > defaults.
 
     Precedencia final: variable de entorno > .env > osap.toml > BD (app_config) > defaults.
     Carga `.env` del directorio de trabajo (dev) y, si `OSAP_DOTENV` apunta a un fichero
     (p. ej. `.env.production`), también lo carga.
+
+    Si se proporciona `service_name`, valida la configuración contra las reglas del servicio
+    antes de devolverla.
     """
     from dotenv import load_dotenv
 
@@ -164,14 +211,14 @@ def load_configuration(path: str | Path | None = None) -> Configuration:
             data = tomllib.load(handle)
     db = data.get("db", {}) if isinstance(data.get("db", None), dict) else {}
 
-    def conn(env: str, key: str, default: str) -> str:
-        return os.environ.get(env, str(db.get(key, default)))
+    def conn(env: str, key: str) -> str | None:
+        return os.environ.get(env) or db.get(key)
 
     base = Configuration(
-        osap_api_db_host=conn("OSAP_API_DB_HOST", "host", "127.0.0.1"),
-        osap_api_db_user=conn("OSAP_API_DB_USER", "user", "osap2027"),
-        osap_api_db_password=conn("OSAP_API_DB_PASSWORD", "password", "2027osapdb"),
-        osap_api_db_name=conn("OSAP_API_DB_NAME", "name", "osap-api"),
+        osap_api_db_host=conn("OSAP_API_DB_HOST", "host"),
+        osap_api_db_user=conn("OSAP_API_DB_USER", "user"),
+        osap_api_db_password=conn("OSAP_API_DB_PASSWORD", "password"),
+        osap_api_db_name=conn("OSAP_API_DB_NAME", "name"),
     )
 
     overrides: dict[str, Any] = _load_db_overrides(base)
@@ -187,4 +234,123 @@ def load_configuration(path: str | Path | None = None) -> Configuration:
         if value is not None:
             overrides[field] = _coerce(field, value)
 
-    return Configuration(**{**base.__dict__, **overrides})
+    config = Configuration(**{**base.__dict__, **overrides})
+
+    if service_name:
+        validate_configuration(config, service_name, data, config_path)
+
+    return config
+
+
+def validate_configuration(
+    config: Configuration,
+    service_name: str,
+    toml_data: dict[str, Any],
+    config_path: Path | None = None,
+) -> None:
+    """Valida la configuración según el entorno (production/development)."""
+    env = os.environ.get("OSAP_ENV", "development").strip().lower()
+    if env not in ("production", "development"):
+        env = "development"
+
+    rules = _SERVICE_REQUIRED_SECTIONS.get(service_name, {})
+    if not rules:
+        warnings.warn(
+            f"[{service_name}] No hay reglas de validación definidas para este servicio.",
+            ConfigurationWarning,
+            stacklevel=2,
+        )
+        return
+
+    if env == "production":
+        _validate_strict(service_name, rules, toml_data, config, config_path)
+    else:
+        _validate_lenient(service_name, rules, toml_data, config, config_path)
+
+
+def _validate_strict(
+    service_name: str,
+    rules: dict[str, list[str]],
+    toml_data: dict[str, Any],
+    config: Configuration,
+    config_path: Path | None,
+) -> None:
+    errors: list[str] = []
+    config_ref = str(config_path) if config_path else "osap.toml"
+
+    for section, fields in rules.items():
+        if section not in toml_data or not isinstance(toml_data.get(section), dict):
+            errors.append(f"Sección obligatoria '{section}' faltante en {config_ref}")
+            continue
+
+        section_data = toml_data[section]
+        for field in fields:
+            raw_value = section_data.get(field)
+            if raw_value is None or (isinstance(raw_value, str) and not raw_value.strip()):
+                errors.append(f"Campo obligatorio '{section}.{field}' vacío o faltante en {config_ref}")
+
+    # Validar que los campos de BD estén definidos en producción
+    db_fields = {
+        "host": "OSAP_API_DB_HOST",
+        "user": "OSAP_API_DB_USER",
+        "password": "OSAP_API_DB_PASSWORD",
+        "name": "OSAP_API_DB_NAME",
+    }
+    for key, env_var in db_fields.items():
+        actual = getattr(config, "osap_api_db_" + key, None)
+        if not actual:
+            errors.append(
+                f"Campo 'db.{key}' no definido. Defina {env_var} o actualice {config_ref}."
+            )
+
+    if config.dev_auth_bypass:
+        errors.append(
+            "dev_auth_bypass=true en producción es inseguro. "
+            "Desactívelo en osap.toml o mediante OSAP_DEV_AUTH_BYPASS=false."
+        )
+
+    if errors:
+        raise ConfigurationError(
+            service=service_name,
+            message="Configuración inválida para producción:\n" + "\n".join(f"  - {e}" for e in errors),
+        )
+
+
+def _validate_lenient(
+    service_name: str,
+    rules: dict[str, list[str]],
+    toml_data: dict[str, Any],
+    config: Configuration,
+    config_path: Path | None,
+) -> None:
+    warnings_list: list[str] = []
+    config_ref = str(config_path) if config_path else "osap.toml"
+
+    for section, fields in rules.items():
+        if section not in toml_data or not isinstance(toml_data.get(section), dict):
+            warnings_list.append(f"Sección recomendada '{section}' faltante en {config_ref}")
+            continue
+
+        section_data = toml_data[section]
+        for field in fields:
+            raw_value = section_data.get(field)
+            if raw_value is None or (isinstance(raw_value, str) and not raw_value.strip()):
+                warnings_list.append(f"Campo '{section}.{field}' vacío o faltante en {config_ref}")
+
+    db_fields = {
+        "host": "OSAP_API_DB_HOST",
+        "user": "OSAP_API_DB_USER",
+        "password": "OSAP_API_DB_PASSWORD",
+        "name": "OSAP_API_DB_NAME",
+    }
+    for key, env_var in db_fields.items():
+        actual = getattr(config, "osap_api_db_" + key, None)
+        if not actual:
+            warnings_list.append(f"Campo 'db.{key}' no definido (defina {env_var} o actualice {config_ref})")
+
+    for warning_msg in warnings_list:
+        warnings.warn(
+            f"[{service_name}] Configuración (dev): {warning_msg}",
+            ConfigurationWarning,
+            stacklevel=2,
+        )

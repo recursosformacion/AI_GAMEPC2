@@ -69,12 +69,7 @@ class Container:
         self._storage_read_only: bool = False
         self._dev_auth_bypass: bool = False
         self._storage_web_base: str | None = None
-        self._op_store_config: dict[str, str] = {
-            "host": "127.0.0.1",
-            "user": "osap2027",
-            "password": "2027osapdb",
-            "database": "osap-api",
-        }
+        self._op_store_config: dict[str, str] | None = None
 
     def register_catalog_provider(self, provider: ICatalogProvider) -> None:
         self._catalog_providers.append(provider)
