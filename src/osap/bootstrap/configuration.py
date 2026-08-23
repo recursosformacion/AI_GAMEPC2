@@ -172,10 +172,10 @@ def _load_db_overrides(cfg: Configuration) -> dict[str, Any]:
         from src.osap.infrastructure.state.op_store import build_op_store
 
         store = build_op_store(
-            host=cfg.osap_api_db_host,
-            user=cfg.osap_api_db_user,
-            password=cfg.osap_api_db_password,
-            database=cfg.osap_api_db_name,
+            host=cfg.osap_api_db_host or "127.0.0.1",
+            user=cfg.osap_api_db_user or "osap2027",
+            password=cfg.osap_api_db_password or "2027osapdb",
+            database=cfg.osap_api_db_name or "osap-api",
         )
         out: dict[str, Any] = {}
         for field in _CONFIG_FIELDS:

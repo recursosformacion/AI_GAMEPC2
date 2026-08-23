@@ -111,6 +111,7 @@ class ProviderResponse(_Frozen):
     available: bool
     formats: list[str] = []
     last_sync: str | None = None
+    description: dict[str, str] = {}
 
 
 class KnowledgeObservationDTO(_Frozen):
@@ -300,6 +301,11 @@ class UpsertProviderRequest(_Frozen):
     base_url: str | None = None
     wired: bool = False
     config: dict[str, object] = {}
+    description: dict[str, str] = {}
+    endpoints: dict[str, object] = {}
+    mapping: dict[str, object] = {}
+    resources: dict[str, object] = {}
+    transforms: dict[str, object] = {}
 
 
 class SetProviderWiredRequest(_Frozen):

@@ -6,15 +6,15 @@ resolución así, priorizando la información local:
 
   * >= umbral de obras (por defecto 20) -> `resolved_by_prolific` (aceptado SIN red:
     muchas obras en el corpus = evidencia real de uso; ej. Tchaikovsky, Paganini, Skinner).
-  * < umbral -> resuelve SOLO con fuentes locales (maestro + composer_authority),
-    cero red; si no está, queda `unknown`.
+  * < umbral -> por defecto resuelve SOLO con fuentes locales (maestro + composer_authority),
+    cero red; con `--network` usa además VIAF/Wikidata para los que no están en local.
 
 No crea Composer: registra `composer_candidate.resolved_status` como PROPUESTA para la
-fase de validación. `local_only` evita Wikidata/MusicBrainz cuando no es necesario.
+fase de validación.
 
 Uso (en osap-api, con PYTHONPATH=osap-api):
     python script/candidate_resolver.py --limit 100 --db-name osap_storage \
-        [--db-user osap] [--db-password ...] [--threshold 20]
+        [--db-user osap] [--db-password ...] [--threshold 20] [--network]
 """
 
 from __future__ import annotations
@@ -44,6 +44,10 @@ def main() -> int:
     parser.add_argument("--label", default="real", choices=("real", "review", "all"))
     parser.add_argument("--threshold", type=int, default=20,
                         help="obras en el corpus para aceptar sin red (famoso/prolífico)")
+    parser.add_argument("--network", action="store_true",
+                        help="resolver además con VIAF/Wikidata los que no están en local")
+    parser.add_argument("--only-status", default="",
+                        help="solo candidatos con este resolved_status (p. ej. 'unknown')")
     parser.add_argument("--db-host", default="127.0.0.1")
     parser.add_argument("--db-user", default="osap2027")
     parser.add_argument("--db-password", default="2027osapdb")
@@ -57,6 +61,9 @@ def main() -> int:
     conn = pymysql.connect(**db)
     try:
         where = "" if args.label == "all" else f"WHERE label='{args.label}'"
+        if args.only_status:
+            where = f"WHERE label='{args.label}' AND resolved_status='{args.only_status}'" \
+                if args.label != "all" else f"WHERE resolved_status='{args.only_status}'"
         with conn.cursor() as cur:
             cur.execute(
                 f"SELECT attribution, name_key, cleaned_name, work_count "
@@ -76,9 +83,12 @@ def main() -> int:
                 g["best"] = wc
                 g["raw"] = r["attribution"]
                 g["name"] = r["cleaned_name"] or r["attribution"]
-        ranked = sorted(groups.items(), key=lambda kv: kv[1]["works"], reverse=True)[: args.limit]
+        ranked = sorted(groups.items(), key=lambda kv: kv[1]["works"], reverse=True)
+        if args.limit > 0:
+            ranked = ranked[: args.limit]
 
-        # resolver: prolíficos (>=threshold obras) sin red; el resto solo con autoridad local
+        # resolver: prolíficos (>=threshold obras) sin red; el resto con autoridad local
+        # (y con red si `--network` está activo).
         resolver = IdentityResolver(db)
         stats: Counter = Counter()
         results: list[tuple[str, str]] = []
@@ -87,7 +97,9 @@ def main() -> int:
                 status = "resolved_by_prolific"
                 reason = f"prolific ({g['works']} obras en corpus)"
             else:
-                status, reason, _ev, _src, _cached = resolver.resolve(g["raw"], local_only=True)
+                status, reason, _ev, _src, _cached = resolver.resolve(
+                    g["raw"], local_only=not args.network
+                )
             stats[status] += 1
             results.append((key, status))
             print(f"  {g['works']:>5}  {status:24}  {g['raw'][:52]}", flush=True)

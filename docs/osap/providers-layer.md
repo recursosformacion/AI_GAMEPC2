@@ -11,6 +11,13 @@
 > de verdad. El `endpoints.yaml` de IMSLP (API.ISCR.php) es la definición Nivel 1 de
 > reserva: **la búsqueda real de IMSLP la hace el `MediaWikiFetcher`** (`api.php?action=query
 > &list=search`, índice completo, límite configurable), no `API.ISCR.php`.
+>
+> **Modelo en BD (2026-08):** cada YAML del proveedor va a **su propia columna** en
+> `providers` — `endpoints`, `mapping`, `resources`, `transforms` (más `config` monolítico
+> por compatibilidad) — evitando duplicar datos en un único JSON. La **descripción**
+> multi-idioma se guarda en `description` como JSON `{es, ca, fr, en, de}`; `GET
+> /api/v1/providers` la expone localizada y la pantalla de administración la edita por
+> fichas de idioma.
 
 > **Búsqueda (2026-08):** `POST /api/v1/searches` es **asíncrono**: devuelve el recurso en
 > `status=running` con `progress` (0..100) y completa en un hilo en background; `GET

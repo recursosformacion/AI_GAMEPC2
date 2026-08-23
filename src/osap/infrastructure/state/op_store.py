@@ -106,11 +106,21 @@ class _MemoryStore:
         wired: bool = False,
         kind: str = "dynamic",
         config: dict[str, object] | None = None,
+        description: dict[str, str] | str | None = None,
+        endpoints: dict[str, object] | None = None,
+        mapping: dict[str, object] | None = None,
+        resources: dict[str, object] | None = None,
+        transforms: dict[str, object] | None = None,
     ) -> dict[str, object]:
         payload = json.dumps(config or {}, ensure_ascii=False)
         for existing in self._providers:
             if existing["provider_id"] == provider_id:
-                existing.update({"name": name, "base_url": base_url, "wired": int(wired), "config": payload})
+                existing.update({
+                    "name": name, "base_url": base_url, "wired": int(wired),
+                    "config": payload, "description": description,
+                    "endpoints": endpoints, "mapping": mapping,
+                    "resources": resources, "transforms": transforms,
+                })
                 return existing
         row: dict[str, object] = {
             "provider_id": provider_id,
@@ -119,10 +129,20 @@ class _MemoryStore:
             "base_url": base_url,
             "wired": int(wired),
             "config": payload,
+            "description": description,
+            "endpoints": endpoints,
+            "mapping": mapping,
+            "resources": resources,
+            "transforms": transforms,
             "created_at": _now(),
         }
         self._providers.append(row)
         return row
+
+    def delete_provider(self, provider_id: str) -> bool:
+        before = len(self._providers)
+        self._providers = [r for r in self._providers if r["provider_id"] != provider_id]
+        return len(self._providers) < before
 
     def set_provider_wired(self, provider_id: str, wired: bool) -> dict[str, object] | None:
         for row in self._providers:
@@ -192,8 +212,13 @@ class _MysqlStore(_MemoryStore):
                 name VARCHAR(255) NOT NULL,
                 kind VARCHAR(32) NOT NULL DEFAULT 'dynamic',
                 base_url VARCHAR(1024),
+                description TEXT,
                 wired TINYINT NOT NULL DEFAULT 0,
                 config TEXT NOT NULL,
+                endpoints TEXT,
+                mapping TEXT,
+                resources TEXT,
+                transforms TEXT,
                 created_at VARCHAR(64) NOT NULL
             )
             """
@@ -245,6 +270,44 @@ class _MysqlStore(_MemoryStore):
                 UNIQUE KEY uq_idxrep (work_id, provider, format, title_provider(255))
             ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
             """
+        )
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS sync_state (
+                `key` VARCHAR(64) PRIMARY KEY,
+                value VARCHAR(255) NOT NULL,
+                updated_at VARCHAR(64) NOT NULL
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+            """
+        )
+        self._migrate()
+
+    def _migrate(self) -> None:
+        """Migraciones idempotentes sobre tablas ya existentes."""
+        columns = self._run(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_schema = DATABASE() AND table_name = 'providers'"
+        )
+        existing = {str(r["column_name"]) for r in columns} if columns else set()
+        for col, ddl in (
+            ("description", "ALTER TABLE providers ADD COLUMN description TEXT"),
+            ("endpoints", "ALTER TABLE providers ADD COLUMN endpoints TEXT"),
+            ("mapping", "ALTER TABLE providers ADD COLUMN mapping TEXT"),
+            ("resources", "ALTER TABLE providers ADD COLUMN resources TEXT"),
+            ("transforms", "ALTER TABLE providers ADD COLUMN transforms TEXT"),
+        ):
+            if col not in existing:
+                self._run(ddl)
+
+    def get_sync_state(self, key: str) -> str | None:
+        rows = self._run("SELECT value FROM sync_state WHERE `key` = %s", (key,))
+        return str(rows[0]["value"]) if rows else None
+
+    def set_sync_state(self, key: str, value: str) -> None:
+        self._run(
+            "INSERT INTO sync_state (`key`, value, updated_at) VALUES (%s, %s, %s) "
+            "ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = VALUES(updated_at)",
+            (key, value, _now()),
         )
 
     def list_suggestions(self) -> list[dict[str, object]]:
@@ -305,11 +368,12 @@ class _MysqlStore(_MemoryStore):
         return counts
 
     def list_providers(self) -> list[dict[str, object]]:
-        return self._run("SELECT * FROM providers ORDER BY name")
+        rows = self._run("SELECT * FROM providers ORDER BY name")
+        return [_decode_provider_row(r) for r in rows]
 
     def get_provider(self, provider_id: str) -> dict[str, object] | None:
         rows = self._run("SELECT * FROM providers WHERE provider_id = %s", (provider_id,))
-        return rows[0] if rows else None
+        return _decode_provider_row(rows[0]) if rows else None
 
     def upsert_provider(
         self,
@@ -319,18 +383,39 @@ class _MysqlStore(_MemoryStore):
         wired: bool = False,
         kind: str = "dynamic",
         config: dict[str, object] | None = None,
+        description: dict[str, str] | str | None = None,
+        endpoints: dict[str, object] | None = None,
+        mapping: dict[str, object] | None = None,
+        resources: dict[str, object] | None = None,
+        transforms: dict[str, object] | None = None,
     ) -> dict[str, object]:
         payload = json.dumps(config or {}, ensure_ascii=False)
+        description_json = _encode_description(description)
+        endpoints_json = json.dumps(endpoints, ensure_ascii=False) if endpoints is not None else None
+        mapping_json = json.dumps(mapping, ensure_ascii=False) if mapping is not None else None
+        resources_json = json.dumps(resources, ensure_ascii=False) if resources is not None else None
+        transforms_json = json.dumps(transforms, ensure_ascii=False) if transforms is not None else None
         self._run(
-            "INSERT INTO providers (provider_id, name, kind, base_url, wired, config, created_at) "
-            "VALUES (%s, %s, %s, %s, %s, %s, %s) "
+            "INSERT INTO providers (provider_id, name, kind, base_url, description, wired, "
+            "config, endpoints, mapping, resources, transforms, created_at) "
+            "VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s) "
             "ON DUPLICATE KEY UPDATE name = VALUES(name), base_url = VALUES(base_url), "
-            "wired = VALUES(wired), config = VALUES(config)",
-            (provider_id, name, kind, base_url, int(wired), payload, _now()),
+            "description = VALUES(description), wired = VALUES(wired), config = VALUES(config), "
+            "endpoints = COALESCE(VALUES(endpoints), endpoints), "
+            "mapping = COALESCE(VALUES(mapping), mapping), "
+            "resources = COALESCE(VALUES(resources), resources), "
+            "transforms = COALESCE(VALUES(transforms), transforms)",
+            (provider_id, name, kind, base_url, description_json, int(wired), payload,
+             endpoints_json, mapping_json, resources_json, transforms_json, _now()),
         )
         row = self.get_provider(provider_id)
         assert row is not None
         return row
+
+    def delete_provider(self, provider_id: str) -> bool:
+        existed = bool(self.get_provider(provider_id))
+        self._run("DELETE FROM providers WHERE provider_id = %s", (provider_id,))
+        return existed
 
     def set_provider_wired(self, provider_id: str, wired: bool) -> dict[str, object] | None:
         self._run("UPDATE providers SET wired = %s WHERE provider_id = %s", (int(wired), provider_id))
@@ -346,6 +431,39 @@ class _MysqlStore(_MemoryStore):
             "ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = VALUES(updated_at)",
             (key, value, _now()),
         )
+
+
+def _decode_provider_row(row: dict[str, object]) -> dict[str, object]:
+    """Parsea las columnas JSON de `providers` para el API/admin."""
+    out = dict(row)
+    description_raw = row.get("description")
+    if description_raw:
+        try:
+            parsed = json.loads(str(description_raw))
+            out["description"] = parsed if isinstance(parsed, dict) else {"en": str(parsed)}
+        except (TypeError, ValueError):
+            out["description"] = {"en": str(description_raw)}
+    else:
+        out["description"] = {}
+    for col in ("config", "endpoints", "mapping", "resources", "transforms"):
+        raw = row.get(col)
+        if raw:
+            try:
+                out[col] = json.loads(str(raw))
+            except (TypeError, ValueError):
+                out[col] = raw
+        else:
+            out[col] = {}
+    return out
+
+
+def _encode_description(description: dict[str, str] | str | None) -> str | None:
+    """Codifica la descripción multi-idioma a JSON para la columna `description`."""
+    if not description:
+        return None
+    if isinstance(description, str):
+        return json.dumps({"en": description}, ensure_ascii=False)
+    return json.dumps(description, ensure_ascii=False)
 
 
 def build_op_store(

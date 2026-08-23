@@ -19,6 +19,7 @@ import type {
   Envelope,
   MergeComposersResult,
   MoveAliasResult,
+  OpProvider,
   PromoteAliasResult,
   SetAttributionResult,
   SourcePreview,
@@ -186,6 +187,35 @@ export class ApiClient {
 
   async getStorageWebUrl(): Promise<{ url: string }> {
     return this.get<{ url: string }>("/admin/storage-web");
+  }
+
+  async listOpProviders(): Promise<OpProvider[]> {
+    return this.get<OpProvider[]>("/admin/op/providers");
+  }
+
+  async upsertOpProvider(payload: {
+    provider_id: string;
+    name: string;
+    base_url?: string | null;
+    wired?: boolean;
+    config?: Record<string, unknown>;
+    description?: Record<string, string> | string | null;
+    endpoints?: Record<string, unknown>;
+    mapping?: Record<string, unknown>;
+    resources?: Record<string, unknown>;
+    transforms?: Record<string, unknown>;
+  }): Promise<OpProvider> {
+    return this.post<OpProvider>("/admin/op/providers", payload);
+  }
+
+  async deleteOpProvider(providerId: string): Promise<{ deleted: boolean; provider_id: string }> {
+    return this.delete<{ deleted: boolean; provider_id: string }>(
+      `/admin/op/providers/${encodeURIComponent(providerId)}`,
+    );
+  }
+
+  async setOpProviderWired(providerId: string, wired: boolean): Promise<OpProvider> {
+    return this.post<OpProvider>(`/admin/op/providers/${encodeURIComponent(providerId)}/wire`, { wired });
   }
 
   async devSession(): Promise<{ access_token: string; refresh_token: string }> {

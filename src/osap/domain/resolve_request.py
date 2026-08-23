@@ -15,6 +15,7 @@ class ResolveRequest:
     query: str | None = None
     title: str | None = None
     composer: str | None = None
+    catalogue: str | None = None
     genre: str | None = None
     language: str | None = None
     instrumentation: tuple[str, ...] = field(default_factory=tuple)
@@ -46,6 +47,9 @@ class ResolveRequestBuilder:
 
     def composer(self, value: str) -> "ResolveRequestBuilder":
         return ResolveRequestBuilder(replace(self._request, composer=value))
+
+    def catalogue(self, value: str) -> "ResolveRequestBuilder":
+        return ResolveRequestBuilder(replace(self._request, catalogue=value))
 
     def genre(self, value: str) -> "ResolveRequestBuilder":
         return ResolveRequestBuilder(replace(self._request, genre=value))

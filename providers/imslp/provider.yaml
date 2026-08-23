@@ -4,6 +4,12 @@ version: 1.3
 enabled: true
 priority: 100
 base_url: https://imslp.org
+description:
+  es: "Biblioteca Internacional de Partituras Musicales (IMSLP / Petrucci): dominio público y ediciones modernas."
+  en: "International Music Score Library Project (IMSLP / Petrucci): public domain and modern editions."
+  ca: "Biblioteca Internacional de Partitures Musicals (IMSLP / Petrucci): domini públic i edicions modernes."
+  fr: "Bibliothèque internationale de partitions musicales (IMSLP / Petrucci) : domaine public et éditions modernes."
+  de: "Internationales Musiknotenarchiv (IMSLP / Petrucci): Gemeinfreiheit und moderne Ausgaben."
 authentication:
   type: none
 contract:

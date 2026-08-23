@@ -37,8 +37,26 @@ def provider_config_from_dir(child: Path) -> dict[str, object] | None:
     }
 
 
+def provider_description_from_dir(child: Path) -> dict[str, str] | None:
+    """Lee la descripción multi-idioma del `provider.yaml` (clave `description`)."""
+    if not child.is_dir() or not (child / "provider.yaml").exists():
+        return None
+    provider = _read(child, "provider.yaml")
+    desc = provider.get("description")
+    if isinstance(desc, dict):
+        clean = {str(k): str(v) for k, v in desc.items() if isinstance(v, str)}
+        return clean or None
+    if isinstance(desc, str) and desc.strip():
+        return {"en": desc.strip()}
+    return None
+
+
 def seed_providers(store: _MemoryStore, providers_root: Path, active_ids: set[str]) -> int:
-    """Upserta cada proveedor YAML en la BD. Devuelve cuántos se sembraron."""
+    """Upserta cada proveedor YAML en la BD. Devuelve cuántos se sembraron.
+
+    Cada fichero YAML del proveedor va a su propia columna (provider/endpoints/mapping/
+    resources/transforms) para evitar el doble mantenimiento en un único `config` JSON.
+    """
     count = 0
     for child in sorted(providers_root.iterdir()):
         config = provider_config_from_dir(child)
@@ -55,6 +73,15 @@ def seed_providers(store: _MemoryStore, providers_root: Path, active_ids: set[st
             wired=pid in active_ids,
             kind="yaml",
             config=config,
+            description=provider_description_from_dir(child),
+            endpoints=_as_section(config.get("endpoints")),
+            mapping=_as_section(config.get("mapping")),
+            resources=_as_section(config.get("resources")),
+            transforms=_as_section(config.get("transforms")),
         )
         count += 1
     return count
+
+
+def _as_section(value: object) -> dict[str, object] | None:
+    return value if isinstance(value, dict) else None

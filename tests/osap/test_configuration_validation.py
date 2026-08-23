@@ -5,7 +5,6 @@ Verifican el comportamiento estricto en producción y permisivo en desarrollo.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import pytest
@@ -18,7 +17,6 @@ from src.osap.bootstrap.configuration import (
     _validate_strict,
     validate_configuration,
 )
-
 
 _MINIMAL_TOML = """
 [db]
@@ -62,7 +60,7 @@ class TestValidateStrict:
             osap_api_db_password="secret",
             osap_api_db_name="prod_db",
         )
-        _validate_strict("osap-api", {"db": ["host", "name", "user", "password"], "oidc": ["issuer", "client_id", "redirect_uri", "client_secret"]}, data, config, Path("osap.toml"))
+        _validate_strict("osap-api", {"db": ["host", "name", "user", "password"], "oidc": ["issuer", "client_id", "redirect_uri", "client_secret"]}, data, config, Path("osap.toml"))  # noqa: E501
 
     def test_raises_when_section_missing(self) -> None:
         data = _toml("[db]\nhost = '127.0.0.1'\n")
@@ -76,7 +74,7 @@ class TestValidateStrict:
             _validate_strict("osap-api", {"db": ["host"], "oidc": ["issuer"]}, data, config, Path("osap.toml"))
 
     def test_raises_when_field_empty(self) -> None:
-        data = _toml("[db]\nhost = '127.0.0.1'\nname = ''\n[oidc]\nissuer = 'http://x'\nclient_id = 'id'\nredirect_uri = 'http://x'\nclient_secret = ''\n")
+        data = _toml("[db]\nhost = '127.0.0.1'\nname = ''\n[oidc]\nissuer = 'http://x'\nclient_id = 'id'\nredirect_uri = 'http://x'\nclient_secret = ''\n")  # noqa: E501
         config = _config(
             osap_api_db_host="127.0.0.1",
             osap_api_db_user="osap2027",
@@ -84,7 +82,7 @@ class TestValidateStrict:
             osap_api_db_name="osap-api",
         )
         with pytest.raises(ConfigurationError, match="Campo obligatorio 'db.name'"):
-            _validate_strict("osap-api", {"db": ["host", "name"], "oidc": ["client_secret"]}, data, config, Path("osap.toml"))
+            _validate_strict("osap-api", {"db": ["host", "name"], "oidc": ["client_secret"]}, data, config, Path("osap.toml"))  # noqa: E501
 
     def test_raises_when_db_fields_missing(self) -> None:
         config = _config()
@@ -148,7 +146,7 @@ class TestValidateLenient:
 class TestValidateConfigurationIntegration:
     def test_production_mode_requires_sections(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("OSAP_ENV", "production")
-        data = _toml("[db]\nhost = 'db.prod'\nname = 'prod_db'\nuser = 'admin'\npassword = 'secret'\n[oidc]\nissuer = 'http://x'\nclient_id = 'id'\nredirect_uri = 'http://x'\nclient_secret = 'secret'\n")
+        data = _toml("[db]\nhost = 'db.prod'\nname = 'prod_db'\nuser = 'admin'\npassword = 'secret'\n[oidc]\nissuer = 'http://x'\nclient_id = 'id'\nredirect_uri = 'http://x'\nclient_secret = 'secret'\n")  # noqa: E501
         config = _config(
             osap_api_db_host="db.prod",
             osap_api_db_user="admin",

@@ -6,6 +6,12 @@ priority: 100
 base_url: https://musicbrainz.org
 native_formats: [json]
 conversion: ninguno (metadata + enlace; sin fichero de partitura)
+description:
+  es: "MusicBrainz: base de datos abierta de obras y compositores; aporta metadatos e identificadores (sin partituras)."
+  en: "MusicBrainz: open database of works and composers; provides metadata and identifiers (no scores)."
+  ca: "MusicBrainz: base de dades oberta d'obres i compositors; aporta metadades i identificadors (sense partitures)."
+  fr: "MusicBrainz : base de données ouverte d'œuvres et de compositeurs ; fournit métadonnées et identifiants (sans partitions)."
+  de: "MusicBrainz: offene Datenbank für Werke und Komponisten; liefert Metadaten und Identifikatoren (keine Noten)."
 authentication:
   type: none
 protocol: rest           # MusicBrainz WS/2 (work search) -> MusicBrainzFetcher, Nivel 2

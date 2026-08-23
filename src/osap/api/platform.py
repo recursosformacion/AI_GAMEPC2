@@ -150,6 +150,20 @@ def _classify_collection(title: str | None) -> str | None:
     return None
 
 
+def _replace_provider_description(
+    response: ProviderResponse, description: dict[str, str]
+) -> ProviderResponse:
+    """Devuelve un ProviderResponse con la descripción multi-idioma (objeto frozen)."""
+    return ProviderResponse(
+        provider_id=response.provider_id,
+        name=response.name,
+        available=response.available,
+        formats=list(response.formats),
+        last_sync=response.last_sync,
+        description=description,
+    )
+
+
 def _remote_online(url: str) -> bool:
     """True if the remote API responds; the OpenMusicRepository provider's availability
     is defined by its remote endpoint (api.openmusicrepository.com), not a local index.
@@ -598,7 +612,7 @@ class PlatformApi:
         if req.title:
             builder = builder.title(req.title)
         if req.catalogue:
-            builder = builder.text(req.catalogue)
+            builder = builder.catalogue(req.catalogue)
         if req.instrumentation:
             builder = builder.instrumentation(req.instrumentation)
         if req.language:
@@ -632,10 +646,23 @@ class PlatformApi:
         if req.title:
             groups = [g for g in groups if g.work.title and req.title.lower() in g.work.title.lower()]
         if req.catalogue:
+            from src.osap.infrastructure.catalogs.index.index_catalog_provider import (
+                _catalogue_normalized,
+            )
+
+            cat_norm = _catalogue_normalized(req.catalogue)
             groups = [
                 g
                 for g in groups
-                if g.work.catalogue_number and req.catalogue.lower() in g.work.catalogue_number.lower()
+                if g.work.catalogue_number
+                and (
+                    req.catalogue.lower() in g.work.catalogue_number.lower()
+                    or (
+                        cat_norm
+                        and cat_norm
+                        in _catalogue_normalized(g.work.catalogue_number)
+                    )
+                )
             ]
         results: list[SearchResultItem] = []
         total = len(groups)
@@ -836,11 +863,17 @@ class PlatformApi:
 
     def _focused_representations(self, work: WorkInfo) -> list[RepresentationInfo]:
         """Reúne las representaciones de una obra: búsqueda AMPLIA por título (sin
-        filtro de compositor en la query, para captar todo) y filtra por título+compositor."""
+        filtro de compositor en la query, para captar todo) y filtra por título+compositor.
+
+        El enrich se resuelve SOLO contra el índice local (offline): los proveedores
+        indexados ya están en el índice, y RISM (no indexado) se consulta en vivo una
+        sola vez en la búsqueda principal. Así no se dispara una búsqueda en vivo por
+        cada obra a enriquecer.
+        """
         core = _NORMALIZER.comparison_title(work.title or "", work.composer)
         ranked: tuple[object, ...] = ()
         try:
-            request = ResolveRequestBuilder().title(core).build()
+            request = ResolveRequestBuilder().title(core).online(False).build()
             ranked = self._container.work_resolution_engine().rank(request)
         except Exception:  # noqa: BLE001
             return []
@@ -900,6 +933,20 @@ class PlatformApi:
             responses.append(
                 ProviderResponse(provider_id=pid, name=name, available=wired, formats=[], last_sync=None)
             )
+        # Descripción multi-idioma desde la BD operativa (providers.description JSON).
+        try:
+            descriptions: dict[str, dict[str, str]] = {}
+            for row in self._store.list_providers():
+                desc = row.get("description")
+                if isinstance(desc, dict):
+                    clean = {str(k): str(v) for k, v in desc.items() if isinstance(v, str)}
+                    if clean:
+                        descriptions[str(row.get("provider_id"))] = clean
+        except Exception:  # noqa: BLE001
+            descriptions = {}
+        for i, r in enumerate(responses):
+            if r.provider_id in descriptions:
+                responses[i] = _replace_provider_description(r, descriptions[r.provider_id])
         return responses
 
     def get_provider(self, provider_id: str) -> ProviderResponse | None:
@@ -1240,11 +1287,22 @@ class PlatformApi:
         base_url: str | None,
         wired: bool,
         config: dict[str, object],
+        description: dict[str, str] | None = None,
+        endpoints: dict[str, object] | None = None,
+        mapping: dict[str, object] | None = None,
+        resources: dict[str, object] | None = None,
+        transforms: dict[str, object] | None = None,
     ) -> dict[str, object]:
         self._require_admin(token)
         return self._store.upsert_provider(
-            provider_id, name, base_url=base_url, wired=wired, kind="dynamic", config=config
+            provider_id, name, base_url=base_url, wired=wired, kind="dynamic",
+            config=config, description=description, endpoints=endpoints,
+            mapping=mapping, resources=resources, transforms=transforms,
         )
+
+    def delete_op_provider(self, token: str | None, provider_id: str) -> bool:
+        self._require_admin(token)
+        return self._store.delete_provider(provider_id)
 
     def set_op_provider_wired(self, token: str | None, provider_id: str, wired: bool) -> dict[str, object] | None:
         self._require_admin(token)

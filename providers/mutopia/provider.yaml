@@ -6,6 +6,12 @@ priority: 100
 base_url: https://www.mutopiaproject.org
 native_formats: [ly, pdf, midi]
 conversion: ly (LilyPond) -> MusicXML (lilypond + musicxml2ly / internal)
+description:
+  es: "Proyecto Mutopia: partituras en dominio público grabadas con LilyPond, con fuente PDF/MIDI editable."
+  en: "Mutopia Project: public-domain scores typeset with LilyPond, with editable PDF/MIDI source."
+  ca: "Projecte Mutopia: partitures de domini públic gravades amb LilyPond, amb font PDF/MIDI editable."
+  fr: "Projet Mutopia : partitions du domaine public gravées avec LilyPond, avec source PDF/MIDI éditable."
+  de: "Mutopia-Projekt: gemeinfreie Noten mit LilyPond gesetzt, mit editierbarer PDF/MIDI-Quelle."
 authentication:
   type: none
 protocol: html-table      # cgibin/make-table.cgi (HTML) -> MutopiaFetcher, Nivel 2

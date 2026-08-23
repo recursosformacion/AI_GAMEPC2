@@ -156,7 +156,7 @@ class Container:
         self._op_store_config = config
 
     def op_store_config(self) -> dict[str, str]:
-        return self._op_store_config
+        return self._op_store_config or {}
 
     def auth_proxy(self) -> AuthProxyClient:
         if self._auth_proxy is None:

@@ -126,6 +126,12 @@ class ProviderOrchestrator:
         Per ADR-0020 (revised), the search does not stop at the first "sufficient"
         provider: all compatible providers are queried (in parallel) so the Work
         Resolution gathers every representation, metadata and relationship.
+
+        Hybrid mode (estático): cada proveedor está marcado como *indexado* o *en vivo*.
+        - Indexados (omr, imslp, mutopia, musicbrainz): se sirven SIEMPRE del índice
+          local (nunca en vivo), tenga o no resultados en esta búsqueda.
+        - No indexados (RISM, openscore, local): se consultan SIEMPRE en vivo.
+        La marca la declara el proveedor de índice (`IndexCatalogProvider.indexed_providers`).
         """
         aggregator = ProviderResultAggregator()
 
@@ -147,26 +153,67 @@ class ProviderOrchestrator:
                 logger.info("provider %s: unavailable en %.3fs (%s)", pid, elapsed, exc)
                 return pid, None
 
-        found_by_pid: dict[str, tuple[CandidateRepresentation, ...] | None] = {}
-        with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, min(len(plan.steps), 8))) as executor:
-            futures = {executor.submit(run, step): step for step in plan.steps}
-            done, not_done = concurrent.futures.wait(
-                futures, timeout=SEARCH_TIMEOUT_SECONDS, return_when=concurrent.futures.ALL_COMPLETED
-            )
-            for future in done:
-                pid, found = future.result()
-                found_by_pid[pid] = found
-            for future in not_done:
-                step = futures[future]
-                logger.info("provider %s: timeout (>{:.0f}s), skipped", step.provider_id.value, SEARCH_TIMEOUT_SECONDS)
-                found_by_pid[step.provider_id.value] = None
+        # 1) Descubrir el proveedor de índice y su marca estática de proveedores indexados.
+        index_step = next((s for s in plan.steps if s.provider_id.value == "index"), None)
+        indexed: set[str] = set()
+        if index_step is not None:
+            provider = self.provider(index_step.provider_id)
+            indexed = set(getattr(provider, "indexed_providers", ()))
 
-        # Aggregate in plan order so `providers_used` stays deterministic.
+        # 2) Proveedores indexados: SOLO índice (aunque devuelva 0 resultados).
+        index_results: dict[str, tuple[CandidateRepresentation, ...]] = {}
+        if index_step is not None:
+            if on_progress is not None:
+                on_progress("Consultando índice local...")
+            start = time.monotonic()
+            try:
+                found = self.provider(index_step.provider_id).search(search)
+                elapsed = time.monotonic() - start
+                logger.info("provider index: %d candidato(s) en %.3fs", len(found), elapsed)
+                index_results = _index_by_provider(found)
+                for pid, cands in index_results.items():
+                    if cands:
+                        logger.info("index cubre %s: %d candidato(s)", pid, len(cands))
+                        aggregator.add_candidates(ProviderId(pid), cands)
+            except (ResourceUnavailableError, ScoreResolutionError, NotImplementedError) as exc:
+                logger.info("provider index: unavailable (%s)", exc)
+            if on_progress is not None and index_results:
+                on_progress(f"índice: {sum(len(c) for c in index_results.values())} candidato(s)")
+
+        # 3) Proveedores NO indexados: SIEMPRE en vivo.
+        live_steps = [
+            s for s in plan.steps
+            if s is not index_step and s.provider_id.value not in indexed
+        ]
+        found_by_pid: dict[str, tuple[CandidateRepresentation, ...] | None] = {}
+        if live_steps:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, min(len(live_steps), 8))) as executor:
+                futures = {executor.submit(run, step): step for step in live_steps}
+                done, not_done = concurrent.futures.wait(
+                    futures, timeout=SEARCH_TIMEOUT_SECONDS, return_when=concurrent.futures.ALL_COMPLETED
+                )
+                for future in done:
+                    result_pid, result_found = future.result()
+                    found_by_pid[result_pid] = result_found
+                for future in not_done:
+                    step = futures[future]
+                    logger.info(
+                        "provider %s: timeout (>{:.0f}s), skipped",
+                        step.provider_id.value,
+                        SEARCH_TIMEOUT_SECONDS,
+                    )
+                    found_by_pid[step.provider_id.value] = None
+
+        # 4) Agregar en orden de plan para `providers_used` determinista.
         for step in plan.steps:
             pid = step.provider_id.value
-            found = found_by_pid.get(pid)
-            if found:
-                aggregator.add_candidates(step.provider_id, found)
+            if step is index_step:
+                continue
+            if pid in indexed:
+                continue  # servido por el índice (sus candidatos ya se agregaron)
+            found_live = found_by_pid.get(pid)
+            if found_live:
+                aggregator.add_candidates(step.provider_id, found_live)
             else:
                 aggregator.add_diagnostic(f"{pid}: unavailable")
         return aggregator.result()
@@ -215,3 +262,16 @@ class ProviderOrchestrator:
         return all(
             not wants or bool(getattr(caps, f"supports_{field}")) for field, wants in requested.items()
         )
+
+
+def _index_by_provider(
+    candidates: tuple[CandidateRepresentation, ...],
+) -> dict[str, tuple[CandidateRepresentation, ...]]:
+    """Agrupa los candidatos del índice por su provider_id real."""
+    by_provider: dict[str, list[CandidateRepresentation]] = {}
+    for candidate in candidates:
+        pid = candidate.provider_id.value
+        if pid == "index":
+            continue
+        by_provider.setdefault(pid, []).append(candidate)
+    return {pid: tuple(cands) for pid, cands in by_provider.items()}

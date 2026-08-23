@@ -23,6 +23,7 @@ interface AuthState {
   status: AuthStatus;
   login: (email: string, password: string) => Promise<void>;
   completeOidc: (accessToken: string, refreshToken: string) => void;
+  devLogin: () => Promise<boolean>;
   logout: () => void;
   refreshSession: () => Promise<boolean>;
   rehydrate: () => Promise<void>;
@@ -75,6 +76,23 @@ export const useAuth = create<AuthState>((set, get) => ({
   logout: () => {
     localStorage.removeItem(REFRESH_KEY);
     set({ accessToken: null, refreshToken: null, user: null, status: "anonymous" });
+  },
+
+  // Sesión admin de desarrollo (solo con OSAP_DEV_AUTH_BYPASS activo en osap-api).
+  devLogin: async () => {
+    try {
+      const session = await apiClient.devSession();
+      localStorage.setItem(REFRESH_KEY, session.refresh_token);
+      set({
+        accessToken: session.access_token,
+        refreshToken: session.refresh_token,
+        user: decodeUser(session.access_token),
+        status: "authenticated",
+      });
+      return true;
+    } catch {
+      return false;
+    }
   },
 
   // Sesión obtenida tras el callback OIDC (osap-api devolvió access+refresh a la SPA).

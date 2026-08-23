@@ -6,6 +6,12 @@ priority: 90
 base_url: https://opac.rism.info
 native_formats: [rss]
 conversion: ninguno (metadata con compositor; sin fichero de partitura)
+description:
+  es: "RISM: Répertoire International des Sources Musicales, catálogo de fuentes musicales históricas con metadatos."
+  en: "RISM: Répertoire International des Sources Musicales, catalogue of historical music sources with metadata."
+  ca: "RISM: Répertoire International des Sources Musicales, catàleg de fonts musicals històriques amb metadades."
+  fr: "RISM : Répertoire International des Sources Musicales, catalogue des sources musicales historiques avec métadonnées."
+  de: "RISM: Répertoire International des Sources Musicales, Verzeichnis historischer Musikquellen mit Metadaten."
 authentication:
   type: none
 protocol: opensearch    # RISM opac (VuFind) RSS search -> RismFetcher, Nivel 2

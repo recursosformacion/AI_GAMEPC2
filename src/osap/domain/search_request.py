@@ -44,6 +44,7 @@ class SearchRequest:
             query=request.query,
             title=request.title,
             composer=request.composer,
+            catalogue=request.catalogue,
             genre=request.genre,
             language=request.language,
             instrumentation=request.instrumentation,

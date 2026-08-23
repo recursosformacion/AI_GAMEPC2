@@ -103,6 +103,7 @@ export interface ProviderResponse {
   available: boolean;
   formats: string[];
   last_sync: string | null;
+  description?: Record<string, string>;
 }
 
 export interface KnowledgeObservation {
@@ -411,6 +412,21 @@ export interface SourceSuggestion {
   requested_by: string;
   status: string;
   admin_message: string | null;
+  created_at: string;
+}
+
+export interface OpProvider {
+  provider_id: string;
+  name: string;
+  kind: string;
+  base_url: string | null;
+  description: Record<string, string> | string | null;
+  wired: number | boolean;
+  config: Record<string, unknown> | string;
+  endpoints: Record<string, unknown> | string;
+  mapping: Record<string, unknown> | string;
+  resources: Record<string, unknown> | string;
+  transforms: Record<string, unknown> | string;
   created_at: string;
 }
 

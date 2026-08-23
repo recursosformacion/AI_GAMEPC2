@@ -6,6 +6,12 @@ priority: 100
 base_url: https://www.freescores.com
 native_formats: [pdf, musicxml, midi]
 conversion: ninguno (ya incluye MusicXML)
+description:
+  es: "FreeScores.com: partituras clásicas de dominio público en PDF y MusicXML."
+  en: "FreeScores.com: public-domain classical scores in PDF and MusicXML."
+  ca: "FreeScores.com: partitures clàssiques de domini públic en PDF i MusicXML."
+  fr: "FreeScores.com : partitions classiques du domaine public en PDF et MusicXML."
+  de: "FreeScores.com: gemeinfreie klassische Noten in PDF und MusicXML."
 authentication:
   type: none
 protocol: web            # sin API JSON pública; HTML; necesita fetcher propio (scraping)

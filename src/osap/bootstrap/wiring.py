@@ -1,10 +1,9 @@
-import json
 from pathlib import Path
 from typing import Any
 
 from src.osap.application.composers_service import ComposersService
 from src.osap.application.votes_service import VotesService
-from src.osap.bootstrap.configuration import Configuration, load_configuration
+from src.osap.bootstrap.configuration import Configuration, ConfigurationError, load_configuration
 from src.osap.bootstrap.container import Container
 from src.osap.domain.event import Event
 from src.osap.domain.ranking_config import RankingConfig
@@ -16,7 +15,7 @@ from src.osap.infrastructure.auth.oidc_rp_client import OidcRpClient
 from src.osap.infrastructure.auth.service_token_provider import ClientCredentialsServiceTokenProvider
 from src.osap.infrastructure.auth.token_authenticator import JwtAuthenticator
 from src.osap.infrastructure.cache import InMemoryCache
-from src.osap.infrastructure.catalogs import LocalCatalogProvider
+from src.osap.infrastructure.catalogs import IndexCatalogProvider, LocalCatalogProvider
 from src.osap.infrastructure.catalogs.remote.remote_catalog_provider import RemoteCatalogProvider
 from src.osap.infrastructure.dedup import DuplicateResolver
 from src.osap.infrastructure.events import InMemoryEventBus
@@ -92,10 +91,10 @@ def _provider_definition(
     """Carga la definición del proveedor desde la BD (dev); si no, desde YAML (prod)."""
     try:
         row = store.get_provider(provider_id)
-        if row and row.get("config"):
-            definition = load_definition_from_config(provider_id, json.loads(str(row["config"])))
-        else:
-            definition = load_definition(fallback_path)
+        config = _config_from_provider_row(row) if row else None
+        definition = (
+            load_definition_from_config(provider_id, config) if config else load_definition(fallback_path)
+        )
     except Exception:  # noqa: BLE001
         definition = load_definition(fallback_path)
     if base_url:
@@ -103,6 +102,33 @@ def _provider_definition(
 
         return replace(definition, base_url=base_url.rstrip("/"))
     return definition
+
+
+def _config_from_provider_row(row: dict[str, object]) -> dict[str, object] | None:
+    """Reconstruye el config `{provider, endpoints, mapping, resources, transforms}` desde
+    las columnas separadas de `providers` (cada YAML en su columna, sin duplicar datos)."""
+    config_value = row.get("config")
+    config = config_value if isinstance(config_value, dict) else {}
+    provider_doc_raw = config.get("provider")
+    if isinstance(provider_doc_raw, dict):
+        provider_doc: dict[str, object] = provider_doc_raw
+    else:
+        provider_doc = {
+            "id": str(row.get("provider_id") or ""),
+            "name": str(row.get("name") or ""),
+            "base_url": str(row.get("base_url")) if row.get("base_url") else None,
+        }
+    out: dict[str, object] = {"provider": provider_doc}
+    for key in ("endpoints", "mapping", "resources", "transforms"):
+        section = row.get(key)
+        if isinstance(section, dict):
+            out[key] = section
+    # Mantén compatibilidad con el config monolítico si las columnas están vacías.
+    if not any(isinstance(row.get(k), dict) for k in ("endpoints", "mapping", "resources", "transforms")):
+        for key in ("endpoints", "mapping", "resources", "transforms"):
+            if key not in out and key in config:
+                out[key] = config[key]
+    return out
 
 
 def _db_provider_metadata(container: Container) -> list[tuple[str, str, str | None, bool]]:
@@ -207,6 +233,17 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
         )
     )
     container.register_catalog_provider(LocalCatalogProvider(Path(config.library_root)))
+    # Índice local (búsqueda híbrida): responde primero desde index_works/index_representations.
+    # Los providers indexados se omiten en vivo; RISM/openscore/local se consultan en vivo.
+    container.register_catalog_provider(
+        IndexCatalogProvider(
+            host=db_config["host"],
+            user=db_config["user"],
+            password=db_config["password"],
+            database=db_config["database"],
+            name="index",
+        )
+    )
 
     # Register metadata of EVERY declared provider (wired or not) so Discover/Sources
     # can list them all. `wired` tells whether the provider is registered as active.

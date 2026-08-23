@@ -1126,12 +1126,41 @@ def create_platform_app(
                     payload.base_url,
                     payload.wired,
                     payload.config,
+                    payload.description,
+                    payload.endpoints,
+                    payload.mapping,
+                    payload.resources,
+                    payload.transforms,
                 )
             )
         except UnauthenticatedError:
             return fail(401, response, "UNAUTHORIZED", "Login required")
         except ForbiddenError:
             return fail(403, response, "FORBIDDEN", "Admin role required")
+
+    @app.delete(
+        "/api/v1/admin/op/providers/{provider_id}",
+        tags=["Providers"],
+        summary="Delete a dynamic provider",
+        description="Elimina un proveedor dinámico de la BD operativa. Exige role=admin.",
+        response_model=SuccessEnvelope[dict[str, object]] | ErrorEnvelope,
+        responses={200: _resp("Deleted", _example({"deleted": True})), 401: _UNAUTHORIZED_401,
+                   403: _FORBIDDEN_403, 404: _NOT_FOUND_404},
+    )
+    def delete_op_provider(
+        provider_id: str,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            deleted = api.delete_op_provider(authorization, provider_id)
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Login required")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+        if not deleted:
+            return fail(404, response, "NOT_FOUND", "Provider not found")
+        return ok({"deleted": True, "provider_id": provider_id})
 
     @app.post(
         "/api/v1/admin/op/providers/{provider_id}/wire",
@@ -2116,4 +2145,3 @@ def create_platform_app(
         return ok(_resolution_results_dto(data))
 
     return app
- 

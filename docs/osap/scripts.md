@@ -142,7 +142,8 @@ python scripts/test_authority_coverage.py [--db BD] [--limit 100] [--from-id 0]
 | `extract_composers_from_dump.py` | Extraer compositores del dump completo de Wikidata. |
 | `fichas_30.py` | Fichas de ground truth de los 30 (evidencia, procedencia, conflictos). |
 | `ground_truth_30.py` | Ground truth de resolución de los 30. |
-| `index_works.py` | Indexador local de obras (paso 1 del índice): lee el proveedor OMR (osap-storage) y puebla `index_works`+`index_representations` (osap-api) con normalización y dedupe. |
+| `index_works.py` | **Indexador local de obras multi-proveedor** (paso 1 del índice): lee OMR (osap-storage), IMSLP (Worklist API), Mutopia (make-table.cgi) y MusicBrainz (dump local) y puebla `index_works`+`index_representations` (osap-api) con normalización y dedupe. Uso: `python script/index_works.py --providers omr,imslp,mutopia,musicbrainz`. OMR construye `download_url={storage}/api/download/{file_id}` y `available=1`. MusicBrainz filtra a tipos de música artística (`--mb-types art`) por defecto. |
+| `sync_index.py` | **Sincronización incremental del índice** con estado persistido en `sync_state` (tabla de osap-api): relanza `index_works.py` reanudando donde terminó (IMSLP desde `start`, OMR desde el último `work_id`, Mutopia completo). Para programar con cron/crontab cada X tiempo. Uso: `python script/sync_index.py --providers imslp,omr,mutopia [--omr-base-url https://...]`. |
 | `identity_resolver.py` | **Resolver de identidad escalonado** (evidencia acumulada) sobre obras de storage. |
 | `inventory_title_noise.py` | Inventario de patrones de ruido en títulos (FASE 5.7.2). |
 | `process_250_batch.py` | Procesar 250 obras (`works250.json`) → resultados + resumen. |
@@ -158,6 +159,7 @@ python scripts/test_authority_coverage.py [--db BD] [--limit 100] [--from-id 0]
 | `validation_report.py` | Validación de compositor → `resolved` seguro (FASE 5.8). |
 | `works_resolve_experiment.py` | Experimento v1 de `/works/resolve` (250 obras). |
 | `deploy.ps1` | Deploy de OSAP a producción (frontend + backend + reinicio). |
+| `sync_db_down.ps1` | **Sincroniza la BD operativa de osap-api desde el VPS a desarrollo** (solo lectura): exporta de `osap_api` (excepto `app_config`) y restaura en la BD local `osap-api`. Permite que las pruebas locales trabajen con el índice real + storage/auth reales (`dev_mode=1`). Uso: `powershell -File script/sync_db_down.ps1`. |
 | `pre_dbadmin_tunnel.ps1` | Túnel SSH para administración de BD. |
 
 ### candidate_resolver.py
@@ -169,6 +171,28 @@ corpus = evidencia real); los de menos obras se resuelven solo con fuentes local
 ```
 PYTHONPATH=<osap-api> python script/candidate_resolver.py --limit 100 \
     --db-user osap --db-password osap2027 --db-name osap_storage [--threshold 20]
+```
+
+### sync_index.py
+Sincronización incremental del índice con el estado persistido en `sync_state` (tabla de
+osap-api, creada automáticamente). Relanza `index_works.py` por proveedor reanudando donde
+terminó: IMSLP desde `start` (la Worklist API no expone cambios recientes → se relanza
+completo y es idempotente), OMR desde el último `work_id` de storage, Mutopia completo.
+Pensado para programarse con cron/crontab.
+```
+PYTHONPATH=<osap-api> python script/sync_index.py --providers imslp,omr,mutopia \
+    --db-user osap --db-password osap2027 --db-api osap_api --db-omr osap_storage \
+    --omr-base-url https://storage.openmusicrepository.com
+```
+Ejemplo cron (cada 6 h en el VPS):
+```
+0 */6 * * * cd ~/osap-api && PYTHONPATH=. .venv/bin/python script/sync_index.py \
+    --providers omr,mutopia --db-user osap --db-password osap2027 \
+    --db-api osap_api --db-omr osap_storage \
+    --omr-base-url https://storage.openmusicrepository.com >> ~/sync_index.log 2>&1
+0 3 * * *   cd ~/osap-api && PYTHONPATH=. .venv/bin/python script/sync_index.py \
+    --providers imslp --db-user osap --db-password osap2027 \
+    --db-api osap_api --db-omr osap_storage >> ~/sync_imslp.log 2>&1
 ```
 
 ### identity_resolver.py (script principal de la pasada)

@@ -48,6 +48,29 @@ def test_provider_upsert_and_wired(store) -> None:
     assert store.get_provider("prov-x")["wired"] == 1
 
 
+def test_provider_description_and_delete(store) -> None:
+    row = store.upsert_provider(
+        "prov-desc",
+        "Provider Desc",
+        base_url="https://x",
+        wired=True,
+        config={"endpoint": "https://x/search"},
+        description={"en": "Test directory", "es": "Directorio de prueba"},
+        endpoints={"search": {"path": "/search"}},
+        mapping={"work": {"id": "id"}},
+        transforms={"fields": {}},
+    )
+    assert row["description"] == {"en": "Test directory", "es": "Directorio de prueba"}
+    assert row["endpoints"] == {"search": {"path": "/search"}}
+    got = store.get_provider("prov-desc")
+    assert got is not None
+    assert got["description"] == {"en": "Test directory", "es": "Directorio de prueba"}
+    assert got["mapping"] == {"work": {"id": "id"}}
+    assert store.delete_provider("prov-desc") is True
+    assert store.get_provider("prov-desc") is None
+    assert store.delete_provider("prov-desc") is False
+
+
 def test_app_config(store) -> None:
     assert store.get_config("missing") is None
     store.set_config("theme", "dark")

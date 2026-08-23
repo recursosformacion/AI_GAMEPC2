@@ -5,6 +5,12 @@ enabled: true
 priority: 100
 base_url: https://www.cpdl.org/wiki
 native_formats: [pdf]
+description:
+  es: "CPDL (Choral Public Domain Library): partituras corales de dominio público para SATB/SSA/TTBB y más."
+  en: "CPDL (Choral Public Domain Library): public-domain choral scores for SATB/SSA/TTBB and more."
+  ca: "CPDL (Choral Public Domain Library): partitures corals de domini públic per a SATB/SSA/TTBB i més."
+  fr: "CPDL (Choral Public Domain Library) : partitions chorales du domaine public pour SATB/SSA/TTBB et plus."
+  de: "CPDL (Choral Public Domain Library): gemeinfreie Chorpartituren für SATB/SSA/TTBB und mehr."
 authentication:
   type: none
 protocol: mediawiki      # definido; NO cableado como conector directo en esta fase

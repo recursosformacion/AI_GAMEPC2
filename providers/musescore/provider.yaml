@@ -6,6 +6,12 @@ priority: 100
 base_url: https://musescore.com
 native_formats: [mscz, mscx, pdf]
 conversion: mscz/mscx -> MusicXML (unzip mscz; mscx is MusicXML-compatible source)
+description:
+  es: "MuseScore.com: comunidad de partituras creadas con MuseScore (requiere API key / OAuth para acceso programático)."
+  en: "MuseScore.com: community of scores created with MuseScore (requires API key / OAuth for programmatic access)."
+  ca: "MuseScore.com: comunitat de partitures creades amb MuseScore (requereix API key / OAuth per accés programàtic)."
+  fr: "MuseScore.com : communauté de partitions créées avec MuseScore (nécessite une clé API / OAuth pour l'accès programmatique)."
+  de: "MuseScore.com: Community von mit MuseScore erstellten Noten (erfordert API-Schlüssel / OAuth für den Programmzugriff)."
 authentication:
   type: oauth            # requiere API key / OAuth; con rate limits
 protocol: web            # sin endpoint REST público estable; necesita fetcher propio

@@ -6,6 +6,12 @@ priority: 100
 base_url: https://api.musopen.org/v1
 native_formats: [pdf, musicxml, midi]
 conversion: ninguno (a veces MusicXML directo)
+description:
+  es: "Musopen: grabaciones y partituras de dominio público (API deprecada; requiere clave)."
+  en: "Musopen: public-domain recordings and scores (deprecated API; key required)."
+  ca: "Musopen: enregistraments i partitures de domini públic (API obsoleta; requereix clau)."
+  fr: "Musopen : enregistrements et partitions du domaine public (API obsolète ; clé requise)."
+  de: "Musopen: gemeinfreie Aufnahmen und Noten (veraltete API; Schlüssel erforderlich)."
 authentication:
   type: api_key          # API deprecada; requiere API key; limitada a dominio publico
 protocol: rest           # endpoint REST, pero key-gated y sin mantenimiento activo

@@ -4,6 +4,12 @@ version: 1.3
 enabled: true
 priority: 100
 base_url: https://api.github.com
+description:
+  es: "OpenScore: transcripciones en dominio público alojadas en GitHub, con fuentes MusicXML/MEI editables."
+  en: "OpenScore: public-domain transcriptions hosted on GitHub, with editable MusicXML/MEI sources."
+  ca: "OpenScore: transcripcions de domini públic allotjades a GitHub, amb fonts MusicXML/MEI editables."
+  fr: "OpenScore : transcriptions du domaine public hébergées sur GitHub, avec sources MusicXML/MEI éditables."
+  de: "OpenScore: gemeinfreie Transkriptionen auf GitHub, mit editierbaren MusicXML/MEI-Quellen."
 authentication:
   type: github_token
 protocol: github

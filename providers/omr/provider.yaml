@@ -6,6 +6,12 @@ priority: 100
 base_url: https://storage.openmusicrepository.com
 native_formats: [musicxml, pdf, midi]
 conversion: ninguno
+description:
+  es: "Catálogo propio de partituras digitalizadas (MusicXML) con metadatos normalizados y compositores resueltos."
+  en: "Our own catalog of digitized scores (MusicXML) with normalized metadata and resolved composers."
+  ca: "Catàleg propi de partitures digitalitzades (MusicXML) amb metadades normalitzades i compositors resolts."
+  fr: "Notre propre catalogue de partitions numérisées (MusicXML) avec métadonnées normalisées et compositeurs résolus."
+  de: "Eigener Katalog digitalisierter Noten (MusicXML) mit normalisierten Metadaten und aufgelösten Komponisten."
 authentication:
   type: none
 protocol: storage        # /api/v1/search -> array JSON (OmrStorageFetcher, Nivel 2)

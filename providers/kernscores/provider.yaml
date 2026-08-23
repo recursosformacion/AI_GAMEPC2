@@ -6,6 +6,12 @@ priority: 100
 base_url: https://kern.humdrum.org
 native_formats: [kern]
 conversion: kern (Humdrum) -> MusicXML (fase posterior; se entregaría el enlace del .krn)
+description:
+  es: "KernScores: colección académica de música en formato Humdrum **kern** (CCARH)."
+  en: "KernScores: academic collection of music in Humdrum **kern** format (CCARH)."
+  ca: "KernScores: col·lecció acadèmica de música en format Humdrum **kern** (CCARH)."
+  fr: "KernScores : collection académique de musique au format Humdrum **kern** (CCARH)."
+  de: "KernScores: akademische Musiksammlung im Humdrum-**kern**-Format (CCARH)."
 authentication:
   type: none
 protocol: github         # definido: existe KernScoresFetcher; NO cableado (sin mirror GitHub verificado/buscable)
