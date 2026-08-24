@@ -245,7 +245,7 @@ export function AdminProvidersPage() {
                 className="mt-1 w-full rounded border border-osap-border bg-osap-surface px-2 py-1 text-sm"
               />
             </label>
-            <label className="flex items-center gap-2 text-xs text-osap-muted" title={t("admin.providersWireHint")}>
+            <label className="flex items-center gap-2 text-xs text-osap-muted" title={t("admin.providersConnectHint")}>
               <input
                 type="checkbox"
                 checked={form.wired}
@@ -253,7 +253,7 @@ export function AdminProvidersPage() {
                 disabled={viewing !== null}
                 className="h-4 w-4"
               />
-              {t("admin.providersWire")}
+              {t("admin.providersConnect")}
             </label>
           </div>
 
@@ -336,8 +336,7 @@ export function AdminProvidersPage() {
           <table className="w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-osap-border text-left text-xs text-osap-muted">
-                <th className="px-2 py-2">provider_id</th>
-                <th className="px-2 py-2">{t("admin.providersName")}</th>
+                <th className="px-2 py-2">{t("admin.providersProvider")}</th>
                 <th className="px-2 py-2">{t("admin.providersDescription")}</th>
                 <th className="px-2 py-2">base_url</th>
                 <th className="px-2 py-2">{t("admin.providersState")}</th>
@@ -347,8 +346,10 @@ export function AdminProvidersPage() {
             <tbody>
               {items.map((p) => (
                 <tr key={p.provider_id} className="border-b border-osap-border">
-                  <td className="px-2 py-2 font-mono text-xs">{p.provider_id}</td>
-                  <td className="px-2 py-2">{p.name}</td>
+                  <td className="px-2 py-2">
+                    <div className="font-medium">{p.name}</div>
+                    <div className="font-mono text-xs text-osap-muted">{p.provider_id}</div>
+                  </td>
                   <td className="px-2 py-2 text-osap-muted">{desc(p) || "—"}</td>
                   <td className="px-2 py-2 font-mono text-xs">{p.base_url || "—"}</td>
                   <td className="px-2 py-2">
@@ -363,33 +364,28 @@ export function AdminProvidersPage() {
                     </span>
                   </td>
                   <td className="px-2 py-2 text-right">
-                    <div className="flex justify-end gap-1">
-                      <button
-                        onClick={() => startView(p)}
-                        className="rounded border border-osap-border px-2 py-0.5 text-xs"
+                    <div className="flex justify-end gap-1.5">
+                      <IconButton
                         title={t("admin.providersView")}
-                      >
-                        {t("admin.providersView")}
-                      </button>
-                      <button
+                        onClick={() => startView(p)}
+                        path="M2.5 12S5.5 5.5 12 5.5 21.5 12 21.5 12 18.5 18.5 12 18.5 2.5 12 2.5 12z M12 15a3 3 0 100-6 3 3 0 000 6z"
+                      />
+                      <IconButton
+                        title={t("admin.providersEdit")}
                         onClick={() => startEdit(p)}
-                        className="rounded border border-osap-border px-2 py-0.5 text-xs"
-                      >
-                        {t("admin.providersEdit")}
-                      </button>
-                      <button
+                        path="M12 20h9 M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"
+                      />
+                      <IconButton
+                        title={p.wired ? t("admin.providersDisconnect") : t("admin.providersConnect")}
                         onClick={() => toggleWired(p, !p.wired)}
-                        className="rounded border border-osap-border px-2 py-0.5 text-xs"
-                        title={t("admin.providersWireHint")}
-                      >
-                        {p.wired ? t("admin.providersUnwire") : t("admin.providersWire")}
-                      </button>
-                      <button
+                        path="M5 12h14 M13 6l6 6-6 6"
+                      />
+                      <IconButton
+                        title={t("admin.providersDelete")}
+                        danger
                         onClick={() => void remove(p)}
-                        className="rounded border border-osap-danger/50 px-2 py-0.5 text-xs text-osap-danger"
-                      >
-                        {t("admin.providersDelete")}
-                      </button>
+                        path="M3 6h18 M8 6V4h8v2 M19 6l-1 14H6L5 6 M10 11v6 M14 11v6"
+                      />
                     </div>
                   </td>
                 </tr>
@@ -399,5 +395,44 @@ export function AdminProvidersPage() {
         </div>
       )}
     </div>
+  );
+}
+
+function IconButton({
+  title,
+  onClick,
+  path,
+  danger = false,
+}: {
+  title: string;
+  onClick: () => void;
+  path: string;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      type="button"
+      title={title}
+      aria-label={title}
+      onClick={onClick}
+      className={`rounded p-1 transition-colors ${
+        danger
+          ? "text-osap-danger hover:bg-osap-danger/10"
+          : "text-osap-muted hover:bg-osap-surface hover:text-osap-accent"
+      }`}
+    >
+      <svg
+        width="16"
+        height="16"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d={path} />
+      </svg>
+    </button>
   );
 }

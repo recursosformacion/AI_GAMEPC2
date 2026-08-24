@@ -60,8 +60,8 @@ DEFAULT_PROVIDER_ORDER = (
 
 _LOCAL_ROUTES = {
     "storage": "http://127.0.0.1:8000",
-    "auth_token": "http://osap-auth/auth-api/oauth/token",
-    "auth_base": "http://osap-auth/auth-api",
+    "auth_token": "http://127.0.0.1:8200/oauth/token",
+    "auth_base": "http://127.0.0.1:8200/auth",
 }
 _REAL_ROUTES = {
     "storage": "https://storage.openmusicrepository.com",
@@ -70,16 +70,34 @@ _REAL_ROUTES = {
 }
 
 
-def _routes(deployment: str, dev_mode: int) -> tuple[dict[str, str], bool]:
+def _routes(
+    deployment: str, dev_mode: int, config: Configuration
+) -> tuple[dict[str, str], bool]:
     """Decide las rutas (storage/auth) y si es solo lectura según entorno y dev_mode.
 
-    - deployment == "prod": rutas reales, escribible.
-    - deployment == "dev": dev_mode=0 → local; dev_mode=1 → real y SOLO lectura.
+    storage/auth/app se comunican por HTTP y pueden estar en máquinas distintas: los
+    valores de configuración (OSAP_STORAGE_BASE_URL / OSAP_AUTH_TOKEN_URL /
+    OSAP_AUTH_BASE_URL, o `[osap]` en osap.toml) SIEMPRE vencen a los defaults.
+
+    - deployment == "prod": sin override, usa los dominios públicos (o el VPS monólito
+      si se configura 127.0.0.1); escribible.
+    - deployment == "dev": dev_mode=0 → local (127.0.0.1); dev_mode=1 → real y SOLO lectura.
     """
     if deployment == "prod":
-        return _REAL_ROUTES, False
-    use_real = dev_mode == 1
-    return (_REAL_ROUTES if use_real else _LOCAL_ROUTES), use_real
+        base = dict(_REAL_ROUTES)
+        read_only = False
+    else:
+        use_real = dev_mode == 1
+        base = dict(_REAL_ROUTES if use_real else _LOCAL_ROUTES)
+        read_only = use_real
+    # Override por configuración (soporta máquinas distintas).
+    if config.storage_base_url:
+        base["storage"] = config.storage_base_url.rstrip("/")
+    if config.auth_token_url:
+        base["auth_token"] = config.auth_token_url
+    if config.auth_base_url:
+        base["auth_base"] = config.auth_base_url.rstrip("/")
+    return base, read_only
 
 
 def _provider_definition(
@@ -154,7 +172,7 @@ def _db_provider_metadata(container: Container) -> list[tuple[str, str, str | No
 
 def wire(container: Container, configuration: Configuration | None = None) -> Container:
     config = configuration or load_configuration()
-    routes, storage_read_only = _routes(config.deployment, config.dev_mode)
+    routes, storage_read_only = _routes(config.deployment, config.dev_mode, config)
     storage_base = routes["storage"]
     auth_token_url = routes["auth_token"]
     auth_base = routes["auth_base"]

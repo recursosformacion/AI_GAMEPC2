@@ -141,6 +141,7 @@ export function ComposerPage() {
 
       {collections.length > 0 && (
         <Card title={t("work.collections")}>
+          <p className="mb-2 text-xs text-osap-muted">{t("work.collectionsHint")}</p>
           <div className="flex flex-wrap gap-3">
             {collections.map((c) => (
               <label key={c} className="flex items-center gap-1.5 text-sm">

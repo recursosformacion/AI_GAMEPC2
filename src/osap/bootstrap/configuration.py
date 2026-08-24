@@ -29,7 +29,7 @@ class Configuration:
     conexión a la BD ([db]). `deployment` (prod/dev) y `dev_mode` deciden las rutas.
     """
 
-    deployment: str = "development"  # "prod" | "development" (default)
+    deployment: str = "prod"  # "prod" (default) | "development"
     dev_mode: int = 0  # 0 = local, 1 = real (solo lectura) — solo en dev
     confidence_threshold: float = 0.8
     max_processing_time: float = 300.0
@@ -57,6 +57,9 @@ class Configuration:
     osap_api_db_name: str | None = None
     dev_auth_bypass: bool = False
     storage_web_base: str | None = None
+    storage_base_url: str | None = None
+    auth_token_url: str | None = None
+    auth_base_url: str | None = None
     oidc_issuer: str | None = None
     oidc_client_id: str | None = None
     oidc_client_secret: str | None = None
@@ -95,6 +98,9 @@ _CONFIG_FIELDS: dict[str, tuple[str, Any]] = {
     "oidc_scope": ("OSAP_OIDC_SCOPE", str),
     "dev_auth_bypass": ("OSAP_DEV_AUTH_BYPASS", bool),
     "storage_web_base": ("OSAP_STORAGE_WEB_BASE", str),
+    "storage_base_url": ("OSAP_STORAGE_BASE_URL", str),
+    "auth_token_url": ("OSAP_AUTH_TOKEN_URL", str),
+    "auth_base_url": ("OSAP_AUTH_BASE_URL", str),
 }
 
 # Campo -> (sección TOML, clave) para leer config desde osap.toml (precedencia media).
@@ -117,6 +123,9 @@ _TOML_SECTIONS: dict[str, tuple[str, str]] = {
     "oidc_scope": ("oidc", "scope"),
     "dev_auth_bypass": ("osap", "dev_auth_bypass"),
     "storage_web_base": ("osap", "storage_web_base"),
+    "storage_base_url": ("osap", "storage_base_url"),
+    "auth_token_url": ("osap", "auth_token_url"),
+    "auth_base_url": ("osap", "auth_base_url"),
 }
 
 # Reglas de validación por servicio.
@@ -236,6 +245,14 @@ def load_configuration(path: str | Path | None = None, service_name: str | None 
 
     config = Configuration(**{**base.__dict__, **overrides})
 
+    # Entorno de despliegue: si OSAP_ENV=development y no se forzó OSAP_DEPLOYMENT,
+    # se considera desarrollo (rutas locales); en caso contrario prod (rutas públicas).
+    if os.environ.get("OSAP_DEPLOYMENT") is None:
+        env = os.environ.get("OSAP_ENV", "development").strip().lower()
+        config = Configuration(
+            **{**config.__dict__, "deployment": "development" if env == "development" else "prod"}
+        )
+
     if service_name:
         validate_configuration(config, service_name, data, config_path)
 
@@ -287,7 +304,12 @@ def _validate_strict(
         for field in fields:
             raw_value = section_data.get(field)
             if raw_value is None or (isinstance(raw_value, str) and not raw_value.strip()):
-                errors.append(f"Campo obligatorio '{section}.{field}' vacío o faltante en {config_ref}")
+                # El valor puede venir por variable de entorno (cargada en `config`),
+                # p. ej. OSAP_OIDC_CLIENT_SECRET / OSAP_SERVICE_CLIENT_SECRET.
+                config_attr = f"{section}_{field}"
+                env_value = getattr(config, config_attr, None)
+                if not env_value:
+                    errors.append(f"Campo obligatorio '{section}.{field}' vacío o faltante en {config_ref}")
 
     # Validar que los campos de BD estén definidos en producción
     db_fields = {

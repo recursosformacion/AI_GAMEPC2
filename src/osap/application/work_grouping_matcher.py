@@ -232,6 +232,34 @@ class WorkGroupingMatcher:
         # 6. Fallback: título muy parecido, sin conflicto estructurado. La regla 1
         #    ya vetó compositores contradictorios, así que aquí basta la similitud
         #    de título (funciona aunque el compositor sea desconocido en un lado).
+        #    PROTECCIÓN: cuando el título reducido es genérico (p. ej. 'prelude',
+        #    'sonata'), un catálogo/número/clave presente en un solo lado es señal de
+        #    obra distinta y NO se fusiona. Con título específico (≥3 tokens, p. ej.
+        #    'ave verum corpus') el título resuelve la ambigüedad y se permite.
+        core_tokens = (na.title or "").split()
+        generic_title = len(core_tokens) <= 2
+        if generic_title:
+            if (na.catalog or nb.catalog) and na.catalog != nb.catalog:
+                return decision(0.0, MergeVerdict.NOT_MERGED, [])
+            if (na.work_number or nb.work_number) and na.work_number != nb.work_number:
+                return decision(0.0, MergeVerdict.NOT_MERGED, [])
+            if (na.key or nb.key) and na.key != nb.key:
+                return decision(0.0, MergeVerdict.NOT_MERGED, [])
+        else:
+            if (
+                na.catalog
+                and nb.catalog
+                and na.catalog != nb.catalog
+            ) or (
+                na.work_number
+                and nb.work_number
+                and na.work_number != nb.work_number
+            ) or (
+                na.key
+                and nb.key
+                and na.key != nb.key
+            ):
+                return decision(0.0, MergeVerdict.NOT_MERGED, [])
         sim = _token_similarity(na.title or "", nb.title or "")
         if sim >= _TITLE_FALLBACK_SIM:
             ev: list[Evidence] = [TitleSimilarity(similarity=round(sim, 2), confidence=round(sim, 2))]
