@@ -165,8 +165,20 @@ class StorageComposerClient:
             provider=self._admin_token_provider,
         )
         if 200 <= status < 300 and isinstance(doc, dict):
-            return {str(k): int(v) for k, v in doc.items()}
+            return {str(k): _as_int(v) for k, v in doc.items()}
         return {"total": 0, "correct": 0, "incorrect": 0, "reviewed": 0, "not_reviewed": 0}
+
+    def storage_statistics(self) -> dict[str, int]:
+        """Estadísticas del repositorio de osap-storage (endpoint público)."""
+        status, doc = self._call(
+            "GET",
+            "/api/v1/statistics",
+            scope="storage:read",
+            provider=self._token_provider,
+        )
+        if 200 <= status < 300 and isinstance(doc, dict):
+            return {str(k): _as_int(v) for k, v in doc.items()}
+        return {"archives": 0, "entries": 0, "files": 0, "bytes": 0}
 
     def add_alias(self, composer_id: str, alias: str) -> dict[str, object] | None:
         status, doc = self._call(

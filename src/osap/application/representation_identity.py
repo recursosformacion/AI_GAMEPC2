@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from functools import lru_cache
 
 from src.osap.application.metadata_normalizer import MetadataNormalizer
 
@@ -88,8 +89,14 @@ class RepresentationIdentity:
         return "|".join(parts)
 
 
+@lru_cache(maxsize=8192)
 def build_identity(title: str, composer: str | None) -> RepresentationIdentity:
-    """Normaliza un título/compositor crudos en una ficha de identidad."""
+    """Normaliza un título/compositor crudos en una ficha de identidad.
+
+    Cacheada: el matcher re-compara las mismas representaciones O(n²) veces y
+    esta normalización era el cuello de botella dominante en búsquedas amplias
+    (p. ej. "moz" -> 400 candidatos -> 36s de agrupación).
+    """
     nm = MetadataNormalizer.normalize(title, composer)
     tokens = _TOKEN.findall(nm.normalized_title)
     work_type = next((WORK_TYPES[t] for t in tokens if t in WORK_TYPES), None)

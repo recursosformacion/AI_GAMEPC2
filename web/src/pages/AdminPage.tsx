@@ -90,6 +90,44 @@ export function AdminPage() {
               {t("admin.sourceSuggestions")} → {t("sources.manage")}
             </Link>
           </div>
+
+          {adminOverview.storage !== undefined && (
+            <div className="rounded border border-osap-border bg-osap-surface p-4">
+              <h2 className="mb-2 text-sm font-semibold">{t("admin.storageStats")}</h2>
+              <div className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-4">
+                <div>
+                  <p className="text-osap-muted">{t("admin.archives")}</p>
+                  <p className="text-xl font-bold">{adminOverview.storage.archives ?? 0}</p>
+                </div>
+                <div>
+                  <p className="text-osap-muted">{t("admin.entries")}</p>
+                  <p className="text-xl font-bold">{adminOverview.storage.entries ?? 0}</p>
+                </div>
+                <div>
+                  <p className="text-osap-muted">{t("admin.files")}</p>
+                  <p className="text-xl font-bold">{adminOverview.storage.files ?? 0}</p>
+                </div>
+                <div>
+                  <p className="text-osap-muted">{t("admin.materialized")}</p>
+                  <p className="text-xl font-bold">{adminOverview.storage.materialized ?? 0}</p>
+                </div>
+                <div>
+                  <p className="text-osap-muted">{t("admin.pending")}</p>
+                  <p className="text-xl font-bold">{adminOverview.storage.pending ?? 0}</p>
+                </div>
+                <div>
+                  <p className="text-osap-muted">{t("admin.downloaded")}</p>
+                  <p className="text-xl font-bold">{adminOverview.storage.downloaded_tar ?? 0}</p>
+                </div>
+                <div>
+                  <p className="text-osap-muted">{t("admin.bytes")}</p>
+                  <p className="text-xl font-bold">
+                    {(adminOverview.storage.bytes ?? 0).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -73,6 +73,20 @@ class _FakeComposerClient(StorageComposerClient):
             "review_status": review_status,
         }
 
+    def composer_review_stats(self) -> dict[str, int]:
+        return {"total": 2, "correct": 1, "incorrect": 0, "reviewed": 1, "not_reviewed": 1}
+
+    def storage_statistics(self) -> dict[str, int]:
+        return {
+            "archives": 12,
+            "entries": 340,
+            "files": 9800,
+            "downloaded_tar": 9,
+            "materialized": 300,
+            "pending": 40,
+            "bytes": 1_000_000_000,
+        }
+
 
 def _build(auth) -> TestClient:
     client = _FakeComposerClient()
@@ -193,3 +207,23 @@ def test_review_composer_admin_200() -> None:
     assert resp.status_code == 200
     data = resp.json()["data"]
     assert data["review_status"] == "correct"
+
+
+def test_admin_overview_requires_admin() -> None:
+    client = _build(StaticTokenAuthenticator(TOKEN_USER, "u1", roles=("user",)))
+    resp = client.get("/api/v1/admin/overview", headers={"Authorization": f"Bearer {TOKEN_USER}"})
+    assert resp.status_code == 403
+
+
+def test_admin_overview_incluye_stats_de_storage() -> None:
+    client = _build(StaticTokenAuthenticator(TOKEN_ADMIN, "admin1", roles=("user", "admin")))
+    resp = client.get("/api/v1/admin/overview", headers={"Authorization": f"Bearer {TOKEN_ADMIN}"})
+    assert resp.status_code == 200
+    data = resp.json()["data"]
+    assert data["composers"]["total"] == 3
+    assert data["composers"]["correct"] == 1
+    assert data["composers"]["reviewed"] == 2
+    assert data["storage"]["archives"] == 12
+    assert data["storage"]["entries"] == 340
+    assert data["storage"]["materialized"] == 300
+    assert data["storage"]["bytes"] == 1_000_000_000

@@ -1091,6 +1091,7 @@ def create_platform_app(
                 composers=cast("dict[str, int]", overview["composers"]),
                 source_suggestions_pending=cast("int", overview["source_suggestions_pending"]),
                 source_suggestions=cast("dict[str, int]", overview["source_suggestions"]),
+                storage=cast("dict[str, int]", overview.get("storage", {})),
             )
         )
 

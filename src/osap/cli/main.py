@@ -48,6 +48,11 @@ def _build_parser() -> argparse.ArgumentParser:
 
     catalog = subparsers.add_parser("catalog", help="Lista catálogos musicales.")
     catalog_sub = catalog.add_subparsers(dest="catalog_command", required=True)
+
+    validate = subparsers.add_parser("validate", help="Valida un MusicXML/.mxl y muestra su calidad.")
+    validate.add_argument("path", help="Ruta al fichero MusicXML (.xml/.musicxml) o .mxl")
+    validate.add_argument("--title", default=None, help="Título (opcional, va al Score)")
+    validate.add_argument("--composer", default=None, help="Compositor (opcional, va al Score)")
     catalog_sub.add_parser("list", help="Lista catálogos disponibles.")
     catalog_sub.add_parser("info", help="Información de un catálogo.").add_argument("name")
 
@@ -527,9 +532,59 @@ def _run_search(args: argparse.Namespace, container: Container) -> int:
     return 0
 
 
+def _run_validate(args: argparse.Namespace) -> int:
+    """Valida un MusicXML/.mxl y muestra calidad + errores + warnings."""
+    from src.osap.domain.acquisition_result import AcquisitionResult
+    from src.osap.domain.musical_source import MusicalSource
+    from src.osap.domain.output_format import OutputFormat
+    from src.osap.domain.quality_report import QualityReport
+    from src.osap.domain.value_objects import Confidence, Duration, ProviderId, SourceId
+    from src.osap.infrastructure.adapters.validation import BasicValidator
+
+    path = Path(args.path)
+    if not path.exists():
+        print(f"Error: no existe {path}")
+        return 1
+
+    content = path.read_bytes()
+    source = MusicalSource(
+        source_id=SourceId(f"file-{path.name}"),
+        content=content,
+        format=OutputFormat.MUSICXML,
+        metadata={"title": args.title, "composer": args.composer},
+    )
+    result = AcquisitionResult(
+        provider_id=ProviderId("file"),
+        source=source,
+        confidence=Confidence(1.0),
+        processing_time=Duration(0.0),
+        format=OutputFormat.MUSICXML,
+    )
+    score = BasicValidator().validate(result)
+    md = score.metadata
+    report_raw = md.get("quality_report")
+    report = report_raw if isinstance(report_raw, QualityReport) else None
+    dims = report.dimensions if report is not None else {}
+
+    print(f"valid: {md.get('valid', False)}")
+    print(f"quality_level: {score.quality_level.value}")
+    print("report:")
+    for dim, value in dims.items():
+        print(f"  {dim.value}: {value:.2f}")
+    print(f"errors: {md.get('errors', [])}")
+    print(f"warnings: {md.get('warnings', [])}")
+    print(f"parts: {md.get('parts', 0)} | measures: {md.get('measures', 0)} | "
+          f"notes: {md.get('notes', 0)} | voices: {md.get('voices', 0)} | "
+          f"lyrics: {md.get('has_lyrics', False)}")
+    return 0 if md.get("valid", False) else 1
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = _build_parser()
     args = parser.parse_args(argv)
+
+    if args.command == "validate":
+        return _run_validate(args)
 
     config = load_configuration()
     if getattr(args, "library", None):

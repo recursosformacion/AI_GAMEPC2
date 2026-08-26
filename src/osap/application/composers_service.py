@@ -116,6 +116,9 @@ class ComposersService:
         self.require_admin(token)
         return self._client.composer_review_stats()
 
+    def storage_statistics(self) -> dict[str, int]:
+        return self._client.storage_statistics()
+
     def catalogues(self, prefix: str | None = None, composer: str | None = None) -> list[dict[str, object]]:
         return self._client.catalogues(prefix, composer)
 

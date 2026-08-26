@@ -450,6 +450,15 @@ export interface AdminOverview {
   composers: Record<string, number>;
   source_suggestions_pending: number;
   source_suggestions: Record<string, number>;
+  storage: {
+    archives: number;
+    entries: number;
+    files: number;
+    downloaded_tar: number;
+    materialized: number;
+    pending: number;
+    bytes: number;
+  };
 }
 
 export interface RegisterResult {

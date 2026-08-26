@@ -1402,10 +1402,12 @@ class PlatformApi:
     def admin_overview(self, token: str | None) -> dict[str, object]:
         stats = self.composer_review_stats(token)
         suggestions = self._store.suggestion_counts()
+        storage = self.composers().storage_statistics()
         return {
             "composers": stats,
             "source_suggestions_pending": suggestions.get("pending", 0),
             "source_suggestions": suggestions,
+            "storage": storage,
         }
 
     # --- proveedores dinámicos + config (BD operativa) -----------------------
