@@ -299,6 +299,25 @@ class _MysqlStore(_MemoryStore):
             if col not in existing:
                 self._run(ddl)
 
+        # Índice FULLTEXT para la búsqueda de texto libre del índice de obras.
+        # `LIKE '%término%'` hace full scan de index_works (355k filas); MATCH usa este
+        # índice y mantiene el esquema idéntico en local y producción por construcción.
+        ft = self._run(
+            "SELECT index_name FROM information_schema.statistics "
+            "WHERE table_schema = DATABASE() AND table_name = 'index_works' "
+            "AND index_name = 'ft_idx_title_composer'"
+        )
+        if not ft:
+            try:
+                self._run(
+                    "ALTER TABLE index_works ADD FULLTEXT INDEX ft_idx_title_composer (title, composer_name)"
+                )
+            except pymysql.err.OperationalError:
+                # Innodb o versión sin FULLTEXT: se deja el LIKE (funciona, más lento).
+                _LOGGER.warning("FULLTEXT no disponible en index_works; se usa LIKE")
+            except pymysql.err.InternalError:
+                _LOGGER.warning("FULLTEXT no disponible en index_works; se usa LIKE")
+
     def get_sync_state(self, key: str) -> str | None:
         rows = self._run("SELECT value FROM sync_state WHERE `key` = %s", (key,))
         return str(rows[0]["value"]) if rows else None
@@ -477,6 +496,7 @@ def build_op_store(
     try:
         store = _MysqlStore(**params)
         store._init()
+        store._migrate()
         return store
     except pymysql.err.OperationalError as exc:
         _LOGGER.warning("MySQL operativo no disponible (%s); usando almacén en memoria", exc)

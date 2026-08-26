@@ -125,6 +125,30 @@ class IndexCatalogProvider(ICatalogProvider):
         self._password = password
         self._database = database
         self._max_results = max_results
+        self._fulltext_available: bool | None = None
+
+    def _has_fulltext(self, conn: pymysql.connections.Connection[DictCursor]) -> bool:
+        """Detecta el índice FULLTEXT `ft_idx_title_composer` (una sola vez).
+
+        Si la migración de esquema todavía no se ha aplicado (deploy previo), la
+        búsqueda cae a LIKE hasta que el índice exista. Nunca lanza.
+        """
+        if self._fulltext_available is not None:
+            return self._fulltext_available
+        available = False
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT COUNT(*) AS n FROM information_schema.statistics "
+                    "WHERE table_schema = DATABASE() AND table_name = 'index_works' "
+                    "AND index_name = 'ft_idx_title_composer'"
+                )
+                row = cur.fetchone()
+                available = bool(row and row["n"] > 0)
+        except Exception:  # noqa: BLE001
+            available = False
+        self._fulltext_available = available
+        return available
 
     @property
     def provider_id(self) -> ProviderId:
@@ -153,9 +177,6 @@ class IndexCatalogProvider(ICatalogProvider):
         )
 
     def search(self, request: SearchRequest) -> tuple[CandidateRepresentation, ...]:
-        query, args = _build_sql(request, self._max_results)
-        if query is None:
-            return ()
         try:
             conn = pymysql.connect(
                 host=self._host,
@@ -170,6 +191,10 @@ class IndexCatalogProvider(ICatalogProvider):
             logger.warning("index provider: MySQL no disponible (%s)", exc)
             return ()
         try:
+            use_fulltext = self._has_fulltext(conn)
+            query, args = _build_sql(request, self._max_results, use_fulltext=use_fulltext)
+            if query is None:
+                return ()
             with conn.cursor() as cur:
                 cur.execute(query, args)
                 rows = cur.fetchall()
@@ -192,7 +217,9 @@ class IndexCatalogProvider(ICatalogProvider):
         raise ScoreResolutionError(f"Index candidate {candidate.candidate_id.value} is not downloadable")
 
 
-def _build_sql(request: SearchRequest, max_results: int) -> tuple[str | None, tuple[object, ...]]:
+def _build_sql(
+    request: SearchRequest, max_results: int, use_fulltext: bool = False
+) -> tuple[str | None, tuple[object, ...]]:
     """Construye la consulta al índice a partir de la SearchRequest.
 
     Devuelve (None, ()) si no hay términos utilizables (no conviene escanear 354k filas).
@@ -242,8 +269,21 @@ def _build_sql(request: SearchRequest, max_results: int) -> tuple[str | None, tu
         else:
             # Query libre general (o texto + catálogo): matchea título/compositor y,
             # si lleva catálogo, también las variantes.
-            free_clauses = ["i.title LIKE %s", "i.composer_name LIKE %s"]
-            free_args = [f"%{free}%", f"%{free}%"]
+            #
+            # FULLTEXT (si el índice existe): un único token >=3 chars sin catálogo
+            # usa MATCH(title, composer_name) BOOLEAN con sufijo '*' -> usa índice, sin
+            # full scan. Cualquier otro caso (multi-palabra, catálogo, token corto) cae
+            # a LIKE (correcto, aunque full scan).
+            free_tokens = free.split()
+            single_token = len(free_tokens) == 1 and len(free_tokens[0]) >= 3
+            if use_fulltext and single_token and not key and not variants:
+                # Prefijo BOOLEAN: 'moz*' matchea tokens que empiezan por 'moz'
+                # (mozart, Mozzafiato...) usando el índice FULLTEXT (sin full scan).
+                free_clauses = ["MATCH(i.title, i.composer_name) AGAINST(%s IN BOOLEAN MODE)"]
+                free_args = [f"{free}*"]
+            else:
+                free_clauses = ["i.title LIKE %s", "i.composer_name LIKE %s"]
+                free_args = [f"%{free}%", f"%{free}%"]
             if key:
                 free_clauses.append("i.catalogue_key LIKE %s")
                 free_args.append(f"%{key}%")
