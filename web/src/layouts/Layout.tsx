@@ -9,6 +9,7 @@ import { LoginForm } from "../components/LoginForm";
 import { RegisterForm } from "../components/RegisterForm";
 import { useOidcLogin } from "../components/useOidcLogin";
 import { useI18n } from "../i18n/I18n";
+import { useCanonical } from "../i18n/useCanonical";
 import { useAuth } from "../state/auth";
 import { useSystem } from "../state/system";
 
@@ -250,6 +251,7 @@ export function StorageBanner() {
 }
 
 export function Layout(): ReactNode {
+  useCanonical();
   return (
     <div className="flex min-h-screen flex-col bg-osap-bg text-osap-ink">
       <StorageBanner />

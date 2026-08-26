@@ -3,19 +3,30 @@ import { Link } from "react-router-dom";
 import { Envelope } from "../components/Envelope";
 import { useI18n } from "../i18n/I18n";
 import { useSources } from "../state/repositorySources";
+import { useProviders } from "../state/providers";
 
 export function SourceCatalogPage() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { list, detail, loadList, loadDetail } = useSources();
+  const providers = useProviders((s) => s.data);
+  const listProviders = useProviders((s) => s.list);
   const [selected, setSelected] = useState<string | null>(null);
 
   useEffect(() => {
     void loadList();
-  }, [loadList]);
+    void listProviders();
+  }, [loadList, listProviders]);
 
   const open = (sourceId: string) => {
     setSelected(sourceId);
     void loadDetail(sourceId);
+  };
+
+  const descOf = (p: { description?: Record<string, string> | string | null }): string => {
+    const d = p.description;
+    if (d && typeof d === "object") return d[lang] ?? d.en ?? d.es ?? "";
+    if (typeof d === "string") return d;
+    return "";
   };
 
   return (
@@ -35,33 +46,94 @@ export function SourceCatalogPage() {
       <Envelope loading={list.loading} error={list.error} data={list.data} emptyMessage={t("states.empty")}>
         {(sources) => {
           const wired = sources.filter((s) => s.status === "Online");
-          return (
-            <ul className="grid gap-4 sm:grid-cols-2">
-              {wired.map((s) => (
-              <li key={s.source_id}>
-                <button
-                  type="button"
-                  onClick={() => open(s.source_id)}
-                  className="block w-full rounded-lg border border-osap-border bg-osap-surface p-4 text-left shadow-sm hover:border-osap-accent"
+          const providerList = providers ?? [];
+          // Una sola tarjeta por fuente: fusiona la info del storage (nombre, provider,
+          // trust/verified, estrellas, calidad) con la del provider de osap-api
+          // (descripción, formatos, website). Clave común: source_id == provider_id.
+          const byProvider = new Map(providerList.map((p) => [p.provider_id.toLowerCase(), p]));
+          const sourceIds = new Set(wired.map((s) => s.source_id.toLowerCase()));
+          const orphanProviders = providerList.filter((p) => !sourceIds.has(p.provider_id.toLowerCase()));
+          const merged = wired.map((s) => ({ source: s, provider: byProvider.get(s.source_id.toLowerCase()) }));
+
+          const renderCard = (
+            source: (typeof wired)[number],
+            provider: (typeof providerList)[number] | undefined,
+            key: string,
+          ) => {
+            const desc = provider ? descOf(provider) : "";
+            const formats = provider?.formats.length ? provider.formats : source.type ? [source.type] : [];
+            const website = provider?.website;
+            const stars = Math.max(1, Math.min(5, Math.round(source.quality / 20)));
+            return (
+              <li key={key}>
+                <div
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => open(source.source_id)}
+                  onKeyDown={(e) => e.key === "Enter" && open(source.source_id)}
+                  className="block h-full w-full cursor-pointer rounded-lg border border-osap-border bg-osap-surface p-4 text-left shadow-sm hover:border-osap-accent"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-osap-accent">{s.name}</span>
-                    <span className={`text-sm ${s.status === "Online" ? "text-osap-success" : "text-osap-danger"}`}>
-                      {s.status}
+                    <span className="font-semibold text-osap-accent">{source.name}</span>
+                    <span className={`text-sm ${source.status === "Online" ? "text-osap-success" : "text-osap-danger"}`}>
+                      {source.status}
                     </span>
                   </div>
-                  <div className="mt-1 text-xs text-osap-muted">
-                    {s.type} · {s.origin} · {s.trust}
+                  <div className="mt-1 flex flex-wrap items-center gap-1 text-xs text-osap-muted">
+                    {source.source_id ? <span className="font-mono">{source.source_id}</span> : null}
+                    {source.trust ? <span className="rounded bg-osap-surface px-1.5 py-0.5">{source.trust}</span> : null}
+                    {source.origin ? <span>{source.origin}</span> : null}
                   </div>
                   <div className="mt-2 text-sm">
-                    {"★".repeat(Math.max(1, Math.min(5, Math.round(s.quality / 20))))}
+                    {"★".repeat(stars)}
                     <span className="ml-1 text-osap-muted">
-                      {s.quality}/100 · {s.quality_label}
+                      {source.quality}/100 · {source.quality_label}
                     </span>
                   </div>
-                </button>
+                  {desc ? <p className="mt-2 text-sm text-osap-muted">{desc}</p> : null}
+                  {formats.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {formats.map((f) => (
+                        <span key={f} className="rounded bg-osap-accent-soft px-2 py-0.5 text-xs">
+                          {f}
+                        </span>
+                      ))}
+                    </div>
+                  ) : null}
+                  {website ? (
+                    <a
+                      href={website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
+                      className="mt-3 inline-flex items-center gap-1 text-xs text-osap-accent hover:underline"
+                    >
+                      {website.replace(/^https?:\/\//, "")} ↗
+                    </a>
+                  ) : null}
+                </div>
               </li>
-            ))}
+            );
+          };
+
+          return (
+            <ul className="grid gap-4 sm:grid-cols-2">
+              {merged.map(({ source, provider }) => renderCard(source, provider, `src-${source.source_id}`))}
+              {orphanProviders.map((p) => {
+                // Providers sin fuente en el storage (no cableados o nuevos): tarjeta propia.
+                const pseudoSource: (typeof wired)[number] = {
+                  source_id: p.provider_id,
+                  name: p.name,
+                  type: p.formats[0] ?? "",
+                  origin: "",
+                  trust: "",
+                  status: p.available ? "Online" : "Offline",
+                  quality: 0,
+                  quality_label: "",
+                  updated_at: "",
+                };
+                return renderCard(pseudoSource, p, `prov-${p.provider_id}`);
+              })}
             </ul>
           );
         }}

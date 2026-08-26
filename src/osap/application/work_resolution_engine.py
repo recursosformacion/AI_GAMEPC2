@@ -186,9 +186,12 @@ class WorkResolutionEngine:
         return provider.download(candidate, request.desired_format)
 
     def rank(
-        self, request: ResolveRequest, on_progress: ProgressCallback | None = None
+        self,
+        request: ResolveRequest,
+        on_progress: ProgressCallback | None = None,
+        on_index_partial: Callable[[tuple[CandidateRepresentation, ...]], None] | None = None,
     ) -> tuple[CandidateRepresentation, ...]:
-        result = self._collect(request, on_progress)
+        result = self._collect(request, on_progress, on_index_partial)
         return self._ranking_engine.rank(result.candidates, request, self._config)
 
     def provider_status(
@@ -214,9 +217,14 @@ class WorkResolutionEngine:
         )
 
     def _collect(
-        self, request: ResolveRequest, on_progress: ProgressCallback | None = None
+        self,
+        request: ResolveRequest,
+        on_progress: ProgressCallback | None = None,
+        on_index_partial: Callable[[tuple[CandidateRepresentation, ...]], None] | None = None,
     ) -> AggregatedProviderResult:
-        return self._orchestrator.search(SearchRequest.from_resolve(request), on_progress)
+        return self._orchestrator.search(
+            SearchRequest.from_resolve(request), on_progress, on_index_partial
+        )
 
 
 def _is_structured(format: object) -> bool:

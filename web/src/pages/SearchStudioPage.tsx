@@ -73,22 +73,40 @@ export function SearchStudioPage() {
   };
 
   const resolve = () => {
-    const payload: Record<string, unknown> = {
+    // Bloques multi: `where` -> providers (dónde), `what_kind` -> formats (qué tipo).
+    // Solo se envían los checkboxes ACTIVOS; vacío = sin filtro.
+    const providers: string[] = [];
+    const formats: string[] = [];
+    const options: Record<string, boolean> = {};
+    for (const block of model?.blocks ?? []) {
+      if (block.kind === "multi") {
+        for (const o of block.options) {
+          if (multi[o]) {
+            if (block.id === "where") providers.push(o);
+            else if (block.id === "what_kind") formats.push(o);
+          }
+        }
+      } else if (block.kind === "boolean") {
+        for (const c of block.criteria) {
+          if (multi[c.key]) options[c.key] = true;
+        }
+      }
+    }
+    const payload = {
       query: text["title"] ?? "",
-      limit: 20,
+      limit: 30,
+      page: 1,
       composer: text["composer"] || null,
       title: text["title"] || null,
       catalogue: text["catalogue"] || null,
-      confidence,
+      formats: formats.length > 0 ? formats : undefined,
+      providers: providers.length > 0 ? providers : undefined,
     };
-    void useSearches.getState().create({
-      query: payload.query as string,
-      limit: 30,
-      composer: payload.composer as string | null,
-      title: payload.title as string | null,
-      catalogue: payload.catalogue as string | null,
-    });
-    void payload;
+    void options;
+    void confidence;
+    // Navega tras lanzar la búsqueda: CandidatesPage mostrará la barra de progreso
+    // y los resultados parciales del índice mientras se refina con los providers en vivo.
+    void useSearches.getState().create(payload);
     navigate("/candidates");
   };
 

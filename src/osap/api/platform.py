@@ -53,10 +53,13 @@ from src.osap.application.metadata_normalizer import MetadataNormalizer
 from src.osap.application.use_cases.resolve_works import ResolvedWorkItem, WorkResolveInput
 from src.osap.application.votes_service import VotesService
 from src.osap.bootstrap.container import Container
+from src.osap.domain.candidate_representation import CandidateRepresentation
 from src.osap.domain.jobs import JobContext, JobTrigger
 from src.osap.domain.knowledge import KnowledgeBase
+from src.osap.domain.output_format import OutputFormat
 from src.osap.domain.principal import Principal
 from src.osap.domain.resolve_request import ResolveRequestBuilder
+from src.osap.domain.value_objects import ProviderId
 from src.osap.domain.votes import ComposerStats, WorkStats, WorkVote
 from src.osap.infrastructure.resolution.acquisition_service import AcquisitionService
 from src.osap.infrastructure.resolution.provider_acquirer import IProviderAcquirer
@@ -151,9 +154,9 @@ def _classify_collection(title: str | None) -> str | None:
 
 
 def _replace_provider_description(
-    response: ProviderResponse, description: dict[str, str]
+    response: ProviderResponse, description: dict[str, str], website: str | None = None
 ) -> ProviderResponse:
-    """Devuelve un ProviderResponse con la descripción multi-idioma (objeto frozen)."""
+    """Devuelve un ProviderResponse con la descripción multi-idioma y website (objeto frozen)."""
     return ProviderResponse(
         provider_id=response.provider_id,
         name=response.name,
@@ -161,7 +164,43 @@ def _replace_provider_description(
         formats=list(response.formats),
         last_sync=response.last_sync,
         description=description,
+        website=website,
     )
+
+
+_PROVIDER_NAME_MAP = {
+    "imslp": "imslp",
+    "openscore": "openscore",
+    "local": "local",
+    "openmusicrepository": "omr",
+    "open music repository": "omr",
+    "omr": "omr",
+    "mutopia": "mutopia",
+    "musicbrainz": "musicbrainz",
+    "rism": "rism",
+}
+
+
+def _provider_id_for_name(name: str) -> str | None:
+    key = name.strip().lower().replace("_", " ").replace("-", " ")
+    return _PROVIDER_NAME_MAP.get(key) or _PROVIDER_NAME_MAP.get(key.replace(" ", ""))
+
+
+_FORMAT_NAME_MAP = {
+    "musicxml": "musicxml",
+    "mxl": "musicxml",
+    "xml": "musicxml",
+    "pdf": "pdf",
+    "midi": "midi",
+    "mid": "midi",
+    "ly": "ly",
+    "kern": "kern",
+}
+
+
+def _format_for_name(name: str) -> str | None:
+    key = name.strip().lower()
+    return _FORMAT_NAME_MAP.get(key)
 
 
 def _remote_online(url: str) -> bool:
@@ -373,6 +412,8 @@ def _search_signature(req: SearchRequest) -> str:
             (req.catalogue or "").strip().lower(),
             (req.instrumentation or "").strip().lower(),
             (req.language or "").strip().lower(),
+            ",".join(sorted(f.lower() for f in req.formats)),
+            ",".join(sorted(p.strip().lower() for p in req.providers)),
         ]
     )
 
@@ -568,7 +609,7 @@ class PlatformApi:
                     id="where",
                     label="WHERE",
                     kind="multi",
-                    options=["IMSLP", "OpenScore", "Local", "OpenMusicRepository"],
+                    options=["IMSLP", "OpenScore", "OpenMusicRepository", "MusicBrainz", "Mutopia", "RISM"],
                 ),
                 SearchModelBlock(
                     id="what_kind",
@@ -617,6 +658,16 @@ class PlatformApi:
             builder = builder.instrumentation(req.instrumentation)
         if req.language:
             builder = builder.language(req.language)
+        # Filtros del Estudio: dónde (providers) y qué tipo (formats).
+        if req.providers:
+            for name in req.providers:
+                pid = _provider_id_for_name(name)
+                if pid:
+                    builder = builder.allow_provider(ProviderId(pid))
+        if req.formats:
+            fmt = _format_for_name(req.formats[0])
+            if fmt:
+                builder = builder.format(OutputFormat(fmt))
         request = builder.build()
         logger.info(
             "search start query=%r composer=%r title=%r catalogue=%r",
@@ -626,7 +677,99 @@ class PlatformApi:
             req.catalogue,
         )
         engine = self._container.work_resolution_engine()
-        ranked = engine.rank(request, on_progress=on_provider)
+
+        def build_results(
+            ranked: tuple[CandidateRepresentation, ...],
+        ) -> tuple[list[SearchResultItem], int]:
+            groups = list(self._container.work_merge_service().group(ranked))
+            # Strict entity filters (providers may return loose matches for free-text).
+            if composer_canonical:
+                groups = [
+                    g
+                    for g in groups
+                    if g.work.composer and composer_canonical.lower() in g.work.composer.lower()
+                ]
+            if req.title:
+                groups = [g for g in groups if g.work.title and req.title.lower() in g.work.title.lower()]
+            if req.catalogue:
+                from src.osap.infrastructure.catalogs.index.index_catalog_provider import (
+                    _catalogue_normalized,
+                )
+
+                cat_norm = _catalogue_normalized(req.catalogue)
+                groups = [
+                    g
+                    for g in groups
+                    if g.work.catalogue_number
+                    and (
+                        req.catalogue.lower() in g.work.catalogue_number.lower()
+                        or (
+                            cat_norm
+                            and cat_norm
+                            in _catalogue_normalized(g.work.catalogue_number)
+                        )
+                    )
+                ]
+            results: list[SearchResultItem] = []
+            total = len(groups)
+            for group in groups:
+                work = group.work
+                reps = []
+                wanted_formats = (
+                    {f for f in (_format_for_name(x) for x in req.formats) if f}
+                    if req.formats
+                    else None
+                )
+                wanted_pids = (
+                    {p for p in (_provider_id_for_name(x) for x in req.providers) if p}
+                    if req.providers
+                    else None
+                )
+                for m in group.representations:
+                    if m is not None:
+                        rep = self._to_rep(m, work)
+                        # Filtro del Estudio: qué tipo (formats) y dónde (providers).
+                        if wanted_formats and rep.format not in wanted_formats:
+                            continue
+                        if wanted_pids and rep.provider not in wanted_pids:
+                            continue
+                        reps.append(rep)
+                if not reps:
+                    continue
+                best = max(reps, key=lambda r: r.confidence)
+                results.append(
+                    SearchResultItem(
+                        work=WorkInfo(
+                            work_id=work.work_id.value,
+                            title=work.title,
+                            composer=work.composer,
+                            catalogue=work.catalogue_number,
+                            collection=_classify_collection(work.title),
+                        ),
+                        representation=best,
+                        representations=reps,
+                        score=best.confidence,
+                        evidence=[],
+                        relationships=self._work_relationships(work),
+                    )
+                )
+            return results, total
+
+        # Resultado parcial: publica lo que el índice ya encontró (a los ~1-3s),
+        # mientras los providers en vivo siguen consultándose. La UI muestra esto
+        # al instante y se refina cuando termina la búsqueda completa.
+        index_partial: Callable[[tuple[CandidateRepresentation, ...]], None] | None = None
+        if on_partial is not None:
+
+            def index_partial(found: tuple[CandidateRepresentation, ...]) -> None:
+                try:
+                    partial, ptotal = build_results(found)
+                    if partial:
+                        on_partial(partial, ptotal)
+                except Exception:  # noqa: BLE001
+                    pass
+
+        ranked = engine.rank(request, on_progress=on_provider, on_index_partial=index_partial)
         if progress is not None:
             progress(60)
         ranked_providers = sorted({c.provider_id.value for c in ranked})
@@ -636,64 +779,16 @@ class PlatformApi:
             ranked_providers,
             "openmusicrepository" in ranked_providers,
         )
-        groups = list(self._container.work_merge_service().group(ranked))
+        results, total = build_results(ranked)
         if progress is not None:
             progress(85)
-        logger.info("search groups=%d", len(groups))
-        # Strict entity filters (providers may return loose matches for free-text).
-        if composer_canonical:
-            groups = [g for g in groups if g.work.composer and composer_canonical.lower() in g.work.composer.lower()]
-        if req.title:
-            groups = [g for g in groups if g.work.title and req.title.lower() in g.work.title.lower()]
-        if req.catalogue:
-            from src.osap.infrastructure.catalogs.index.index_catalog_provider import (
-                _catalogue_normalized,
-            )
-
-            cat_norm = _catalogue_normalized(req.catalogue)
-            groups = [
-                g
-                for g in groups
-                if g.work.catalogue_number
-                and (
-                    req.catalogue.lower() in g.work.catalogue_number.lower()
-                    or (
-                        cat_norm
-                        and cat_norm
-                        in _catalogue_normalized(g.work.catalogue_number)
-                    )
-                )
-            ]
-        results: list[SearchResultItem] = []
-        total = len(groups)
-        for group in groups:
-            work = group.work
-            reps = []
-            for m in group.representations:
-                if m is not None:
-                    reps.append(self._to_rep(m, work))
-            if not reps:
-                continue
-            best = max(reps, key=lambda r: r.confidence)
-            results.append(
-                SearchResultItem(
-                    work=WorkInfo(
-                        work_id=work.work_id.value,
-                        title=work.title,
-                        composer=work.composer,
-                        catalogue=work.catalogue_number,
-                        collection=_classify_collection(work.title),
-                    ),
-                    representation=best,
-                    representations=reps,
-                    score=best.confidence,
-                    evidence=[],
-                    relationships=self._work_relationships(work),
-                )
-            )
+        logger.info("search groups=%d", len(results))
         if on_partial is not None:
             on_partial(results, total)
-        return self._enrich_search_results(results), total
+        enriched = self._enrich_search_results(results, req.formats, req.providers)
+        # total = obras que quedan tras el filtro de formatos/proveedores.
+        filtered_total = len([r for r in enriched if r.representations])
+        return enriched, filtered_total
 
     def _paginate(
         self, results: list[SearchResultItem], total: int, page: int, limit: int
@@ -795,7 +890,12 @@ class PlatformApi:
         comp = _NORMALIZER.canonical_composer(composer) if composer else ""
         return f"{core}|{comp}"
 
-    def _enrich_search_results(self, results: list[SearchResultItem]) -> list[SearchResultItem]:
+    def _enrich_search_results(
+        self,
+        results: list[SearchResultItem],
+        formats: list[str] | None = None,
+        providers: list[str] | None = None,
+    ) -> list[SearchResultItem]:
         """Iguala las representaciones de cada obra usando el cache por obra.
 
         Una obra identificada (título+compositor normalizados) debe mostrar SIEMPRE las
@@ -803,7 +903,24 @@ class PlatformApi:
         Las obras con representaciones de <5 providers se enriquecen con una búsqueda
         enfocada por título (una vez; el resultado queda cacheado). Se ordenan
         por nº de providers (las más infrarrepresentadas primero) con un tope por búsqueda.
+
+        `formats`/`providers` (filtros del Estudio) se aplican sobre las representaciones
+        finales de cada obra.
         """
+        wanted_formats = (
+            {f for f in (_format_for_name(x) for x in formats) if f} if formats else None
+        )
+        wanted_pids = (
+            {p for p in (_provider_id_for_name(x) for x in providers) if p} if providers else None
+        )
+
+        def _filt(reps: list[RepresentationInfo]) -> list[RepresentationInfo]:
+            if wanted_formats:
+                reps = [r for r in reps if r.format in wanted_formats]
+            if wanted_pids:
+                reps = [r for r in reps if r.provider in wanted_pids]
+            return reps
+
         results = self._merge_same_work(results)
         out: list[SearchResultItem] = []
         candidates_to_enrich: list[tuple[int, SearchResultItem]] = []
@@ -818,7 +935,9 @@ class PlatformApi:
                 providers_now = {r.provider for r in item.representations}
                 if len(providers_now) < 5:
                     candidates_to_enrich.append((len(providers_now), item))
-            reps = list(current.values())
+            # Cache sin filtrar; el filtro del Estudio se aplica solo a la salida.
+            reps_all = list(current.values())
+            reps = _filt(reps_all)
             best = max(reps, key=lambda r: r.confidence) if reps else item.representation
             out.append(
                 SearchResultItem(
@@ -841,11 +960,12 @@ class PlatformApi:
             merged = {r.id: r for r in item.representations}
             for r in focused:
                 merged[r.id] = r
-            reps = list(merged.values())
-            self._cache_work_reps(key, reps)
+            reps_all = list(merged.values())
+            self._cache_work_reps(key, reps_all)
+            reps = _filt(reps_all)
             for it in out:
                 if it.work.work_id == item.work.work_id:
-                    best = max(reps, key=lambda r: r.confidence)
+                    best = max(reps, key=lambda r: r.confidence) if reps else it.representation
                     out[out.index(it)] = SearchResultItem(
                         work=it.work, representation=best, representations=reps,
                         score=it.score, evidence=it.evidence, relationships=it.relationships,
@@ -925,28 +1045,39 @@ class PlatformApi:
     # --- providers ----------------------------------------------------------
 
     def list_providers(self) -> list[ProviderResponse]:
-        responses = [self._provider_response(provider) for provider in self._container.catalog_manager().providers()]
+        # `index` y `local` son proveedores internos (índice local / disco): no se
+        # muestran como fuentes al usuario.
+        responses = [
+            self._provider_response(provider)
+            for provider in self._container.catalog_manager().providers()
+            if provider.provider_id.value not in ("index", "local")
+        ]
         active_ids = {r.provider_id for r in responses}
         for pid, name, _base_url, wired in self._container.defined_providers():
-            if pid in active_ids or pid == "local":
+            if pid in active_ids or pid in ("local", "index"):
                 continue
             responses.append(
                 ProviderResponse(provider_id=pid, name=name, available=wired, formats=[], last_sync=None)
             )
-        # Descripción multi-idioma desde la BD operativa (providers.description JSON).
+        # Descripción multi-idioma + website desde la BD operativa.
         try:
-            descriptions: dict[str, dict[str, str]] = {}
+            enrich: dict[str, tuple[dict[str, str], str | None]] = {}
             for row in self._store.list_providers():
+                pid = str(row.get("provider_id"))
                 desc = row.get("description")
+                clean: dict[str, str] = {}
                 if isinstance(desc, dict):
                     clean = {str(k): str(v) for k, v in desc.items() if isinstance(v, str)}
-                    if clean:
-                        descriptions[str(row.get("provider_id"))] = clean
+                base_url = row.get("base_url")
+                website = str(base_url) if base_url else None
+                if clean or website:
+                    enrich[pid] = (clean, website)
         except Exception:  # noqa: BLE001
-            descriptions = {}
+            enrich = {}
         for i, r in enumerate(responses):
-            if r.provider_id in descriptions:
-                responses[i] = _replace_provider_description(r, descriptions[r.provider_id])
+            if r.provider_id in enrich:
+                clean, website = enrich[r.provider_id]
+                responses[i] = _replace_provider_description(r, clean, website)
         return responses
 
     def get_provider(self, provider_id: str) -> ProviderResponse | None:
@@ -1024,6 +1155,9 @@ class PlatformApi:
 
     def get_composer(self, composer_id: str) -> dict[str, object] | None:
         return self.composers().get_composer(composer_id)
+
+    def get_composer_biography(self, composer_id: str) -> dict[str, object] | None:
+        return self.composers().get_composer_biography(composer_id)
 
     def composer_works(self, composer_id: str, limit: int, offset: int) -> dict[str, object]:
         return self.composers().composer_works(composer_id, limit, offset)
@@ -1226,17 +1360,18 @@ class PlatformApi:
 
     def composer_review_stats(self, token: str | None) -> dict[str, int]:
         stats = self.composers().composer_review_stats(token)
-        correct = int(stats.get("correct") or 0)
-        incorrect = int(stats.get("incorrect") or 0)
+        # Estados reales: `reviewed`/`not_reviewed`/`review_required` (puestos por el
+        # proceso de biografías) + `correct`/`incorrect` (clasificación manual/IA antigua).
+        reviewed = int(stats.get("reviewed") or 0) + int(stats.get("correct") or 0) + int(stats.get("incorrect") or 0)
         not_reviewed = int(stats.get("not_reviewed") or 0)
-        # Criterio: los estados son correct / incorrect / not_reviewed.
-        # revisados = correctos + incorrectos; total = suma de todos.
+        review_required = int(stats.get("review_required") or 0)
+        total = reviewed + not_reviewed + review_required
         return {
-            "total": correct + incorrect + not_reviewed,
-            "correct": correct,
-            "incorrect": incorrect,
-            "reviewed": correct + incorrect,
-            "not_reviewed": not_reviewed,
+            "total": total,
+            "correct": int(stats.get("correct") or 0),
+            "incorrect": int(stats.get("incorrect") or 0),
+            "reviewed": reviewed,
+            "not_reviewed": not_reviewed + review_required,
         }
 
     def catalogues(self, prefix: str | None = None, composer: str | None = None) -> list[CatalogueRead]:

@@ -460,6 +460,10 @@ def _composer_detail_dto(d: dict[str, object]) -> ComposerDetailResponse:
     raw_identifiers = identifiers if isinstance(identifiers, list) else []
     build_evidence = d.get("evidence")
     raw_build_evidence = build_evidence if isinstance(build_evidence, list) else []
+    key_works = d.get("biography_key_works")
+    raw_key_works = key_works if isinstance(key_works, list) else []
+    references = d.get("biography_references")
+    raw_references = references if isinstance(references, list) else []
     return ComposerDetailResponse(
         id=cast("str", d.get("id") or ""),
         name=cast("str", d.get("name") or ""),
@@ -478,6 +482,16 @@ def _composer_detail_dto(d: dict[str, object]) -> ComposerDetailResponse:
         review_reason=cast("str | None", d.get("review_reason")),
         identifiers=[_composer_identifier_dto(dict(i)) for i in raw_identifiers if isinstance(i, dict)],
         evidence=[_composer_build_evidence_dto(dict(e)) for e in raw_build_evidence if isinstance(e, dict)],
+        biography_summary=cast("str | None", d.get("biography_summary")),
+        biography_era=cast("str | None", d.get("biography_era")),
+        biography_nationality=cast("str | None", d.get("biography_nationality")),
+        biography_key_works=[str(k) for k in raw_key_works if isinstance(k, str)],
+        biography_key_fact=cast("str | None", d.get("biography_key_fact")),
+        biography_references=[
+            str(r) if isinstance(r, str) else str(r.get("title") or r.get("url") or r)
+            for r in raw_references
+            if isinstance(r, (dict, str))
+        ],
     )
 
 
@@ -1686,6 +1700,25 @@ def create_platform_app(
         except StorageComposerError:
             return fail(503, response, "SERVICE_UNAVAILABLE", "Composer service is not configured")
         # La consulta pública solo expone compositores visibles del Maestro.
+        if detail is None or not bool(detail.get("visible", True)):
+            return fail(404, response, "NOT_FOUND", "Composer not found")
+        return ok(_composer_detail_dto(detail))
+
+    @app.get(
+        "/api/v1/composers/{composer_id}/biography",
+        tags=["Composers"],
+        summary="Composer biography",
+        description="Detalle de un compositor con su biografía (resumen, época, nacionalidad, "
+        "obras clave, dato clave, referencias) y las obras del compositor. "
+        "Backend: osap-storage con storage:read.",
+        response_model=SuccessEnvelope[ComposerDetailResponse] | ErrorEnvelope,
+        responses={200: _resp("Composer biography", _example({})), 404: _NOT_FOUND_404, **_standard_errors()},
+    )
+    def get_composer_biography(composer_id: str, response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            detail = api.get_composer_biography(composer_id)
+        except StorageComposerError:
+            return fail(503, response, "SERVICE_UNAVAILABLE", "Composer service is not configured")
         if detail is None or not bool(detail.get("visible", True)):
             return fail(404, response, "NOT_FOUND", "Composer not found")
         return ok(_composer_detail_dto(detail))

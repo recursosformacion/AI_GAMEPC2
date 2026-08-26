@@ -253,15 +253,21 @@ def _build_sql(request: SearchRequest, max_results: int) -> tuple[str | None, tu
         clauses.append("(" + " OR ".join(free_clauses) + ")")
         args.extend(free_args)
     where = " AND ".join(clauses)
+    providers = tuple(_INDEXED_PROVIDERS)
+    if request.allowed_providers:
+        allowed = {p.value for p in request.allowed_providers}
+        providers = tuple(p for p in providers if p in allowed)
+        if not providers:
+            return None, ()
     sql = (
         "SELECT i.id, i.title, i.composer_name, i.catalogue, i.year, "
         "r.provider, r.format, r.download_url, r.available, r.quality "
         "FROM index_representations r "
         "JOIN index_works i ON i.id = r.work_id "
-        f"WHERE {where} AND r.provider IN (%s, %s, %s, %s) "
+        f"WHERE {where} AND r.provider IN ({', '.join(['%s'] * len(providers))}) "
         "ORDER BY i.title LIMIT %s"
     )
-    args.extend(_INDEXED_PROVIDERS)
+    args.extend(providers)
     args.append(max_results)
     return sql, tuple(args)
 

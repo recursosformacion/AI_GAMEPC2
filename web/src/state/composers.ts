@@ -9,6 +9,7 @@ import type { ComposerDetail, ComposerList, ComposerSummary, ComposerWorks, Merg
 interface ComposersState {
   list: ComposerList | null;
   detail: ComposerDetail | null;
+  biography: ComposerDetail | null;
   works: ComposerWorks | null;
   loading: boolean;
   error: ApiError | null;
@@ -22,6 +23,7 @@ interface ComposersState {
   setVisible: (visible: string) => void;
   fetchList: (q: string, limit: number, offset: number, review: string | null, visible?: string) => Promise<void>;
   fetchDetail: (id: string) => Promise<void>;
+  fetchBiography: (id: string) => Promise<void>;
   fetchWorks: (id: string, limit: number, offset: number) => Promise<void>;
   merge: (targetId: string, sourceIds: string[]) => Promise<void>;
   createComposer: (name: string) => Promise<ComposerSummary>;
@@ -35,6 +37,7 @@ interface ComposersState {
 export const useComposers = create<ComposersState>((set, get) => ({
   list: null,
   detail: null,
+  biography: null,
   works: null,
   loading: false,
   error: null,
@@ -60,6 +63,15 @@ export const useComposers = create<ComposersState>((set, get) => ({
     try {
       const detail = await apiClient.getComposer(id);
       set({ detail, loading: false, error: null });
+    } catch (e) {
+      set({ loading: false, error: e instanceof ApiError ? e : new ApiError("UNKNOWN", String(e)) });
+    }
+  },
+  fetchBiography: async (id) => {
+    set({ loading: true, error: null });
+    try {
+      const biography = await apiClient.getComposerBiography(id);
+      set({ biography, loading: false, error: null });
     } catch (e) {
       set({ loading: false, error: e instanceof ApiError ? e : new ApiError("UNKNOWN", String(e)) });
     }

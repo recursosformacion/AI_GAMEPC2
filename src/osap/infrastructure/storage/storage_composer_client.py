@@ -73,6 +73,18 @@ class StorageComposerClient:
             return doc
         return None
 
+    def get_composer_biography(self, composer_id: str) -> dict[str, object] | None:
+        """Detalle público de un compositor con su biografía (endpoint público de storage)."""
+        status, doc = self._call(
+            "GET",
+            f"/api/v1/composers/{_q(composer_id)}",
+            scope="storage:read",
+            provider=self._token_provider,
+        )
+        if 200 <= status < 300 and isinstance(doc, dict):
+            return doc
+        return None
+
     def composer_works(self, composer_id: str, limit: int, offset: int) -> dict[str, object]:
         path = f"/api/admin/composers/{_q(composer_id)}/works?limit={limit}&offset={offset}"
         status, doc = self._call(

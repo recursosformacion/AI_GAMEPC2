@@ -105,6 +105,10 @@ export class ApiClient {
     return this.get<ComposerDetail>(`/composers/${encodeURIComponent(composerId)}`);
   }
 
+  async getComposerBiography(composerId: string): Promise<ComposerDetail> {
+    return this.get<ComposerDetail>(`/composers/${encodeURIComponent(composerId)}/biography`);
+  }
+
   async getWork(workId: string): Promise<WorkDetail> {
     return this.get<WorkDetail>(`/works/${encodeURIComponent(workId)}`);
   }

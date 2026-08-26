@@ -35,6 +35,8 @@ class SearchRequest(_Frozen):
     catalogue: str | None = None
     instrumentation: str | None = None
     language: str | None = None
+    formats: list[str] = []
+    providers: list[str] = []
 
 
 class WorkInfo(_Frozen):
@@ -112,6 +114,7 @@ class ProviderResponse(_Frozen):
     formats: list[str] = []
     last_sync: str | None = None
     description: dict[str, str] = {}
+    website: str | None = None
 
 
 class KnowledgeObservationDTO(_Frozen):
@@ -465,6 +468,12 @@ class ComposerDetailResponse(_Frozen):
     review_reason: str | None = None
     identifiers: list[ComposerIdentifierResponse] = []
     evidence: list[ComposerEvidenceResponse] = []
+    biography_summary: str | None = None
+    biography_era: str | None = None
+    biography_nationality: str | None = None
+    biography_key_works: list[str] = []
+    biography_key_fact: str | None = None
+    biography_references: list[str] = []
 
 
 class ComposerWorkRefResponse(_Frozen):

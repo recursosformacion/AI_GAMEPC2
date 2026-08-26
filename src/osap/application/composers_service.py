@@ -35,6 +35,9 @@ class ComposersService:
     def get_composer(self, composer_id: str) -> dict[str, object] | None:
         return self._client.get_composer(composer_id)
 
+    def get_composer_biography(self, composer_id: str) -> dict[str, object] | None:
+        return self._client.get_composer_biography(composer_id)
+
     def composer_works(self, composer_id: str, limit: int, offset: int) -> dict[str, object]:
         return self._client.composer_works(composer_id, limit, offset)
 

@@ -29,6 +29,8 @@ export interface SearchRequest {
   catalogue?: string | null;
   instrumentation?: string | null;
   language?: string | null;
+  formats?: string[];
+  providers?: string[];
 }
 
 export interface WorkInfo {
@@ -104,6 +106,7 @@ export interface ProviderResponse {
   formats: string[];
   last_sync: string | null;
   description?: Record<string, string>;
+  website?: string | null;
 }
 
 export interface KnowledgeObservation {
@@ -281,6 +284,19 @@ export interface ComposerDetail {
   creation_evidence: ComposerCreationEvidence[];
   review_status: string | null;
   reviewed_at: string | null;
+  visible?: boolean;
+  birth_year?: string | null;
+  death_year?: string | null;
+  biography_summary?: string | null;
+  biography_era?: string | null;
+  biography_nationality?: string | null;
+  biography_key_works?: string[];
+  biography_key_fact?: string | null;
+  biography_references?: string[];
+  identifiers?: Array<{ id?: string; type?: string; value?: string; url?: string }>;
+  evidence?: Array<{ source?: string; code?: string; score?: number; reason?: string }>;
+  cluster_id?: string | null;
+  review_reason?: string | null;
 }
 
 export interface ComposerWorkRef {

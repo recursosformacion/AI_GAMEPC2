@@ -66,14 +66,17 @@ class ProviderOrchestrator:
         self._cache_ttl_seconds = cache_ttl_seconds
 
     def search(
-        self, search: SearchRequest, on_progress: ProgressCallback | None = None
+        self,
+        search: SearchRequest,
+        on_progress: ProgressCallback | None = None,
+        on_index_partial: Callable[[tuple[CandidateRepresentation, ...]], None] | None = None,
     ) -> AggregatedProviderResult:
         cached = self._cached(search)
         if cached is not None:
             return cached
 
         plan = self._build_plan(search)
-        result = self._execute(plan, search, on_progress)
+        result = self._execute(plan, search, on_progress, on_index_partial)
         self._store(search, result)
         return result
 
@@ -119,7 +122,11 @@ class ProviderOrchestrator:
         return ProviderExecutionPlan(steps=steps)
 
     def _execute(
-        self, plan: ProviderExecutionPlan, search: SearchRequest, on_progress: ProgressCallback | None
+        self,
+        plan: ProviderExecutionPlan,
+        search: SearchRequest,
+        on_progress: ProgressCallback | None,
+        on_index_partial: Callable[[tuple[CandidateRepresentation, ...]], None] | None = None,
     ) -> AggregatedProviderResult:
         """Phase 2 (enrich): consult ALL eligible providers and merge everything.
 
@@ -170,6 +177,10 @@ class ProviderOrchestrator:
                 found = self.provider(index_step.provider_id).search(search)
                 elapsed = time.monotonic() - start
                 logger.info("provider index: %d candidato(s) en %.3fs", len(found), elapsed)
+                # Publica los candidatos del índice inmediatamente (resultado parcial
+                # para la UI; los providers en vivo se agregan después).
+                if on_index_partial is not None and found:
+                    on_index_partial(found)
                 index_results = _index_by_provider(found)
                 for pid, cands in index_results.items():
                     if cands:
@@ -241,6 +252,10 @@ class ProviderOrchestrator:
 
     @staticmethod
     def _eligible(provider: ICatalogProvider, search: SearchRequest) -> bool:
+        # El proveedor de índice siempre consulta (filtra allowed_providers internamente
+        # para que 'dónde' del Estudio limite a los proveedores indexados elegidos).
+        if provider.provider_id.value == "index":
+            return True
         if search.allowed_providers and provider.provider_id not in search.allowed_providers:
             return False
         if provider.provider_id in search.excluded_providers:
