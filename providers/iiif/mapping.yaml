@@ -1,0 +1,29 @@
+work:
+  array: "items"
+  fields:
+    id: "id"
+    title: "label.en[0]"
+    composer: "metadata.composer[0].value.en[0]"
+    catalogue: "metadata.catalogue[0].value.en[0]"
+    confidence: "0.85"
+    musical_key: "metadata.key[0].value.en[0]"
+    genre: "metadata.genre[0].value.en[0]"
+    license: "metadata.license[0].value.en[0]"
+    public_domain: "metadata.rights[0].value.en[0]"
+  links:
+    download: "items[0].items[0].items[0].body.id"
+    view: "id"
+    thumbnail: "thumbnail[0].id"
+
+resources:
+  array: "items[0].items[0].items"
+  fields:
+    id: "id"
+    format: "type"
+    mime_type: "format"
+    available: "1"
+    license: "metadata.license[0].value.en[0]"
+  links:
+    download: "body.id"
+    view: "body.id"
+    thumbnail: "thumbnail[0].id"

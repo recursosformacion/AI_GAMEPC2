@@ -16,7 +16,7 @@
       "type": "shell",
       "command": ".venv\\Scripts\\python.exe -m uvicorn api.main:app --host 127.0.0.1 --port 8000 --reload",
       "options": {
-        "cwd": "D:\\Proyectos\\AI_OSAP\\osap-storage",
+        "cwd": "${workspaceFolder}/../osap-storage",
         "env": { "OSAP_CONFIG": "config.test.yaml" }
       },
       "isBackground": true,
@@ -28,7 +28,7 @@
       "label": "osap-auth: uvicorn (:8200, reload)",
       "type": "shell",
       "command": ".venv\\Scripts\\python.exe -m uvicorn api.main:create_app_from_settings --factory --host 127.0.0.1 --port 8200 --reload",
-      "options": { "cwd": "D:\\Proyectos\\AI_OSAP\\osap-auth" },
+      "options": { "cwd": "${workspaceFolder}/../osap-auth" },
       "isBackground": true,
       "presentation": { "reveal": "silent", "panel": "dedicated", "group": "servers", "clear": false },
       "runOptions": { "runOn": "folderOpen" },

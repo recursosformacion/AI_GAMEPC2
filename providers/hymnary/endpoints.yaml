@@ -1,0 +1,29 @@
+search:
+  method: GET
+  path: /api/tunes
+  query:
+    text: "{query}"
+    page: "{page}"
+    per_page: "{limit}"
+    format: "json"
+
+lookup:
+  method: GET
+  path: /api/tunes
+  query:
+    text: "{query}"
+    page: "1"
+    per_page: "10"
+    format: "json"
+
+resource:
+  method: GET
+  path: /api/tunes/{id}
+  query:
+    format: "json"
+
+download:
+  method: GET
+  path: /api/tunes/{id}/musicxml
+  query:
+    format: "xml"

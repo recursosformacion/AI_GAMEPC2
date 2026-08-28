@@ -60,6 +60,7 @@ class Configuration:
     storage_base_url: str | None = None
     auth_token_url: str | None = None
     auth_base_url: str | None = None
+    iiif_base_url: str | None = None
     oidc_issuer: str | None = None
     oidc_client_id: str | None = None
     oidc_client_secret: str | None = None
@@ -101,6 +102,7 @@ _CONFIG_FIELDS: dict[str, tuple[str, Any]] = {
     "storage_base_url": ("OSAP_STORAGE_BASE_URL", str),
     "auth_token_url": ("OSAP_AUTH_TOKEN_URL", str),
     "auth_base_url": ("OSAP_AUTH_BASE_URL", str),
+    "iiif_base_url": ("OSAP_IIIF_BASE_URL", str),
 }
 
 # Campo -> (sección TOML, clave) para leer config desde osap.toml (precedencia media).

@@ -33,6 +33,7 @@ from src.osap.infrastructure.providers.adapters.generic_provider_adapter import 
 )
 from src.osap.infrastructure.providers.fetchers import (
     GitHubFetcher,
+    IIIFFetcher,
     MediaWikiFetcher,
     MusicBrainzFetcher,
     MutopiaFetcher,
@@ -248,6 +249,23 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
         RemoteCatalogProvider(
             definition=_provider_definition(op_store, "rism", providers_root / "rism"),
             fetcher=RismFetcher(),
+        )
+    )
+    # --- New providers (Hymnary, IIIF, Zenodo) ---
+    container.register_catalog_provider(
+        RemoteCatalogProvider(
+            definition=_provider_definition(op_store, "hymnary", providers_root / "hymnary"),
+        )
+    )
+    container.register_catalog_provider(
+        RemoteCatalogProvider(
+            definition=_provider_definition(op_store, "iiif", providers_root / "iiif"),
+            fetcher=IIIFFetcher(base_url=config.iiif_base_url or "https://iiif.example.org"),
+        )
+    )
+    container.register_catalog_provider(
+        RemoteCatalogProvider(
+            definition=_provider_definition(op_store, "zenodo", providers_root / "zenodo"),
         )
     )
     container.register_catalog_provider(LocalCatalogProvider(Path(config.library_root)))

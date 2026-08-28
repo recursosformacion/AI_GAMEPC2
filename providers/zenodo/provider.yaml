@@ -1,0 +1,22 @@
+id: zenodo
+name: Zenodo (datasets MusicXML/MEI)
+version: "1.3"
+enabled: true
+priority: 60
+base_url: https://zenodo.org
+native_formats: [musicxml, mei, mxl, xml, midi]
+conversion: "Datasets MusicXML/MEI directos; algunos requieren descompresión ZIP"
+description:
+  es: "Zenodo: repositorio de datos de investigación con datasets musicales (MusicXML, MEI, kern) bajo licencias abiertas (CC0, CC-BY)."
+  en: "Zenodo: research data repository with musical datasets (MusicXML, MEI, kern) under open licenses (CC0, CC-BY)."
+  ca: "Zenodo: repositori de dades de recerca amb conjunts de dades musicals (MusicXML, MEI, kern) sota llicències obertes (CC0, CC-BY)."
+  fr: "Zenodo : dépôt de données de recherche avec jeux de données musicaux (MusicXML, MEI, kern) sous licences ouvertes (CC0, CC-BY)."
+  de: "Zenodo: Forschungsdaten-Repository mit musikalischen Datensätzen (MusicXML, MEI, kern) unter offenen Lizenzen (CC0, CC-BY)."
+authentication:
+  type: none
+contract:
+  version: "1.3"
+  search_endpoint: search
+  lookup_endpoint: lookup
+  resource_endpoint: resource
+  download_endpoint: download

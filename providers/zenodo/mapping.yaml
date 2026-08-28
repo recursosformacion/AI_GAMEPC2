@@ -1,0 +1,25 @@
+work:
+  array: "hits.hits"
+  fields:
+    id: "id"
+    title: "metadata.title"
+    composer: "metadata.creators[0].name"
+    catalogue: "metadata.subjects[0].subject"
+    confidence: "0.8"
+    musical_key: "metadata.keywords[0]"
+    genre: "metadata.subjects[1].subject"
+    license: "metadata.access_right"
+    public_domain: "metadata.access_right"
+
+resources:
+  array: "files"
+  fields:
+    id: "key"
+    format: "type"
+    mime_type: "mimetype"
+    available: "1"
+    license: "metadata.access_right"
+  links:
+    download: "links.self"
+    view: "links.record_html"
+    thumbnail: "links.preview"

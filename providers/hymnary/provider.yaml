@@ -1,0 +1,22 @@
+id: hymnary
+name: Hymnary.org
+version: "1.3"
+enabled: true
+priority: 80
+base_url: https://hymnary.org
+native_formats: [musicxml, midi, pdf, txt]
+conversion: "MusicXML nativo; MIDI y PDF disponibles directamente"
+description:
+  es: "Hymnary.org: base de datos de himnos y melodías con MusicXML, MIDI y PDF (dominio público / CC-BY)."
+  en: "Hymnary.org: hymn and tune database with MusicXML, MIDI, and PDF (public domain / CC-BY)."
+  ca: "Hymnary.org: base de dades d'himnes i melodies amb MusicXML, MIDI i PDF (domini públic / CC-BY)."
+  fr: "Hymnary.org : base de données d'hymnes et mélodies avec MusicXML, MIDI et PDF (domaine public / CC-BY)."
+  de: "Hymnary.org: Lied- und Melodie-Datenbank mit MusicXML, MIDI und PDF (Public Domain / CC-BY)."
+authentication:
+  type: none
+contract:
+  version: "1.3"
+  search_endpoint: search
+  lookup_endpoint: lookup
+  resource_endpoint: resource
+  download_endpoint: download

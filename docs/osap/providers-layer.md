@@ -5,12 +5,16 @@
 > interno. El núcleo (Canonicalizer, Matcher, Ranking, Work Resolution, Relationships,
 > Knowledge Hub) nunca conoce cómo responde un proveedor.
 
-> **Estado actual (2026-08):** las definiciones de proveedores viven en la **BD de osap-api**
+> **Estado actual (2026-08-27):** las definiciones de proveedores viven en la **BD de osap-api**
 > (tabla `providers`, cargadas en `wiring.py` vía `_provider_definition`). Los directorios
 > `providers/{id}/` YAML son la **plantilla de origen** que se importó; la BD es la fuente
 > de verdad. El `endpoints.yaml` de IMSLP (API.ISCR.php) es la definición Nivel 1 de
 > reserva: **la búsqueda real de IMSLP la hace el `MediaWikiFetcher`** (`api.php?action=query
 > &list=search`, índice completo, límite configurable), no `API.ISCR.php`.
+>
+> **Nuevos proveedores añadidos 2026-08-27:** `hymnary` (Hymnary.org, Nivel 1 REST), `iiif`
+> (IIIF Manifest genérico para BNE/BnF/LoC/DIAMM/HathiTrust, Nivel 2 con `IIIFFetcher`),
+> `zenodo` (Zenodo datasets MusicXML/MEI, Nivel 1 REST).
 >
 > **Modelo en BD (2026-08):** cada YAML del proveedor va a **su propia columna** en
 > `providers` — `endpoints`, `mapping`, `resources`, `transforms` (más `config` monolítico
@@ -80,7 +84,9 @@ src/osap/infrastructure/providers/
 │                                     #   + ProviderFetcher + load_definition
 ├── fetchers/
 │   ├── github_fetcher.py      # OpenScore (Nivel 2)
-│   └── mediawiki_fetcher.py   # IMSLP (Nivel 2)
+│   ├── iiif_fetcher.py        # IIIF Manifest BNE/BnF/LoC (Nivel 2)
+│   ├── mediawiki_fetcher.py   # IMSLP (Nivel 2)
+│   └── ...
 └── (definiciones por proveedor fuera del paquete, p. ej. providers/{omr,imslp,openscore}/)
     ├── provider.yaml          # id, name, base_url, authentication, protocol
     ├── endpoints.yaml         # bloques endpoint: lookup, search, resource, download
@@ -236,6 +242,9 @@ Los antiguos `IMSLPProvider.download()`, `OMRProvider.download()` y
 | `imslp` | 2 | MediaWiki (`MediaWikiFetcher`) | PDF | **Activo** (wiring) |
 | `openscore` | 2 | GitHub (`GitHubFetcher`) | MusicXML | **Activo** (wiring) |
 | `local` | 3 | Ficheros | — | **Activo** (wiring) |
+| `hymnary` | 1 | REST JSON (`/api/tunes`) | MusicXML, MIDI, PDF | **Activo** (wiring) |
+| `iiif` | 2 | IIIF Presentation API 3.0 (`IIIFFetcher`) | MusicXML, MEI, PDF | **Activo** (wiring) |
+| `zenodo` | 1 | REST JSON (`/api/records`) | MusicXML, MEI, MIDI | **Activo** (wiring) |
 | `cpdl` | 2 | MediaWiki (`MediaWikiFetcher`) | PDF | **Definido, NO cableado** |
 | `musescore` | 2/3 | Web + OAuth (fetcher propio) | MSCZ/MSCX/PDF | **Definido, NO cableado** |
 | `mutopia` | 2 | HTML CGI (`MutopiaFetcher`, `make-table.cgi`) | LY/PDF/MIDI | **Activo** (wiring) |
@@ -243,21 +252,14 @@ Los antiguos `IMSLPProvider.download()`, `OMRProvider.download()` y
 | `freescores` | 2/3 | Web/HTML (fetcher propio) | PDF/MusicXML | **Definido, NO cableado** |
 | `musopen` | 2 | REST key-gated (fetcher propio) | PDF/MusicXML | **Definido, NO cableado** |
 
-> **Sondeo de accesibilidad (2026-08-09):** de los proveedores adicionales solo **Mutopia** es
-> alcanzable (búsqueda vía `cgibin/make-table.cgi`) y está **cableado**. El resto está
-> **bloqueado o caído** y no se puede cablear de momento: `cpdl`, `musescore` y `musopen`
-> responden **HTTP 403 Cloudflare**; `kernscores` devuelve **503 / timeout**; `freescores.com`
-> es una landing page de dominio, no un catálogo.
+> **Sondeo de accesibilidad (2026-08-27):** de los proveedores adicionales **Mutopia, Hymnary, IIIF (BnF Gallica), Zenodo** son alcanzables y están **cableados**. El resto sigue **bloqueado o caído**: `cpdl`, `musescore` y `musopen` responden **HTTP 403 Cloudflare**; `kernscores` devuelve **503 / timeout**; `freescores.com` es una landing page de dominio, no un catálogo.
 >
 > **Descarga protegida:** no es un bloqueo. OSAP-API **facilita el `links.download`** del
 > proveedor (y avisa al usuario). Si el usuario tiene cuenta en el destino, descarga; si no,
 > no. Nunca se implementa un downloader propio: se usan las clases de descarga estándar
 > (link → redirect/proxy), igual que en los proveedores activos.
 
-> Los 5 nuevos siguen el precedente de `cpdl`: su definición declarativa (misma
-> estructura YAML que `omr`/`imslp`/`openscore`) ya existe en `providers/{id}/`, pero
-> **no se registran en `wiring.py`** porque ninguno expone un endpoint del contrato v1.3
-> consultable sin trabajo previo (auth, scraping o conversión de formato).
+> **Actualización 2026-08-27:** 3 nuevos proveedores **activos y cableados**: `hymnary` (Hymnary.org, Nivel 1 REST), `iiif` (BNE/BnF/LoC/DIAMM/HathiTrust, Nivel 2 IIIF), `zenodo` (datasets MusicXML/MEI, Nivel 1 REST). Los 5 restantes (`cpdl`, `musescore`, `kernscores`, `freescores`, `musopen`) siguen pendientes de desbloqueo/acceso.
 
 ## Proveedores adicionales (definidos, pendientes de cablear)
 

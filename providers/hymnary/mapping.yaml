@@ -1,0 +1,28 @@
+work:
+  array: "tunes"
+  fields:
+    id: "id"
+    title: "title"
+    composer: "author"
+    catalogue: "meter"
+    confidence: "0.9"
+    musical_key: "key"
+    genre: "genre"
+    license: "license"
+    public_domain: "public_domain"
+  links:
+    download: "musicxml_url"
+    view: "url"
+    thumbnail: "thumbnail_url"
+resources:
+  array: "resources"
+  fields:
+    id: "id"
+    format: "format"
+    mime_type: "mime_type"
+    available: "available"
+    license: "license"
+  links:
+    download: "download_url"
+    view: "view_url"
+    thumbnail: "thumbnail_url"

@@ -1,0 +1,22 @@
+id: iiif
+name: IIIF Manifest (BNE, BnF, LoC, DIAMM, HathiTrust)
+version: "1.3"
+enabled: true
+priority: 70
+base_url: https://iiif.example.org
+native_formats: [musicxml, mei, pdf, jp2, tiff]
+conversion: "IIIF Presentation API 3.0 → MusicXML/MEI via canvas resources; PDF/imagen directa"
+description:
+  es: "Proveedor genérico IIIF para bibliotecas digitales (BNE, BnF, Library of Congress, DIAMM, HathiTrust). Requiere configurar base_url por institución."
+  en: "Generic IIIF provider for digital libraries (BNE, BnF, Library of Congress, DIAMM, HathiTrust). Requires per-institution base_url configuration."
+  ca: "Proveïdor genèric IIIF per a biblioteques digitals (BNE, BnF, Library of Congress, DIAMM, HathiTrust). Requereix configurar base_url per institució."
+  fr: "Fournisseur IIIF générique pour bibliothèques numériques (BNE, BnF, Library of Congress, DIAMM, HathiTrust). Nécessite base_url par institution."
+  de: "Generischer IIIF-Provider für digitale Bibliotheken (BNE, BnF, Library of Congress, DIAMM, HathiTrust). Erfordert institutionelle base_url."
+authentication:
+  type: none
+contract:
+  version: "1.3"
+  search_endpoint: search
+  lookup_endpoint: lookup
+  resource_endpoint: resource
+  download_endpoint: download

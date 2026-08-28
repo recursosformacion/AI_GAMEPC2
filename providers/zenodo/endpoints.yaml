@@ -1,0 +1,27 @@
+search:
+  method: GET
+  path: /api/records
+  query:
+    q: "musicxml OR mei OR kern OR musicxml"
+    type: "dataset"
+    page: "{page}"
+    size: "{limit}"
+    sort: "bestmatch"
+
+lookup:
+  method: GET
+  path: /api/records
+  query:
+    q: "{query}"
+    type: "dataset"
+    page: "1"
+    size: "10"
+    sort: "bestmatch"
+
+resource:
+  method: GET
+  path: /api/records/{id}
+
+download:
+  method: GET
+  path: /api/records/{id}/files/{file_key}/content
