@@ -6,7 +6,7 @@ import { useSources } from "../state/repositorySources";
 import { useProviders } from "../state/providers";
 
 export function SourceCatalogPage() {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const { list, detail, loadList, loadDetail } = useSources();
   const providers = useProviders((s) => s.data);
   const listProviders = useProviders((s) => s.list);
@@ -24,7 +24,7 @@ export function SourceCatalogPage() {
 
   const descOf = (p: { description?: Record<string, string> | string | null }): string => {
     const d = p.description;
-    if (d && typeof d === "object") return d[lang] ?? d.en ?? d.es ?? "";
+    if (d && typeof d === "object") return d.en ?? d.es ?? Object.values(d)[0] ?? "";
     if (typeof d === "string") return d;
     return "";
   };

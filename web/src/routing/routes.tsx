@@ -21,6 +21,7 @@ import { ProvidersPage } from "../pages/ProvidersPage";
 import { SearchStudioPage } from "../pages/SearchStudioPage";
 import { SourceCatalogPage } from "../pages/SourceCatalogPage";
 import { SourcesPage } from "../pages/SourcesPage";
+import { SupportPage } from "../pages/SupportPage";
 import { WorkResolutionPage } from "../pages/WorkResolutionPage";
 
 // Routing is independent of navigation: navigation is a consequence of these routes.
@@ -31,6 +32,7 @@ export function AppRoutes() {
         <Route path="/" element={<HomePage />} />
         <Route path="/oidc/callback" element={<AuthCallbackPage />} />
         <Route path="/discover" element={<DiscoverPage />} />
+        <Route path="/support" element={<SupportPage />} />
         <Route path="/catalog" element={<SourceCatalogPage />} />
         <Route path="/sources" element={<SourcesPage />} />
         <Route path="/studio" element={<SearchStudioPage />} />

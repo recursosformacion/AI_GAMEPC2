@@ -20,6 +20,7 @@ const MAIN_NAV = [
   { to: "/catalog", key: "nav.sources" },
   { to: "/composers", key: "nav.composers" },
   { to: "/knowledge/observations", key: "nav.knowledge" },
+  { to: "/support", key: "nav.support" },
   { to: "/about", key: "nav.about" },
 ] as const;
 
@@ -223,6 +224,10 @@ export function Footer() {
   return (
     <footer className="border-t border-osap-border bg-osap-surface py-4 text-center text-xs text-osap-muted">
       {t("app.name")} · {t("app.subtitle")} — {t("app.poweredBy")} ·{" "}
+      <Link to="/support" className="text-osap-accent hover:underline">
+        {t("nav.support")}
+      </Link>
+      {" · "}
       <Link to="/about" className="text-osap-accent hover:underline">
         {t("nav.about")}
       </Link>
