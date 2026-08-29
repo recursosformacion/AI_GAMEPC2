@@ -4,15 +4,20 @@ import { LoginForm } from "../components/LoginForm";
 import { RegisterForm } from "../components/RegisterForm";
 import { useOidcLogin } from "../components/useOidcLogin";
 import { useI18n } from "../i18n/I18n";
-import { useAuth } from "../state/auth";
+import { useSupport } from "../support";
 
 // Página pública "Apoya Chorus": explica el proyecto y prepara el flujo de apoyo.
 // No vende agresivamente: comunica un proyecto cultural + comunidad + transparencia.
 // No simula pagos ni crea datos de suscripción.
+//
+// Fronteras:
+//  - Identidad (login/registro) → Auth (vía useOidcLogin + formularios Auth).
+//  - Relación de apoyo (estado/CTA) → SupportGateway (useSupport). En el MVP se deriva de
+//    Auth; cuando exista osap-support cambiará la implementación, no esta página.
 
 export function SupportPage() {
   const { t } = useI18n();
-  const { user } = useAuth();
+  const support = useSupport();
   const { start: startOidc, error: oidcError } = useOidcLogin();
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [authOpen, setAuthOpen] = useState(false);
@@ -20,7 +25,7 @@ export function SupportPage() {
   // Usuario no autenticado: abrir el flujo de identidad existente de Auth (OIDC popup,
   // con respaldo email/contraseña si OIDC no está configurado).
   const openLogin = () => {
-    if (user !== null) return;
+    if (support.authenticated) return;
     void (async () => {
       const opened = await startOidc();
       if (!opened) setAuthOpen(true);
@@ -84,7 +89,7 @@ export function SupportPage() {
 
       {/* CTA: identificación */}
       <section className="rounded border border-osap-border bg-osap-surface p-6 text-center">
-        {user === null ? (
+        {!support.authenticated ? (
           <>
             <Button onClick={openLogin}>{t("support.loginCta")}</Button>
             {oidcError && <p className="mt-2 text-xs text-red-500">{oidcError}</p>}
