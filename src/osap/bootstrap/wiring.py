@@ -56,6 +56,9 @@ DEFAULT_PROVIDER_ORDER = (
     "cpdl",
     "imslp",
     "openmusicrepository",
+    "zenodo",
+    "hymnary",
+    "iiif",
 )
 
 
@@ -260,7 +263,6 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     container.register_catalog_provider(
         RemoteCatalogProvider(
             definition=_provider_definition(op_store, "iiif", providers_root / "iiif"),
-            fetcher=IIIFFetcher(base_url=config.iiif_base_url or "https://iiif.example.org"),
         )
     )
     container.register_catalog_provider(

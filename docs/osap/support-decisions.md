@@ -265,6 +265,35 @@ Python **≥ 3.12** recomendado (consistentemente con osap-api).
 
 ---
 
+### ADR-012 — Estado de Membership ausente
+
+**Decisión fijada:**
+
+`GET /api/v1/membership/me`, para un usuario autenticado sin Membership, responde **`200 OK`** con el contrato vacío tipado:
+
+```json
+{
+  "status": null,
+  "level": null,
+  "started_at": null,
+  "next_renewal_at": null,
+  "is_founder": false
+}
+```
+
+**Motivo (Alternativa B):** el endpoint representa el **estado de apoyo del usuario autenticado**, no la existencia de un recurso independiente. La ausencia de Membership es un **estado válido del dominio**, no un error HTTP. Evita `404` como semántica de ausencia y evita que el cliente tenga que distinguir entre `null` como respuesta completa y un objeto de estado. `is_founder` será `false` cuando no exista Membership.
+
+**Consecuencias:**
+- No se crea automáticamente una fila `support_members` para todo usuario autenticado.
+- `SupportMember` representa una **relación de apoyo**, no una segunda identidad ni un registro obligatorio por usuario de Auth.
+- La ausencia de `SupportMember` y/o `Membership` se resuelve como ausencia de estado de apoyo → contrato vacío tipado.
+- Contrato de respuesta del caso con Membership: `{ status, level, started_at, next_renewal_at, is_founder }` (arquitectura §14).
+
+**Variante elegida:** V-022 — `200 OK` con estado vacío tipado. **FIJADA.**
+**Variantes descartadas:** V-023 — `200 + null` (cliente debe distinguir null-completo vs objeto); V-024 — `404` (ausencia ≠ error de recurso).
+
+---
+
 ## Tabla global de variantes
 
 | ID | Decisión | Variante | Estado | Motivo |
@@ -290,8 +319,12 @@ Python **≥ 3.12** recomendado (consistentemente con osap-api).
 | V-019 | Email | Servicio de email externo separado | **ABIERTA** | puede extraerse cuando el volumen crezca |
 | V-020 | Dinero | Float (10.50) | DESCARTADA | riesgo de precisión |
 | V-021 | Dinero | Mínimas unidades (int micro/centavos) | **FIJADA** | sin floats, cálculo exacto |
+| V-022 | API usuario | `200 OK` + estado vacío tipado sin membership | **FIJADA** | ausencia = estado válido del dominio (ADR-012) |
+| V-023 | API usuario | `200 + null` sin membership | DESCARTADA | cliente debe distinguir null-completo vs objeto (ADR-012) |
+| V-024 | API usuario | `404` sin membership | DESCARTADA | ausencia ≠ error de recurso (ADR-012) |
 
 > V-020/V-021 se derivan del documento de arquitectura (`amount` en mínimas unidades, currency ISO 4217).
+> V-022/V-023/V-024 se derivan de ADR-012 (estado de Membership ausente).
 
 ---
 
