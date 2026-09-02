@@ -1,5 +1,4 @@
 from src.chorus.bootstrap.container import Container
-from src.chorus.infrastructure.generators.exercise_generator import ExerciseGenerator
 
 
 def wire(container: Container) -> Container:
@@ -9,5 +8,7 @@ def wire(container: Container) -> Container:
     `PDFGenerator` siguen sin implementar (funcionalidad futura) y NO se registran
     para no crear una falsa sensación de soporte.
     """
+    from src.chorus.infrastructure.generators.exercise_generator import ExerciseGenerator
+
     container.register_generator(ExerciseGenerator())
     return container

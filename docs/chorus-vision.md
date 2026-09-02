@@ -13,6 +13,10 @@
 > `PipelineEngine` fue eliminado por estar huérfano (no participaba en el circuito). `IScoreProvider`,
 > `CapabilityAnalyzer`, `ScoreSelector` y `MusicXmlProvider` descritos abajo son componentes
 > **previstos en la visión**, no implementados ni necesarios para el circuito actual.
+>
+> **Documentos de estado actual:** `docs/chorus-product.md` (definición de producto/MVP),
+> `docs/chorus-separation.md` (frontera OSAP ≠ Chorus, decisión de monorepo) y
+> `docs/chorus-web.md` (propuesta de web independiente y primer vertical slice).
 
 ## Objetivo del proyecto
 

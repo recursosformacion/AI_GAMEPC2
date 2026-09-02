@@ -9,7 +9,6 @@ from src.osap.domain.event import Event
 from src.osap.domain.job import Job, JobState, JobSubmission
 from src.osap.domain.metrics import MetricRecord
 from src.osap.domain.output_format import OutputFormat
-from src.osap.domain.pipeline_context import PipelineContext
 from src.osap.domain.quality_level import QualityLevel
 from src.osap.domain.quality_report import QualityDimension, QualityReport
 from src.osap.domain.user_profile import UserProfile

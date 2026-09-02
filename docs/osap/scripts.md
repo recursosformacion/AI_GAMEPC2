@@ -132,7 +132,10 @@ python scripts/test_authority_coverage.py [--db BD] [--limit 100] [--from-id 0]
 
 | Script | Propósito |
 |--------|-----------|
-| `build_composer_index.py` | Construir índice de compositores desde el dump de MusicBrainz (artists). |
+| `list_providers.py` | Lista proveedores registrados en BD (`provider_id`, `name`, `wired`). |
+| `check_providers.py` | Alias de `list_providers.py` para comprobaciones rápidas. |
+| `seed_missing_providers.py` | Siembra proveedores faltantes desde `providers/*/provider.yaml` en BD (usa mapping procesado; no recomendado para proveedores nuevos). |
+| `reseed_providers.py` | Re-siembra proveedores desde `providers/{id}/` usando el mapping crudo de YAML. Recomendado para (re)crear `hymnary`, `iiif`, `zenodo` con su configuración completa. |
 | `build_composers_index.py` | Fusionar fuentes de compositores en `composers_index.json`. |
 | `confidence_report.py` | Reporte de `resolution_confidence` sobre los 30 (FASE 5.8). |
 | `cross_attribution.py` | Atribución cruzada reusando la capa de proveedores (FASE 5.8). |
@@ -207,6 +210,36 @@ PYTHONPATH=<osap-api> python script/identity_resolver.py \
 Flags: `--limit` (obras), `--named-only` (solo compositores no anónimos), `--from-id`,
 `--workers` (concurrencia), `--batch` (persistencia incremental), `--test` (id de la pasada).
 En prod: `--db-user osap --db-password osap2027 --db-name osap_storage`.
+
+### list_providers.py
+Lista los proveedores registrados en `providers` con su estado `wired`. Útil para verificar
+rápidamente qué proveedores están activos en la BD.
+```
+PYTHONPATH=<osap-api> python list_providers.py
+```
+
+### check_providers.py
+Alias práctico de `list_providers.py` con el mismo comportamiento.
+```
+PYTHONPATH=<osap-api> python check_providers.py
+```
+
+### seed_missing_providers.py
+Siembra proveedores faltantes desde `providers/*/provider.yaml`. Guarda el mapping
+**procesado** (`definition.work_mapping`), que para algunos proveedores queda vacío.
+No recomendado para proveedores nuevos; usar `reseed_providers.py` en su lugar.
+```
+PYTHONPATH=<osap-api> python seed_missing_providers.py
+```
+
+### reseed_providers.py
+Re-siembra proveedores desde `providers/{id}/` tomando el mapping **crudo** de YAML
+(`mapping.yaml`, `endpoints.yaml`, `resources.yaml`, `provider.yaml`). Es el script
+correcto para (re)crear proveedores como `hymnary`, `iiif` o `zenodo` con su
+configuración completa. Por defecto los deja en `wired=False` (preparados, no activos).
+```
+PYTHONPATH=<osap-api> python reseed_providers.py
+```
 
 ### Otros scripts (resumen)
 - **Autoridad / datos**: `download_composers.py` (`--out`, `--limit`),

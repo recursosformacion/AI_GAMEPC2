@@ -45,7 +45,7 @@ src/
 │   ├── infrastructure/    # catalogs/, resources/, export/, library/, rankings/
 │   ├── bootstrap/         # Container, Configuration, wiring
 │   └── cli/               # osap
-├── chorus/
+├── chorus/                # Producto independiente Chorus (ver docs/chorus-separation.md)
 └── shared/
 tests/
 docs/
@@ -54,7 +54,10 @@ docs/
 │   ├── v2/                  # V2: contratos y diseños (auditoría, provider, search intelligence, ...)
 │   ├── adr/                 # Architecture Decision Records
 │   └── old/                 # Documentos obsoletos (histórico)
-└── chorus-vision.md         # Visión de Chorus (proyecto aparte)
+├── chorus-vision.md         # Visión de Chorus (producto independiente)
+├── chorus-product.md        # Definición de producto Chorus (MVP)
+├── chorus-separation.md     # Frontera arquitectónica OSAP ≠ Chorus
+└── chorus-web.md            # Propuesta de web independiente de Chorus
 ```
 
 ### CLI

@@ -40,4 +40,6 @@ osap/
 4. `v2/provider-contract.md` — contrato de proveedores.
 5. `v2/search-engine-design.md` — diseño del Search Intelligence.
 
-Chorus (proyecto aparte): `docs/chorus-vision.md`.
+Chorus (producto independiente): `docs/chorus-vision.md` (visión),
+`docs/chorus-product.md` (producto/MVP), `docs/chorus-separation.md` (frontera OSAP ≠ Chorus),
+`docs/chorus-web.md` (web independiente).

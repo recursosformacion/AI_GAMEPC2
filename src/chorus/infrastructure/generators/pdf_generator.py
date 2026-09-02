@@ -1,7 +1,13 @@
-from src.chorus.domain.material_type import MaterialType
-from src.chorus.domain.study_material import StudyMaterial
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from src.chorus.ports.study_material_generator import IStudyMaterialGenerator
-from src.osap.domain.score import Score
+
+if TYPE_CHECKING:
+    from src.chorus.domain.material_type import MaterialType
+    from src.chorus.domain.study_material import StudyMaterial
+    from src.osap.domain.score import Score
 
 
 class PDFGenerator(IStudyMaterialGenerator):

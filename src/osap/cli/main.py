@@ -549,11 +549,13 @@ def _run_search(args: argparse.Namespace, container: Container) -> int:
 
 
 def _run_chorus_generate(args: argparse.Namespace) -> int:
-    """Chorus: valida el MusicXML → Score real → GenerateMaterialsUseCase → StudyMaterial.
+    """Chorus (demo): valida el MusicXML → Score real → GenerateMaterialsUseCase → StudyMaterial.
 
-    Chorus es una aplicación independiente: este comando solo construye el Score con
-    el validador de OSAP y lo entrega al use case de Chorus (en-proceso). No invoca
-    `/works/resolve` ni ningún servicio externo.
+    Chorus es una aplicación independiente de OSAP: este subcomando es un harness de
+    demostración del contrato `Score` (OSAP produce el Score con su validador y lo entrega
+    en-proceso a Chorus). NO es el entry del producto Chorus (futuro CLI/web propio) y no
+    convierte a Chorus en una funcionalidad conceptual de OSAP. No invoca `/works/resolve`
+    ni ningún servicio externo.
     """
     from src.chorus.bootstrap.container import Container as ChorusContainer
     from src.chorus.bootstrap.wiring import wire as chorus_wire

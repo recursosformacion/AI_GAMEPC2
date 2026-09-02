@@ -107,21 +107,27 @@ def _provider_definition(
     provider_id: str,
     fallback_path: Path,
     base_url: str | None = None,
-) -> ProviderDefinition:
-    """Carga la definición del proveedor desde la BD (dev); si no, desde YAML (prod)."""
+) -> tuple[ProviderDefinition, bool]:
+    """Carga la definición del proveedor desde la BD (dev); si no, desde YAML (prod).
+
+    Returns:
+        (definition, wired) donde `wired=True` significa que el proveedor está activo.
+    """
     try:
         row = store.get_provider(provider_id)
         config = _config_from_provider_row(row) if row else None
         definition = (
             load_definition_from_config(provider_id, config) if config else load_definition(fallback_path)
         )
+        wired = bool(row.get("wired")) if row else True
     except Exception:  # noqa: BLE001
         definition = load_definition(fallback_path)
+        wired = True
     if base_url:
         from dataclasses import replace
 
-        return replace(definition, base_url=base_url.rstrip("/"))
-    return definition
+        definition = replace(definition, base_url=base_url.rstrip("/"))
+    return definition, wired
 
 
 def _config_from_provider_row(row: dict[str, object]) -> dict[str, object] | None:
@@ -215,59 +221,79 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
         client_secret=config.service_client_secret or "",
         token_url=auth_token_url,
     )
-    container.register_catalog_provider(
-        RemoteCatalogProvider(
-            definition=_provider_definition(op_store, "imslp", providers_root / "imslp"),
-            fetcher=MediaWikiFetcher(MediaWikiClient(verify=config.imslp_verify_ssl)),
+    imslp_def, imslp_wired = _provider_definition(op_store, "imslp", providers_root / "imslp")
+    if imslp_wired:
+        container.register_catalog_provider(
+            RemoteCatalogProvider(
+                definition=imslp_def,
+                fetcher=MediaWikiFetcher(MediaWikiClient(verify=config.imslp_verify_ssl)),
+            )
         )
-    )
-    container.register_catalog_provider(
-        RemoteCatalogProvider(
-            definition=_provider_definition(op_store, "openscore", providers_root / "openscore"),
-            fetcher=GitHubFetcher(github, config.openscore_repos),
+    openscore_def, openscore_wired = _provider_definition(op_store, "openscore", providers_root / "openscore")
+    if openscore_wired:
+        container.register_catalog_provider(
+            RemoteCatalogProvider(
+                definition=openscore_def,
+                fetcher=GitHubFetcher(github, config.openscore_repos),
+            )
         )
-    )
-    container.register_catalog_provider(
-        RemoteCatalogProvider(
-            definition=_provider_definition(op_store, "omr", providers_root / "omr", base_url=storage_base),
-            base_url=storage_base,
-            fetcher=OmrStorageFetcher(base_url=storage_base, token_provider=service_token_provider),
+    omr_def, omr_wired = _provider_definition(op_store, "omr", providers_root / "omr", base_url=storage_base)
+    if omr_wired:
+        container.register_catalog_provider(
+            RemoteCatalogProvider(
+                definition=omr_def,
+                base_url=storage_base,
+                fetcher=OmrStorageFetcher(base_url=storage_base, token_provider=service_token_provider),
+            )
         )
-    )
-    container.register_catalog_provider(
-        RemoteCatalogProvider(
-            definition=_provider_definition(op_store, "mutopia", providers_root / "mutopia"),
-            fetcher=MutopiaFetcher(),
+    mutopia_def, mutopia_wired = _provider_definition(op_store, "mutopia", providers_root / "mutopia")
+    if mutopia_wired:
+        container.register_catalog_provider(
+            RemoteCatalogProvider(
+                definition=mutopia_def,
+                fetcher=MutopiaFetcher(),
+            )
         )
+    musicbrainz_def, musicbrainz_wired = _provider_definition(
+        op_store, "musicbrainz", providers_root / "musicbrainz"
     )
-    container.register_catalog_provider(
-        RemoteCatalogProvider(
-            definition=_provider_definition(op_store, "musicbrainz", providers_root / "musicbrainz"),
-            fetcher=MusicBrainzFetcher(),
+    if musicbrainz_wired:
+        container.register_catalog_provider(
+            RemoteCatalogProvider(
+                definition=musicbrainz_def,
+                fetcher=MusicBrainzFetcher(),
+            )
         )
-    )
-    container.register_catalog_provider(
-        RemoteCatalogProvider(
-            definition=_provider_definition(op_store, "rism", providers_root / "rism"),
-            fetcher=RismFetcher(),
+    rism_def, rism_wired = _provider_definition(op_store, "rism", providers_root / "rism")
+    if rism_wired:
+        container.register_catalog_provider(
+            RemoteCatalogProvider(
+                definition=rism_def,
+                fetcher=RismFetcher(),
+            )
         )
-    )
     # --- New providers (Hymnary, IIIF, Zenodo) ---
-    container.register_catalog_provider(
-        RemoteCatalogProvider(
-            definition=_provider_definition(op_store, "hymnary", providers_root / "hymnary"),
+    hymnary_def, hymnary_wired = _provider_definition(op_store, "hymnary", providers_root / "hymnary")
+    if hymnary_wired:
+        container.register_catalog_provider(
+            RemoteCatalogProvider(
+                definition=hymnary_def,
+            )
         )
-    )
-    container.register_catalog_provider(
-        RemoteCatalogProvider(
-            definition=_provider_definition(op_store, "iiif", providers_root / "iiif"),
+    iiif_def, iiif_wired = _provider_definition(op_store, "iiif", providers_root / "iiif")
+    if iiif_wired:
+        container.register_catalog_provider(
+            RemoteCatalogProvider(
+                definition=iiif_def,
+            )
         )
-    )
-    container.register_catalog_provider(
-        RemoteCatalogProvider(
-            definition=_provider_definition(op_store, "zenodo", providers_root / "zenodo"),
+    zenodo_def, zenodo_wired = _provider_definition(op_store, "zenodo", providers_root / "zenodo")
+    if zenodo_wired:
+        container.register_catalog_provider(
+            RemoteCatalogProvider(
+                definition=zenodo_def,
+            )
         )
-    )
     container.register_catalog_provider(LocalCatalogProvider(Path(config.library_root)))
     # Índice local (búsqueda híbrida): responde primero desde index_works/index_representations.
     # Los providers indexados se omiten en vivo; RISM/openscore/local se consultan en vivo.
@@ -283,7 +309,6 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
 
     # Register metadata of EVERY declared provider (wired or not) so Discover/Sources
     # can list them all. `wired` tells whether the provider is registered as active.
-    # Se lee de la BD operativa si está sembrada (dev); si no, de los YAML (prod).
     active_ids = {p.provider_id.value for p in container.catalog_manager().providers()}
     defined: list[tuple[str, str, str, bool]] = []
     db_providers = _db_provider_metadata(container)

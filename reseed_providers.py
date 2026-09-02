@@ -1,11 +1,13 @@
-"""Re-seed de los 3 proveedores (hymnary, zenodo, iiif) con el mapping CRUDO.
+"""Re-seed de proveedores desde YAML con mapping CRUDO.
 
-El seed anterior guardó `definition.work_mapping` (procesado), que para estos
+El seed anterior guardó `definition.work_mapping` (procesado), que para algunos
 proveedores quedó vacío. `load_definition_from_config` espera el mapping crudo
 (`{"work": {...}, "resources": {...}}`) tal como está en los YAML.
 
 Este script lee los YAML de `providers/{id}/` y hace upsert en la BD con el formato
-correcto. No modifica proveedores existentes funcionales (imslp, etc.).
+correcto. Por defecto deja los proveedores en `wired=False` (preparados, no activos).
+No modifica proveedores existentes funcionales (imslp, etc.) a menos que se incluyan
+explícitamente en `IDS`.
 """
 
 import sys
@@ -38,7 +40,7 @@ for pid in IDS:
         provider_id=pid,
         name=str(provider_doc.get("name") or pid),
         base_url=provider_doc.get("base_url"),
-        wired=True,
+        wired=False,
         kind="dynamic",
         config=provider_doc,
         description=provider_doc.get("description", {}),

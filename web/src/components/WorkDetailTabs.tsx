@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import type { EvidenceInfo, RepresentationInfo, WorkInfo } from "../api/types";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
@@ -25,11 +26,116 @@ interface WorkDetailTabsProps {
   defaultTab?: WorkDetailTab;
 }
 
+function ResolveWorkBlock({
+  workTitle,
+  workComposer,
+  hasUsableFile,
+}: {
+  workTitle?: string | null;
+  workComposer?: string | null;
+  hasUsableFile: boolean;
+}) {
+  const { t } = useI18n();
+  const { session, loading, resolve } = useResolution();
+  if (!workTitle) return null;
+
+  const startResolve = () => {
+    const query = [workTitle, workComposer].filter(Boolean).join(" — ");
+    void resolve(query);
+  };
+
+  const statusBlock = session ? (
+    <div className="mt-2 space-y-2 text-sm">
+      <p>
+        <span className="text-osap-muted">{t("work.resolveStatus")}:</span>{" "}
+        <strong>{session.status}</strong>
+        {session.error ? <span className="ml-2 text-xs text-osap-muted">{session.error}</span> : null}
+      </p>
+      {session.progress?.acquired_works != null ? (
+        <p className="text-xs text-osap-muted">
+          {t("work.resolveWorks")}: {session.progress.acquired_works} ·{" "}
+          {t("work.resolvePages")}: {session.progress.acquired_pages ?? 0}
+        </p>
+      ) : null}
+      {session.selection?.provider ? (
+        <div className="rounded border border-osap-border bg-osap-surface p-2">
+          <p className="font-medium">
+            {t("work.selectedBest")}: {session.selection.provider} · {session.selection.format}
+          </p>
+          {session.selection.quality_level != null ? (
+            <p className="text-xs text-osap-muted">
+              {t("work.resolveQuality")}: {session.selection.quality_level}
+              {session.selection.quality_score != null
+                ? ` · ${t("work.resolveScore")}: ${session.selection.quality_score.toFixed(2)}`
+                : ""}
+            </p>
+          ) : null}
+          {session.selection.reason ? (
+            <p className="text-xs text-osap-muted">
+              {t("work.resolveReason")}: {session.selection.reason}
+            </p>
+          ) : null}
+          {session.selection.url ? (
+            <a
+              href={session.selection.url}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 inline-block rounded bg-osap-accent px-2 py-0.5 text-xs text-white"
+            >
+              {t("actions.download")}
+            </a>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  ) : null;
+
+  if (!hasUsableFile) {
+    return (
+      <div className="mt-3 rounded border border-dashed border-osap-border p-3">
+        <h4 className="text-sm font-semibold">{t("work.resolveTitle")}</h4>
+        <p className="mt-1 text-xs text-osap-muted">{t("work.resolveBody")}</p>
+        {!session ? (
+          <button
+            type="button"
+            onClick={startResolve}
+            disabled={loading}
+            className="mt-2 inline-flex items-center gap-1.5 rounded bg-osap-accent px-3 py-1 text-sm text-white disabled:opacity-60"
+          >
+            {loading ? t("states.loading") : t("work.resolveCta")}
+          </button>
+        ) : (
+          statusBlock
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 rounded border border-dashed border-osap-border p-3">
+      <h4 className="text-sm font-semibold">{t("work.resolveTitleAlt")}</h4>
+      <p className="mt-1 text-xs text-osap-muted">{t("work.resolveBodyAlt")}</p>
+      {!session ? (
+        <button
+          type="button"
+          onClick={startResolve}
+          disabled={loading}
+          className="mt-2 inline-flex items-center gap-1.5 rounded bg-osap-accent px-3 py-1 text-sm text-white disabled:opacity-60"
+        >
+          {loading ? t("states.loading") : t("work.resolveCtaAlt")}
+        </button>
+      ) : (
+        statusBlock
+      )}
+    </div>
+  );
+}
+
 export function WorkDetailTabs({
   work,
   representations,
   score,
-  evidence,
+  evidence: _evidence,
   defaultTab = "representations",
 }: WorkDetailTabsProps) {
   const { t } = useI18n();
@@ -61,7 +167,11 @@ export function WorkDetailTabs({
             key={tb.id}
             type="button"
             onClick={() => setTab(tb.id)}
-            className={`px-3 py-1.5 text-xs ${tab === tb.id ? "border-b-2 border-osap-accent font-medium text-osap-accent" : "text-osap-muted"}`}
+            className={`px-3 py-1.5 text-xs ${
+              tab === tb.id
+                ? "border-b-2 border-osap-accent font-medium text-osap-accent"
+                : "text-osap-muted"
+            }`}
           >
             {t(tb.labelKey as TKey)}
           </button>
@@ -75,6 +185,12 @@ export function WorkDetailTabs({
             <Meta label={t("work.composer")} value={work.composer ?? "—"} />
             <Meta label={t("work.catalogue")} value={work.catalogue ?? "—"} />
           </dl>
+          <Link
+            to={`/works/${work.work_id}`}
+            className="mt-3 inline-block rounded bg-osap-accent px-3 py-1 text-sm text-white"
+          >
+            {t("work.viewDetails")}
+          </Link>
           <p className="mt-2 text-sm text-osap-muted">
             {representations.length} {t("work.representations")} · {providers.size} {t("work.providers")}
           </p>
@@ -86,20 +202,20 @@ export function WorkDetailTabs({
             </span>
           </p>
 
-          {work.work_id ? (
-            <div className="mt-4 flex flex-col gap-2 border-t border-osap-border pt-3">
-              {isAuthenticated ? (
-                <>
-                  <WorkRating workId={work.work_id} />
-                  <VoteControl workId={work.work_id} />
-                </>
-              ) : (
-                <p className="text-sm text-osap-muted">{t("work.loginToRate")}</p>
-              )}
-            </div>
-          ) : null}
-        </div>
-      ) : null}
+           {work.work_id ? (
+             <div className="mt-4 flex flex-col gap-2 border-t border-osap-border pt-3">
+               {isAuthenticated ? (
+                 <>
+                   <WorkRating workId={work.work_id} />
+                   <VoteControl workId={work.work_id} />
+                 </>
+               ) : (
+                 <p className="text-sm text-osap-muted">{t("work.loginToRate")}</p>
+               )}
+             </div>
+            ) : null}
+          </div>
+        ) : null}
 
       {tab === "representations" ? (
         <RepresentationsTab
@@ -138,22 +254,6 @@ export function WorkDetailTabs({
               </ul>
             </div>
           ) : null}
-
-          {evidence && evidence.length > 0 ? (
-            <div className="mt-3">
-              <h4 className="text-xs font-semibold uppercase text-osap-muted">Evidence</h4>
-              <ul className="mt-1 space-y-1">
-                {evidence.map((ev, i) => (
-                  <li key={`${ev.source}-${i}`} className="flex justify-between text-sm">
-                    <span className="text-osap-muted">
-                      {ev.source} · <code className="text-osap-ink">{ev.code}</code>
-                    </span>
-                    <span>{(ev.score * 100).toFixed(0)}%</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
         </div>
       ) : null}
 
@@ -175,7 +275,7 @@ function RepresentationsTab({
 }) {
   const { t } = useI18n();
   const [selected, setSelected] = useState<string | null>(null);
-  const sel = representations.find((r) => r.id === selected) ?? null;
+  const hasUsableFile = representations.some((r) => r.available);
 
   return (
     <div className="p-3">
@@ -199,22 +299,39 @@ function RepresentationsTab({
               </span>
             </span>
             <span className="flex shrink-0 items-center gap-1.5">
+              {rep.url ? (
+                <a
+                  href={rep.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={t("work.openIn").replace("{p}", rep.provider)}
+                  aria-label={t("work.openIn").replace("{p}", rep.provider)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="px-1.5 text-osap-muted hover:text-osap-accent"
+                >
+                  <_LinkIcon />
+                </a>
+              ) : (
+                <span className="px-1 text-xs text-osap-muted">—</span>
+              )}
               {rep.available === false ? (
-                rep.url ? (
-                  <a
-                    href={rep.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    title={t("work.openIn").replace("{p}", rep.provider)}
-                    aria-label={t("work.openIn").replace("{p}", rep.provider)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="px-1.5 text-osap-muted hover:text-osap-accent"
-                  >
-                    <_LinkIcon />
-                  </a>
-                ) : (
-                  <span className="px-1 text-xs text-osap-muted">—</span>
-                )
+                <>
+                  {rep.url ? (
+                    <a
+                      href={rep.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={t("work.openIn").replace("{p}", rep.provider)}
+                      aria-label={t("work.openIn").replace("{p}", rep.provider)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="px-1.5 text-osap-muted hover:text-osap-accent"
+                    >
+                      <_LinkIcon />
+                    </a>
+                  ) : (
+                    <span className="px-1 text-xs text-osap-muted">—</span>
+                  )}
+                </>
               ) : (
                 <>
                   <a
@@ -224,9 +341,9 @@ function RepresentationsTab({
                     title={t("work.view")}
                     aria-label={t("work.view")}
                     onClick={(e) => e.stopPropagation()}
-                    className="px-1.5 text-osap-muted hover:text-osap-accent"
+                    className="inline-flex items-center gap-1.5 rounded border border-osap-border px-3 py-1 text-sm text-osap-accent"
                   >
-                    <_EyeIcon />
+                    <_EyeIcon /> {t("work.view")}
                   </a>
                   <a
                     href={`/api/v1/representations/${rep.id}/download`}
@@ -236,9 +353,9 @@ function RepresentationsTab({
                     title={t("work.download")}
                     aria-label={t("work.download")}
                     onClick={(e) => e.stopPropagation()}
-                    className="px-1.5 text-osap-muted hover:text-osap-accent"
+                    className="inline-flex items-center gap-1.5 rounded border border-osap-border px-3 py-1 text-sm text-osap-accent"
                   >
-                    <_DownloadIcon />
+                    <_DownloadIcon /> {t("work.download")}
                   </a>
                 </>
               )}
@@ -246,63 +363,11 @@ function RepresentationsTab({
           </li>
         ))}
       </ul>
-
       <p className="mt-2 text-xs text-osap-muted">{t("work.titlesFromSources")}</p>
-
-      {sel ? (
-        <div className="mt-3 rounded border border-osap-border bg-osap-surface p-3">
-          <h4 className="text-sm font-semibold">{t("work.repDetails")}</h4>
-          <dl className="mt-2 space-y-1 text-sm">
-            <Meta label={t("work.provider")} value={sel.provider} />
-            <Meta label={t("work.originalTitle")} value={sel.title || "—"} />
-            <Meta label={t("work.format")} value={sel.format} />
-            <Meta label={t("work.providerId")} value={sel.id} />
-          </dl>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {sel.available === false ? (
-              sel.url ? (
-                <a
-                  href={sel.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded bg-osap-accent px-3 py-1 text-sm text-white"
-                >
-                  <_LinkIcon /> {t("work.openIn").replace("{p}", sel.provider)}
-                </a>
-              ) : (
-                <span className="text-sm text-osap-muted">—</span>
-              )
-            ) : (
-              <>
-                <a
-                  href={`/api/v1/representations/${sel.id}/download?view=1`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded border border-osap-border px-3 py-1 text-sm text-osap-accent"
-                >
-                  <_EyeIcon /> {t("work.view")}
-                </a>
-                <a
-                  href={`/api/v1/representations/${sel.id}/download`}
-                  download={downloadFileName(sel, workTitle)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 rounded border border-osap-border px-3 py-1 text-sm text-osap-accent"
-                >
-                  <_DownloadIcon /> {t("work.download")}
-                </a>
-              </>
-            )}
-          </div>
-        </div>
-      ) : null}
-
-      {/* Resolver obra: cuando ninguna representación es descargable, se ofrece
-          crear una sesión de adquisición (POST /works/resolve) para buscarla. */}
       <ResolveWorkBlock
         workTitle={workTitle}
         workComposer={workComposer}
-        hasUsableFile={representations.some((r) => r.available !== false)}
+        hasUsableFile={hasUsableFile}
       />
     </div>
   );
@@ -310,6 +375,7 @@ function RepresentationsTab({
 
 function ProvidersTab({ byProvider }: { byProvider: Map<string, RepresentationInfo[]> }) {
   const { t } = useI18n();
+
   return (
     <div className="p-3">
       <p className="mb-2 text-sm text-osap-muted">
@@ -323,7 +389,7 @@ function ProvidersTab({ byProvider }: { byProvider: Map<string, RepresentationIn
             <li key={provider} className="flex items-center justify-between py-2 text-sm">
               <div>
                 <span className="font-medium">{provider}</span>
-                <p className="text-xs text-osap-muted">
+                <p className="text-osap-muted">
                   {t("work.repCount").replace("{n}", String(reps.length))} · {formats}
                 </p>
               </div>
@@ -332,8 +398,6 @@ function ProvidersTab({ byProvider }: { byProvider: Map<string, RepresentationIn
                   href={url}
                   target="_blank"
                   rel="noreferrer"
-                  title={t("work.seeSource")}
-                  aria-label={t("work.seeSource")}
                   className="px-1.5 text-osap-muted hover:text-osap-accent"
                 >
                   <_LinkIcon />
@@ -352,104 +416,6 @@ function downloadFileName(rep: RepresentationInfo, workTitle?: string | null): s
   const base = rep.title || workTitle || rep.id || "representation";
   const safe = base.replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, "_");
   return `${safe}.${ext}`;
-}
-
-function ResolveWorkBlock({
-  workTitle,
-  workComposer,
-  hasUsableFile,
-}: {
-  workTitle?: string | null;
-  workComposer?: string | null;
-  hasUsableFile: boolean;
-}) {
-  const { t } = useI18n();
-  const { session, loading, polling, error, resolve, clear } = useResolution();
-  if (!workTitle || hasUsableFile) return null;
-
-  const startResolve = () => {
-    const query = [workTitle, workComposer].filter(Boolean).join(" — ");
-    void resolve(query);
-  };
-
-  return (
-    <div className="mt-3 rounded border border-dashed border-osap-border p-3">
-      <h4 className="text-sm font-semibold">{t("work.resolveTitle")}</h4>
-      <p className="mt-1 text-xs text-osap-muted">{t("work.resolveBody")}</p>
-      {!session ? (
-        <button
-          type="button"
-          onClick={startResolve}
-          disabled={loading}
-          className="mt-2 inline-flex items-center gap-1.5 rounded bg-osap-accent px-3 py-1 text-sm text-white disabled:opacity-60"
-        >
-          {loading ? t("states.loading") : t("work.resolveCta")}
-        </button>
-      ) : (
-        <div className="mt-2 space-y-2 text-sm">
-          <p>
-            <span className="text-osap-muted">{t("work.resolveStatus")}:</span>{" "}
-            <strong>{session.status}</strong>
-            {session.error ? <span className="ml-2 text-xs text-osap-muted">{session.error}</span> : null}
-          </p>
-          {session.progress?.acquired_works != null ? (
-            <p className="text-xs text-osap-muted">
-              {t("work.resolveWorks")}: {session.progress.acquired_works} ·{" "}
-              {t("work.resolvePages")}: {session.progress.acquired_pages ?? 0}
-            </p>
-          ) : null}
-          {session.selection?.provider ? (
-            <div className="rounded border border-osap-border bg-osap-surface p-2">
-              <p className="font-medium">
-                {t("work.selectedBest")}: {session.selection.provider} · {session.selection.format}
-              </p>
-              {session.selection.quality_level != null ? (
-                <p className="text-xs text-osap-muted">
-                  {t("work.resolveQuality")}: {session.selection.quality_level}
-                  {session.selection.quality_score != null
-                    ? ` · ${t("work.resolveScore")}: ${session.selection.quality_score.toFixed(2)}`
-                    : ""}
-                </p>
-              ) : null}
-              {session.selection.reason ? (
-                <p className="text-xs text-osap-muted">
-                  {t("work.resolveReason")}: {session.selection.reason}
-                </p>
-              ) : null}
-              {session.selection.url ? (
-                <a
-                  href={session.selection.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-1 inline-block rounded bg-osap-accent px-2 py-0.5 text-xs text-white"
-                >
-                  {t("actions.download")}
-                </a>
-              ) : null}
-            </div>
-          ) : null}
-          {polling ? <p className="text-xs text-osap-muted">{t("work.resolvePolling")}</p> : null}
-          {error ? <p className="mt-1 text-xs text-red-500">{error.message}</p> : null}
-          <button
-            type="button"
-            onClick={clear}
-            className="mt-1 text-xs text-osap-muted underline hover:text-osap-accent"
-          >
-            {t("work.resolveReset")}
-          </button>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function Meta({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex justify-between">
-      <dt className="text-osap-muted">{label}</dt>
-      <dd>{value}</dd>
-    </div>
-  );
 }
 
 const _ICON_CLASS = "h-4 w-4";
@@ -480,5 +446,14 @@ function _LinkIcon() {
       <polyline points="15 3 21 3 21 9" />
       <line x1="10" y1="14" x2="21" y2="3" />
     </svg>
+  );
+}
+
+function Meta({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex justify-between">
+      <dt className="text-osap-muted">{label}</dt>
+      <dd>{value}</dd>
+    </div>
   );
 }
