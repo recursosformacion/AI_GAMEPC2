@@ -53,6 +53,21 @@ def _build_parser() -> argparse.ArgumentParser:
     validate.add_argument("path", help="Ruta al fichero MusicXML (.xml/.musicxml) o .mxl")
     validate.add_argument("--title", default=None, help="Título (opcional, va al Score)")
     validate.add_argument("--composer", default=None, help="Compositor (opcional, va al Score)")
+
+    chorus = subparsers.add_parser(
+        "chorus-generate",
+        help="Chorus: genera un material de estudio desde un MusicXML/.mxl validado.",
+    )
+    chorus.add_argument("path", help="Ruta al fichero MusicXML (.xml/.musicxml) o .mxl")
+    chorus.add_argument(
+        "--material",
+        default="exercise",
+        choices=("exercise",),
+        help="Tipo de material a generar (solo 'exercise' por ahora).",
+    )
+    chorus.add_argument("--title", default=None, help="Título (opcional, va al Score)")
+    chorus.add_argument("--composer", default=None, help="Compositor (opcional, va al Score)")
+    chorus.add_argument("--voice", default=None, help="Voz solicitada (opcional)")
     catalog_sub.add_parser("list", help="Lista catálogos disponibles.")
     catalog_sub.add_parser("info", help="Información de un catálogo.").add_argument("name")
 
@@ -493,7 +508,8 @@ def _run_catalog(args: argparse.Namespace, container: Container) -> int:
 
 def _config_path(args: argparse.Namespace) -> Path:
     explicit = getattr(args, "file", None)
-    return Path(explicit or os.environ.get("OSAP_CONFIG", "osap.toml"))
+    value = explicit or os.environ.get("OSAP_CONFIG") or "osap.toml"
+    return Path(value)
 
 
 def _run_search(args: argparse.Namespace, container: Container) -> int:
@@ -529,6 +545,54 @@ def _run_search(args: argparse.Namespace, container: Container) -> int:
     print(f"{len(seen)} obra(s) encontrada(s):")
     for (title, comp), candidate in seen.items():
         print(f"  - {title} ({comp or '?'}) [{candidate.provider_id.value}]")
+    return 0
+
+
+def _run_chorus_generate(args: argparse.Namespace) -> int:
+    """Chorus: valida el MusicXML → Score real → GenerateMaterialsUseCase → StudyMaterial.
+
+    Chorus es una aplicación independiente: este comando solo construye el Score con
+    el validador de OSAP y lo entrega al use case de Chorus (en-proceso). No invoca
+    `/works/resolve` ni ningún servicio externo.
+    """
+    from src.chorus.bootstrap.container import Container as ChorusContainer
+    from src.chorus.bootstrap.wiring import wire as chorus_wire
+    from src.chorus.domain.material_type import MaterialType
+    from src.osap.domain.acquisition_result import AcquisitionResult
+    from src.osap.domain.musical_source import MusicalSource
+    from src.osap.domain.output_format import OutputFormat
+    from src.osap.domain.value_objects import Confidence, Duration, ProviderId, SourceId
+    from src.osap.infrastructure.adapters.validation import BasicValidator
+
+    path = Path(args.path)
+    if not path.exists():
+        print(f"Error: no existe {path}")
+        return 1
+    content = path.read_bytes()
+    acquisition = AcquisitionResult(
+        provider_id=ProviderId("file"),
+        source=MusicalSource(
+            source_id=SourceId(f"file-{path.name}"),
+            content=content,
+            format=OutputFormat.MUSICXML,
+            metadata={"title": args.title, "composer": args.composer},
+        ),
+        confidence=Confidence(1.0),
+        processing_time=Duration(0.0),
+        format=OutputFormat.MUSICXML,
+    )
+    score = BasicValidator().validate(acquisition)
+
+    chorus_container = chorus_wire(ChorusContainer())
+    use_case = chorus_container.generate_materials_use_case()
+    material_type = MaterialType(args.material)
+    material = use_case.generate(score, material_type, voice=args.voice)
+
+    print(f"Material generado: {material.material_type.value}")
+    print(f"  título: {material.metadata.get('title') or '—'}")
+    print(f"  calidad (QualityLevel): {material.metadata.get('quality_level')}")
+    content_text = material.content.get("text") if isinstance(material.content, dict) else str(material.content)
+    print(content_text or "—")
     return 0
 
 
@@ -585,6 +649,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "validate":
         return _run_validate(args)
+
+    if args.command == "chorus-generate":
+        return _run_chorus_generate(args)
 
     config = load_configuration()
     if getattr(args, "library", None):

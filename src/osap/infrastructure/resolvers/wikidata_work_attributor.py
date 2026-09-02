@@ -120,7 +120,10 @@ LIMIT 5
 
 def _val(binding: Any, key: str) -> str:
     value = binding.get(key, {})
-    return value.get("value", "") if isinstance(value, dict) else ""
+    if isinstance(value, dict):
+        raw = value.get("value", "")
+        return str(raw) if raw is not None else ""
+    return ""
 
 
 def _qid(uri: str) -> str:

@@ -25,7 +25,6 @@ from src.osap.infrastructure.mediawiki import MediaWikiClient
 from src.osap.infrastructure.merge import MergeEngine
 from src.osap.infrastructure.metrics import InMemoryMetricsCollector
 from src.osap.infrastructure.persistence.storage_vote_store import StorageVoteStore
-from src.osap.infrastructure.pipeline import PipelineEngine
 from src.osap.infrastructure.providers.adapters.generic_provider_adapter import (
     ProviderDefinition,
     load_definition,
@@ -33,7 +32,6 @@ from src.osap.infrastructure.providers.adapters.generic_provider_adapter import 
 )
 from src.osap.infrastructure.providers.fetchers import (
     GitHubFetcher,
-    IIIFFetcher,
     MediaWikiFetcher,
     MusicBrainzFetcher,
     MutopiaFetcher,
@@ -315,7 +313,6 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     container.set_cache(InMemoryCache())
     container.set_user_profile_store(InMemoryUserProfileStore())
     container.set_job_engine(InMemoryJobEngine(event_bus))
-    container.set_pipeline_engine(PipelineEngine(event_bus))
     container.set_duplicate_resolver(DuplicateResolver())
     container.set_merge_engine(MergeEngine())
 

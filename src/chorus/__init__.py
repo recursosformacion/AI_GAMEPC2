@@ -1,6 +1,6 @@
-from src.chorus.domain import StudyMaterial, MaterialType
-from src.chorus.ports import IStudyMaterialGenerator
 from src.chorus.application.use_cases import GenerateMaterialsUseCase
+from src.chorus.domain import MaterialType, StudyMaterial
+from src.chorus.ports import IStudyMaterialGenerator
 
 __all__ = [
     "StudyMaterial",

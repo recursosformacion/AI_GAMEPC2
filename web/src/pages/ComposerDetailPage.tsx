@@ -18,6 +18,8 @@ export function ComposerDetailPage() {
   const fetchBiography = useComposers((s) => s.fetchBiography);
   const fetchWorks = useComposers((s) => s.fetchWorks);
   const pipeline = useSearches((s) => s.data);
+  const searchLoading = useSearches((s) => s.loading);
+  const searchPolling = useSearches((s) => s.polling);
   const loading = useComposers((s) => s.loading);
 
   useEffect(() => {
@@ -35,6 +37,10 @@ export function ComposerDetailPage() {
   const storedWorks = (works?.items ?? []).filter((w) => w.title);
   const pipelineWorks = pipeline?.results ? groupWorks(pipeline.results) : [];
   const showPipeline = pipelineWorks.length > 0;
+  // Mientras se cargan/buscan las obras y aún no hay resultados, mostramos un
+  // indicador para que la pantalla no parezca vacía.
+  const worksLoading =
+    loading || searchLoading || searchPolling || (!showPipeline && storedWorks.length === 0 && !works);
 
   if (loading && !biography) {
     return <Spinner label={t("states.loading")} />;
@@ -163,6 +169,8 @@ export function ComposerDetailPage() {
             works={[]}
             fallbackWorks={storedWorks.map((w) => ({ work_id: w.work_id, title: w.title }))}
           />
+        ) : worksLoading ? (
+          <Spinner label={t("composers.searching")} />
         ) : (
           <p className="text-sm text-osap-muted">{t("states.empty")}</p>
         )}

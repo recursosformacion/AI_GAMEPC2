@@ -50,6 +50,10 @@ from src.osap.application.composer_resolution_engine import ResolutionDecision
 from src.osap.application.composers_service import ComposersService
 from src.osap.application.jobs import DefaultJob
 from src.osap.application.metadata_normalizer import MetadataNormalizer
+from src.osap.application.representation_selector import (
+    RepresentationCandidate,
+    SelectedRepresentation,
+)
 from src.osap.application.use_cases.resolve_works import ResolvedWorkItem, WorkResolveInput
 from src.osap.application.votes_service import VotesService
 from src.osap.bootstrap.container import Container
@@ -62,7 +66,7 @@ from src.osap.domain.resolve_request import ResolveRequestBuilder
 from src.osap.domain.value_objects import ProviderId
 from src.osap.domain.votes import ComposerStats, WorkStats, WorkVote
 from src.osap.infrastructure.resolution.acquisition_service import AcquisitionService
-from src.osap.infrastructure.resolution.provider_acquirer import IProviderAcquirer
+from src.osap.infrastructure.resolution.provider_acquirer import CatalogAcquirer, IProviderAcquirer
 from src.osap.infrastructure.resolution.universe_matching import SimpleUniverseMatcher
 from src.osap.infrastructure.state.op_store import build_op_store
 from src.osap.infrastructure.state.resolution_store import build_resolution_store
@@ -418,6 +422,58 @@ def _search_signature(req: SearchRequest) -> str:
     )
 
 
+def _download_bytes(url: str, timeout: int = 30) -> bytes:
+    """Descarga el contenido de una URL (usado por el worker para validar MusicXML)."""
+    req = urllib.request.Request(url, headers={"User-Agent": "osap-api/1.0"})
+    with urllib.request.urlopen(req, timeout=timeout) as resp:
+        raw: bytes = resp.read()
+        return raw
+
+
+def _progress_flat(progress: dict[str, object]) -> dict[str, object]:
+    """Normaliza el progress para el DTO: convierte escalares numéricos a int y
+    conserva los valores anidados (dicts por provider) sin tocar."""
+    out: dict[str, object] = {}
+    for k, v in progress.items():
+        if isinstance(v, (int, float, str)) and not isinstance(v, bool):
+            try:
+                out[k] = int(v)
+                continue
+            except (TypeError, ValueError):
+                pass
+        out[k] = v
+    return out
+
+
+def _selection_payload(selected: SelectedRepresentation) -> dict[str, object]:
+    """Construye el payload estructurado de la representación seleccionada."""
+    candidate = selected.candidate
+    if candidate is None:
+        return {"provider": None, "format": None, "quality_level": selected.quality_level.value}
+    report = selected.report
+    score_value = None
+    if report is not None:
+        overall = getattr(report, "overall", None)
+        if callable(overall):
+            try:
+                score_value = round(float(overall()), 4)
+            except Exception:  # noqa: BLE001
+                score_value = None
+    return {
+        "provider": candidate.provider,
+        "format": candidate.format,
+        "source_id": candidate.source_id,
+        "url": candidate.url,
+        "quality_level": selected.quality_level.value,
+        "quality_score": score_value,
+        "reason": selected.reason,
+        "alternatives": [
+            {"provider": a.provider, "format": a.format, "url": a.url} for a in selected.alternatives
+        ],
+        "warnings": list(selected.warnings),
+    }
+
+
 class PlatformApi:
     """Use cases of the OSAP Platform API, backed by existing application services."""
 
@@ -446,7 +502,7 @@ class PlatformApi:
         self._suggestion_counter = 0
         self._store = build_op_store(**(self._container.op_store_config() or {}))
         self._resolution_store = build_resolution_store(**(self._container.op_store_config() or {}))
-        self._acquisition = AcquisitionService(self._resolution_store, {}, SimpleUniverseMatcher())
+        self._acquisition = self._build_acquisition_service()
         highest = 0
         for item in self._store.list_suggestions():
             sid = str(item.get("id") or "")
@@ -1280,13 +1336,124 @@ class PlatformApi:
         """Inyecta los acquirers de proveedor (normalmente por wiring)."""
         self._acquisition = AcquisitionService(self._resolution_store, acquirers, SimpleUniverseMatcher())
 
+    def _build_acquisition_service(self) -> AcquisitionService:
+        """Construye el AcquisitionService con acquirers reales sobre el catálogo.
+
+        Reutiliza los providers ya wireados en el container (RemoteCatalogProvider, ...)
+        vía `CatalogAcquirer`: el pipeline de resolución consulta exactamente los mismos
+        providers que la búsqueda productiva, sin duplicar HTTP ni mapping.
+        """
+        acquirers: dict[str, IProviderAcquirer] = {}
+        for provider in self._container.catalog_manager().providers():
+            pid = provider.provider_id.value
+            if pid in ("local", "index"):
+                # Los proveedores internos no se consultan en vivo para una sesión de
+                # resolución (el índice/local ya alimentan la búsqueda normal).
+                continue
+            acquirers[pid] = CatalogAcquirer(pid, provider)
+        return AcquisitionService(self._resolution_store, acquirers, SimpleUniverseMatcher())
+
     def resolve_session(self, session_id: str) -> str | None:
         """Ejecuta una sesión hasta su estado terminal (completa adquisición + matching
-        definitivo). Devuelve el estado, o None si la sesión no existe."""
+        definitivo) y valida la mejor representación descargable obtenida.
+
+        Devuelve el estado final (`complete`/`partial`/`expired`), o None si la sesión
+        no existe. La validación (BasicValidator → Score + QualityReport + PipelineLog)
+        se registra en el estado de la sesión vía `error`/metadata.
+        """
         row = self._resolution_store.get_session(session_id)
         if row is None:
             return None
-        return self._acquisition.run_until_terminal(session_id)
+        status = self._acquisition.run_until_terminal(session_id)
+        if status in ("complete", "partial"):
+            self._validate_best_representation(session_id, status)
+        return status
+
+    def _validate_best_representation(self, session_id: str, status: str) -> None:
+        """Selecciona y valida la mejor representación adquirida.
+
+        Recoge TODAS las representaciones descargables, las valida con el
+        `BestRepresentationSelector` (MusicXmlValidator) y persiste la selección en
+        `selection_json` (resultado normal). `error` se usa SOLO para fallos reales.
+        """
+        from src.osap.application.representation_selector import BestRepresentationSelector
+
+        candidates = self._all_downloadable(session_id)
+        if not candidates:
+            self._resolution_store.update_status(
+                session_id, status, error="sin representación descargable para validar"
+            )
+            return
+        selected = BestRepresentationSelector().select(candidates)
+        if selected.candidate is None:
+            detail = "; ".join(selected.errors) if selected.errors else selected.reason
+            self._resolution_store.update_status(session_id, status, error=f"validación: {detail}")
+            return
+        selection = _selection_payload(selected)
+        self._resolution_store.set_selection(session_id, json.dumps(selection, ensure_ascii=False))
+
+    def _all_downloadable(self, session_id: str) -> tuple[RepresentationCandidate, ...]:
+        """Todas las representaciones descargables de la sesión (para el selector)."""
+        out: list[RepresentationCandidate] = []
+        for row in self._resolution_store.list_all_provider_results(session_id):
+            try:
+                works = json.loads(str(row.get("payload_json") or "[]"))
+            except ValueError:
+                continue
+            provider = str(row.get("provider") or "unknown")
+            for work in works:
+                if not isinstance(work, dict):
+                    continue
+                for resource in work.get("resources") or []:
+                    if not isinstance(resource, dict):
+                        continue
+                    links = resource.get("links") or {}
+                    url = str(links.get("download") or "")
+                    if not url.startswith(("http://", "https://")):
+                        continue
+                    out.append(
+                        RepresentationCandidate(
+                            provider=provider,
+                            format=str(resource.get("format") or "unknown"),
+                            url=url,
+                            source_id=f"{session_id}-{provider}-{len(out)}",
+                        )
+                    )
+        return tuple(out)
+
+    def _best_downloadable(self, session_id: str) -> tuple[str | None, str | None]:
+        """Mejor representación descargable entre los provider_results adquiridos.
+
+        Prioriza representaciones con fichero real (MusicXML/MXL/MEI) sobre páginas de
+        proveedor (IMSLP/MusicBrainz apuntan al registro humano, no al fichero). Entre
+        iguales, la primera URL encontrada gana.
+        """
+        score_formats = {"musicxml", "mxl", "mei"}
+        best_url: str | None = None
+        best_format: str | None = None
+        best_score = 0
+        for row in self._resolution_store.list_all_provider_results(session_id):
+            try:
+                works = json.loads(str(row.get("payload_json") or "[]"))
+            except ValueError:
+                continue
+            for work in works:
+                if not isinstance(work, dict):
+                    continue
+                for resource in work.get("resources") or []:
+                    if not isinstance(resource, dict):
+                        continue
+                    links = resource.get("links") or {}
+                    url = str(links.get("download") or "")
+                    if not url.startswith(("http://", "https://")):
+                        continue
+                    fmt = str(resource.get("format") or "").lower()
+                    score = 2 if fmt in score_formats else 1
+                    if score > best_score:
+                        best_score = score
+                        best_url = url
+                        best_format = fmt
+        return best_url, best_format
 
     def run_resolution_worker(self, max_sessions: int = 1) -> list[str]:
         """Recoge y procesa sesiones `acquiring` (una unidad de trabajo por sesión)."""
@@ -1330,17 +1497,25 @@ class PlatformApi:
     def _resolution_session_row(row: dict[str, object]) -> dict[str, object]:
         query_info = json.loads(str(row.get("query_json") or "{}"))
         progress_raw = json.loads(str(row.get("progress_json") or "{}"))
+        selection_raw = row.get("selection_json")
+        try:
+            selection = json.loads(str(selection_raw)) if selection_raw else None
+        except ValueError:
+            selection = None
         return {
             "session_id": str(row["session_id"]),
             "status": str(row.get("status") or "acquiring"),
             "query": query_info.get("query"),
             "providers": json.loads(str(row.get("providers_json") or "[]")),
             "policy": json.loads(str(row.get("policy_json") or "{}")),
-            "progress": {k: int(v) for k, v in progress_raw.items()},
+            # El progress puede tener claves anidadas (p. ej. `providers` -> dict por
+            # provider) además de contadores planos; se devuelve tal cual.
+            "progress": _progress_flat(progress_raw),
             "created_at": str(row.get("created_at") or ""),
             "updated_at": str(row.get("updated_at") or ""),
             "expires_at": str(row.get("expires_at") or ""),
             "error": row.get("error"),
+            "selection": selection,
         }
 
     @staticmethod

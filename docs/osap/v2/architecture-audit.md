@@ -162,7 +162,7 @@ Se sabe que existirán, pero no se construyen todavía.
 | Módulo | Cuándo |
 |--------|--------|
 | `knowledge_base/*` | V3 (aprendizaje de la plataforma). |
-| `pipeline/*` (motor de pipeline definitivo) | Cuando se fije el pipeline canónico de resolución (V2.1+). El `PipelineEngine` actual es mínima. |
+| pipeline modular de múltiples stages | Cuando se fije el pipeline canónico (V2.1+). El `PipelineEngine` previsto fue **eliminado por huérfano**; el circuito vigente lo coordina `resolve_session()` + `AcquisitionService` + `BestRepresentationSelector` + `ScoreValidationStage`. |
 | `user_profile/*` | Personalización; sin demanda todavía. |
 | `adapters/export/*` (construcción real) | Con OMR (V2.0). |
 | IA avanzada: embeddings, aprendizaje automático, análisis armónico profundo | V3 — **no tocar ahora**. |

@@ -1,36 +1,37 @@
 # Score Acquisition Pipeline — validación y trazabilidad
 
 Incremento sobre `docs/osap/musicxml-validation.md`: el validador MusicXML
-(`BasicValidator`) se conecta al **Score Acquisition Pipeline** como un stage,
-produciendo `Score` + `QualityReport` + `PipelineLog` con trazabilidad.
+(`BasicValidator`) se conecta al circuito de adquisición real, produciendo
+`Score` + `QualityReport` + `PipelineLog` con trazabilidad.
 
-## Flujo
+> **Estado (sept 2026):** `PipelineEngine`/`IPipelineEngine` fueron **eliminados** por
+> estar huérfanos (no participaban en el circuito real). La coordinación la hace
+> `resolve_session()` + `AcquisitionService` + `BestRepresentationSelector`, que
+> invoca `ScoreValidationStage` directamente.
+
+## Flujo real
 
 ```
-MusicalDocument → adquisición/representación MusicXML → BasicValidator →
-Score + QualityReport → PipelineLog
+obra → POST /works/resolve → resolve_session()
+  → AcquisitionService.run_until_terminal()
+  → BestRepresentationSelector.select()
+  → ScoreValidationStage.execute() → BasicValidator → MusicXmlValidator
+  → Score + QualityReport + PipelineLog → selection_json → complete
 ```
 
 ## Componentes
 
 - `src/osap/infrastructure/pipeline/score_validation_stage.py`
-  - `ScoreValidationStage(IPipelineStage)` — lee del `PipelineContext.data`:
-    - `musical_request` (clave `KEY_REQUEST`): `MusicalRequest` (opcional),
-    - `musical_document` (clave `KEY_DOCUMENT`): `MusicalDocument` (opcional),
-    - `acquisition_result` (clave `KEY_ACQUISITION`): `AcquisitionResult`
-      obligatorio, con el contenido MusicXML/.mxl en `source.content`.
-  - Ejecuta `BasicValidator` (validación MusicXML por niveles, real, sin simular
-    MuseScore).
-  - Escribe en el contexto:
-    - `score` (`KEY_SCORE`): `Score` con contenido, `QualityReport` y
-      `QualityLevel` exactos del validador,
-    - `quality_report` (`KEY_QUALITY_REPORT`): `QualityReport`,
-    - `pipeline_log` (`KEY_PIPELINE_LOG`): `PipelineLog`,
-    - `validation_diagnostic` (`KEY_VALIDATION`): `ValidationDiagnostic`.
-- `src/osap/infrastructure/pipeline/pipeline_engine.py`
-  - `PipelineEngine(IPipelineEngine)` — motor mínimo: registra stages
-    (`add_stage`) y los ejecuta en orden (`run`). Acepta un `IEventBus`
-    opcional (compatible con `wiring.py`) y publica `pipeline.stage.<name>`.
+  - `ScoreValidationStage` — ejecuta `BasicValidator` sobre un
+    `AcquisitionResult` (contenido MusicXML/.mxl en `source.content`) y produce
+    el `Score` + `QualityReport` + `PipelineLog` exactos del validador.
+  - Es invocado por `BestRepresentationSelector` (selección de la mejor
+    representación) dentro de `resolve_session`.
+- `src/osap/application/representation_selector.py`
+  - `BestRepresentationSelector` — selecciona la mejor representación entre las
+    adquiridas (descargable → MusicXML → mayor QualityLevel → mejor
+    QualityReport → menos errores → desempate por provider) y conserva las
+    alternativas como evidencia.
 
 ## Fallo controlado
 

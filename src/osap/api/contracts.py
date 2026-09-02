@@ -734,6 +734,7 @@ class ResolutionSessionResponse(_Frozen):
     updated_at: str
     expires_at: str
     error: str | None = None
+    selection: dict[str, object] | None = None
 
 
 class ResolutionItemResponse(_Frozen):

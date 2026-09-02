@@ -152,6 +152,37 @@ def test_every_response_has_request_id() -> None:
 
 def test_error_response_is_uniform() -> None:
     client = _client()
+    # Una ruta conocida con error controlado devuelve el envelope uniforme.
+    resp = client.get("/api/v1/sessions/ses_inexistente")
+    assert resp.status_code == 404
+    body = resp.json()
+    assert body["success"] is False
+    assert body["request_id"]
+    assert body["error"]["code"] == "NOT_FOUND"
+
+
+def test_resolve_creates_session_and_is_queryable() -> None:
+    """Caso D — POST /works/resolve → 202 + session_id; GET /sessions/{id} → estado."""
+    client = _client()
+    resp = client.post("/api/v1/works/resolve", json={"query": "Ave Verum"})
+    assert resp.status_code == 202
+    body = resp.json()
+    assert body["success"] is True
+    session_id = body["data"]["session_id"]
+    assert session_id
+    assert body["data"]["status"] == "acquiring"
+    # El estado es consultable (adquisición asíncrona: puede seguir acquiring o ya
+    # haber terminado; lo importante es que la sesión existe y es consultable).
+    get = client.get(f"/api/v1/sessions/{session_id}")
+    assert get.status_code == 200
+    assert get.json()["data"]["session_id"] == session_id
+
+
+def test_resolve_session_not_found_is_404() -> None:
+    client = _client()
+    resp = client.get("/api/v1/sessions/ses_inexistente")
+    assert resp.status_code == 404
+    assert resp.json()["error"]["code"] == "NOT_FOUND"
     resp = client.post("/api/v1/searches", json={"query": "   "})
     assert resp.status_code == 400
     body = resp.json()

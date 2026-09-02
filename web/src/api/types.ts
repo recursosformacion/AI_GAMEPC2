@@ -215,6 +215,47 @@ export interface SessionSourceCreate {
   location: string;
 }
 
+export interface ResolutionSessionCreateRequest {
+  query?: string | null;
+  works?: Array<{ title: string; composer?: string | null }> | null;
+  providers?: string[] | null;
+}
+
+export interface ResolutionProgress {
+  acquired_pages?: number;
+  acquired_works?: number;
+  items_total?: number;
+  items_resolved?: number;
+  items_ambiguous?: number;
+  items_not_found?: number;
+  providers?: Record<string, { pages?: number; works?: number; retries?: number }>;
+}
+
+export interface ResolutionSelection {
+  provider?: string | null;
+  format?: string | null;
+  source_id?: string | null;
+  url?: string | null;
+  quality_level?: number | null;
+  quality_score?: number | null;
+  reason?: string | null;
+  alternatives?: Array<{ provider: string; format: string; url: string }>;
+  warnings?: string[];
+}
+
+export interface ResolutionSession {
+  session_id: string;
+  status: string;
+  query?: string | null;
+  providers?: string[];
+  progress?: ResolutionProgress;
+  created_at: string;
+  updated_at: string;
+  expires_at: string;
+  error?: string | null;
+  selection?: ResolutionSelection | null;
+}
+
 export interface DiscoverSource {
   source_id: string;
   name: string;

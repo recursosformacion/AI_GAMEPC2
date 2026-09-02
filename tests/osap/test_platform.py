@@ -27,9 +27,7 @@ from src.osap.infrastructure.dedup import DuplicateResolver
 from src.osap.infrastructure.events import InMemoryEventBus
 from src.osap.infrastructure.jobs import InMemoryJobEngine
 from src.osap.infrastructure.metrics import InMemoryMetricsCollector
-from src.osap.infrastructure.pipeline import PipelineEngine
 from src.osap.infrastructure.user_profile import InMemoryUserProfileStore
-from src.osap.ports.pipeline_stage import IPipelineStage
 
 
 def _work(title: str = "Ave Maria", composer: str = "Franz Schubert") -> WorkDescriptor:
@@ -163,34 +161,6 @@ class TestDuplicateResolver:
             format=OutputFormat.PDF,
         )
         assert resolver.is_duplicate(first, other) is False
-
-
-class _NoopStage(IPipelineStage):
-    def __init__(self, name: str) -> None:
-        self._name = name
-        self.runs = 0
-
-    @property
-    def name(self) -> str:
-        return self._name
-
-    def execute(self, context: PipelineContext) -> PipelineContext:
-        self.runs += 1
-        return context.with_data(stage=self._name)
-
-
-class TestPipelineEngine:
-    def test_composes_stages(self) -> None:
-        bus = InMemoryEventBus()
-        engine = PipelineEngine(bus)
-        s1 = _NoopStage("lookup")
-        s2 = _NoopStage("download")
-        engine.add_stage(s1)
-        engine.add_stage(s2)
-        context = engine.run(PipelineContext())
-        assert s1.runs == 1 and s2.runs == 1
-        assert context.data["stage"] == "download"
-        assert any(e.event_type == "StageStarted" for e in bus.published)
 
 
 def _await_terminal(engine: InMemoryJobEngine, job_id: JobId, timeout: float = 2.0) -> Job:

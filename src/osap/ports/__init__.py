@@ -11,7 +11,6 @@ from .knowledge_miner import IKnowledgeMiner
 from .library_provider import ILibraryProvider
 from .merge_engine import IMergeEngine
 from .metrics import IMetricsCollector
-from .pipeline_engine import IPipelineEngine
 from .pipeline_stage import IPipelineStage
 from .ranking_engine import IRankingEngine
 from .score_exporter import IScoreExporter
@@ -40,5 +39,4 @@ __all__ = [
     "IDuplicateResolver",
     "IMergeEngine",
     "IPipelineStage",
-    "IPipelineEngine",
 ]

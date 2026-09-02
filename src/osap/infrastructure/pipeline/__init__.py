@@ -1,6 +1,5 @@
-"""Implementaciones de stages y motor del pipeline."""
+"""Implementaciones de stages del pipeline."""
 
-from src.osap.infrastructure.pipeline.pipeline_engine import PipelineEngine
 from src.osap.infrastructure.pipeline.score_validation_stage import (
     KEY_ACQUISITION,
     KEY_DOCUMENT,
@@ -15,7 +14,6 @@ from src.osap.infrastructure.pipeline.score_validation_stage import (
 )
 
 __all__ = [
-    "PipelineEngine",
     "ScoreValidationError",
     "ScoreValidationStage",
     "ValidationDiagnostic",

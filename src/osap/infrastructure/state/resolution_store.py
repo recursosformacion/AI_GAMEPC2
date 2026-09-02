@@ -54,6 +54,7 @@ class _MemoryStore:
             "policy_json": policy_json,
             "progress_json": "{}",
             "error": None,
+            "selection_json": None,
             "created_at": created_at,
             "updated_at": created_at,
             "expires_at": expires_at,
@@ -72,6 +73,15 @@ class _MemoryStore:
         row["updated_at"] = _now()
         if error is not None:
             row["error"] = error
+        return row
+
+    def set_selection(self, session_id: str, selection_json: str) -> dict[str, object] | None:
+        """Persiste la representación seleccionada (resultado normal, no error)."""
+        row = self._sessions.get(session_id)
+        if row is None:
+            return None
+        row["selection_json"] = selection_json
+        row["updated_at"] = _now()
         return row
 
     def set_progress(self, session_id: str, progress_json: str) -> dict[str, object] | None:
@@ -241,6 +251,7 @@ class _MysqlStore(_MemoryStore):
                 policy_json     TEXT         NOT NULL,
                 progress_json   TEXT         NOT NULL,
                 error           TEXT,
+                selection_json  TEXT,
                 created_at      VARCHAR(64)  NOT NULL,
                 updated_at      VARCHAR(64)  NOT NULL,
                 expires_at      VARCHAR(64)  NOT NULL,
@@ -287,6 +298,17 @@ class _MysqlStore(_MemoryStore):
             )
             """
         )
+        # Migración idempotente: columna selection_json para sesiones ya creadas.
+        cols = self._run(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_schema = DATABASE() AND table_name = 'resolution_sessions' "
+            "AND column_name = 'selection_json'"
+        )
+        if not cols:
+            try:
+                self._run("ALTER TABLE resolution_sessions ADD COLUMN selection_json TEXT")
+            except pymysql.err.OperationalError:
+                _LOGGER.warning("no se pudo añadir selection_json (tabla en uso o permisos)")
 
     def create_session(
         self,
@@ -322,6 +344,14 @@ class _MysqlStore(_MemoryStore):
                 "UPDATE resolution_sessions SET status = %s, updated_at = %s WHERE session_id = %s",
                 (status, _now(), session_id),
             )
+        return self.get_session(session_id)
+
+    def set_selection(self, session_id: str, selection_json: str) -> dict[str, object] | None:
+        """Persiste la representación seleccionada (resultado normal, no error)."""
+        self._run(
+            "UPDATE resolution_sessions SET selection_json = %s, updated_at = %s WHERE session_id = %s",
+            (selection_json, _now(), session_id),
+        )
         return self.get_session(session_id)
 
     def set_progress(self, session_id: str, progress_json: str) -> dict[str, object] | None:

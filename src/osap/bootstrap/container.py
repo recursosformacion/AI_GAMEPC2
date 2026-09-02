@@ -20,7 +20,6 @@ from src.osap.infrastructure.events import InMemoryEventBus
 from src.osap.infrastructure.jobs import InMemoryJobEngine
 from src.osap.infrastructure.merge import MergeEngine
 from src.osap.infrastructure.metrics import InMemoryMetricsCollector
-from src.osap.infrastructure.pipeline import PipelineEngine
 from src.osap.infrastructure.user_profile import InMemoryUserProfileStore
 from src.osap.ports.cache import ICache
 from src.osap.ports.catalog_provider import ICatalogProvider
@@ -30,7 +29,6 @@ from src.osap.ports.event_bus import IEventBus
 from src.osap.ports.library_provider import ILibraryProvider
 from src.osap.ports.merge_engine import IMergeEngine
 from src.osap.ports.metrics import IMetricsCollector
-from src.osap.ports.pipeline_engine import IPipelineEngine
 from src.osap.ports.ranking_engine import IRankingEngine
 from src.osap.ports.score_exporter import IScoreExporter
 from src.osap.ports.score_validator import IScoreValidator
@@ -51,7 +49,6 @@ class Container:
         self._cache: InMemoryCache | None = None
         self._user_profiles: InMemoryUserProfileStore | None = None
         self._job_engine: InMemoryJobEngine | None = None
-        self._pipeline_engine: PipelineEngine | None = None
         self._duplicate_resolver: DuplicateResolver | None = None
         self._merge_engine: MergeEngine | None = None
         self._defined_providers: tuple[tuple[str, str, str, bool], ...] = ()
@@ -210,12 +207,6 @@ class Container:
     def set_user_profile_store(self, store: InMemoryUserProfileStore) -> None:
         self._user_profiles = store
 
-    def set_job_engine(self, engine: InMemoryJobEngine) -> None:
-        self._job_engine = engine
-
-    def set_pipeline_engine(self, engine: PipelineEngine) -> None:
-        self._pipeline_engine = engine
-
     def set_duplicate_resolver(self, resolver: DuplicateResolver) -> None:
         self._duplicate_resolver = resolver
 
@@ -247,10 +238,8 @@ class Container:
             raise RuntimeError("Job engine not wired")
         return self._job_engine
 
-    def pipeline_engine(self) -> IPipelineEngine:
-        if self._pipeline_engine is None:
-            raise RuntimeError("Pipeline engine not wired")
-        return self._pipeline_engine
+    def set_job_engine(self, engine: InMemoryJobEngine) -> None:
+        self._job_engine = engine
 
     def duplicate_resolver(self) -> IDuplicateResolver:
         if self._duplicate_resolver is None:

@@ -1,5 +1,19 @@
 # Visión y Arquitectura de Chorus Study Generator v2
 
+> **Nota de estado (sept 2026):** este documento es la VISIÓN original. La implementación real del
+> pipeline de adquisición/validación ha evolucionado. El circuito vigente en osap-api es:
+>
+> ```
+> obra → POST /works/resolve → resolve_session() → AcquisitionService.run_until_terminal()
+>   → BestRepresentationSelector.select() → ScoreValidationStage.execute()
+>   → BasicValidator → MusicXmlValidator → Score + QualityReport + PipelineLog
+>   → selection_json → complete
+> ```
+>
+> `PipelineEngine` fue eliminado por estar huérfano (no participaba en el circuito). `IScoreProvider`,
+> `CapabilityAnalyzer`, `ScoreSelector` y `MusicXmlProvider` descritos abajo son componentes
+> **previstos en la visión**, no implementados ni necesarios para el circuito actual.
+
 ## Objetivo del proyecto
 
 Chorus Study Generator genera materiales de estudio para coros a partir de la mejor representación musical disponible para cada caso de uso. El sistema acepta documentos musicales en cualquier formato (PDF, imágenes, MusicXML, MEI, MIDI, etc.) y produce partituras reducidas, partes individuales, guías vocales y otros recursos pedagógicos listos para ensayo.

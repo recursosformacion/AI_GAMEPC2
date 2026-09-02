@@ -4,6 +4,12 @@
 
 Aceptado.
 
+> **Nota de evolución (sept 2026):** la decisión de pipeline modular (ADRs 0014-0017)
+> es histórica. En la implementación actual `PipelineEngine` fue **eliminado** por estar
+> huérfano; el circuito vigente de adquisición/validación es:
+> `resolve_session()` → `AcquisitionService` → `BestRepresentationSelector` →
+> `ScoreValidationStage` → `BasicValidator` → `MusicXmlValidator`.
+
 ## Contexto
 
 Hasta ahora `CandidateRepresentation`/`WorkDescriptor` no distinguían entre una

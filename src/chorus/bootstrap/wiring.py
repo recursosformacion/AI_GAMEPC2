@@ -1,6 +1,13 @@
 from src.chorus.bootstrap.container import Container
-from src.chorus.infrastructure.generators import PDFGenerator, AudioGenerator, ExerciseGenerator
+from src.chorus.infrastructure.generators.exercise_generator import ExerciseGenerator
 
 
 def wire(container: Container) -> Container:
-    raise NotImplementedError
+    """Registra los generadores funcionales de Chorus.
+
+    Solo se registran generadores reales y ejecutables. `AudioGenerator` y
+    `PDFGenerator` siguen sin implementar (funcionalidad futura) y NO se registran
+    para no crear una falsa sensación de soporte.
+    """
+    container.register_generator(ExerciseGenerator())
+    return container

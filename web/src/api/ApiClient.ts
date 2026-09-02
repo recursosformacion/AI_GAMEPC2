@@ -21,6 +21,8 @@ import type {
   MoveAliasResult,
   OpProvider,
   PromoteAliasResult,
+  ResolutionSession,
+  ResolutionSessionCreateRequest,
   SetAttributionResult,
   SourcePreview,
   SourceSuggestion,
@@ -116,6 +118,14 @@ export class ApiClient {
   async getComposerWorks(composerId: string, limit: number, offset: number): Promise<ComposerWorks> {
     const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
     return this.get<ComposerWorks>(`/composers/${encodeURIComponent(composerId)}/works?${params.toString()}`);
+  }
+
+  async createResolutionSession(req: ResolutionSessionCreateRequest): Promise<ResolutionSession> {
+    return this.post<ResolutionSession>("/works/resolve", req);
+  }
+
+  async getResolutionSession(sessionId: string): Promise<ResolutionSession> {
+    return this.get<ResolutionSession>(`/sessions/${encodeURIComponent(sessionId)}`);
   }
 
   async mergeComposers(targetId: string, sources: string[]): Promise<MergeComposersResult> {

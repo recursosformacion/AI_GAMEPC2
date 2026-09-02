@@ -3,6 +3,7 @@ import type { EvidenceInfo, RepresentationInfo, WorkInfo } from "../api/types";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
 import { useAuth } from "../state/auth";
+import { useResolution } from "../state/resolution";
 import { VoteControl } from "./VoteControl";
 import { WorkRating } from "./WorkRating";
 
@@ -100,7 +101,14 @@ export function WorkDetailTabs({
         </div>
       ) : null}
 
-      {tab === "representations" ? <RepresentationsTab representations={representations} byProvider={byProvider} /> : null}
+      {tab === "representations" ? (
+        <RepresentationsTab
+          representations={representations}
+          byProvider={byProvider}
+          workTitle={work.title}
+          workComposer={work.composer}
+        />
+      ) : null}
 
       {tab === "evidence" ? (
         <div className="p-3">
@@ -157,9 +165,13 @@ export function WorkDetailTabs({
 function RepresentationsTab({
   representations,
   byProvider,
+  workTitle,
+  workComposer,
 }: {
   representations: RepresentationInfo[];
   byProvider: Map<string, RepresentationInfo[]>;
+  workTitle?: string | null;
+  workComposer?: string | null;
 }) {
   const { t } = useI18n();
   const [selected, setSelected] = useState<string | null>(null);
@@ -218,7 +230,7 @@ function RepresentationsTab({
                   </a>
                   <a
                     href={`/api/v1/representations/${rep.id}/download`}
-                    download={downloadFileName(rep)}
+                    download={downloadFileName(rep, workTitle)}
                     target="_blank"
                     rel="noreferrer"
                     title={t("work.download")}
@@ -272,7 +284,7 @@ function RepresentationsTab({
                 </a>
                 <a
                   href={`/api/v1/representations/${sel.id}/download`}
-                  download={downloadFileName(sel)}
+                  download={downloadFileName(sel, workTitle)}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-1.5 rounded border border-osap-border px-3 py-1 text-sm text-osap-accent"
@@ -284,6 +296,14 @@ function RepresentationsTab({
           </div>
         </div>
       ) : null}
+
+      {/* Resolver obra: cuando ninguna representación es descargable, se ofrece
+          crear una sesión de adquisición (POST /works/resolve) para buscarla. */}
+      <ResolveWorkBlock
+        workTitle={workTitle}
+        workComposer={workComposer}
+        hasUsableFile={representations.some((r) => r.available !== false)}
+      />
     </div>
   );
 }
@@ -327,11 +347,100 @@ function ProvidersTab({ byProvider }: { byProvider: Map<string, RepresentationIn
   );
 }
 
-function downloadFileName(rep: RepresentationInfo): string {
+function downloadFileName(rep: RepresentationInfo, workTitle?: string | null): string {
   const ext = ({ musicxml: "mxl", pdf: "pdf", midi: "mid" } as Record<string, string>)[rep.format] ?? rep.format;
-  const base = rep.title || rep.id || "representation";
+  const base = rep.title || workTitle || rep.id || "representation";
   const safe = base.replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, "_");
   return `${safe}.${ext}`;
+}
+
+function ResolveWorkBlock({
+  workTitle,
+  workComposer,
+  hasUsableFile,
+}: {
+  workTitle?: string | null;
+  workComposer?: string | null;
+  hasUsableFile: boolean;
+}) {
+  const { t } = useI18n();
+  const { session, loading, polling, error, resolve, clear } = useResolution();
+  if (!workTitle || hasUsableFile) return null;
+
+  const startResolve = () => {
+    const query = [workTitle, workComposer].filter(Boolean).join(" — ");
+    void resolve(query);
+  };
+
+  return (
+    <div className="mt-3 rounded border border-dashed border-osap-border p-3">
+      <h4 className="text-sm font-semibold">{t("work.resolveTitle")}</h4>
+      <p className="mt-1 text-xs text-osap-muted">{t("work.resolveBody")}</p>
+      {!session ? (
+        <button
+          type="button"
+          onClick={startResolve}
+          disabled={loading}
+          className="mt-2 inline-flex items-center gap-1.5 rounded bg-osap-accent px-3 py-1 text-sm text-white disabled:opacity-60"
+        >
+          {loading ? t("states.loading") : t("work.resolveCta")}
+        </button>
+      ) : (
+        <div className="mt-2 space-y-2 text-sm">
+          <p>
+            <span className="text-osap-muted">{t("work.resolveStatus")}:</span>{" "}
+            <strong>{session.status}</strong>
+            {session.error ? <span className="ml-2 text-xs text-osap-muted">{session.error}</span> : null}
+          </p>
+          {session.progress?.acquired_works != null ? (
+            <p className="text-xs text-osap-muted">
+              {t("work.resolveWorks")}: {session.progress.acquired_works} ·{" "}
+              {t("work.resolvePages")}: {session.progress.acquired_pages ?? 0}
+            </p>
+          ) : null}
+          {session.selection?.provider ? (
+            <div className="rounded border border-osap-border bg-osap-surface p-2">
+              <p className="font-medium">
+                {t("work.selectedBest")}: {session.selection.provider} · {session.selection.format}
+              </p>
+              {session.selection.quality_level != null ? (
+                <p className="text-xs text-osap-muted">
+                  {t("work.resolveQuality")}: {session.selection.quality_level}
+                  {session.selection.quality_score != null
+                    ? ` · ${t("work.resolveScore")}: ${session.selection.quality_score.toFixed(2)}`
+                    : ""}
+                </p>
+              ) : null}
+              {session.selection.reason ? (
+                <p className="text-xs text-osap-muted">
+                  {t("work.resolveReason")}: {session.selection.reason}
+                </p>
+              ) : null}
+              {session.selection.url ? (
+                <a
+                  href={session.selection.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-1 inline-block rounded bg-osap-accent px-2 py-0.5 text-xs text-white"
+                >
+                  {t("actions.download")}
+                </a>
+              ) : null}
+            </div>
+          ) : null}
+          {polling ? <p className="text-xs text-osap-muted">{t("work.resolvePolling")}</p> : null}
+          {error ? <p className="mt-1 text-xs text-red-500">{error.message}</p> : null}
+          <button
+            type="button"
+            onClick={clear}
+            className="mt-1 text-xs text-osap-muted underline hover:text-osap-accent"
+          >
+            {t("work.resolveReset")}
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function Meta({ label, value }: { label: string; value: string }) {

@@ -1,19 +1,19 @@
-// Test mínimo de la página /support (a través del SupportGateway).
-// Verifica que mantiene el comportamiento actual: CTA de login (anónimo) vs CTA de
-// "empezar a apoyar" (identificado), sin romper la autenticación.
+// Test mínimo de la página "Apoya a OSAP" (a través del SupportGateway).
+// Verifica que mantiene el mismo comportamiento que la antigua "Apoya Chorus":
+// CTA de login (anónimo) vs CTA de "empezar a apoyar" (identificado), sin simular pago.
 
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { I18nProvider } from "../i18n/I18n";
 import { useAuth } from "../state/auth";
-import { SupportPage } from "./SupportPage";
+import { SupportOsapPage } from "./SupportOsapPage";
 
-function renderSupportPage(): void {
+function renderSupportOsapPage(): void {
   render(
     <MemoryRouter initialEntries={["/support"]}>
       <I18nProvider lang="en" setLang={() => undefined}>
-        <SupportPage />
+        <SupportOsapPage />
       </I18nProvider>
     </MemoryRouter>,
   );
@@ -34,10 +34,9 @@ afterEach(() => {
   resetAuth();
 });
 
-describe("SupportPage", () => {
+describe("SupportOsapPage", () => {
   it("muestra el CTA de iniciar sesión cuando no hay usuario", () => {
-    renderSupportPage();
-    // Botón de identificación (login) para no autenticado.
+    renderSupportOsapPage();
     expect(screen.getByRole("button", { name: /login|sign in|iniciar/i })).toBeTruthy();
   });
 
@@ -46,8 +45,7 @@ describe("SupportPage", () => {
       user: { user_id: "uuid-1", roles: ["user"], email_verified: true },
       status: "authenticated",
     });
-    renderSupportPage();
-    // CTA de apoyo (autenticado), sin simular pago.
+    renderSupportOsapPage();
     expect(screen.getByRole("button", { name: /start supporting|empezar a apoyar/i })).toBeTruthy();
   });
 });

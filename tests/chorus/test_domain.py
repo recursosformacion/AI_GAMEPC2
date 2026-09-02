@@ -1,9 +1,10 @@
 import unittest
-from src.chorus.domain import StudyMaterial, MaterialType
+
+from src.chorus.domain import MaterialType, StudyMaterial
 
 
 class TestStudyMaterial(unittest.TestCase):
-    def test_create_material(self):
+    def test_create_material(self) -> None:
         material = StudyMaterial(
             material_type=MaterialType.REDUCED_SCORE,
             content={},

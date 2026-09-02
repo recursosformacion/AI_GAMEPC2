@@ -9,8 +9,9 @@ proveedor.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import TYPE_CHECKING, Protocol
 
+from src.osap.domain.search_request import SearchRequest
 from src.osap.infrastructure.providers.adapters.generic_provider_adapter import (
     GenericProviderAdapter,
     ProviderQuery,
@@ -18,9 +19,15 @@ from src.osap.infrastructure.providers.adapters.generic_provider_adapter import 
 from src.osap.infrastructure.providers.contracts import (
     ProviderIdentity,
     ProviderLinks,
+    ProviderMetadata,
     ProviderResource,
+    ProviderStatistics,
     ProviderWork,
 )
+
+if TYPE_CHECKING:
+    from src.osap.domain.candidate_representation import CandidateRepresentation
+    from src.osap.ports.catalog_provider import ICatalogProvider
 
 
 @dataclass(frozen=True)
@@ -66,6 +73,85 @@ class ProviderAdapterAcquirer:
             next_cursor=None,
             end_of_provider=True,
         )
+
+
+class CatalogAcquirer:
+    """Acquirer sobre un `ICatalogProvider` existente del catálogo.
+
+    Reutiliza el provider ya wireado (RemoteCatalogProvider, LocalCatalogProvider, ...)
+    sin duplicar su HTTP ni su mapping: delega en `provider.search(SearchRequest)` y
+    convierte las `CandidateRepresentation` en el formato `ProviderWork.identity` que
+    consume el universo/matcher. Entrega una única página (`end_of_provider`).
+    """
+
+    def __init__(self, provider_id: str, provider: ICatalogProvider) -> None:
+        self._provider_id = provider_id
+        self._provider = provider
+
+    def acquire_page(self, provider: str, cursor_value: str, query: str) -> AcquiredPage:
+        request = SearchRequest(query=query)
+        try:
+            candidates = self._provider.search(request)
+        except Exception as exc:  # noqa: BLE001  # el error se registra como recuperable
+            return AcquiredPage(provider=provider, cursor_value=cursor_value, error=str(exc))
+        works = tuple(_candidate_to_provider_work(self._provider_id, c) for c in candidates)
+        return AcquiredPage(
+            provider=provider,
+            cursor_value=cursor_value,
+            works=works,
+            next_cursor=None,
+            end_of_provider=True,
+        )
+
+
+def _candidate_to_provider_work(provider_id: str, candidate: CandidateRepresentation) -> ProviderWork:
+    """Convierte una CandidateRepresentation del catálogo a ProviderWork (contrato v1.3).
+
+    El matcher consume `work.identity` con id/title/composer/catalogue/confidence; los
+    recursos se usan como trazabilidad de representación (formato + URL de descarga).
+    """
+    desc = candidate.work_descriptor
+    resources: list[ProviderResource] = []
+    if candidate.download_url or candidate.view_url:
+        resources.append(
+            ProviderResource(
+                id=candidate.remote_id or f"{candidate.candidate_id.value}",
+                format=candidate.format.value,
+                mime_type="",
+                available=candidate.downloadable,
+                license=candidate.license,
+                links=ProviderLinks(
+                    download=candidate.download_url,
+                    view=candidate.view_url,
+                    thumbnail=None,
+                ),
+            )
+        )
+    return ProviderWork(
+        identity=ProviderIdentity(
+            id=desc.work_id.value,
+            title=desc.title,
+            composer=desc.composer,
+            catalogue=desc.catalogue_number,
+            confidence=candidate.confidence.value,
+        ),
+        metadata=ProviderMetadata(
+            subtitle=None,
+            opus=None,
+            musical_key=None,
+            duration=None,
+            measures=None,
+            pages=None,
+            parts=None,
+            license=candidate.license,
+            public_domain=candidate.public_domain,
+            genres=(),
+            tags=(),
+            instruments=(),
+        ),
+        statistics=ProviderStatistics(favorites=0, downloads=0, views=0, rating=0.0),
+        resources=tuple(resources),
+    )
 
 
 class FakePaginatedAcquirer:

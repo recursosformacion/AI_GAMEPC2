@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
 import uuid
 from typing import TYPE_CHECKING, Any, cast
 
@@ -568,11 +569,12 @@ def _resolution_session_dto(data: dict[str, object]) -> ResolutionSessionRespons
         providers=cast("list[str]", data.get("providers") or []),
         policy=ResolutionPolicy.model_validate(data.get("policy") or {}),
         progress=ResolutionProgress.model_validate(data.get("progress") or {}),
-        created_at=cast("str", data["created_at"]),
-        updated_at=cast("str", data["updated_at"]),
-        expires_at=cast("str", data["expires_at"]),
-        error=cast("str | None", data.get("error")),
-    )
+          created_at=cast("str", data["created_at"]),
+          updated_at=cast("str", data["updated_at"]),
+          expires_at=cast("str", data["expires_at"]),
+          error=cast("str | None", data.get("error")),
+          selection=cast("dict[str, object] | None", data.get("selection")),
+      )
 
 
 def _resolution_item_dto(row: dict[str, object]) -> ResolutionItemResponse:
@@ -839,11 +841,15 @@ def create_platform_app(
         payload: JobCreateRequest, response: Response, authorization: str | None = Header(default=None)
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         del authorization  # auth prepared but disabled in V3.1
-        if not payload.type.strip():
-            return fail(400, response, "INVALID_JOB_TYPE", "Job type cannot be empty")
-        job = api.create_job(payload.type)
-        response.headers["Location"] = f"/api/v1/jobs/{job.job_id}"
-        return ok(job)
+        # V3.2: el endpoint de jobs no está implementado. Antes devolvía un `DefaultJob`
+        # no-op marcado como completed sin ejecutar trabajo; eso simulaba una ejecución
+        # real. Se prefiere un 501 explícito a un falso positivo.
+        return fail(
+            501,
+            response,
+            "NOT_IMPLEMENTED",
+            "Job execution is not implemented yet",
+        )
 
     @app.get(
         "/api/v1/jobs",
@@ -2127,9 +2133,18 @@ def create_platform_app(
             providers=list(payload.providers) if payload.providers else None,
             policy=payload.policy.model_dump() if payload.policy else None,
         )
+        session_id = cast("str", created["session_id"])
+        # Dispara el worker en segundo plano: la adquisición+validación NO bloquea la
+        # petición HTTP. El progreso se consulta con GET /sessions/{id}.
+        threading.Thread(
+            target=api.resolve_session,
+            args=(session_id,),
+            name=f"resolve-{session_id[:8]}",
+            daemon=True,
+        ).start()
         return ok(
             ResolutionSessionCreated(
-                session_id=cast("str", created["session_id"]),
+                session_id=session_id,
                 status=cast("str", created["status"]),
                 created_at=cast("str", created["created_at"]),
                 expires_at=cast("str", created["expires_at"]),

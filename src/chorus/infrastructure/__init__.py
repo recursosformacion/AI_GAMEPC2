@@ -1,5 +1,5 @@
-from .generators import PDFGenerator, AudioGenerator, ExerciseGenerator
 from .exporters import PDFExporter
+from .generators import AudioGenerator, ExerciseGenerator, PDFGenerator
 
 __all__ = [
     "PDFGenerator",

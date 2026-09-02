@@ -1,5 +1,5 @@
-from src.chorus.ports.study_material_generator import IStudyMaterialGenerator
 from src.chorus.application.use_cases.generate_materials import GenerateMaterialsUseCase
+from src.chorus.ports.study_material_generator import IStudyMaterialGenerator
 
 
 class Container:
@@ -10,4 +10,4 @@ class Container:
         self._generators.append(generator)
 
     def generate_materials_use_case(self) -> GenerateMaterialsUseCase:
-        raise NotImplementedError
+        return GenerateMaterialsUseCase(tuple(self._generators))

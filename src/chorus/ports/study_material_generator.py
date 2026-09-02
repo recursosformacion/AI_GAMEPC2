@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 
-from src.osap.domain.score import Score
-from src.chorus.domain.study_material import StudyMaterial
 from src.chorus.domain.material_type import MaterialType
+from src.chorus.domain.study_material import StudyMaterial
+from src.osap.domain.score import Score
 
 
 class IStudyMaterialGenerator(ABC):
