@@ -64,7 +64,26 @@ $out = ssh -o BatchMode=yes $HostAlias $remoteCmd
 $out
 
 Write-Host "== [5/6] Verificando salud ==" -ForegroundColor Cyan
-Start-Sleep -Seconds 3
-$r = Invoke-RestMethod -Uri "https://app.openmusicrepository.com/api/v1/system/health" -Method Get -TimeoutSec 30
-Write-Host "health: $($r.data.status)"
+$maxRetries = 10
+$delay = 5
+$healthy = $false
+
+for ($i = 1; $i -le $maxRetries; $i++) {
+    Start-Sleep -Seconds $delay
+    try {
+        $r = Invoke-RestMethod -Uri "https://app.openmusicrepository.com/api/v1/system/health" -Method Get -TimeoutSec 30
+        if ($r.data.status -eq "ok") {
+            Write-Host "health: $($r.data.status)"
+            $healthy = $true
+            break
+        }
+    } catch {
+        Write-Host ("Intento " + $i + " de " + $maxRetries + ": servicio no listo aún...")
+    }
+}
+
+if (-not $healthy) {
+    throw ("El servicio no respondió OK tras " + $maxRetries + " intentos")
+}
+
 Write-Host "Deploy completado."

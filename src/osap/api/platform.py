@@ -20,6 +20,7 @@ from typing import cast
 
 from src.osap.api.contracts import (
     CatalogueRead,
+    CorrectionRead,
     DiscoverSource,
     IntentResponse,
     JobResponse,
@@ -472,6 +473,63 @@ def _selection_payload(selected: SelectedRepresentation) -> dict[str, object]:
         ],
         "warnings": list(selected.warnings),
     }
+
+
+class _UnreadableScoreError(Exception):
+    """La representación descargada no produce un Score legible."""
+
+
+def _fetch_url_bytes(url: str) -> bytes | None:
+    """Descarga bytes de la URL con User-Agent de cliente (igual criterio que el selector)."""
+    import urllib.request
+
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "osap-api/1.0"})
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            raw: bytes = resp.read()
+            return raw
+    except Exception:  # noqa: BLE001
+        return None
+
+
+def _validate_to_contract(content: bytes, identity: dict[str, object] | None) -> dict[str, object]:
+    """Valida bytes MusicXML con el validador real y produce el `ScoreContract` (JSON).
+
+    Reutiliza exactamente el mismo camino del pipeline (`BasicValidator` →
+    `MusicXmlValidator` → `Score`) y el conversor establecido `score_to_contract`.
+    """
+    from src.chorus.contract.bridge import score_to_contract
+    from src.osap.domain.acquisition_result import AcquisitionResult
+    from src.osap.domain.musical_source import MusicalSource
+    from src.osap.domain.output_format import OutputFormat
+    from src.osap.domain.quality_level import QualityLevel
+    from src.osap.domain.value_objects import Confidence, Duration, ProviderId, SourceId
+    from src.osap.infrastructure.adapters.validation import BasicValidator
+
+    provider = str((identity or {}).get("provider") or "omr")
+    source = MusicalSource(
+        source_id=SourceId("score-contract"),
+        content=content,
+        format=OutputFormat.MUSICXML,
+        metadata={
+            "title": (identity or {}).get("title"),
+            "composer": (identity or {}).get("composer"),
+        },
+    )
+    acquisition = AcquisitionResult(
+        provider_id=ProviderId(provider),
+        source=source,
+        confidence=Confidence(1.0),
+        processing_time=Duration(0.0),
+        format=OutputFormat.MUSICXML,
+    )
+    try:
+        score = BasicValidator().validate(acquisition)
+    except Exception:  # noqa: BLE001 — fichero malformado = entrada no válida
+        raise _UnreadableScoreError from None
+    if score.quality_level == QualityLevel.UNREADABLE:
+        raise _UnreadableScoreError
+    return score_to_contract(score).to_dict()
 
 
 class PlatformApi:
@@ -1421,6 +1479,89 @@ class PlatformApi:
                     )
         return tuple(out)
 
+    def score_contract_for_session(
+        self, session_id: str
+    ) -> tuple[int, str, str, dict[str, object] | None]:
+        """Produce un `ScoreContract` (JSON) para una sesión ya resuelta.
+
+        La sesión ya identificó la obra y seleccionó la mejor representación
+        (`selection_json`). El productor reutiliza esa selección: descarga la URL
+        elegida y la revalida con el mismo `BasicValidator`/MusicXmlValidator del
+        pipeline (no hay parser ni validador paralelo; el `Score` no se persiste, por
+        eso se revalida la representación ya elegida, sin volver a seleccionar).
+
+        Devuelve: (status_code, error_code, mensaje, payload). En éxito el payload es
+        `{"score_contract": {...}}` (más identidad de la obra cuando se puede derivar).
+        """
+        row = self._resolution_store.get_session(session_id)
+        if row is None:
+            return 404, "SESSION_NOT_FOUND", "Sesión no encontrada", None
+        status = str(row.get("status") or "")
+        selection_raw = row.get("selection_json")
+        if status not in ("complete", "partial") or not selection_raw:
+            return (
+                409,
+                "NO_SELECTION",
+                "La sesión no tiene una representación seleccionada",
+                None,
+            )
+        try:
+            selection = json.loads(str(selection_raw))
+        except ValueError:
+            return 422, "INVALID_SELECTION", "Selección de representación inválida", None
+        url = str((selection or {}).get("url") or "")
+        if not url.startswith(("http://", "https://")):
+            return (
+                422,
+                "INVALID_SELECTION",
+                "La representación seleccionada no tiene URL descargable",
+                None,
+            )
+        content = _fetch_url_bytes(url)
+        if content is None:
+            return 502, "FETCH_FAILED", "No se pudo obtener la representación", None
+        identity = self._match_work_identity(session_id, url)
+        try:
+            contract = _validate_to_contract(content, identity)
+        except _UnreadableScoreError:
+            return (
+                422,
+                "INVALID_REPRESENTATION",
+                "La representación no es una partitura válida",
+                None,
+            )
+        except Exception:  # noqa: BLE001
+            return 500, "INTERNAL", "No se pudo generar el contrato", None
+        payload: dict[str, object] = {"score_contract": contract}
+        if identity is not None:
+            payload["work"] = identity
+        return 200, "", "", payload
+
+    def _match_work_identity(self, session_id: str, url: str) -> dict[str, object] | None:
+        """Localiza en los resultados de la sesión la obra dueña de la URL elegida."""
+        for row in self._resolution_store.list_all_provider_results(session_id):
+            try:
+                works = json.loads(str(row.get("payload_json") or "[]"))
+            except ValueError:
+                continue
+            for work in works:
+                if not isinstance(work, dict):
+                    continue
+                for resource in work.get("resources") or []:
+                    if not isinstance(resource, dict):
+                        continue
+                    links = resource.get("links") or {}
+                    if str(links.get("download") or "") != url:
+                        continue
+                    identity = work.get("identity")
+                    if isinstance(identity, dict):
+                        return {
+                            "title": str(identity.get("title") or "") or None,
+                            "composer": str(identity.get("composer") or "") or None,
+                            "provider": str(work.get("provider") or "") or None,
+                        }
+        return None
+
     def _best_downloadable(self, session_id: str) -> tuple[str | None, str | None]:
         """Mejor representación descargable entre los provider_results adquiridos.
 
@@ -1953,6 +2094,105 @@ class PlatformApi:
             location=str(row["location"]),
             mapping=json.loads(str(row["mapping"])),
             requested_by=str(row["requested_by"]),
+            status=str(row["status"]),
+            admin_message=str(row["admin_message"]) if row.get("admin_message") else None,
+            created_at=str(row["created_at"]),
+        )
+
+    def submit_correction(
+        self,
+        token: str | None,
+        kind: str,
+        message: str,
+        entity_id: str | None = None,
+        entity_provider: str | None = None,
+        field: str | None = None,
+        current_value: str | None = None,
+        proposed_value: str | None = None,
+        contact_email: str | None = None,
+    ) -> CorrectionRead:
+        """Registra una solicitud de contacto o corrección de catálogo (queda `pending`).
+
+        Contacto es público; el resto requiere login. El catálogo NO se modifica aquí.
+        """
+        from src.osap.application.corrections import CorrectionService
+
+        requested_by: str | None = None
+        if kind != "contact":
+            principal = self._container.authenticator().resolve(token)
+            if principal is None or not getattr(principal, "user_id", None):
+                from src.osap.domain.votes import UnauthenticatedError
+
+                raise UnauthenticatedError("Login required to submit a correction")
+            requested_by = str(getattr(principal, "user_id", None))
+        service = CorrectionService(self._store, exists=self._correction_entity_exists)
+        row = service.submit(
+            kind=kind,
+            message=message,
+            entity_id=entity_id,
+            entity_provider=entity_provider,
+            field=field,
+            current_value=current_value,
+            proposed_value=proposed_value,
+            contact_email=contact_email,
+            requested_by=requested_by,
+        )
+        return self._correction_read(row)
+
+    def _correction_entity_exists(self, kind: str, entity_id: str) -> bool:
+        if kind == "source":
+            ids = {str(p.provider_id.value) for p in self._container.catalog_manager().providers()}
+            ids.update(str(pid) for pid, _n, _b, _w in self._container.defined_providers())
+            try:
+                for row in self._store.list_providers():
+                    ids.add(str(row.get("provider_id") or ""))
+            except Exception:  # noqa: BLE001
+                pass
+            return entity_id in ids
+        try:
+            if kind == "composer":
+                return self.composers().get_composer(entity_id) is not None
+            if kind == "work":
+                return self.composers().get_work(entity_id) is not None
+        except Exception:  # noqa: BLE001 — storage inaccesible: no bloquear la petición
+            return True
+        return True
+
+    def list_corrections(self, token: str | None) -> list[CorrectionRead]:
+        self._require_admin(token)
+        return [self._correction_read(row) for row in self._store.list_corrections()]
+
+    def resolve_correction(
+        self, token: str | None, correction_id: str, action: str, message: str
+    ) -> CorrectionRead | None:
+        self._require_admin(token)
+        from src.osap.domain.votes import UnauthenticatedError
+
+        principal = self._container.authenticator().resolve(token)
+        if principal is None:
+            raise UnauthenticatedError("Login required")
+        decided_by = str(getattr(principal, "user_id", "admin"))
+        status = "reviewed" if action == "review" else "closed"
+        row = self._store.resolve_correction(correction_id, status, message, decided_by)
+        if row is None:
+            return None
+        logging.getLogger("osap.corrections").info(
+            "correction %s -> %s: %s", correction_id, status, message
+        )
+        return self._correction_read(row)
+
+    def _correction_read(self, row: dict[str, object]) -> CorrectionRead:
+        return CorrectionRead(
+            id=str(row["id"]),
+            kind=str(row["kind"]),
+            entity_id=str(row["entity_id"]) if row.get("entity_id") else None,
+            entity_provider=str(row["entity_provider"]) if row.get("entity_provider") else None,
+            field=str(row["field"]) if row.get("field") else None,
+            current_value=str(row["current_value"]) if row.get("current_value") else None,
+            proposed_value=str(row["proposed_value"]) if row.get("proposed_value") else None,
+            message=str(row.get("message") or ""),
+            contact_email=str(row["contact_email"]) if row.get("contact_email") else None,
+            requested_by=str(row["requested_by"]) if row.get("requested_by") else None,
             status=str(row["status"]),
             admin_message=str(row["admin_message"]) if row.get("admin_message") else None,
             created_at=str(row["created_at"]),

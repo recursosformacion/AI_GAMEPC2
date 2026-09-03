@@ -18,7 +18,11 @@ adapters con import lazy).
 
 from __future__ import annotations
 
+import json
 import logging
+import os
+import urllib.parse
+import urllib.request
 from typing import TYPE_CHECKING
 
 from fastapi import FastAPI, Request
@@ -39,6 +43,36 @@ logger = logging.getLogger("chorus.web")
 
 class _InputError(Exception):
     """Entrada no procesable como partitura (mensaje seguro para el usuario)."""
+
+
+class _OsapError(Exception):
+    """OSAP no devolvió un ScoreContract utilizable."""
+
+
+def _fetch_osap_contract(session_id: str) -> dict[str, object]:
+    """Primer transporte Chorus → OSAP (HTTP, sin auth): obtiene el `ScoreContract`
+    del productor de OSAP para una sesión ya resuelta.
+
+    Base configurable con `CHORUS_OSAP_BASE_URL` (por defecto el API local de OSAP).
+    Este transporte es deliberadamente sencillo y no introduce autenticación.
+    """
+    base = os.environ.get("CHORUS_OSAP_BASE_URL") or "http://127.0.0.1:8001"
+    url = f"{base}/api/v1/sessions/{urllib.parse.quote(session_id)}/score-contract"
+    req = urllib.request.Request(url, headers={"User-Agent": "chorus-web/0.1"})
+    try:
+        with urllib.request.urlopen(req, timeout=60) as resp:
+            raw = resp.read()
+    except Exception as exc:  # noqa: BLE001
+        raise _OsapError("No se pudo contactar con OSAP") from exc
+    try:
+        doc = json.loads(raw)
+    except ValueError as exc:
+        raise _OsapError("OSAP devolvió una respuesta inválida") from exc
+    data = doc.get("data") if isinstance(doc, dict) else None
+    contract = (data or {}).get("score_contract") if isinstance(data, dict) else None
+    if not isinstance(contract, dict):
+        raise _OsapError("OSAP no devolvió un ScoreContract")
+    return contract
 
 
 def _build_score_from_mxl(content: bytes, title: str | None = None) -> Score:
@@ -119,6 +153,42 @@ def create_chorus_web_app(use_case: GenerateMaterialsUseCase | None = None) -> F
             )
         return JSONResponse(_material_payload(material))
 
+    @app.post("/from-osap")
+    async def from_osap(request: Request) -> JSONResponse:
+        """Obtiene el `ScoreContract` de OSAP (sesión resuelta) y genera el material."""
+        try:
+            body = await request.json()
+        except Exception:  # noqa: BLE001
+            return JSONResponse({"error": "JSON inválido."}, status_code=400)
+        session_id = body.get("session_id") if isinstance(body, dict) else None
+        if not isinstance(session_id, str) or not session_id.strip():
+            return JSONResponse(
+                {"error": "Falta el session_id de OSAP."},
+                status_code=400,
+            )
+        try:
+            contract_doc = _fetch_osap_contract(session_id)
+            contract = ScoreContract.from_dict(contract_doc)
+            if not is_readable_contract(contract):
+                raise ContractError("La obra no es legible (sin material aprovechable).")
+            score = contract_to_score(contract)
+            material = materials_use_case.generate(score, MaterialType.EXERCISE)
+        except _OsapError:
+            logger.warning("OSAP no respondió para la sesión %s", session_id)
+            return JSONResponse(
+                {"error": "No se pudo obtener la obra desde OSAP."},
+                status_code=502,
+            )
+        except ContractError as exc:
+            return JSONResponse({"error": str(exc)}, status_code=400)
+        except Exception:
+            logger.exception("No se pudo generar el material de estudio")
+            return JSONResponse(
+                {"error": "No se pudo generar el material de estudio."},
+                status_code=500,
+            )
+        return JSONResponse(_material_payload(material))
+
     @app.post("/generate-file")
     async def generate_file(request: Request, title: str | None = None) -> JSONResponse:
         """Entrada PROVISIONAL (legacy): fichero .mxl/.xml en crudo para la demo."""
@@ -183,6 +253,13 @@ _INDEX_HTML = """<!doctype html>
 
   <section id="status" hidden></section>
 
+  <section id="osap">
+    <h2>Obra desde OSAP</h2>
+    <p class="hint">Sesión de OSAP ya resuelta (productor de ScoreContract).</p>
+    <input id="osap-session" type="text" placeholder="ses_…">
+    <button id="from-osap" type="button">Cargar desde OSAP</button>
+  </section>
+
   <section id="result" hidden>
     <h2>Material generado</h2>
     <p id="material-type"></p>
@@ -193,6 +270,8 @@ _INDEX_HTML = """<!doctype html>
 <script>
   var fileInput = document.getElementById("file");
   var button = document.getElementById("generate");
+  var osapSession = document.getElementById("osap-session");
+  var fromOsapButton = document.getElementById("from-osap");
   var statusBox = document.getElementById("status");
   var resultBox = document.getElementById("result");
 
@@ -286,7 +365,31 @@ _INDEX_HTML = """<!doctype html>
     }
   }
 
+  async function loadFromOsap() {
+    var sid = osapSession.value.trim();
+    if (!sid) { setStatus("Introduce un session_id de OSAP.", true); return; }
+    setProcessing(true);
+    try {
+      var res = await fetch("/from-osap", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ session_id: sid })
+      });
+      var data = await res.json();
+      if (!res.ok) {
+        setStatus(data.error || "No se ha podido obtener la obra desde OSAP.", true);
+        return;
+      }
+      renderResult(data);
+    } catch (err) {
+      setStatus("No se ha podido obtener la obra desde OSAP.", true);
+    } finally {
+      setProcessing(false);
+    }
+  }
+
   button.addEventListener("click", generate);
+  fromOsapButton.addEventListener("click", loadFromOsap);
 </script>
 </body>
 </html>

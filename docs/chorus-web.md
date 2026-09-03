@@ -64,6 +64,18 @@ datos puros (JSON), no depende de clases Python de OSAP, y está versionado
 (`schema_version`). Las versiones no soportadas y los contratos inválidos se rechazan
 con error controlado (400).
 
+### Productor real en OSAP
+OSAP produce el contrato desde una obra identificada y resuelta:
+`GET /api/v1/sessions/{session_id}/score-contract` (OSAP-api).
+
+### Primer transporte Chorus → OSAP (implementado)
+`POST /from-osap` (body `{"session_id": "ses_…"}`): Chorus consulta el productor de OSAP
+por HTTP (base configurable con `CHORUS_OSAP_BASE_URL`, por defecto
+`http://127.0.0.1:8001`), deserializa el `ScoreContract` y genera el material. Es el
+**primer transporte real** (deliberadamente sencillo, sin autenticación). La entrada
+provisional `.mxl` (`POST /generate-file`) se mantiene como legacy mientras se valida el
+flujo con obras reales del catálogo.
+
 ### Entrada provisional (`.mxl`), no eliminada
 `POST /generate-file` mantiene la demo por fichero (el navegador no puede producir aún
 un contrato sin un productor OSAP). Usa el `BasicValidator` de OSAP dentro del adapter

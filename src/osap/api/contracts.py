@@ -292,6 +292,44 @@ class SourceSuggestionResolveRequest(_Frozen):
     message: str = ""
 
 
+class CorrectionRequest(_Frozen):
+    """Solicitud de contacto o de corrección de datos del catálogo (OSAP).
+
+    `kind`: contact | source | composer | work.
+    Para `work` (título de obra OMR) se usa `entity_provider="omr"` y `field="title"`.
+    """
+
+    kind: str
+    entity_id: str | None = None
+    entity_provider: str | None = None
+    field: str | None = None
+    current_value: str | None = None
+    proposed_value: str | None = None
+    message: str = ""
+    contact_email: str | None = None
+
+
+class CorrectionRead(_Frozen):
+    id: str
+    kind: str
+    entity_id: str | None = None
+    entity_provider: str | None = None
+    field: str | None = None
+    current_value: str | None = None
+    proposed_value: str | None = None
+    message: str = ""
+    contact_email: str | None = None
+    requested_by: str | None = None
+    status: str
+    admin_message: str | None = None
+    created_at: str
+
+
+class CorrectionResolveRequest(_Frozen):
+    action: str
+    message: str = ""
+
+
 class AdminOverviewResponse(_Frozen):
     composers: dict[str, int] = {}
     source_suggestions_pending: int = 0

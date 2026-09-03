@@ -106,9 +106,15 @@ Los adaptadores `score_to_contract` / `contract_to_score` viven en
 soportadas se rechazan de forma controlada (`ContractError`).
 
 **Estado:** contrato establecido y probado (round-trip real + equivalencia funcional ante
-`ExerciseGenerator`). El **transporte** HTTP OSAP → Chorus y la sustitución definitiva de
-la entrada provisional `.mxl` quedan para incrementos posteriores; hoy la web recibe el
-contrato en `POST /generate` y mantiene `/generate-file` como demo provisional.
+`ExerciseGenerator`). **OSAP ya dispone de un productor real del contrato**: el endpoint
+`GET /api/v1/sessions/{session_id}/score-contract` reutiliza una sesión de resolución ya
+terminada (obra identificada + mejor representación en `selection_json`), revalida esa
+representación con el `BasicValidator` del pipeline y devuelve el `ScoreContract` (JSON)
+con la identidad de la obra. El `Score` no se persiste, por lo que el productor revalida
+la representación ya elegida (sin repetir búsqueda ni selección). El **transporte**
+HTTP OSAP → Chorus y la sustitución definitiva de la entrada provisional `.mxl` quedan
+para el siguiente incremento; hoy la web de Chorus recibe el contrato en `POST /generate`
+y mantiene `/generate-file` como demo provisional.
 
 ## 5. Criterios para la extracción física (incremento futuro)
 

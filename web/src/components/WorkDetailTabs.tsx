@@ -299,39 +299,22 @@ function RepresentationsTab({
               </span>
             </span>
             <span className="flex shrink-0 items-center gap-1.5">
-              {rep.url ? (
-                <a
-                  href={rep.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  title={t("work.openIn").replace("{p}", rep.provider)}
-                  aria-label={t("work.openIn").replace("{p}", rep.provider)}
-                  onClick={(e) => e.stopPropagation()}
-                  className="px-1.5 text-osap-muted hover:text-osap-accent"
-                >
-                  <_LinkIcon />
-                </a>
-              ) : (
-                <span className="px-1 text-xs text-osap-muted">—</span>
-              )}
               {rep.available === false ? (
-                <>
-                  {rep.url ? (
-                    <a
-                      href={rep.url}
-                      target="_blank"
-                      rel="noreferrer"
-                      title={t("work.openIn").replace("{p}", rep.provider)}
-                      aria-label={t("work.openIn").replace("{p}", rep.provider)}
-                      onClick={(e) => e.stopPropagation()}
-                      className="px-1.5 text-osap-muted hover:text-osap-accent"
-                    >
-                      <_LinkIcon />
-                    </a>
-                  ) : (
-                    <span className="px-1 text-xs text-osap-muted">—</span>
-                  )}
-                </>
+                rep.url ? (
+                  <a
+                    href={rep.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={t("work.openIn").replace("{p}", rep.provider)}
+                    aria-label={t("work.openIn").replace("{p}", rep.provider)}
+                    onClick={(e) => e.stopPropagation()}
+                    className="px-1.5 text-osap-muted hover:text-osap-accent"
+                  >
+                    <_LinkIcon />
+                  </a>
+                ) : (
+                  <span className="px-1 text-xs text-osap-muted">—</span>
+                )
               ) : (
                 <>
                   <a
@@ -413,7 +396,7 @@ function ProvidersTab({ byProvider }: { byProvider: Map<string, RepresentationIn
 
 function downloadFileName(rep: RepresentationInfo, workTitle?: string | null): string {
   const ext = ({ musicxml: "mxl", pdf: "pdf", midi: "mid" } as Record<string, string>)[rep.format] ?? rep.format;
-  const base = rep.title || workTitle || rep.id || "representation";
+  const base = workTitle || rep.title || rep.id || "representation";
   const safe = base.replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, "_");
   return `${safe}.${ext}`;
 }

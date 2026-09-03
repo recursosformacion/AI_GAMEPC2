@@ -20,6 +20,7 @@ from src.chorus.web import create_chorus_web_app
 from src.chorus.web.app import _build_score_from_mxl
 
 if TYPE_CHECKING:
+    import pytest
     from fastapi import FastAPI
 
     from src.osap.domain.score import Score
@@ -151,6 +152,57 @@ class TestGenerateContract:
         with _client() as client:
             response = client.post("/generate")
         assert response.status_code == 400
+
+
+class TestFromOsap:
+    """Primer transporte Chorus → OSAP: obtiene el ScoreContract del productor."""
+
+    def test_carga_obra_desde_osap(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from src.chorus.web import app as chorus_app
+
+        monkeypatch.setattr(
+            chorus_app,
+            "_fetch_osap_contract",
+            lambda sid: _real_contract().to_dict(),
+        )
+        with _client() as client:
+            response = client.post("/from-osap", json={"session_id": "ses_1"})
+        assert response.status_code == 200
+        data = response.json()
+        assert data["material_type"] == "exercise"
+        assert data["metadata"]["title"] == "Ave Maria"
+        assert data["metadata"]["measures"] == 14
+
+    def test_falta_session_id_devuelve_400(self) -> None:
+        with _client() as client:
+            response = client.post("/from-osap", json={})
+        assert response.status_code == 400
+
+    def test_osap_no_disponible_devuelve_502(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from src.chorus.web import app as chorus_app
+
+        def _fail(sid: str) -> dict[str, object]:
+            raise chorus_app._OsapError("no disponible")
+
+        monkeypatch.setattr(chorus_app, "_fetch_osap_contract", _fail)
+        with _client() as client:
+            response = client.post("/from-osap", json={"session_id": "ses_1"})
+        assert response.status_code == 502
+        assert "OSAP" in response.json()["error"]
+
+    def test_usa_el_caso_de_uso_real(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from src.chorus.web import app as chorus_app
+
+        monkeypatch.setattr(
+            chorus_app,
+            "_fetch_osap_contract",
+            lambda sid: _real_contract().to_dict(),
+        )
+        recording = _RecordingUseCase()
+        with _client(create_chorus_web_app(use_case=recording)) as client:
+            response = client.post("/from-osap", json={"session_id": "ses_1"})
+        assert response.status_code == 200
+        assert recording.calls == [(MaterialType.EXERCISE, None)]
 
 
 class TestGenerateFileLegacy:

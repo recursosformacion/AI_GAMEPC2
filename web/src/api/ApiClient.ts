@@ -10,6 +10,7 @@
 
 import type {
   ComposerDetail,
+  CorrectionRequestRead,
   ComposerList,
   ComposerStatistics,
   ComposerSummary,
@@ -182,6 +183,26 @@ export class ApiClient {
     mapping: Record<string, unknown>;
   }): Promise<SourceSuggestion> {
     return this.post<SourceSuggestion>("/sources/suggest", payload);
+  }
+
+  async submitContact(message: string, contactEmail?: string): Promise<CorrectionRequestRead> {
+    return this.post<CorrectionRequestRead>("/contact", {
+      kind: "contact",
+      message,
+      contact_email: contactEmail || null,
+    });
+  }
+
+  async submitCorrection(payload: {
+    kind: "source" | "composer" | "work";
+    entity_id: string;
+    entity_provider?: string;
+    field?: string;
+    current_value?: string;
+    proposed_value?: string;
+    message: string;
+  }): Promise<CorrectionRequestRead> {
+    return this.post<CorrectionRequestRead>("/corrections", payload);
   }
 
   async listSourceSuggestions(): Promise<SourceSuggestion[]> {

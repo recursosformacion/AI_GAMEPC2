@@ -13,6 +13,7 @@ import threading
 import uuid
 from typing import TYPE_CHECKING, Any, cast
 
+import requests
 from fastapi import FastAPI, Header, Query, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 
@@ -34,6 +35,9 @@ from src.osap.api.contracts import (
     ComposerSummaryResponse,
     ComposerWorkRefResponse,
     ComposerWorksResponse,
+    CorrectionRead,
+    CorrectionRequest,
+    CorrectionResolveRequest,
     CreateComposerRequest,
     DiscoverSource,
     ErrorBody,
@@ -90,6 +94,7 @@ from src.osap.api.contracts import (
     WorkStatisticsResponse,
 )
 from src.osap.api.platform import VERSION, PlatformApi
+from src.osap.application.corrections import CorrectionError
 from src.osap.bootstrap.configuration import load_configuration
 from src.osap.bootstrap.container import Container
 from src.osap.bootstrap.wiring import wire
@@ -761,9 +766,28 @@ def create_platform_app(
         url = str(info.get("download_url") or "")
         if not url:
             return fail(404, response, "NOT_FOUND", "No download available")
-        # Redirige (302) al navegador directamente a la URL del proveedor: el servidor NO
-        # proxya server-side porque IMSLP/MusicBrainz/Mutopia responden con challenge
-        # anti-bot a peticiones de servidor, pero el navegador del usuario sí las resuelve.
+        # OMR/OSAP storage: el fichero vive en nuestro storage bajo un nombre hash.
+        # En lugar de redirigir (el navegador usaría el hash como nombre), lo servimos
+        # desde el servidor con un nombre legible (compositor - título).
+        storage_base = (container.storage_web_base() or "").rstrip("/")
+        if storage_base and url.startswith(storage_base):
+            try:
+                upstream = requests.get(url, timeout=120)
+            except requests.RequestException:
+                return fail(502, response, "UPSTREAM_ERROR", "No se pudo obtener el fichero del storage")
+            if upstream.status_code != 200:
+                return fail(502, response, "UPSTREAM_ERROR", "No se pudo obtener el fichero del storage")
+            filename = _download_filename(info)
+            disposition = "inline" if view else "attachment"
+            fmt = str(info.get("format") or "")
+            return Response(
+                content=upstream.content,
+                media_type=_media_type_for_format(fmt),
+                headers={"Content-Disposition": f'{disposition}; filename="{filename}"'},
+            )
+        # Proveedores externos (IMSLP/MusicBrainz/Mutopia...): el servidor NO proxya
+        # porque responden con challenge anti-bot a peticiones de servidor; el navegador
+        # del usuario sí las resuelve. Se redirige (302) a la URL del proveedor.
         return RedirectResponse(url, status_code=302)
 
     # --- search model (Search Studio is driven by it) ------------------------
@@ -2192,5 +2216,135 @@ def create_platform_app(
         if data is None:
             return fail(404, response, "NOT_FOUND", "Resolution session not found")
         return ok(_resolution_results_dto(data))
+
+    @app.get(
+        "/api/v1/sessions/{session_id}/score-contract",
+        status_code=200,
+        tags=["Works"],
+        summary="Produce el ScoreContract de una sesión resuelta",
+        description=(
+            "Productor OSAP → Chorus: para una sesión ya terminada con representación "
+            "seleccionada (obra identificada + mejor representación), revalida esa "
+            "representación y devuelve el `ScoreContract` serializable (JSON). El "
+            "consumidor de Chorus lo recibe en `POST /generate`."
+        ),
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={
+            200: _resp("ScoreContract", {"score_contract": {"schema_version": 1}}),
+            **_standard_errors(404, 409, 422, 502),
+        },
+    )
+    async def get_session_score_contract(
+        session_id: str,
+        response: Response,
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        code, err_code, message, payload = api.score_contract_for_session(session_id)
+        if code == 200 and payload is not None:
+            return ok(payload)
+        if code in (404, 409, 422, 502):
+            return fail(code, response, err_code, message)
+        return fail(500, response, "INTERNAL", "No se pudo generar el contrato")
+
+    # --- support: contacto y correcciones de catálogo -------------------------
+
+    @app.post(
+        "/api/v1/contact",
+        tags=["Support"],
+        summary="Contacto general (público)",
+        description="Registra una solicitud de contacto (sin login). Queda `pending`.",
+        response_model=SuccessEnvelope[CorrectionRead] | ErrorEnvelope,
+        responses={200: _resp("Contact", _example({})), **_standard_errors(422)},
+    )
+    def contact_general(
+        payload: CorrectionRequest,
+        response: Response,
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            correction = api.submit_correction(
+                None, "contact", payload.message, contact_email=payload.contact_email
+            )
+        except CorrectionError as exc:
+            return fail(exc.status, response, exc.code, exc.message)
+        return ok(correction)
+
+    @app.post(
+        "/api/v1/corrections",
+        tags=["Support"],
+        summary="Proponer corrección de datos del catálogo",
+        description=(
+            "Requiere login. kind: source | composer | work. Para corregir el título de "
+            "una obra de OMR: kind=work, entity_provider=omr, field=title, current_value y "
+            "proposed_value. No modifica el catálogo: queda `pending` de revisión."
+        ),
+        response_model=SuccessEnvelope[CorrectionRead] | ErrorEnvelope,
+        responses={200: _resp("Correction", _example({})), 401: _UNAUTHORIZED_401, **_standard_errors(404, 422)},
+    )
+    def propose_correction(
+        payload: CorrectionRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            correction = api.submit_correction(
+                authorization,
+                payload.kind,
+                payload.message,
+                entity_id=payload.entity_id,
+                entity_provider=payload.entity_provider,
+                field=payload.field,
+                current_value=payload.current_value,
+                proposed_value=payload.proposed_value,
+                contact_email=payload.contact_email,
+            )
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Login required to submit a correction")
+        except CorrectionError as exc:
+            return fail(exc.status, response, exc.code, exc.message)
+        return ok(correction)
+
+    @app.get(
+        "/api/v1/admin/corrections",
+        tags=["Support"],
+        summary="List correction requests (admin)",
+        description="Lista las solicitudes de contacto/corrección (admin).",
+        response_model=SuccessEnvelope[list[CorrectionRead]] | ErrorEnvelope,
+        responses={200: _resp("Corrections", _example([])), 401: _UNAUTHORIZED_401, 403: _FORBIDDEN_403},
+    )
+    def list_corrections_admin(
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            return ok(api.list_corrections(authorization))
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Login required")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+
+    @app.post(
+        "/api/v1/admin/corrections/{correction_id}/resolve",
+        tags=["Support"],
+        summary="Resolve a correction request (admin)",
+        description="action: review | close. Solo cambia el estado; NO aplica la corrección.",
+        response_model=SuccessEnvelope[CorrectionRead] | ErrorEnvelope,
+        responses={200: _resp("Correction", _example({})), 401: _UNAUTHORIZED_401, 403: _FORBIDDEN_403},
+    )
+    def resolve_correction_admin(
+        correction_id: str,
+        payload: CorrectionResolveRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            resolved = api.resolve_correction(
+                authorization, correction_id, payload.action, payload.message
+            )
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Login required")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+        if resolved is None:
+            return fail(404, response, "NOT_FOUND", "Correction request not found")
+        return ok(resolved)
 
     return app

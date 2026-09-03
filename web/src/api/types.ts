@@ -472,6 +472,22 @@ export interface SourceSuggestion {
   created_at: string;
 }
 
+export interface CorrectionRequestRead {
+  id: string;
+  kind: string;
+  entity_id?: string | null;
+  entity_provider?: string | null;
+  field?: string | null;
+  current_value?: string | null;
+  proposed_value?: string | null;
+  message: string;
+  contact_email?: string | null;
+  requested_by?: string | null;
+  status: string;
+  admin_message?: string | null;
+  created_at: string;
+}
+
 export interface OpProvider {
   provider_id: string;
   name: string;

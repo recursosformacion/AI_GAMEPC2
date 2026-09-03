@@ -29,6 +29,7 @@ class _MemoryStore:
 
     def __init__(self) -> None:
         self._suggestions: list[dict[str, object]] = []
+        self._corrections: list[dict[str, object]] = []
         self._providers: list[dict[str, object]] = []
         self._config: dict[str, str] = {}
 
@@ -88,6 +89,65 @@ class _MemoryStore:
             counts[status] = counts.get(status, 0) + 1
             counts["total"] += 1
         return counts
+
+    # --- correction / contact requests ----------------------------------------
+
+    def list_corrections(self) -> list[dict[str, object]]:
+        return list(self._corrections)
+
+    def add_correction(
+        self,
+        correction_id: str,
+        kind: str,
+        entity_id: str | None,
+        entity_provider: str | None,
+        field: str | None,
+        current_value: str | None,
+        proposed_value: str | None,
+        message: str,
+        contact_email: str | None,
+        requested_by: str | None,
+    ) -> dict[str, object]:
+        row: dict[str, object] = {
+            "id": correction_id,
+            "kind": kind,
+            "entity_id": entity_id,
+            "entity_provider": entity_provider,
+            "field": field,
+            "current_value": current_value,
+            "proposed_value": proposed_value,
+            "message": message,
+            "contact_email": contact_email,
+            "requested_by": requested_by,
+            "status": "pending",
+            "admin_message": None,
+            "created_at": _now(),
+            "decided_at": None,
+            "decided_by": None,
+        }
+        self._corrections.append(row)
+        return row
+
+    def get_correction(self, correction_id: str) -> dict[str, object] | None:
+        for row in self._corrections:
+            if row["id"] == correction_id:
+                return row
+        return None
+
+    def resolve_correction(
+        self, correction_id: str, status: str, message: str, decided_by: str
+    ) -> dict[str, object] | None:
+        for row in self._corrections:
+            if row["id"] == correction_id:
+                row["status"] = status
+                row["admin_message"] = message
+                row["decided_at"] = _now()
+                row["decided_by"] = decided_by
+                return row
+        return None
+
+    def pending_correction_count(self) -> int:
+        return sum(1 for r in self._corrections if r["status"] == "pending")
 
     def list_providers(self) -> list[dict[str, object]]:
         return list(self._providers)
@@ -280,6 +340,27 @@ class _MysqlStore(_MemoryStore):
             ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
             """
         )
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS correction_requests (
+                id VARCHAR(64) PRIMARY KEY,
+                kind VARCHAR(32) NOT NULL,
+                entity_id VARCHAR(255),
+                entity_provider VARCHAR(128),
+                `field` VARCHAR(128),
+                current_value VARCHAR(1024),
+                proposed_value VARCHAR(1024),
+                message TEXT NOT NULL,
+                contact_email VARCHAR(255),
+                requested_by VARCHAR(255),
+                status VARCHAR(32) NOT NULL DEFAULT 'pending',
+                admin_message TEXT,
+                created_at VARCHAR(64) NOT NULL,
+                decided_at VARCHAR(64),
+                decided_by VARCHAR(255)
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+            """
+        )
         self._migrate()
 
     def _migrate(self) -> None:
@@ -385,6 +466,62 @@ class _MysqlStore(_MemoryStore):
             counts[status] = counts.get(status, 0) + count
             counts["total"] += count
         return counts
+
+    def list_corrections(self) -> list[dict[str, object]]:
+        return self._run("SELECT * FROM correction_requests ORDER BY created_at DESC")
+
+    def add_correction(
+        self,
+        correction_id: str,
+        kind: str,
+        entity_id: str | None,
+        entity_provider: str | None,
+        field: str | None,
+        current_value: str | None,
+        proposed_value: str | None,
+        message: str,
+        contact_email: str | None,
+        requested_by: str | None,
+    ) -> dict[str, object]:
+        self._run(
+            "INSERT INTO correction_requests (id, kind, entity_id, entity_provider, `field`, "
+            "current_value, proposed_value, message, contact_email, requested_by, status, "
+            "created_at) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pending',%s)",
+            (
+                correction_id,
+                kind,
+                entity_id,
+                entity_provider,
+                field,
+                current_value,
+                proposed_value,
+                message,
+                contact_email,
+                requested_by,
+                _now(),
+            ),
+        )
+        row = self.get_correction(correction_id)
+        assert row is not None
+        return row
+
+    def get_correction(self, correction_id: str) -> dict[str, object] | None:
+        rows = self._run("SELECT * FROM correction_requests WHERE id = %s", (correction_id,))
+        return rows[0] if rows else None
+
+    def resolve_correction(
+        self, correction_id: str, status: str, message: str, decided_by: str
+    ) -> dict[str, object] | None:
+        self._run(
+            "UPDATE correction_requests SET status = %s, admin_message = %s, "
+            "decided_at = %s, decided_by = %s WHERE id = %s",
+            (status, message, _now(), decided_by, correction_id),
+        )
+        return self.get_correction(correction_id)
+
+    def pending_correction_count(self) -> int:
+        rows = self._run("SELECT COUNT(*) AS n FROM correction_requests WHERE status = 'pending'")
+        return int(str(rows[0]["n"])) if rows else 0
 
     def list_providers(self) -> list[dict[str, object]]:
         rows = self._run("SELECT * FROM providers ORDER BY name")
