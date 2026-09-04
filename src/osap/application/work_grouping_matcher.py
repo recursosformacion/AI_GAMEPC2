@@ -30,6 +30,7 @@ from dataclasses import dataclass
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
+from src.osap.application.metadata_normalizer import MetadataNormalizer
 from src.osap.application.metadata_parser import extract_metadata
 from src.osap.application.representation_identity import RepresentationIdentity, build_identity
 
@@ -156,13 +157,15 @@ class WorkGroupingMatcher:
     Procedimiento de DECISIÓN POR REGLAS sobre la identidad normalizada
     (RepresentationIdentity). Sin regexes y sin comparar texto: solo igualdades.
 
-      1. Veto    composer difiere            -> NO fusionar
-      2. Veto    catálogo difiere (ambos)    -> NO fusionar
-      3. Veto    número difiere (ambos)      -> NO fusionar
-      4. Regla   composer == catalog         -> fusionar (fuerte)
-      5. Regla   composer == número == clave -> fusionar
-      6. Fallback composer == título muy parecido (sin conflicto) -> fusionar (baja confianza)
-      7. Si no   -> NO fusionar
+      1. Veto    dos compositores específicos distintos -> NO fusionar
+      2. Veto    un compositor específico y el otro sin atribución/anónimo
+                 (sin catálogo común)                      -> NO fusionar
+      3. Veto    catálogo difiere (ambos)                  -> NO fusionar
+      4. Veto    número difiere (ambos)                    -> NO fusionar
+      5. Regla   catálogo igual (compositor compatible o ausente) -> fusionar (fuerte)
+      6. Regla   compositor compatible == número == clave  -> fusionar
+      7. Fallback compositor compatible + título muy parecido (sin conflicto) -> fusionar
+      8. Si no   -> NO fusionar
 
     Cada paso emite la misma ``MergeDecision`` (evidencia + explicación).
     """
@@ -190,32 +193,45 @@ class WorkGroupingMatcher:
                 work_id=f"work-{abs(hash(work_key))}" if work_key else None,
             )
 
-        composer_same = bool(na.composer and nb.composer and na.composer == nb.composer)
-        composer_both = bool(na.composer and nb.composer)
+        ca, ca_key = _composer_signal(a.work_descriptor.composer)
+        cb, cb_key = _composer_signal(b.work_descriptor.composer)
+        same_composer = bool(ca_key and cb_key and ca_key == cb_key)
+        both_nonspecific = ca in ("missing", "anonymous") and cb in ("missing", "anonymous")
+        catalog_equal = bool(na.catalog and nb.catalog and na.catalog == nb.catalog)
 
-        # 1. Veto: compositor distinto.
-        if composer_both and not composer_same:
+        # 1. Veto: dos compositores específicos y distintos -> NO fusionar.
+        if ca == "specific" and cb == "specific" and ca_key != cb_key:
             return decision(0.0, MergeVerdict.NOT_MERGED, [])
 
-        # 2. Veto: catálogo distinto.
+        # 2. Sin comodín: si un lado es específico y el otro está sin atribución
+        #    (o es "Anonymous"/"NA"), NO usar la ausencia de compositor como comodín:
+        #    solo se fusiona si ambos comparten catálogo (señal fuerte de identidad).
+        one_specific = (ca == "specific") != (cb == "specific")
+        if one_specific and not catalog_equal:
+            return decision(0.0, MergeVerdict.NOT_MERGED, [])
+
+        # 3. Veto: catálogo distinto.
         if na.catalog and nb.catalog and na.catalog != nb.catalog:
             return decision(0.0, MergeVerdict.NOT_MERGED, [])
 
-        # 3. Veto: número distinto.
+        # 4. Veto: número distinto.
         if na.work_number and nb.work_number and na.work_number != nb.work_number:
             return decision(0.0, MergeVerdict.NOT_MERGED, [])
 
-        # 4. Regla fuerte: catálogo igual (dato más fuerte; los vetos de
-        #    compositor/catálogo ya descartaron las contradicciones).
-        if na.catalog and nb.catalog and na.catalog == nb.catalog:
-            evidence: list[Evidence] = [CatalogEquivalent(_raw_catalog(a), _raw_catalog(b), na.catalog)]
-            if composer_same:
+        # 5. Regla fuerte: catálogo igual (identificador de obra; gana a la
+        #    similitud textual y a la ausencia de atribución en un lado).
+        if catalog_equal:
+            evidence: list[Evidence] = [
+                CatalogEquivalent(_raw_catalog(a), _raw_catalog(b), na.catalog or "")
+            ]
+            if same_composer:
                 evidence.insert(0, ExactComposer())
             return decision(0.95, MergeVerdict.MERGED, evidence)
 
-        # 5. Regla: compositor + número + clave iguales.
+        # 6. Regla: compositor + número + clave iguales (solo cuando la atribución
+        #    es compatible: mismo compositor específico o ambos anónimos/sin dato).
         if (
-            composer_same
+            (same_composer or both_nonspecific)
             and na.work_number
             and nb.work_number
             and na.work_number == nb.work_number
@@ -229,13 +245,13 @@ class WorkGroupingMatcher:
                 [ExactComposer(), NumberEquivalent(na.work_number), KeyEquivalent(na.key)],
             )
 
-        # 6. Fallback: título muy parecido, sin conflicto estructurado. La regla 1
-        #    ya vetó compositores contradictorios, así que aquí basta la similitud
-        #    de título (funciona aunque el compositor sea desconocido en un lado).
-        #    PROTECCIÓN: cuando el título reducido es genérico (p. ej. 'prelude',
-        #    'sonata'), un catálogo/número/clave presente en un solo lado es señal de
-        #    obra distinta y NO se fusiona. Con título específico (≥3 tokens, p. ej.
-        #    'ave verum corpus') el título resuelve la ambigüedad y se permite.
+        # 7. Fallback por título, SOLO con atribución compatible (mismo compositor
+        #    específico, o ambos sin atribución/anónimos). El caso "específico +
+        #    sin dato" ya se vetó en 2 salvo catálogo igual, resuelto en 5.
+        #    PROTECCIÓN: títulos genéricos (≤2 tokens, p. ej. "sonata") no se fusionan
+        #    si un lado aporta catálogo/número/clave que el otro no tiene o contradice.
+        if not (same_composer or both_nonspecific):
+            return decision(0.0, MergeVerdict.NOT_MERGED, [])
         core_tokens = (na.title or "").split()
         generic_title = len(core_tokens) <= 2
         if generic_title:
@@ -263,11 +279,11 @@ class WorkGroupingMatcher:
         sim = _token_similarity(na.title or "", nb.title or "")
         if sim >= _TITLE_FALLBACK_SIM:
             ev: list[Evidence] = [TitleSimilarity(similarity=round(sim, 2), confidence=round(sim, 2))]
-            if composer_same:
+            if same_composer:
                 ev.insert(0, ExactComposer())
             return decision(0.55, MergeVerdict.MERGED, ev)
 
-        # 7. Por defecto: NO fusionar.
+        # 8. Por defecto: NO fusionar.
         return decision(0.0, MergeVerdict.NOT_MERGED, [])
 
     def should_merge(self, decision: MergeDecision) -> bool:
@@ -305,6 +321,30 @@ def _breakdown(na: RepresentationIdentity, nb: RepresentationIdentity) -> tuple[
 def _raw_catalog(rep: CandidateRepresentation) -> str:
     meta = extract_metadata(rep.work_descriptor.title)
     return meta.catalogue_raw or meta.catalogue or ""
+
+
+# Marcadores de "sin atribución" tratados como ausencia (nunca como comodín de fusión).
+_UNKNOWN_COMPOSER_MARKERS = {"", "na", "n/a", "unknown", "anon", "anonymous", "attrib."}
+
+
+def _composer_signal(raw: str | None) -> tuple[str, str]:
+    """Clasifica el compositor en una señal para la decisión.
+
+    Devuelve (categoría, clave):
+      - ("missing", "")       — sin dato;
+      - ("anonymous", "anonymous") — marcadores anónimos (Anonymous/NA/anon/trad);
+      - ("specific", clave)   — compositor concreto (clave normalizada de igualdad).
+    """
+    text = (raw or "").strip()
+    if not text:
+        return "missing", ""
+    low = text.lower()
+    if low in _UNKNOWN_COMPOSER_MARKERS:
+        return "anonymous", "anonymous"
+    key = MetadataNormalizer.comparison_composer(text)
+    if not key or key == "anonymous":
+        return "anonymous", "anonymous"
+    return "specific", key
 
 
 def _token_similarity(a: str, b: str) -> float:

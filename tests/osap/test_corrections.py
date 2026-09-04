@@ -77,6 +77,60 @@ class TestCorrectionService:
         assert resolved["status"] == "reviewed"
         assert store.pending_correction_count() == 0
 
+    def test_correccion_guarda_identidad_del_solicitante(self) -> None:
+        store = _MemoryStore()
+        service = CorrectionService(store, exists=lambda _k, _e: True)
+        row = service.submit(
+            kind="composer",
+            entity_id="c-123",
+            field="name",
+            proposed_value="Wolfgang Amadeus Mozart",
+            message="Nombre incorrecto",
+            requested_by="user-1",
+            requested_by_name="Ana",
+            requested_by_email="ana@example.org",
+        )
+        assert row["requested_by"] == "user-1"
+        assert row["requested_by_name"] == "Ana"
+        assert row["requested_by_email"] == "ana@example.org"
+
+    def test_contacto_no_acepta_entidad(self) -> None:
+        service = CorrectionService(_MemoryStore())
+        with pytest.raises(CorrectionError) as exc:
+            service.submit(kind="contact", message="hola", entity_id="imslp")
+        assert exc.value.code == "CONTACT_NO_ENTITY"
+
+    def test_campo_no_permitido_rechazado(self) -> None:
+        service = CorrectionService(_MemoryStore(), exists=lambda _k, _e: True)
+        with pytest.raises(CorrectionError) as exc:
+            service.submit(kind="source", entity_id="imslp", field="api_key", message="x")
+        assert exc.value.code == "FIELD_NOT_ALLOWED"
+
+    def test_obra_solo_titulo_y_proveedor_omr(self) -> None:
+        store = _MemoryStore()
+        service = CorrectionService(store, exists=lambda _k, _e: True)
+        row = service.submit(
+            kind="work",
+            entity_id="42",
+            proposed_value="Ave verum corpus KV 618",
+            message="mal",
+        )
+        # El backend fuerza campo=título y proveedor=omr (no es elegible por el cliente).
+        assert row["field"] == "title"
+        assert row["entity_provider"] == "omr"
+
+    def test_obra_rechaza_campo_distinto_de_titulo(self) -> None:
+        service = CorrectionService(_MemoryStore(), exists=lambda _k, _e: True)
+        with pytest.raises(CorrectionError) as exc:
+            service.submit(kind="work", entity_id="42", field="composer", proposed_value="Mozart", message="x")
+        assert exc.value.code == "FIELD_NOT_ALLOWED"
+
+    def test_valor_propuesto_obligatorio_si_hay_campo(self) -> None:
+        service = CorrectionService(_MemoryStore(), exists=lambda _k, _e: True)
+        with pytest.raises(CorrectionError) as exc:
+            service.submit(kind="composer", entity_id="c1", field="name", message="x")
+        assert exc.value.code == "PROPOSED_REQUIRED"
+
 
 class TestEndpointsCorrections:
     def test_contact_publico_ok(self, monkeypatch: pytest.MonkeyPatch) -> None:

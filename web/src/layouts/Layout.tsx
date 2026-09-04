@@ -30,6 +30,7 @@ const ADMIN_MENU = [
   { to: "/admin/aliases", key: "admin.aliases" },
   { to: "/admin/source-suggestions", key: "admin.sourceSuggestions" },
   { to: "/admin/providers", key: "admin.providersAdmin" },
+  { to: "/admin/corrections", key: "admin.corrections" },
   { to: "/jobs", key: "jobs" },
 ] as const;
 

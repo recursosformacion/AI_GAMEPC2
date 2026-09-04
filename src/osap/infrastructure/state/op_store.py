@@ -107,6 +107,8 @@ class _MemoryStore:
         message: str,
         contact_email: str | None,
         requested_by: str | None,
+        requested_by_name: str | None = None,
+        requested_by_email: str | None = None,
     ) -> dict[str, object]:
         row: dict[str, object] = {
             "id": correction_id,
@@ -119,6 +121,8 @@ class _MemoryStore:
             "message": message,
             "contact_email": contact_email,
             "requested_by": requested_by,
+            "requested_by_name": requested_by_name,
+            "requested_by_email": requested_by_email,
             "status": "pending",
             "admin_message": None,
             "created_at": _now(),
@@ -353,6 +357,8 @@ class _MysqlStore(_MemoryStore):
                 message TEXT NOT NULL,
                 contact_email VARCHAR(255),
                 requested_by VARCHAR(255),
+                requested_by_name VARCHAR(255),
+                requested_by_email VARCHAR(255),
                 status VARCHAR(32) NOT NULL DEFAULT 'pending',
                 admin_message TEXT,
                 created_at VARCHAR(64) NOT NULL,
@@ -378,6 +384,25 @@ class _MysqlStore(_MemoryStore):
             ("transforms", "ALTER TABLE providers ADD COLUMN transforms TEXT"),
         ):
             if col not in existing:
+                self._run(ddl)
+
+        # Columnas de identidad del solicitante en correction_requests (tablas antiguas).
+        corr_cols = self._run(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_schema = DATABASE() AND table_name = 'correction_requests'"
+        )
+        corr_existing = {str(r["column_name"]) for r in corr_cols} if corr_cols else set()
+        for col, ddl in (
+            (
+                "requested_by_name",
+                "ALTER TABLE correction_requests ADD COLUMN requested_by_name VARCHAR(255)",
+            ),
+            (
+                "requested_by_email",
+                "ALTER TABLE correction_requests ADD COLUMN requested_by_email VARCHAR(255)",
+            ),
+        ):
+            if col not in corr_existing:
                 self._run(ddl)
 
         # Índice FULLTEXT para la búsqueda de texto libre del índice de obras.
@@ -482,11 +507,14 @@ class _MysqlStore(_MemoryStore):
         message: str,
         contact_email: str | None,
         requested_by: str | None,
+        requested_by_name: str | None = None,
+        requested_by_email: str | None = None,
     ) -> dict[str, object]:
         self._run(
             "INSERT INTO correction_requests (id, kind, entity_id, entity_provider, `field`, "
-            "current_value, proposed_value, message, contact_email, requested_by, status, "
-            "created_at) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pending',%s)",
+            "current_value, proposed_value, message, contact_email, requested_by, "
+            "requested_by_name, requested_by_email, status, created_at) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'pending',%s)",
             (
                 correction_id,
                 kind,
@@ -498,6 +526,8 @@ class _MysqlStore(_MemoryStore):
                 message,
                 contact_email,
                 requested_by,
+                requested_by_name,
+                requested_by_email,
                 _now(),
             ),
         )

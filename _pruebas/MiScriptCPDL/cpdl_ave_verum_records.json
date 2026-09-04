@@ -1,0 +1,650 @@
+[
+  {
+    "source": "cpdl",
+    "source_id": "cpdl:Ave verum, Op. 2, No. 1 (Edward Elgar)",
+    "title": "Ave Verum, Op. 2, No. 1",
+    "composer": "Edward Elgar",
+    "voicing": [
+      "4",
+      "SATB",
+      "add=with Soprano solo"
+    ],
+    "instrumentation": [
+      "Organ"
+    ],
+    "genre": [
+      "Sacred",
+      "Motets",
+      "Eucharistic songs"
+    ],
+    "language": [
+      "Latin"
+    ],
+    "license": "CPDL",
+    "catalogue_hint": "Op. 2, No. 1 ",
+    "arrangement_hint": true,
+    "n_editions": 12,
+    "editions": [
+      {
+        "cpdlno": "89460",
+        "files": [
+          "elgar_-_ave_verum.mxl",
+          "elgar_-_ave_verum.pdf"
+        ],
+        "editor": "James Wetzel",
+        "license": "CPDL"
+      },
+      {
+        "cpdlno": "84188",
+        "files": [
+          "edkjaworski_elgar_ave-verum-corpus.pdf"
+        ],
+        "editor": "Karol Jaworski",
+        "license": "CPDL"
+      },
+      {
+        "cpdlno": "77856",
+        "files": [
+          "aveverumcorpussattbb.mid",
+          "aveverumcorpussattbb.mp3",
+          "aveverumcorpussattbb.mscz",
+          "aveverumcorpussattbb.mxl",
+          "aveverumcorpussattbb.pdf",
+          "aveverumcorpussattbbaltop.mid",
+          "aveverumcorpussattbbaltop.mp3",
+          "aveverumcorpussattbbbassp.mid",
+          "aveverumcorpussattbbbassp.mp3",
+          "aveverumcorpussattbbcp.mid",
+          "aveverumcorpussattbbcp.mp3",
+          "aveverumcorpussattbbsoprp.mid",
+          "aveverumcorpussattbbsoprp.mp3",
+          "aveverumcorpussattbbtenrp.mid",
+          "aveverumcorpussattbbtenrp.mp3"
+        ],
+        "editor": "William Chimiak",
+        "license": "CPDL"
+      }
+    ],
+    "imslp": []
+  },
+  {
+    "source": "cpdl",
+    "source_id": "cpdl:Ave verum corpus (William Byrd)",
+    "title": "Ave verum corpus",
+    "composer": "William Byrd",
+    "voicing": [
+      "4",
+      "SATB",
+      "add=or {{Vcat",
+      "ATTB",
+      "ATBarB"
+    ],
+    "instrumentation": [
+      "A cappella"
+    ],
+    "genre": [
+      "Sacred",
+      "Motets",
+      "Eucharistic songs"
+    ],
+    "language": [
+      "Latin"
+    ],
+    "license": "CPDL",
+    "catalogue_hint": "",
+    "arrangement_hint": true,
+    "n_editions": 18,
+    "editions": [
+      {
+        "cpdlno": "80548",
+        "files": [
+          "aveverumcorpusbyrd.mid",
+          "aveverumcorpusbyrd.mp3",
+          "aveverumcorpusbyrd.mscz",
+          "aveverumcorpusbyrd.mxl",
+          "aveverumcorpusbyrd.pdf",
+          "aveverumcorpusbyrdacc.pdf",
+          "aveverumcorpusbyrdaltop.mid",
+          "aveverumcorpusbyrdaltop.mp3",
+          "aveverumcorpusbyrdbassp.mid",
+          "aveverumcorpusbyrdbassp.mp3",
+          "aveverumcorpusbyrdsoprp.mid",
+          "aveverumcorpusbyrdsoprp.mp3",
+          "aveverumcorpusbyrdtenrp.mid",
+          "aveverumcorpusbyrdtenrp.mp3"
+        ],
+        "editor": "William Chimiak",
+        "license": "CPDL"
+      },
+      {
+        "cpdlno": "78969",
+        "files": [
+          "edkjaworski_byrd_ave-verum-corpus.pdf"
+        ],
+        "editor": "Karol Jaworski",
+        "license": "CPDL"
+      },
+      {
+        "cpdlno": "71392",
+        "files": [
+          "byrd_ave_verum_corpus_ssaa.mid",
+          "byrd_ave_verum_corpus_ssaa.mp3",
+          "byrd_ave_verum_corpus_ssaa.mscz",
+          "byrd_ave_verum_corpus_ssaa.mxl",
+          "byrd_ave_verum_corpus_ssaa.pdf"
+        ],
+        "editor": "Kimberly Johnson",
+        "license": "CPDL"
+      }
+    ],
+    "imslp": []
+  },
+  {
+    "source": "cpdl",
+    "source_id": "cpdl:Ave verum in E-flat major (Camille Saint-Saëns)",
+    "title": "Ave verum in E-flat major",
+    "composer": "Camille Saint-Saëns",
+    "voicing": [
+      "4",
+      "SATB"
+    ],
+    "instrumentation": [
+      "A cappella"
+    ],
+    "genre": [
+      "Sacred",
+      "Motets",
+      "Eucharistic songs"
+    ],
+    "language": [
+      "Latin"
+    ],
+    "license": "CPDL",
+    "catalogue_hint": "",
+    "arrangement_hint": true,
+    "n_editions": 11,
+    "editions": [
+      {
+        "cpdlno": "84689",
+        "files": [
+          "edkjaworski_saint-saens_ave-verum-corpus.pdf"
+        ],
+        "editor": "Karol Jaworski",
+        "license": "CPDL"
+      },
+      {
+        "cpdlno": "48280",
+        "files": [
+          "ave_verum_corpus_saint-saens.capx",
+          "ave_verum_corpus_saint-saens.mid",
+          "ave_verum_corpus_saint-saens.mxl",
+          "ave_verum_corpus_saint-saens.pdf"
+        ],
+        "editor": "James Gibb",
+        "license": "CPDL"
+      },
+      {
+        "cpdlno": "47498",
+        "files": [
+          "saint-saens_aveverum.capx",
+          "saint-saens_aveverum.mxl",
+          "saint-saens_aveverum.pdf"
+        ],
+        "editor": "Andrew Sims",
+        "license": "CPDL"
+      }
+    ],
+    "imslp": []
+  },
+  {
+    "source": "cpdl",
+    "source_id": "cpdl:Ave verum corpus, KV 618 (Wolfgang Amadeus Mozart)",
+    "title": "Ave verum corpus, KV 618 (Wolfgang Amadeus Mozart)",
+    "composer": "Wolfgang Amadeus Mozart",
+    "voicing": [
+      "4",
+      "SATB"
+    ],
+    "instrumentation": [
+      "String ensemble:",
+      "2 violins, viola, violoncello, contrabass and organ continuo"
+    ],
+    "genre": [
+      "Sacred",
+      "Motets",
+      "Eucharistic songs"
+    ],
+    "language": [
+      "Latin"
+    ],
+    "license": "Personal",
+    "catalogue_hint": "KV 618",
+    "arrangement_hint": true,
+    "n_editions": 22,
+    "editions": [
+      {
+        "cpdlno": "18715",
+        "files": [],
+        "editor": "Andre van Ryckeghem",
+        "license": "Personal"
+      },
+      {
+        "cpdlno": "10220",
+        "files": [],
+        "editor": "Helmut Kickton",
+        "license": "Personal"
+      },
+      {
+        "cpdlno": "9926",
+        "files": [
+          "mozart.aveverumcorpus.stringaccomp.pdf"
+        ],
+        "editor": "Marshall Jose",
+        "license": "Personal"
+      }
+    ],
+    "imslp": [
+      "Ave verum corpus, K.618 (Mozart, Wolfgang Amadeus)",
+      "Ave verum corpus, K.618 (Mozart, Wolfgang Amadeus)"
+    ]
+  },
+  {
+    "source": "cpdl",
+    "source_id": "cpdl:Ave verum corpus (Johan De Wael)",
+    "title": "Ave verum corpus",
+    "composer": "Johan De Wael",
+    "voicing": [
+      "4",
+      "SATB"
+    ],
+    "instrumentation": [
+      "A cappella or organ"
+    ],
+    "genre": [
+      "Sacred",
+      "Motets",
+      "Eucharistic songs"
+    ],
+    "language": [
+      "Latin"
+    ],
+    "license": "Personal",
+    "catalogue_hint": "",
+    "arrangement_hint": false,
+    "n_editions": 1,
+    "editions": [
+      {
+        "cpdlno": "8102",
+        "files": [],
+        "editor": "Johan De Wael",
+        "license": "Personal"
+      }
+    ],
+    "imslp": [
+      "Ave verum corpus (De Wael, Johan)"
+    ]
+  },
+  {
+    "source": "cpdl",
+    "source_id": "cpdl:Ave verum, CG 142 (Charles Gounod)",
+    "title": "Ave verum",
+    "composer": "Charles Gounod",
+    "voicing": [
+      "4",
+      "SATB"
+    ],
+    "instrumentation": [
+      "Organ"
+    ],
+    "genre": [
+      "Sacred",
+      "Motets",
+      "Eucharistic songs"
+    ],
+    "language": [
+      "Latin"
+    ],
+    "license": "Personal",
+    "catalogue_hint": "CG 142",
+    "arrangement_hint": true,
+    "n_editions": 5,
+    "editions": [
+      {
+        "cpdlno": "64627",
+        "files": [],
+        "editor": "Fernando Gómez Jácome",
+        "license": "Personal"
+      },
+      {
+        "cpdlno": "60900",
+        "files": [
+          "aveverumgounod.mid",
+          "aveverumgounod.mxl",
+          "aveverumgounod.pdf",
+          "aveverumgounod.sib",
+          "aveverumgounod3.sib",
+          "aveverumgounod5.sib"
+        ],
+        "editor": "Andris Solims",
+        "license": "Creative Commons Attribution Non-Commercial"
+      },
+      {
+        "cpdlno": "22800",
+        "files": [
+          "ave_verum_corpus_-_gounod.capx",
+          "ave_verum_corpus_-_gounod.mid",
+          "ave_verum_corpus_-_gounod.mxl",
+          "ave_verum_corpus_-_gounod.pdf"
+        ],
+        "editor": "James Gibb",
+        "license": "CPDL"
+      }
+    ],
+    "imslp": []
+  },
+  {
+    "source": "cpdl",
+    "source_id": "cpdl:Ave verum corpus (Josef Rheinberger)",
+    "title": "Ave verum corpus (Josef Rheinberger)",
+    "composer": "Josef Rheinberger",
+    "voicing": [
+      "4",
+      "SATB"
+    ],
+    "instrumentation": [
+      "A cappella"
+    ],
+    "genre": [
+      "Sacred",
+      "Anthems",
+      "Eucharistic songs"
+    ],
+    "language": [
+      "Latin"
+    ],
+    "license": "Personal",
+    "catalogue_hint": "",
+    "arrangement_hint": true,
+    "n_editions": 1,
+    "editions": [
+      {
+        "cpdlno": "11598",
+        "files": [
+          "rheinberger-ave_verum.mid",
+          "rheinberger-ave_verum.pdf"
+        ],
+        "editor": "Douglas Walczak",
+        "license": "Personal"
+      }
+    ],
+    "imslp": []
+  },
+  {
+    "source": "cpdl",
+    "source_id": "cpdl:Ave verum corpus (Charles Hiestand)",
+    "title": "Ave Verum Corpus",
+    "composer": "Charles Hiestand",
+    "voicing": [
+      "4",
+      "SATB"
+    ],
+    "instrumentation": [
+      "A cappella"
+    ],
+    "genre": [
+      "Sacred",
+      "Motets",
+      "Eucharistic songs"
+    ],
+    "language": [
+      "Latin"
+    ],
+    "license": "CPDL",
+    "catalogue_hint": "",
+    "arrangement_hint": false,
+    "n_editions": 1,
+    "editions": [
+      {
+        "cpdlno": "11764",
+        "files": [],
+        "editor": "Charles Hiestand",
+        "license": "CPDL"
+      }
+    ],
+    "imslp": []
+  },
+  {
+    "source": "cpdl",
+    "source_id": "cpdl:Ave verum corpus (Jef Tinel)",
+    "title": "Ave verum corpus",
+    "composer": "Jef Tinel",
+    "voicing": [
+      "4",
+      "SATB"
+    ],
+    "instrumentation": [
+      "A cappella"
+    ],
+    "genre": [
+      "Sacred",
+      "Motets",
+      "Eucharistic songs"
+    ],
+    "language": [
+      "Latin"
+    ],
+    "license": "Personal",
+    "catalogue_hint": "",
+    "arrangement_hint": false,
+    "n_editions": 1,
+    "editions": [
+      {
+        "cpdlno": "12143",
+        "files": [],
+        "editor": "Peter Leys",
+        "license": "Personal"
+      }
+    ],
+    "imslp": [
+      "Ave verum (Tinel, Jef)"
+    ]
+  },
+  {
+    "source": "cpdl",
+    "source_id": "cpdl:Ave verum corpus (Fábio Soldá)",
+    "title": "Ave verum corpus",
+    "composer": "Fábio Soldá",
+    "voicing": [
+      "4",
+      "SATB"
+    ],
+    "instrumentation": [
+      "String ensemble or piano"
+    ],
+    "genre": [
+      "Sacred",
+      "Motets",
+      "Eucharistic songs"
+    ],
+    "language": [
+      "Latin"
+    ],
+    "license": "Attribution-Noncommercial 3.0 Unported",
+    "catalogue_hint": "",
+    "arrangement_hint": false,
+    "n_editions": 2,
+    "editions": [
+      {
+        "cpdlno": "16951",
+        "files": [
+          "ave_verum_corpus.mid",
+          "ave_verum_corpus.pdf"
+        ],
+        "editor": "Fábio Soldá",
+        "license": "Attribution-Noncommercial 3.0 Unported"
+      },
+      {
+        "cpdlno": "16959",
+        "files": [
+          "ave_verum_corpus_(piano).pdf"
+        ],
+        "editor": "Fábio Soldá",
+        "license": "Attribution-Noncommercial 3.0 Unported"
+      }
+    ],
+    "imslp": []
+  },
+  {
+    "source": "cpdl",
+    "source_id": "cpdl:Ave verum corpus (Enrico Vercesi)",
+    "title": "Ave verum corpus",
+    "composer": "Enrico Vercesi",
+    "voicing": [
+      "4",
+      "SATB"
+    ],
+    "instrumentation": [
+      "String quartet, oboe"
+    ],
+    "genre": [
+      "Sacred",
+      "Motets",
+      "Eucharistic songs"
+    ],
+    "language": [
+      "Latin"
+    ],
+    "license": "CPDL",
+    "catalogue_hint": "",
+    "arrangement_hint": false,
+    "n_editions": 1,
+    "editions": [
+      {
+        "cpdlno": "18733",
+        "files": [
+          "ave verum corpus.mus",
+          "ave verum corpus.mxl",
+          "verc-ave.mid",
+          "verc-ave.pdf"
+        ],
+        "editor": "Enrico Vercesi",
+        "license": "CPDL"
+      }
+    ],
+    "imslp": []
+  },
+  {
+    "source": "cpdl",
+    "source_id": "cpdl:Ave verum Corpus a 4 (Torben Klaes)",
+    "title": "Ave verum Corpus a 4",
+    "composer": "Torben Klaes",
+    "voicing": [
+      "4",
+      "SATB"
+    ],
+    "instrumentation": [
+      "Basso continuo (Organ and Cello or Viol)"
+    ],
+    "genre": [
+      "Sacred",
+      "Motets",
+      "Eucharistic songs"
+    ],
+    "language": [
+      "Latin"
+    ],
+    "license": "Personal",
+    "catalogue_hint": "",
+    "arrangement_hint": false,
+    "n_editions": 1,
+    "editions": [
+      {
+        "cpdlno": "20253",
+        "files": [
+          "ave_verum.mid",
+          "klaes_ave_verum.pdf"
+        ],
+        "editor": "Torben Klaes",
+        "license": "Personal"
+      }
+    ],
+    "imslp": []
+  },
+  {
+    "source": "cpdl",
+    "source_id": "cpdl:Ave verum corpus (Nycholas Maia)",
+    "title": "Ave verum corpus",
+    "composer": "Nycholas Maia",
+    "voicing": [
+      "4",
+      "SATB"
+    ],
+    "instrumentation": [
+      "A cappella"
+    ],
+    "genre": [
+      "Sacred",
+      "Motets",
+      "Eucharistic songs"
+    ],
+    "language": [
+      "Latin"
+    ],
+    "license": "Personal",
+    "catalogue_hint": "",
+    "arrangement_hint": false,
+    "n_editions": 1,
+    "editions": [
+      {
+        "cpdlno": "19890",
+        "files": [
+          "ave verum corpus.mid",
+          "ave_verum_corpus_-_maia.pdf"
+        ],
+        "editor": "Nycholas Maia",
+        "license": "Personal"
+      }
+    ],
+    "imslp": []
+  },
+  {
+    "source": "cpdl",
+    "source_id": "cpdl:Ave verum corpus (Michael J. Oczko)",
+    "title": "Ave Verum Corpus",
+    "composer": "Michael J. Oczko",
+    "voicing": [
+      "4",
+      "SATB",
+      "add=and {{cat",
+      "Solo Soprano"
+    ],
+    "instrumentation": [
+      "A cappella"
+    ],
+    "genre": [
+      "Sacred",
+      "Motets",
+      "Eucharistic songs"
+    ],
+    "language": [
+      "Latin"
+    ],
+    "license": "Personal",
+    "catalogue_hint": "",
+    "arrangement_hint": false,
+    "n_editions": 1,
+    "editions": [
+      {
+        "cpdlno": "20460",
+        "files": [
+          "ave verum corpus satb.mid",
+          "ave verum corpus.pdf",
+          "ave verum1 g minor final audio.mp3"
+        ],
+        "editor": "Michael J. Oczko",
+        "license": "Personal"
+      }
+    ],
+    "imslp": []
+  }
+]

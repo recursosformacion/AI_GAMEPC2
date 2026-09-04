@@ -16,6 +16,24 @@ Convenciones:
 
 ## osap-storage/scripts
 
+### import_cpdl_pages.py
+Ingiere exports MediaWiki de ChoralWiki (CPDL) en la tabla `cpdl_pages` (corpus de
+referencia para identidad/fusión; NO toca `works`). Normaliza plantillas wiki
+(Title/Composer/Voicing/Instruments/Genre/Language/Copy) y ediciones (`CPDLno`,
+editor, ficheros, licencia), upsert por `page_title`. Requiere la migración
+`035_cpdl_pages`.
+Uso: `python scripts/import_cpdl_pages.py --files G:\chunk.xml` (o `--dir`).
+
+
+### analyze_works_content.py
+Barrido offline (sin R2) del contenido de los `.mxl` de `G:\osap-storage`: calcula el
+`sha256`+tamaño reales y los **guarda en `files`** (vía `storage_locations`), valida el
+MusicXML y guarda el "número mágico" musical (`works.music_digest`, md5 de notas) para
+detectar obras equivalentes entre ediciones. Reanudable con `--only-missing`.
+Uso: `python scripts/analyze_works_content.py --only-missing --root G:\osap-storage`
+(progreso cada 2000; probar con `--limit N`). Requiere la migración `034_works_music_digest`.
+
+
 | Script | Propósito |
 |--------|-----------|
 | `backfill_works_pdmx.py` | Backfill de metadatos de obras desde `pdmx_index.db`. |

@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 import re
 import threading
+import urllib.parse
 import uuid
 from typing import TYPE_CHECKING, Any, cast
 
@@ -766,25 +767,42 @@ def create_platform_app(
         url = str(info.get("download_url") or "")
         if not url:
             return fail(404, response, "NOT_FOUND", "No download available")
+
         # OMR/OSAP storage: el fichero vive en nuestro storage bajo un nombre hash.
         # En lugar de redirigir (el navegador usaría el hash como nombre), lo servimos
         # desde el servidor con un nombre legible (compositor - título).
         storage_base = (container.storage_web_base() or "").rstrip("/")
-        if storage_base and url.startswith(storage_base):
+        url_normalized = url.rstrip("/")
+        storage_base_normalized = storage_base.rstrip("/")
+
+        # Comprobar si la URL pertenece a nuestro storage (comparación case-insensitive y normalizada)
+        if storage_base and url_normalized.lower().startswith(storage_base_normalized.lower()):
             try:
                 upstream = requests.get(url, timeout=120)
             except requests.RequestException:
                 return fail(502, response, "UPSTREAM_ERROR", "No se pudo obtener el fichero del storage")
             if upstream.status_code != 200:
                 return fail(502, response, "UPSTREAM_ERROR", "No se pudo obtener el fichero del storage")
+
             filename = _download_filename(info)
+            # Sanitizar el nombre para Content-Disposition (RFC 5987)
+            safe_filename = filename.replace('"', '\\"').replace('\n', '').replace('\r', '')
             disposition = "inline" if view else "attachment"
             fmt = str(info.get("format") or "")
+            media_type = _media_type_for_format(fmt)
+
+            encoded_filename = urllib.parse.quote(safe_filename)
+            content_disposition = (
+                f'{disposition}; filename="{safe_filename}"; '
+                f"filename*=UTF-8''{encoded_filename}"
+            )
+
             return Response(
                 content=upstream.content,
-                media_type=_media_type_for_format(fmt),
-                headers={"Content-Disposition": f'{disposition}; filename="{filename}"'},
+                media_type=media_type,
+                headers={"Content-Disposition": content_disposition},
             )
+
         # Proveedores externos (IMSLP/MusicBrainz/Mutopia...): el servidor NO proxya
         # porque responden con challenge anti-bot a peticiones de servidor; el navegador
         # del usuario sí las resuelve. Se redirige (302) a la URL del proveedor.

@@ -483,6 +483,8 @@ export interface CorrectionRequestRead {
   message: string;
   contact_email?: string | null;
   requested_by?: string | null;
+  requested_by_name?: string | null;
+  requested_by_email?: string | null;
   status: string;
   admin_message?: string | null;
   created_at: string;

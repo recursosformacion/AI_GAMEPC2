@@ -8,7 +8,12 @@ Lee obras de varios proveedores y puebla el índice local
 resultado, no lo recalcula por búsqueda.
 
 Proveedores (selección con `--providers`):
-  omr          -> corpus OMR (osap-storage.works)                          [musicxml]
+  omr          -> corpus OMR
+                                        (osap-storage.works)
+                                               [musicxml]
+  cpdl         -> páginas CPDL
+                                        (osap-storage.cpdl_pages)
+                                               [enlace a página, no descargable]
   imslp        -> Worklist API de IMSLP (paginada por start)               [pdf/página]
   mutopia      -> make-table.cgi (listing completo, paginado por startat)  [pdf+midi]
   musicbrainz  -> dump local mbdump (work + l_artist_work + artist)        [metadata]
@@ -435,6 +440,78 @@ def _iter_musicbrainz(dump_dir: str, art_only: bool, limit: int):
 # ---------------------------------------------------------------- ingest
 
 
+def _iter_cpdl(
+    omr: pymysql.Connection, from_id: int, limit: int, batch: int = 2000
+):
+    """Páginas CPDL ingeridas (`cpdl_pages` de osap-storage).
+
+    Entran en el índice como representación NO descargable (available=0) cuyo
+    `download_url` es la página wiki de CPDL: el usuario abre en el proveedor para
+    descargar allí. Participan así en reclasificación/fusión como cualquier provider.
+    """
+    last_id = max(0, from_id)
+    emitted = 0
+    while limit <= 0 or emitted < limit:
+        take = min(batch, limit - emitted) if limit > 0 else batch
+        with omr.cursor() as cur:
+            cur.execute(
+                "SELECT id, page_title, title, composer, catalogue_hint, n_editions, "
+                "payload_json FROM cpdl_pages WHERE id > %s ORDER BY id LIMIT %s",
+                (last_id, take),
+            )
+            pages = cur.fetchall()
+        if not pages:
+            return
+        for p in pages:
+            page_title = str(p.get("page_title") or "").strip()
+            title = str(p.get("title") or "").strip() or page_title
+            composer = str(p.get("composer") or "").strip() or None
+            if not title or not composer or int(p.get("n_editions") or 0) < 1:
+                continue
+            fmt = _cpdl_format(p.get("payload_json"))
+            page_url = (
+                "https://www.cpdl.org/wiki/index.php?title="
+                + urllib.parse.quote(page_title)
+            )
+            yield {
+                "title": title,
+                "composer": composer,
+                "composer_id": None,
+                "catalogue": (p.get("catalogue_hint") or None),
+                "year": None,
+                "instrumentation": None,
+                "provider": "cpdl",
+                "format": fmt,
+                "download_url": page_url,
+                "available": 0,
+                "quality": 0,
+            }
+            emitted += 1
+        last_id = max(int(p["id"]) for p in pages)
+        if len(pages) < take:
+            return
+
+
+def _cpdl_format(payload_json: object) -> str:
+    try:
+        payload = json.loads(str(payload_json or "{}"))
+    except ValueError:
+        return "pdf"
+    exts: set[str] = set()
+    for edition in payload.get("editions") or []:
+        for name in edition.get("files") or []:
+            ext = str(name).rsplit(".", 1)[-1].lower()
+            if ext:
+                exts.add(ext)
+    if exts & {"mxl", "xml", "musicxml"}:
+        return "musicxml"
+    if "pdf" in exts:
+        return "pdf"
+    if "mid" in exts or "midi" in exts:
+        return "midi"
+    return "pdf"
+
+
 def _ingest(
     api: pymysql.Connection,
     maestro: pymysql.Connection | None,
@@ -513,8 +590,10 @@ def main() -> int:
     if sys.stdout and hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--providers", default="omr",
-                        help="proveedores a indexar (coma): omr,imslp,mutopia,musicbrainz")
+    parser.add_argument(
+        "--providers", default="omr",
+        help="proveedores a indexar (coma): omr,imslp,mutopia,musicbrainz,cpdl"
+    )
     parser.add_argument("--limit", type=int, default=0,
                         help="límite de obras por proveedor (0 = todas)")
     parser.add_argument("--from-id", type=int, default=0, help="OMR: reanudar desde este id")
@@ -564,6 +643,8 @@ def main() -> int:
                     print("  error: --mb-dump es obligatorio para musicbrainz", flush=True)
                     continue
                 rows = _iter_musicbrainz(args.mb_dump, args.mb_types == "art", args.limit)
+            elif provider == "cpdl":
+                rows = _iter_cpdl(omr, args.from_id, args.limit or 2_000_000)
             else:
                 print(f"  proveedor desconocido: {provider}", flush=True)
                 continue

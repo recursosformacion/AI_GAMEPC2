@@ -320,6 +320,8 @@ class CorrectionRead(_Frozen):
     message: str = ""
     contact_email: str | None = None
     requested_by: str | None = None
+    requested_by_name: str | None = None
+    requested_by_email: str | None = None
     status: str
     admin_message: str | None = None
     created_at: str

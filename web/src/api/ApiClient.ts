@@ -205,6 +205,17 @@ export class ApiClient {
     return this.post<CorrectionRequestRead>("/corrections", payload);
   }
 
+  async listCorrections(): Promise<CorrectionRequestRead[]> {
+    return this.get<CorrectionRequestRead[]>("/admin/corrections");
+  }
+
+  async resolveCorrection(id: string, action: "review" | "close", message: string): Promise<CorrectionRequestRead> {
+    return this.post<CorrectionRequestRead>(`/admin/corrections/${encodeURIComponent(id)}/resolve`, {
+      action,
+      message,
+    });
+  }
+
   async listSourceSuggestions(): Promise<SourceSuggestion[]> {
     return this.get<SourceSuggestion[]>("/admin/source-suggestions");
   }

@@ -18,7 +18,6 @@ export function CorrectionsPage() {
   const initialKind = params.get("kind") === "contact" ? "contact" : (params.get("kind") as Kind) || "contact";
   const [kind, setKind] = useState<Kind>(initialKind);
   const [entityId, setEntityId] = useState(params.get("entity_id") || "");
-  const [entityProvider, setEntityProvider] = useState(params.get("provider") || "omr");
   const [field, setField] = useState(params.get("field") || "");
   const [currentValue, setCurrentValue] = useState(params.get("current_value") || "");
   const [proposedValue, setProposedValue] = useState("");
@@ -48,8 +47,8 @@ export function CorrectionsPage() {
           : await apiClient.submitCorrection({
               kind: kind as "source" | "composer" | "work",
               entity_id: entityId.trim(),
-              entity_provider: kind === "work" ? entityProvider.trim() || "omr" : undefined,
-              field: field.trim() || undefined,
+              entity_provider: kind === "work" ? "omr" : undefined,
+              field: kind === "work" ? "title" : field.trim() || undefined,
               current_value: currentValue || undefined,
               proposed_value: proposedValue || undefined,
               message,
@@ -102,25 +101,22 @@ export function CorrectionsPage() {
                 className="mt-1 w-full rounded border border-osap-border px-3 py-2 text-sm"
               />
             </label>
-            {kind === "work" && (
+            {kind === "work" ? (
+              <>
+                <div className="block text-sm text-osap-muted">Origen: OMR (OSAP-storage)</div>
+                <div className="block text-sm text-osap-muted">Corrección permitida: título de la obra</div>
+              </>
+            ) : (
               <label className="block text-sm">
-                Proveedor de la obra
+                Campo afectado
                 <input
-                  value={entityProvider}
-                  onChange={(e) => setEntityProvider(e.target.value)}
+                  value={field}
+                  onChange={(e) => setField(e.target.value)}
+                  placeholder={kind === "source" ? "description" : "name"}
                   className="mt-1 w-full rounded border border-osap-border px-3 py-2 text-sm"
                 />
               </label>
             )}
-            <label className="block text-sm">
-              Campo afectado
-              <input
-                value={field}
-                onChange={(e) => setField(e.target.value)}
-                placeholder={kind === "work" ? "title" : "description"}
-                className="mt-1 w-full rounded border border-osap-border px-3 py-2 text-sm"
-              />
-            </label>
             <label className="block text-sm">
               Valor actual
               <input

@@ -4,7 +4,7 @@ import { AboutPage } from "../pages/AboutPage";
 import { AdminComposerDetailPage } from "../pages/AdminComposerDetailPage";
 import { AdminComposersPage } from "../pages/AdminComposersPage";
 import { AdminSourceSuggestionsPage } from "../pages/AdminSourceSuggestionsPage";
-import { AdminProvidersPage } from "../pages/AdminProvidersPage";
+import { AdminProvidersPage } from "../pages/AdminProvidersPage";import { AdminCorrectionsPage } from "../pages/AdminCorrectionsPage";
 import { AdminPage } from "../pages/AdminPage";
 import { AliasPage } from "../pages/AliasPage";
 import { AuthCallbackPage } from "../pages/AuthCallbackPage";
@@ -45,6 +45,7 @@ export function AppRoutes() {
         <Route path="/admin/aliases" element={<AliasPage />} />
         <Route path="/admin/source-suggestions" element={<AdminSourceSuggestionsPage />} />
         <Route path="/admin/providers" element={<AdminProvidersPage />} />
+        <Route path="/admin/corrections" element={<AdminCorrectionsPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/about/how-it-works" element={<HowItWorksPage />} />
         <Route path="/candidates" element={<CandidatesPage />} />

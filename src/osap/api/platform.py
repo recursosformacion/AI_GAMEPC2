@@ -2118,13 +2118,19 @@ class PlatformApi:
         from src.osap.application.corrections import CorrectionService
 
         requested_by: str | None = None
+        requested_by_name: str | None = None
+        requested_by_email: str | None = None
         if kind != "contact":
             principal = self._container.authenticator().resolve(token)
             if principal is None or not getattr(principal, "user_id", None):
                 from src.osap.domain.votes import UnauthenticatedError
 
                 raise UnauthenticatedError("Login required to submit a correction")
-            requested_by = str(getattr(principal, "user_id", None))
+            requested_by = str(getattr(principal, "user_id", None)) if getattr(principal, "user_id", None) else None
+            raw_name = getattr(principal, "name", None)
+            requested_by_name = str(raw_name) if raw_name else None
+            raw_email = getattr(principal, "email", None)
+            requested_by_email = str(raw_email) if raw_email else None
         service = CorrectionService(self._store, exists=self._correction_entity_exists)
         row = service.submit(
             kind=kind,
@@ -2136,6 +2142,8 @@ class PlatformApi:
             proposed_value=proposed_value,
             contact_email=contact_email,
             requested_by=requested_by,
+            requested_by_name=requested_by_name,
+            requested_by_email=requested_by_email,
         )
         return self._correction_read(row)
 
@@ -2193,6 +2201,8 @@ class PlatformApi:
             message=str(row.get("message") or ""),
             contact_email=str(row["contact_email"]) if row.get("contact_email") else None,
             requested_by=str(row["requested_by"]) if row.get("requested_by") else None,
+            requested_by_name=str(row["requested_by_name"]) if row.get("requested_by_name") else None,
+            requested_by_email=str(row["requested_by_email"]) if row.get("requested_by_email") else None,
             status=str(row["status"]),
             admin_message=str(row["admin_message"]) if row.get("admin_message") else None,
             created_at=str(row["created_at"]),

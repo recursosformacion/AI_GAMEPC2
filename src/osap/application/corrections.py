@@ -1,10 +1,12 @@
 """Circuito de soporte/correcciones del catálogo (OSAP).
 
 Un único mecanismo parametrizado por `kind`:
-- `contact`: mensaje general de contacto;
+- `contact`: mensaje general de contacto (público, sin entidad);
 - `source` / `composer` / `work`: propuesta de corrección de datos de una entidad real
-  del catálogo (identificada por `entity_id`; para obras OMR `entity_provider="omr"` y
-  `field="title"`).
+  del catálogo (identificada por `entity_id`). Solo se admiten los `field` de
+  `ALLOWED_FIELDS` (campos que OSAP puede revisar). Para obras solo se permite el
+  TÍTULO de obras de OSAP-storage (OMR): el backend fija `entity_provider="omr"` y no
+  es una combinación que el cliente pueda elegir.
 
 Las peticiones NO modifican el catálogo: se almacenan como `pending` para revisión
 posterior (admin). Persistencia vía el store operativo de osap-api.
@@ -19,6 +21,17 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 VALID_KINDS = frozenset({"contact", "source", "composer", "work"})
+
+# Campos que OSAP puede realmente revisar/modificar por tipo de entidad. Fuera de esta
+# lista no se acepta ninguna propuesta (evita prometer correcciones imposibles).
+ALLOWED_FIELDS: dict[str, frozenset[str]] = {
+    "source": frozenset({"name", "description", "url"}),
+    "composer": frozenset({"name", "aliases", "biography", "birth_year", "death_year"}),
+    "work": frozenset({"title"}),
+}
+
+# La única corrección de obra admitida es el título de una obra de OSAP-storage (OMR).
+WORK_ALLOWED_PROVIDER = "omr"
 
 
 class CorrectionError(Exception):
@@ -53,20 +66,54 @@ class CorrectionService:
         proposed_value: str | None = None,
         contact_email: str | None = None,
         requested_by: str | None = None,
+        requested_by_name: str | None = None,
+        requested_by_email: str | None = None,
     ) -> dict[str, object]:
         if kind not in VALID_KINDS:
             raise CorrectionError(422, "INVALID_KIND", "Tipo de solicitud no soportado")
         if not message or not message.strip():
             raise CorrectionError(422, "MESSAGE_REQUIRED", "El mensaje es obligatorio")
-        if kind != "contact":
-            if not entity_id or not str(entity_id).strip():
-                raise CorrectionError(422, "ENTITY_REQUIRED", "La entidad es obligatoria")
-            if kind == "work" and field == "title" and not entity_provider:
-                entity_provider = "omr"
-            if self._exists is not None and not self._exists(kind, str(entity_id)):
-                raise CorrectionError(404, "ENTITY_NOT_FOUND", "La entidad indicada no existe")
+        if kind == "contact":
+            if entity_id or entity_provider or field:
+                raise CorrectionError(
+                    422, "CONTACT_NO_ENTITY", "El contacto general no identifica una entidad"
+                )
+            row: dict[str, object] = self._store.add_correction(
+                f"corr-{uuid.uuid4().hex[:10]}",
+                kind,
+                None,
+                None,
+                None,
+                None,
+                None,
+                message,
+                contact_email,
+                requested_by,
+                requested_by_name,
+                requested_by_email,
+            )
+            return row
+
+        # --- Correcciones de datos (source | composer | work) -----------------
+        if not entity_id or not str(entity_id).strip():
+            raise CorrectionError(422, "ENTITY_REQUIRED", "La entidad es obligatoria")
+        if field and field not in ALLOWED_FIELDS.get(kind, frozenset()):
+            raise CorrectionError(
+                422, "FIELD_NOT_ALLOWED", "Este campo no puede proponerse para ese tipo de entidad"
+            )
+        if kind == "work":
+            # Solo se admite la corrección del TÍTULO de obras OSAP-storage (OMR). El
+            # proveedor lo fija el backend: el cliente no puede elegir otro origen.
+            if field not in (None, "title"):
+                raise CorrectionError(422, "FIELD_NOT_ALLOWED", "Solo se admite corregir el título de la obra")
+            field = "title"
+            entity_provider = WORK_ALLOWED_PROVIDER
+        if field and (not proposed_value or not proposed_value.strip()):
+            raise CorrectionError(422, "PROPOSED_REQUIRED", "El valor propuesto es obligatorio")
+        if self._exists is not None and not self._exists(kind, str(entity_id)):
+            raise CorrectionError(404, "ENTITY_NOT_FOUND", "La entidad indicada no existe")
         correction_id = f"corr-{uuid.uuid4().hex[:10]}"
-        row: dict[str, object] = self._store.add_correction(
+        created: dict[str, object] = self._store.add_correction(
             correction_id,
             kind,
             entity_id,
@@ -77,5 +124,7 @@ class CorrectionService:
             message,
             contact_email,
             requested_by,
+            requested_by_name,
+            requested_by_email,
         )
-        return row
+        return created
