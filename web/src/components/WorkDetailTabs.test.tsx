@@ -1,10 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { RepresentationInfo, WorkInfo } from "../api/types";
+import type { RepresentationInfo, RepresentationSelection, WorkInfo } from "../api/types";
 import { I18nProvider } from "../i18n/I18n";
 import { WorkDetailTabs } from "../components/WorkDetailTabs";
-import { useResolution } from "../state/resolution";
 
 const baseWork: WorkInfo = {
   work_id: "w1",
@@ -20,7 +19,8 @@ function reps(available: boolean[]): RepresentationInfo[] {
     format: a ? "musicxml" : "pdf",
     confidence: 0.9,
     available: a,
-    title: "Representation",
+    title: `Representation ${i}`,
+    url: a ? `https://storage.example/download/${i}.mxl` : undefined,
   }));
 }
 
@@ -34,54 +34,112 @@ function renderTabs(work: WorkInfo, representations: RepresentationInfo[]) {
   );
 }
 
-describe("WorkDetailTabs — resolve button", () => {
+function mockFetch(selectedPayload?: RepresentationSelection) {
+  globalThis.fetch = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.includes("/representations/selection") && (!init?.method || init.method === "GET")) {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: selectedPayload ?? {
+              work_id: "w1",
+              representations_known: 0,
+              candidates_usable: 0,
+              status: "none_selected",
+              message: "Sin representación seleccionada.",
+              selected: null,
+            },
+          }),
+          { status: 200 },
+        ),
+      );
+    }
+    if (url.includes("/representations/select-best")) {
+      return Promise.resolve(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: selectedPayload ?? {
+              work_id: "w1",
+              representations_known: 1,
+              candidates_usable: 1,
+              status: "selected",
+              message: "Representación seleccionada.",
+              selected: {
+                provider: "provider-0",
+                format: "musicxml",
+                url: "https://storage.example/download/0.mxl",
+                quality_level: 2,
+                reason: "mejor calidad",
+              },
+            },
+          }),
+          { status: 200 },
+        ),
+      );
+    }
+    return Promise.resolve(new Response(JSON.stringify({ success: true, data: {} }), { status: 200 }));
+  }) as unknown as typeof fetch;
+}
+
+describe("WorkDetailTabs — select best known representation", () => {
   beforeEach(() => {
-    useResolution.setState({ session: null, loading: false, polling: false, error: null });
     vi.resetAllMocks();
+    mockFetch();
   });
 
-  it("shows acquire CTA when no usable representation exists", () => {
-    renderTabs(baseWork, reps([false]));
+  it("shows the selection action", () => {
+    renderTabs(baseWork, reps([true, false]));
     fireEvent.click(screen.getByRole("button", { name: "Representations" }));
-    expect(screen.getByText("No usable file found")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Resolve work" })).toBeInTheDocument();
-  });
-
-  it("shows find-better CTA when at least one usable representation exists", () => {
-    renderTabs(baseWork, reps([true]));
-    fireEvent.click(screen.getByRole("button", { name: "Representations" }));
-    const texts = screen.getAllByText("Find better representations");
-    expect(texts.length).toBeGreaterThanOrEqual(2);
     expect(screen.getByRole("button", { name: "Find better representations" })).toBeInTheDocument();
+    expect(screen.getByText(/No selected representation/)).toBeInTheDocument();
   });
 
-  it("starts a resolution session when CTA is clicked", async () => {
-    const fakeSession = {
-      session_id: "ses_test",
-      status: "acquiring",
-      query: "Ave Verum Corpus — Mozart",
-      providers: ["imslp"],
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-      expires_at: new Date(Date.now() + 1800000).toISOString(),
+  it("selects among KNOWN representations via the backend and shows the winner", async () => {
+    const payload: RepresentationSelection = {
+      work_id: "w1",
+      representations_known: 2,
+      candidates_usable: 1,
+      status: "selected",
+      message: "Representación seleccionada.",
+      selected: {
+        provider: "omr",
+        format: "musicxml",
+        url: "https://storage.example/download/1.mxl",
+        quality_level: 2,
+        reason: "mayor calidad",
+      },
     };
-
-    globalThis.fetch = vi.fn(() =>
-      Promise.resolve({
-        ok: true,
-        status: 202,
-        json: () => Promise.resolve({ success: true, data: fakeSession }),
-      } as Response),
-    );
-
-    renderTabs(baseWork, reps([false]));
+    mockFetch(payload);
+    renderTabs(baseWork, reps([true, true]));
     fireEvent.click(screen.getByRole("button", { name: "Representations" }));
-    fireEvent.click(screen.getByRole("button", { name: "Resolve work" }));
+    fireEvent.click(screen.getByRole("button", { name: "Find better representations" }));
 
     await waitFor(() => {
-      const state = useResolution.getState();
-      expect(state.session).not.toBeNull();
-      expect(state.session?.status).toBe("acquiring");
+      expect(screen.getByText(/Selected representation: omr · musicxml/)).toBeInTheDocument();
     });
+    const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[0]));
+    expect(calls.some((u) => u.includes("/representations/select-best"))).toBe(true);
+    // No acquisition session is created.
+    expect(calls.some((u) => u.includes("/works/resolve"))).toBe(false);
+  });
+
+  it("keeps the button available to repeat after a selection", async () => {
+    const payload: RepresentationSelection = {
+      work_id: "w1",
+      representations_known: 1,
+      candidates_usable: 1,
+      status: "selected",
+      message: "Representación seleccionada.",
+      selected: { provider: "omr", format: "musicxml", url: "https://x/1.mxl", quality_level: 2 },
+    };
+    mockFetch(payload);
+    renderTabs(baseWork, reps([true]));
+    fireEvent.click(screen.getByRole("button", { name: "Representations" }));
+    const action = screen.getByRole("button", { name: "Find better representations" });
+    fireEvent.click(action);
+    await waitFor(() => expect(screen.getByText(/Selected representation/)).toBeInTheDocument());
+    expect(screen.getByRole("button", { name: "Find better representations" })).toBeInTheDocument();
   });
 });

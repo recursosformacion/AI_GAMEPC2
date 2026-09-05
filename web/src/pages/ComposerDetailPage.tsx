@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import { Card } from "../components/Card";
 import { Spinner } from "../components/Spinner";
 import { WorksListModule, groupWorks } from "../components/WorksListModule";
@@ -42,10 +42,6 @@ export function ComposerDetailPage() {
   const worksLoading =
     loading || searchLoading || searchPolling || (!showPipeline && storedWorks.length === 0 && !works);
 
-  if (loading && !biography) {
-    return <Spinner label={t("states.loading")} />;
-  }
-
   const b = biography;
   const reviewLabel = b?.review_status ?? "";
   const periods = [
@@ -83,6 +79,12 @@ export function ComposerDetailPage() {
             <span className="text-osap-muted">
               {b?.works_count ?? works?.total ?? 0} {t("composers.worksTitle")}
             </span>
+            <Link
+              to={`/corrections?kind=composer&entity_id=${encodeURIComponent(composerId)}`}
+              className="text-osap-accent hover:underline"
+            >
+              {t("corrections.propose")}
+            </Link>
           </div>
         </div>
 

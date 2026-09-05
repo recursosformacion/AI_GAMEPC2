@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import type { EvidenceInfo, RepresentationInfo, WorkInfo } from "../api/types";
+import { apiClient } from "../api/ApiClient";
+import type { EvidenceInfo, RepresentationInfo, RepresentationSelection, WorkInfo } from "../api/types";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
 import { useAuth } from "../state/auth";
-import { useResolution } from "../state/resolution";
 import { VoteControl } from "./VoteControl";
 import { WorkRating } from "./WorkRating";
 
@@ -24,108 +24,130 @@ interface WorkDetailTabsProps {
   evidence?: EvidenceInfo[];
   /** Which tab is active initially. Defaults to "representations". */
   defaultTab?: WorkDetailTab;
+  /** Solo en el contexto de obras OMR/storage: permite proponer corrección. */
+  allowWorkCorrections?: boolean;
 }
 
-function ResolveWorkBlock({
+function KnownSelectionBlock({
+  workId,
+  representations,
   workTitle,
   workComposer,
-  hasUsableFile,
 }: {
+  workId?: string | null;
+  representations: RepresentationInfo[];
   workTitle?: string | null;
   workComposer?: string | null;
-  hasUsableFile: boolean;
 }) {
   const { t } = useI18n();
-  const { session, loading, resolve } = useResolution();
-  if (!workTitle) return null;
+  const [busy, setBusy] = useState(false);
+  const [selection, setSelection] = useState<RepresentationSelection | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  const startResolve = () => {
-    const query = [workTitle, workComposer].filter(Boolean).join(" — ");
-    void resolve(query);
+  const knownCount = representations.length;
+  const inputs = representations
+    .filter((r) => r.url)
+    .map((r) => ({
+      id: r.id,
+      provider: r.provider,
+      format: r.format,
+      url: r.url as string,
+      title: r.title ?? null,
+    }));
+
+  useEffect(() => {
+    if (!workId) return;
+    let alive = true;
+    apiClient
+      .getWorkRepresentationSelection(workId)
+      .then((s) => {
+        if (alive && s.status === "selected") setSelection(s);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [workId]);
+
+  const runSelection = async () => {
+    if (!workId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      setSelection(await apiClient.selectBestRepresentation(workId, inputs));
+    } catch {
+      setError("No se pudo completar la selección.");
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const statusBlock = session ? (
-    <div className="mt-2 space-y-2 text-sm">
-      <p>
-        <span className="text-osap-muted">{t("work.resolveStatus")}:</span>{" "}
-        <strong>{session.status}</strong>
-        {session.error ? <span className="ml-2 text-xs text-osap-muted">{session.error}</span> : null}
-      </p>
-      {session.progress?.acquired_works != null ? (
-        <p className="text-xs text-osap-muted">
-          {t("work.resolveWorks")}: {session.progress.acquired_works} ·{" "}
-          {t("work.resolvePages")}: {session.progress.acquired_pages ?? 0}
-        </p>
-      ) : null}
-      {session.selection?.provider ? (
-        <div className="rounded border border-osap-border bg-osap-surface p-2">
-          <p className="font-medium">
-            {t("work.selectedBest")}: {session.selection.provider} · {session.selection.format}
-          </p>
-          {session.selection.quality_level != null ? (
-            <p className="text-xs text-osap-muted">
-              {t("work.resolveQuality")}: {session.selection.quality_level}
-              {session.selection.quality_score != null
-                ? ` · ${t("work.resolveScore")}: ${session.selection.quality_score.toFixed(2)}`
-                : ""}
-            </p>
-          ) : null}
-          {session.selection.reason ? (
-            <p className="text-xs text-osap-muted">
-              {t("work.resolveReason")}: {session.selection.reason}
-            </p>
-          ) : null}
-          {session.selection.url ? (
-            <a
-              href={session.selection.url}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-1 inline-block rounded bg-osap-accent px-2 py-0.5 text-xs text-white"
-            >
-              {t("actions.download")}
-            </a>
-          ) : null}
-        </div>
-      ) : null}
-    </div>
-  ) : null;
-
-  if (!hasUsableFile) {
-    return (
-      <div className="mt-3 rounded border border-dashed border-osap-border p-3">
-        <h4 className="text-sm font-semibold">{t("work.resolveTitle")}</h4>
-        <p className="mt-1 text-xs text-osap-muted">{t("work.resolveBody")}</p>
-        {!session ? (
-          <button
-            type="button"
-            onClick={startResolve}
-            disabled={loading}
-            className="mt-2 inline-flex items-center gap-1.5 rounded bg-osap-accent px-3 py-1 text-sm text-white disabled:opacity-60"
-          >
-            {loading ? t("states.loading") : t("work.resolveCta")}
-          </button>
-        ) : (
-          statusBlock
-        )}
-      </div>
-    );
-  }
+  const sel = selection?.selected ?? null;
+  const status = selection?.status;
 
   return (
     <div className="mt-3 rounded border border-dashed border-osap-border p-3">
       <h4 className="text-sm font-semibold">{t("work.resolveTitleAlt")}</h4>
-      <p className="mt-1 text-xs text-osap-muted">{t("work.resolveBodyAlt")}</p>
-      {!session ? (
-        <button
-          type="button"
-          onClick={startResolve}
-          disabled={loading}
-          className="mt-2 inline-flex items-center gap-1.5 rounded bg-osap-accent px-3 py-1 text-sm text-white disabled:opacity-60"
-        >
-          {loading ? t("states.loading") : t("work.resolveCtaAlt")}
-        </button>
+      <p className="mt-1 text-xs text-osap-muted">
+        {t("work.foundReps").replace("{n}", String(knownCount)).replace("{p}", "1")}
+      </p>
+      <button
+        type="button"
+        onClick={() => void runSelection()}
+        disabled={busy || !workId || knownCount === 0}
+        className="mt-2 inline-flex items-center gap-1.5 rounded bg-osap-accent px-3 py-1 text-sm text-white disabled:opacity-60"
+      >
+        {busy ? t("states.loading") : t("work.resolveCtaAlt")}
+      </button>
+
+      {error ? <p className="mt-2 text-sm text-red-700">{error}</p> : null}
+
+      {!status ? (
+        <p className="mt-2 text-sm text-osap-muted">{t("work.selectNone")}</p>
+      ) : status === "selected" && sel ? (
+        <div className="mt-2 rounded border border-osap-border bg-osap-surface p-2">
+          <p className="text-sm font-medium">
+            {t("work.selectHeading")}: {sel.provider ?? "—"} · {sel.format ?? "—"}
+          </p>
+          {sel.quality_level != null ? (
+            <p className="text-xs text-osap-muted">QualityLevel: {sel.quality_level}</p>
+          ) : null}
+          {sel.reason ? (
+            <p className="text-xs text-osap-muted">
+              {t("work.resolveReason")}: {sel.reason}
+            </p>
+          ) : null}
+          {sel.url ? (
+            sel.provider === "omr" || sel.provider === "osap-storage" ? (
+              <a
+                href={`/api/v1/omr/download?url=${encodeURIComponent(sel.url)}&title=${encodeURIComponent(workTitle ?? "")}&composer=${encodeURIComponent(workComposer ?? "")}`}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-1 inline-block rounded bg-osap-accent px-2 py-0.5 text-xs text-white"
+              >
+                {t("actions.download")}
+              </a>
+            ) : (
+              <a
+                href={sel.url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-1 inline-block rounded bg-osap-accent px-2 py-0.5 text-xs text-white"
+              >
+                {t("actions.download")}
+              </a>
+            )
+          ) : null}
+        </div>
+      ) : status === "none_known" ? (
+        <p className="mt-2 text-sm text-osap-muted">{t("work.noneKnown")}</p>
+      ) : status === "none_selected" ? (
+        <p className="mt-2 text-sm text-osap-muted">{t("work.selectNone")}</p>
       ) : (
-        statusBlock
+        <p className="mt-2 text-sm text-osap-muted">
+          {t("work.noneUsable")}
+          {selection?.errors?.length ? <span className="ml-1 text-xs">({selection.errors.join("; ")})</span> : null}
+        </p>
       )}
     </div>
   );
@@ -137,6 +159,7 @@ export function WorkDetailTabs({
   score,
   evidence: _evidence,
   defaultTab = "representations",
+  allowWorkCorrections = false,
 }: WorkDetailTabsProps) {
   const { t } = useI18n();
   const isAuthenticated = useAuth((s) => s.isAuthenticated());
@@ -214,6 +237,15 @@ export function WorkDetailTabs({
                )}
              </div>
             ) : null}
+
+          {allowWorkCorrections && work.work_id ? (
+            <Link
+              to={`/corrections?kind=work&entity_id=${encodeURIComponent(work.work_id)}&field=title&current_value=${encodeURIComponent(work.title ?? "")}`}
+              className="mt-2 inline-block text-sm text-osap-accent hover:underline"
+            >
+              {t("corrections.propose")}
+            </Link>
+          ) : null}
           </div>
         ) : null}
 
@@ -223,6 +255,7 @@ export function WorkDetailTabs({
           byProvider={byProvider}
           workTitle={work.title}
           workComposer={work.composer}
+          workId={work.work_id}
         />
       ) : null}
 
@@ -267,15 +300,16 @@ function RepresentationsTab({
   byProvider,
   workTitle,
   workComposer,
+  workId,
 }: {
   representations: RepresentationInfo[];
   byProvider: Map<string, RepresentationInfo[]>;
   workTitle?: string | null;
   workComposer?: string | null;
+  workId?: string | null;
 }) {
   const { t } = useI18n();
   const [selected, setSelected] = useState<string | null>(null);
-  const hasUsableFile = representations.some((r) => r.available);
 
   return (
     <div className="p-3">
@@ -347,10 +381,11 @@ function RepresentationsTab({
         ))}
       </ul>
       <p className="mt-2 text-xs text-osap-muted">{t("work.titlesFromSources")}</p>
-      <ResolveWorkBlock
+      <KnownSelectionBlock
+        workId={workId}
+        representations={representations}
         workTitle={workTitle}
         workComposer={workComposer}
-        hasUsableFile={hasUsableFile}
       />
     </div>
   );

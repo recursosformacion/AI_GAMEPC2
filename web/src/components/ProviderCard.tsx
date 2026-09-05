@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Link } from "react-router-dom";
 import { useI18n } from "../i18n/I18n";
 import type { ProviderResponse } from "../api/types";
 import { Card } from "./Card";
@@ -24,6 +25,12 @@ export function ProviderCard({ provider }: { provider: ProviderResponse }): Reac
           </li>
         ))}
       </ul>
+      <Link
+        to={`/corrections?kind=source&entity_id=${encodeURIComponent(provider.provider_id)}`}
+        className="mt-2 inline-block text-sm text-osap-accent hover:underline"
+      >
+        {t("corrections.propose")}
+      </Link>
     </Card>
   );
 }

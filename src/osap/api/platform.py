@@ -32,6 +32,8 @@ from src.osap.api.contracts import (
     RepositorySource,
     RepositorySourceSummary,
     RepresentationInfo,
+    RepresentationInput,
+    RepresentationSelectionRead,
     SearchModel,
     SearchModelBlock,
     SearchModelCriteria,
@@ -530,6 +532,17 @@ def _validate_to_contract(content: bytes, identity: dict[str, object] | None) ->
     if score.quality_level == QualityLevel.UNREADABLE:
         raise _UnreadableScoreError
     return score_to_contract(score).to_dict()
+
+
+_KNOWN_FORMATS_FALLBACK: dict[str, list[str]] = {
+    "cpdl": ["pdf", "musicxml"],
+    "imslp": ["pdf", "musicxml", "midi"],
+    "mutopia": ["musicxml", "pdf", "midi"],
+}
+
+
+def _known_formats_for(provider_id: str) -> list[str]:
+    return list(_KNOWN_FORMATS_FALLBACK.get(provider_id, []))
 
 
 class PlatformApi:
@@ -1171,7 +1184,13 @@ class PlatformApi:
             if pid in active_ids or pid in ("local", "index"):
                 continue
             responses.append(
-                ProviderResponse(provider_id=pid, name=name, available=wired, formats=[], last_sync=None)
+                ProviderResponse(
+                    provider_id=pid,
+                    name=name,
+                    available=wired,
+                    formats=_known_formats_for(pid),
+                    last_sync=None,
+                )
             )
         # Descripción multi-idioma + website desde la BD operativa.
         try:
@@ -1478,6 +1497,104 @@ class PlatformApi:
                         )
                     )
         return tuple(out)
+
+    def select_best_representation(
+        self,
+        work_id: str,
+        representations: list[RepresentationInput],
+    ) -> RepresentationSelectionRead:
+        """Selecciona la mejor representación ENTRE las ya conocidas de la Work.
+
+        No adquiere ni descubre: recibe la lista conocida (la misma que alimenta la
+        UI), filtra las utilizables, valida cada candidata con el selector real y
+        persiste la selección POR WORK (`work_selections`).
+        """
+        known = list(representations)
+        usable = [r for r in known if (r.url or "").startswith(("http://", "https://"))]
+        if not known:
+            return RepresentationSelectionRead(
+                work_id=work_id,
+                representations_known=0,
+                candidates_usable=0,
+                status="none_known",
+                message="No hay representaciones conocidas para esta obra.",
+            )
+        if not usable:
+            return RepresentationSelectionRead(
+                work_id=work_id,
+                representations_known=len(known),
+                candidates_usable=0,
+                status="none_usable",
+                message="No hay una representación utilizable entre las representaciones conocidas.",
+            )
+        from src.osap.application.representation_selector import (
+            BestRepresentationSelector,
+            RepresentationCandidate,
+        )
+
+        candidates = tuple(
+            RepresentationCandidate(
+                provider=r.provider,
+                format=r.format,
+                url=str(r.url),
+                source_id=r.id or f"{work_id}-{r.provider}-{r.format}",
+            )
+            for r in usable
+        )
+        selected = BestRepresentationSelector().select(candidates)
+        if selected.candidate is None:
+            detail = "; ".join(selected.errors) if selected.errors else selected.reason
+            return RepresentationSelectionRead(
+                work_id=work_id,
+                representations_known=len(known),
+                candidates_usable=len(candidates),
+                status="none_usable",
+                message="Ninguna de las representaciones conocidas superó la validación.",
+                errors=[detail],
+            )
+        quality_score: float | None = None
+        report_overall = getattr(selected.report, "overall", None)
+        if callable(report_overall):
+            try:
+                quality_score = float(report_overall())
+            except Exception:  # noqa: BLE001
+                quality_score = None
+        snapshot: dict[str, object] = {
+            "provider": selected.candidate.provider,
+            "format": selected.candidate.format,
+            "url": selected.candidate.url,
+            "source_id": selected.candidate.source_id,
+            "quality_level": selected.quality_level.value,
+            "quality_score": quality_score,
+            "reason": selected.reason or "",
+        }
+        self._store.set_work_selection(work_id, json.dumps(snapshot, ensure_ascii=False))
+        return RepresentationSelectionRead(
+            work_id=work_id,
+            representations_known=len(known),
+            candidates_usable=len(candidates),
+            status="selected",
+            message="Representación seleccionada.",
+            selected=snapshot,
+            errors=list(selected.errors),
+        )
+
+    def get_work_selection(self, work_id: str) -> RepresentationSelectionRead | None:
+        row = self._store.get_work_selection(work_id)
+        if row is None:
+            return None
+        try:
+            selected = json.loads(str(row.get("selection_json") or "{}"))
+        except ValueError:
+            selected = {}
+        return RepresentationSelectionRead(
+            work_id=work_id,
+            representations_known=1,
+            candidates_usable=1,
+            status="selected",
+            message="Representación seleccionada.",
+            selected=selected if isinstance(selected, dict) else {},
+        )
 
     def score_contract_for_session(
         self, session_id: str

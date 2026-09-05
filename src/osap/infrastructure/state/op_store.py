@@ -30,6 +30,7 @@ class _MemoryStore:
     def __init__(self) -> None:
         self._suggestions: list[dict[str, object]] = []
         self._corrections: list[dict[str, object]] = []
+        self._work_selections: dict[str, dict[str, object]] = {}
         self._providers: list[dict[str, object]] = []
         self._config: dict[str, str] = {}
 
@@ -221,6 +222,18 @@ class _MemoryStore:
     def set_config(self, key: str, value: str) -> None:
         self._config[key] = value
 
+    def get_work_selection(self, work_id: str) -> dict[str, object] | None:
+        return self._work_selections.get(work_id)
+
+    def set_work_selection(self, work_id: str, selection_json: str) -> dict[str, object]:
+        row: dict[str, object] = {
+            "work_id": work_id,
+            "selection_json": selection_json,
+            "updated_at": _now(),
+        }
+        self._work_selections[work_id] = row
+        return row
+
 
 class _MysqlStore(_MemoryStore):
     """Almacén operativo respaldado por MySQL."""
@@ -364,6 +377,15 @@ class _MysqlStore(_MemoryStore):
                 created_at VARCHAR(64) NOT NULL,
                 decided_at VARCHAR(64),
                 decided_by VARCHAR(255)
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+            """
+        )
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS work_selections (
+                work_id VARCHAR(128) PRIMARY KEY,
+                selection_json TEXT NOT NULL,
+                updated_at VARCHAR(64) NOT NULL
             ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
             """
         )
@@ -552,6 +574,21 @@ class _MysqlStore(_MemoryStore):
     def pending_correction_count(self) -> int:
         rows = self._run("SELECT COUNT(*) AS n FROM correction_requests WHERE status = 'pending'")
         return int(str(rows[0]["n"])) if rows else 0
+
+    def get_work_selection(self, work_id: str) -> dict[str, object] | None:
+        rows = self._run("SELECT * FROM work_selections WHERE work_id = %s", (work_id,))
+        return rows[0] if rows else None
+
+    def set_work_selection(self, work_id: str, selection_json: str) -> dict[str, object]:
+        self._run(
+            "INSERT INTO work_selections (work_id, selection_json, updated_at) "
+            "VALUES (%s,%s,%s) ON DUPLICATE KEY UPDATE selection_json = VALUES(selection_json), "
+            "updated_at = VALUES(updated_at)",
+            (work_id, selection_json, _now()),
+        )
+        row = self.get_work_selection(work_id)
+        assert row is not None
+        return row
 
     def list_providers(self) -> list[dict[str, object]]:
         rows = self._run("SELECT * FROM providers ORDER BY name")

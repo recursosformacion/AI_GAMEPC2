@@ -12,6 +12,7 @@ import re
 import threading
 import urllib.parse
 import uuid
+from pathlib import Path
 from typing import TYPE_CHECKING, Any, cast
 
 import requests
@@ -58,6 +59,8 @@ from src.osap.api.contracts import (
     RegisterRequest,
     RepositorySource,
     RepositorySourceSummary,
+    RepresentationSelectionRead,
+    RepresentationSelectRequest,
     ResolutionItemResponse,
     ResolutionPolicy,
     ResolutionProgress,
@@ -2364,5 +2367,97 @@ def create_platform_app(
         if resolved is None:
             return fail(404, response, "NOT_FOUND", "Correction request not found")
         return ok(resolved)
+
+    @app.get(
+        "/api/v1/omr/download",
+        tags=["Works"],
+        summary="Descarga OMR con nombre legible (compositor - título)",
+        description=(
+            "Proxy de descarga para representaciones OMR conocidas: recibe la URL real "
+            "del fichero (storage/R2), la descarga el servidor y la devuelve con "
+            "Content-Disposition usando el título de la obra (no el hash). Hosts "
+            "permitidos: solo storage propio."
+        ),
+        response_model=None,
+    )
+    async def omr_download(
+        url: str,
+        title: str | None = None,
+        composer: str | None = None,
+        response: Response = None,  # type: ignore[assignment]
+    ) -> Response | ErrorEnvelope:
+        parsed = urllib.parse.urlparse(url)
+        allowed = {
+            "127.0.0.1",
+            "localhost",
+            "osap-storage",
+            "storage.openmusicrepository.com",
+            "cdn.openmusicrepository.com",
+        }
+        if parsed.scheme not in ("http", "https") or parsed.hostname not in allowed:
+            return fail(400, response, "INVALID_URL", "URL no permitida")
+        try:
+            upstream = requests.get(url, timeout=120)
+        except requests.RequestException:
+            return fail(502, response, "UPSTREAM_ERROR", "No se pudo obtener el fichero")
+        if upstream.status_code != 200:
+            return fail(502, response, "UPSTREAM_ERROR", "No se pudo obtener el fichero")
+        parts = [p for p in (composer, title) if p]
+        stem = " - ".join(parts).replace('"', "").strip()
+        stem = re.sub(r"[\\/:*?<>|]+", "-", stem).strip() or "obra"
+        ext = Path(parsed.path).suffix or ".mxl"
+        filename = f"{stem}{ext}"
+        encoded = urllib.parse.quote(filename)
+        return Response(
+            content=upstream.content,
+            media_type=upstream.headers.get("content-type") or "application/octet-stream",
+            headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded}"},
+        )
+
+    # --- selección de representación entre las YA CONOCIDAS (sin adquisición) ----
+
+    @app.post(
+        "/api/v1/works/{work_id}/representations/select-best",
+        tags=["Works"],
+        summary="Select best representation among the KNOWN ones of a work",
+        description=(
+            "Recibe la lista de representaciones ya conocidas de la Work (la misma que "
+            "muestra la UI) y selecciona la mejor con BestRepresentationSelector, "
+            "persistiéndola POR WORK. NO adquiere ni consulta proveedores."
+        ),
+        response_model=SuccessEnvelope[RepresentationSelectionRead] | ErrorEnvelope,
+        responses={200: _resp("Selection", _example({})), **_standard_errors(422)},
+    )
+    async def select_best_representation_route(
+        work_id: str,
+        payload: RepresentationSelectRequest,
+        response: Response,
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        result = api.select_best_representation(work_id, payload.representations)
+        return ok(result)
+
+    @app.get(
+        "/api/v1/works/{work_id}/representations/selection",
+        tags=["Works"],
+        summary="Persisted selected representation of a work",
+        response_model=SuccessEnvelope[RepresentationSelectionRead] | ErrorEnvelope,
+        responses={200: _resp("Selection", _example({})), **_standard_errors(404)},
+    )
+    async def get_selected_representation_route(
+        work_id: str,
+        response: Response,
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        selection = api.get_work_selection(work_id)
+        if selection is None:
+            return ok(
+                RepresentationSelectionRead(
+                    work_id=work_id,
+                    representations_known=0,
+                    candidates_usable=0,
+                    status="none_selected",
+                    message="Sin representación seleccionada.",
+                )
+            )
+        return ok(selection)
 
     return app

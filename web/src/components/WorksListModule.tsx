@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiClient } from "../api/ApiClient";
+import { Link } from "react-router-dom";
 import type { RepresentationInfo, SearchResultItem, WorkDetail, WorkInfo } from "../api/types";
 import { Spinner } from "./Spinner";
 import { WorkDetailTabs } from "./WorkDetailTabs";
@@ -48,7 +49,7 @@ function toRepresentations(d: WorkDetail): RepresentationInfo[] {
   return (d.resources ?? [])
     .map((r, i): RepresentationInfo => ({
       id: String(r.file_id ?? i),
-      provider: "osap-storage",
+      provider: "omr",
       format: r.format ?? "unknown",
       confidence: 1,
       url: r.url ?? undefined,
@@ -102,25 +103,33 @@ export function WorksListModule({
         const isOpen = openId === String(w.work.work_id);
         return (
           <li key={w.work.work_id} className="py-1">
-            <button
-              type="button"
-              onClick={() => toggleWork(String(w.work.work_id))}
-              className="flex w-full items-center justify-between rounded px-1 py-2 text-left hover:bg-osap-accent-soft"
-            >
-              <span>
-                <span className="text-osap-accent">{stars(w.score)}</span>{" "}
-                <span className="font-medium">
-                  {w.work.composer ? `${w.work.composer} — ` : ""}
-                  {w.work.title}
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => toggleWork(String(w.work.work_id))}
+                className="flex flex-1 items-center justify-between rounded px-1 py-2 text-left hover:bg-osap-accent-soft"
+              >
+                <span>
+                  <span className="text-osap-accent">{stars(w.score)}</span>{" "}
+                  <span className="font-medium">
+                    {w.work.composer ? `${w.work.composer} — ` : ""}
+                    {w.work.title}
+                  </span>
                 </span>
-              </span>
-              <span className="flex items-center gap-2">
-                <span className="text-xs text-osap-muted">
-                  {t("work.repsProviders").replace("{n}", String(reps.length)).replace("{p}", String(providers.size))}
+                <span className="flex items-center gap-2">
+                  <span className="text-xs text-osap-muted">
+                    {t("work.repsProviders").replace("{n}", String(reps.length)).replace("{p}", String(providers.size))}
+                  </span>
+                  <span className="text-osap-muted">{isOpen ? "▲" : "▼"}</span>
                 </span>
-                <span className="text-osap-muted">{isOpen ? "▲" : "▼"}</span>
-              </span>
-            </button>
+              </button>
+              <Link
+                to={`/corrections?kind=work&entity_id=${encodeURIComponent(String(w.work.work_id))}&field=title&current_value=${encodeURIComponent(w.work.title ?? "")}`}
+                className="shrink-0 text-xs text-osap-accent hover:underline"
+              >
+                {t("corrections.propose")}
+              </Link>
+            </div>
             {isOpen ? (
               <div className="mb-2 overflow-hidden rounded bg-osap-surface">
                 {loadingDetail ? (
@@ -133,6 +142,7 @@ export function WorksListModule({
                     representations={toRepresentations(openDetail)}
                     score={w.score}
                     evidence={w.items[0]?.evidence}
+                    allowWorkCorrections
                   />
                 ) : (
                   <WorkDetailTabs
@@ -140,6 +150,7 @@ export function WorksListModule({
                     representations={reps}
                     score={w.score}
                     evidence={w.items[0]?.evidence}
+                    allowWorkCorrections
                   />
                 )}
               </div>
@@ -172,6 +183,7 @@ export function WorksListModule({
                     )}
                     representations={toRepresentations(openDetail)}
                     score={1}
+                    allowWorkCorrections
                   />
                 ) : null}
               </div>

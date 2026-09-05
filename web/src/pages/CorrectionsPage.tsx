@@ -90,6 +90,17 @@ export function CorrectionsPage() {
           ))}
         </div>
 
+        {kind !== "contact" && entityId ? (
+          <div className="rounded border border-osap-border bg-osap-surface p-3 text-sm">
+            <p className="font-medium">
+              Objeto de la solicitud: {KIND_LABEL[kind]} · {entityId}
+            </p>
+            {currentValue ? (
+              <p className="mt-1 text-osap-muted">Valor actual: {currentValue}</p>
+            ) : null}
+          </div>
+        ) : null}
+
         {kind !== "contact" && (
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block text-sm">

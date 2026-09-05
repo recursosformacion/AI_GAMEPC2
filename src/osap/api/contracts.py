@@ -332,6 +332,28 @@ class CorrectionResolveRequest(_Frozen):
     message: str = ""
 
 
+class RepresentationInput(_Frozen):
+    id: str | None = None
+    provider: str = ""
+    format: str = ""
+    url: str = ""
+    title: str | None = None
+
+
+class RepresentationSelectRequest(_Frozen):
+    representations: list[RepresentationInput] = []
+
+
+class RepresentationSelectionRead(_Frozen):
+    work_id: str
+    representations_known: int
+    candidates_usable: int
+    status: str
+    message: str
+    selected: dict[str, object] | None = None
+    errors: list[str] = []
+
+
 class AdminOverviewResponse(_Frozen):
     composers: dict[str, int] = {}
     source_suggestions_pending: int = 0

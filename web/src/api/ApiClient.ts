@@ -24,6 +24,8 @@ import type {
   PromoteAliasResult,
   ResolutionSession,
   ResolutionSessionCreateRequest,
+  RepresentationInput,
+  RepresentationSelection,
   SetAttributionResult,
   SourcePreview,
   SourceSuggestion,
@@ -127,6 +129,19 @@ export class ApiClient {
 
   async getResolutionSession(sessionId: string): Promise<ResolutionSession> {
     return this.get<ResolutionSession>(`/sessions/${encodeURIComponent(sessionId)}`);
+  }
+
+  async selectBestRepresentation(workId: string, representations: RepresentationInput[]): Promise<RepresentationSelection> {
+    return this.post<RepresentationSelection>(
+      `/works/${encodeURIComponent(workId)}/representations/select-best`,
+      { representations },
+    );
+  }
+
+  async getWorkRepresentationSelection(workId: string): Promise<RepresentationSelection> {
+    return this.get<RepresentationSelection>(
+      `/works/${encodeURIComponent(workId)}/representations/selection`,
+    );
   }
 
   async mergeComposers(targetId: string, sources: string[]): Promise<MergeComposersResult> {

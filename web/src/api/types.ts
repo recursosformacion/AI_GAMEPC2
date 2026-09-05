@@ -490,8 +490,33 @@ export interface CorrectionRequestRead {
   created_at: string;
 }
 
-export interface OpProvider {
-  provider_id: string;
+export interface RepresentationInput {
+  id?: string | null;
+  provider: string;
+  format: string;
+  url: string;
+  title?: string | null;
+}
+
+export interface RepresentationSelection {
+  work_id: string;
+  representations_known: number;
+  candidates_usable: number;
+  status: string;
+  message: string;
+  selected: {
+    provider?: string;
+    format?: string;
+    url?: string;
+    source_id?: string;
+    quality_level?: number | null;
+    quality_score?: number | null;
+    reason?: string;
+  } | null;
+  errors?: string[];
+}
+
+export interface OpProvider {  provider_id: string;
   name: string;
   kind: string;
   base_url: string | null;

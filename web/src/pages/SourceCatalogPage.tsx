@@ -111,6 +111,13 @@ export function SourceCatalogPage() {
                       {website.replace(/^https?:\/\//, "")} ↗
                     </a>
                   ) : null}
+                  <Link
+                    to={`/corrections?kind=source&entity_id=${encodeURIComponent(source.source_id)}`}
+                    onClick={(e) => e.stopPropagation()}
+                    className="mt-2 inline-block text-sm text-osap-accent hover:underline"
+                  >
+                    {t("corrections.propose")}
+                  </Link>
                 </div>
               </li>
             );
