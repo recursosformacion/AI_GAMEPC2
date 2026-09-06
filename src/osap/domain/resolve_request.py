@@ -17,6 +17,7 @@ class ResolveRequest:
     composer: str | None = None
     catalogue: str | None = None
     genre: str | None = None
+    genre_ids: tuple[int, ...] = field(default_factory=tuple)
     language: str | None = None
     instrumentation: tuple[str, ...] = field(default_factory=tuple)
     voices: tuple[str, ...] = field(default_factory=tuple)
@@ -53,6 +54,11 @@ class ResolveRequestBuilder:
 
     def genre(self, value: str) -> "ResolveRequestBuilder":
         return ResolveRequestBuilder(replace(self._request, genre=value))
+
+    def genre_ids(self, *values: int) -> "ResolveRequestBuilder":
+        return ResolveRequestBuilder(
+            replace(self._request, genre_ids=self._request.genre_ids + values)
+        )
 
     def language(self, value: str) -> "ResolveRequestBuilder":
         return ResolveRequestBuilder(replace(self._request, language=value))

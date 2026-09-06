@@ -125,11 +125,21 @@ class TestCorrectionService:
             service.submit(kind="work", entity_id="42", field="composer", proposed_value="Mozart", message="x")
         assert exc.value.code == "FIELD_NOT_ALLOWED"
 
-    def test_valor_propuesto_obligatorio_si_hay_campo(self) -> None:
-        service = CorrectionService(_MemoryStore(), exists=lambda _k, _e: True)
-        with pytest.raises(CorrectionError) as exc:
-            service.submit(kind="composer", entity_id="c1", field="name", message="x")
-        assert exc.value.code == "PROPOSED_REQUIRED"
+    def test_valor_propuesto_no_obligatorio_con_mensaje_libre(self) -> None:
+        store = _MemoryStore()
+        service = CorrectionService(store, exists=lambda _k, _e: True)
+        row = service.submit(kind="composer", entity_id="c1", field="name", message="El nombre es incorrecto")
+        assert row["field"] == "name"
+        assert row["proposed_value"] is None
+        assert row["status"] == "pending"
+
+    def test_correccion_obra_con_solo_mensaje(self) -> None:
+        store = _MemoryStore()
+        service = CorrectionService(store, exists=lambda _k, _e: True)
+        row = service.submit(kind="work", entity_id="42", message="El título está mal escrito")
+        assert row["field"] == "title"
+        assert row["entity_provider"] == "omr"
+        assert row["proposed_value"] is None
 
 
 class TestEndpointsCorrections:

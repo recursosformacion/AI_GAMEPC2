@@ -46,6 +46,24 @@ def test_catalogue_variants_in_compound_query() -> None:
     assert "BWV232" in variants
 
 
+def test_build_sql_filtra_por_genre_id() -> None:
+    """El filtro de género (genre_ids) se traduce a `genre_id IN (...)` en el índice."""
+    sql, args = _build_sql(
+        SearchRequest(query="mozart", genre_ids=(1, 2)), 400, use_fulltext=False
+    )
+    assert sql is not None
+    assert "i.genre_id IN (%s, %s)" in sql
+    assert 1 in args
+    assert 2 in args
+
+
+def test_build_sql_sin_genre_ids_no_filtra() -> None:
+    sql, args = _build_sql(SearchRequest(query="mozart"), 400, use_fulltext=False)
+    assert sql is not None
+    assert "genre_id" not in sql
+    assert 1 not in args
+
+
 def test_build_sql_texto_libre_usa_fulltext_con_token_unico() -> None:
     """Un único token >=3 chars sin catálogo usa MATCH (índice FULLTEXT)."""
     sql, args = _build_sql(SearchRequest(query="moz"), 400, use_fulltext=True)

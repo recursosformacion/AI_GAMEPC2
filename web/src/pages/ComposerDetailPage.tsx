@@ -68,20 +68,36 @@ export function ComposerDetailPage() {
             ) : null}
           </div>
           <div className="flex flex-col items-end gap-1 text-xs">
+            {b?.status ? (
+              <span className="rounded bg-osap-surface px-2 py-0.5 text-osap-muted">{b.status}</span>
+            ) : null}
+            {b?.visible !== undefined ? (
+              <span
+                className={
+                  b.visible
+                    ? "rounded bg-osap-success/20 px-2 py-0.5 text-osap-success"
+                    : "rounded bg-osap-danger/20 px-2 py-0.5 text-osap-danger"
+                }
+              >
+                {b.visible ? "visible" : "hidden"}
+              </span>
+            ) : null}
             {reviewLabel ? (
               <span className="rounded bg-osap-surface px-2 py-0.5 text-osap-muted">
                 {t("composers.reviewFilter")}: {reviewLabel}
               </span>
             ) : null}
-            {b?.visible === false ? (
-              <span className="rounded bg-osap-danger/20 px-2 py-0.5 text-osap-danger">hidden</span>
+            {b?.cluster_id ? (
+              <span className="rounded bg-osap-surface px-2 py-0.5 font-mono text-osap-muted">
+                cluster {b.cluster_id}
+              </span>
             ) : null}
             <span className="text-osap-muted">
               {b?.works_count ?? works?.total ?? 0} {t("composers.worksTitle")}
             </span>
             <Link
               to={`/corrections?kind=composer&entity_id=${encodeURIComponent(composerId)}`}
-              className="text-osap-accent hover:underline"
+              className="inline-block rounded border border-osap-accent/40 px-2 py-0.5 text-xs font-medium text-osap-accent transition-colors hover:border-osap-accent hover:bg-osap-accent-soft"
             >
               {t("corrections.propose")}
             </Link>

@@ -114,7 +114,7 @@ export function SourceCatalogPage() {
                   <Link
                     to={`/corrections?kind=source&entity_id=${encodeURIComponent(source.source_id)}`}
                     onClick={(e) => e.stopPropagation()}
-                    className="mt-2 inline-block text-sm text-osap-accent hover:underline"
+                    className="mt-2 inline-block rounded border border-osap-accent/40 px-3 py-1 text-sm font-medium text-osap-accent transition-colors hover:border-osap-accent hover:bg-osap-accent-soft"
                   >
                     {t("corrections.propose")}
                   </Link>

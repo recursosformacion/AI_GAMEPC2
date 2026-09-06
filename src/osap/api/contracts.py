@@ -37,6 +37,11 @@ class SearchRequest(_Frozen):
     language: str | None = None
     formats: list[str] = []
     providers: list[str] = []
+    voices: list[str] = []
+    # Macro-familias de género (nombres visibles del catálogo `genres` de osap-storage,
+    # p. ej. "Música Clásica / Docta"). El backend los resuelve a genre_id y solo el
+    # índice local (obras OMR categorizadas) los aplica; el resto de fuentes los ignora.
+    genres: list[str] = []
 
 
 class WorkInfo(_Frozen):
@@ -55,6 +60,8 @@ class RepresentationInfo(_Frozen):
     url: str | None = None  # link a la fuente original (para abrir cuando no hay fichero servible)
     title: str | None = None
     available: bool = True  # hay fichero descargable vía el endpoint de descarga
+    # Metadatos específicos de la fuente (p. ej. voicing CPDL). Nunca se copian a `works`.
+    metadata: dict[str, object] | None = None
 
 
 class EvidenceInfo(_Frozen):

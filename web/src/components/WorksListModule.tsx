@@ -124,8 +124,8 @@ export function WorksListModule({
                 </span>
               </button>
               <Link
-                to={`/corrections?kind=work&entity_id=${encodeURIComponent(String(w.work.work_id))}&field=title&current_value=${encodeURIComponent(w.work.title ?? "")}`}
-                className="shrink-0 text-xs text-osap-accent hover:underline"
+                to={`/corrections?kind=work&entity_id=${encodeURIComponent(String(w.work.work_id))}`}
+                className="shrink-0 rounded border border-osap-accent/40 px-2 py-0.5 text-xs font-medium text-osap-accent transition-colors hover:border-osap-accent hover:bg-osap-accent-soft"
               >
                 {t("corrections.propose")}
               </Link>

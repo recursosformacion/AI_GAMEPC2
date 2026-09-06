@@ -31,6 +31,11 @@ export interface SearchRequest {
   language?: string | null;
   formats?: string[];
   providers?: string[];
+  /** Formación vocal (términos normalizados). Solo lo consume el provider CPDL. */
+  voices?: string[];
+  /** Macro-familias de género (nombres visibles del catálogo `genres`). Solo el índice
+   *  local (obras OMR categorizadas) las aplica; otras fuentes las ignoran. */
+  genres?: string[];
 }
 
 export interface WorkInfo {
@@ -51,6 +56,8 @@ export interface RepresentationInfo {
   title?: string | null;
   /** Hay fichero descargable vía el endpoint de descarga. */
   available?: boolean;
+  /** Metadatos específicos de la fuente (p. ej. voicing CPDL). Nunca se copian a works. */
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface EvidenceInfo {

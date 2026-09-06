@@ -1799,16 +1799,19 @@ def create_platform_app(
         tags=["System"],
         summary="Storage web admin URL (CRUD)",
         description="Devuelve la URL de la capa web de administración de osap-storage, "
-        "autenticada con token de servicio (storage:admin). Exige role=admin.",
+        "autenticada con token de servicio (storage:admin). `section` (opcional) abre el "
+        "admin de storage en la pestaña correspondiente: composers | works | tables. "
+        "Exige role=admin.",
         response_model=SuccessEnvelope[dict[str, str]] | ErrorEnvelope,
         responses={200: _resp("URL", _example({})), 401: _UNAUTHORIZED_401, 403: _FORBIDDEN_403},
     )
     def storage_web(
         response: Response,
+        section: str | None = Query(default=None),
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            url = api.storage_web(authorization)
+            url = api.storage_web(authorization, section)
         except UnauthenticatedError:
             return fail(401, response, "UNAUTHORIZED", "Login required")
         except ForbiddenError:
@@ -2293,9 +2296,11 @@ def create_platform_app(
         tags=["Support"],
         summary="Proponer corrección de datos del catálogo",
         description=(
-            "Requiere login. kind: source | composer | work. Para corregir el título de "
-            "una obra de OMR: kind=work, entity_provider=omr, field=title, current_value y "
-            "proposed_value. No modifica el catálogo: queda `pending` de revisión."
+            "Requiere login. kind: source | composer | work. La corrección se describe "
+            "en `message` (texto libre); entity_id identifica la entidad. field / "
+            "current_value / proposed_value son metadatos opcionales. Para obras solo se "
+            "revisa el título (backend fija entity_provider=omr). No modifica el catálogo: "
+            "queda `pending` de revisión."
         ),
         response_model=SuccessEnvelope[CorrectionRead] | ErrorEnvelope,
         responses={200: _resp("Correction", _example({})), 401: _UNAUTHORIZED_401, **_standard_errors(404, 422)},

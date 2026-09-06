@@ -16,6 +16,7 @@ from src.osap.infrastructure.auth.service_token_provider import ClientCredential
 from src.osap.infrastructure.auth.token_authenticator import JwtAuthenticator
 from src.osap.infrastructure.cache import InMemoryCache
 from src.osap.infrastructure.catalogs import IndexCatalogProvider, LocalCatalogProvider
+from src.osap.infrastructure.catalogs.cpdl import CPDLCatalogProvider
 from src.osap.infrastructure.catalogs.remote.remote_catalog_provider import RemoteCatalogProvider
 from src.osap.infrastructure.dedup import DuplicateResolver
 from src.osap.infrastructure.events import InMemoryEventBus
@@ -292,6 +293,37 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
         container.register_catalog_provider(
             RemoteCatalogProvider(
                 definition=zenodo_def,
+            )
+        )
+    # CPDL: catálogo independiente sobre el corpus de páginas de osap-storage.
+    # Se registra cuando cpdl.wired = 1 en la BD operativa (patrón de los demás
+    # providers). Su search() consulta /api/v1/cpdl/search y filtra por voicing.
+    try:
+        cpdl_wired = any(
+            bool(r.get("wired"))
+            for r in op_store.list_providers()
+            if str(r.get("provider_id") or "") == "cpdl"
+        )
+    except Exception:  # noqa: BLE001 — sin BD operativa no se activa
+        cpdl_wired = False
+    if cpdl_wired:
+        # Base del corpus CPDL: permite apuntar a otra instancia de osap-storage
+        # (OSAP_STORAGE_BASE_URL) sin depender de la ruta por defecto.
+        cpdl_base = (
+            str(config.storage_base_url).rstrip("/")
+            if getattr(config, "storage_base_url", None)
+            else storage_base
+        )
+        container.register_catalog_provider(
+            CPDLCatalogProvider(
+                base_url=cpdl_base,
+                # En dev-bypass el storage web no valida tokens (patrón de storage_web);
+                # en producción se pide token de servicio con scope storage:read.
+                token_provider=(
+                    None
+                    if container.dev_auth_bypass()
+                    else lambda: service_token_provider.token(("storage:read",))
+                ),
             )
         )
     container.register_catalog_provider(LocalCatalogProvider(Path(config.library_root)))

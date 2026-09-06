@@ -25,11 +25,7 @@ const MAIN_NAV = [
 ] as const;
 
 const ADMIN_MENU = [
-  { to: "/admin", key: "admin.overview" },
-  { to: "/admin/composers", key: "admin.composers" },
-  { to: "/admin/aliases", key: "admin.aliases" },
   { to: "/admin/source-suggestions", key: "admin.sourceSuggestions" },
-  { to: "/admin/providers", key: "admin.providersAdmin" },
   { to: "/admin/corrections", key: "admin.corrections" },
   { to: "/jobs", key: "jobs" },
 ] as const;
@@ -76,6 +72,18 @@ export function Header() {
   const [adminOpen, setAdminOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const { start: startOidc, error: oidcError } = useOidcLogin();
+
+  const openStorage = (section: string | null) => {
+    setAdminOpen(false);
+    void (async () => {
+      try {
+        const r = await apiClient.getStorageWebUrl(section ?? undefined);
+        window.open(r.url, "_blank");
+      } catch {
+        /* storage web no disponible */
+      }
+    })();
+  };
 
   // Sin sesión: pulsar 👤 abre directamente el login OIDC (popup). Si OIDC no está
   // configurado, cae al desplegable con login/registro de respaldo (email/password).
@@ -149,7 +157,7 @@ export function Header() {
                     {t("admin.title")} ▾
                   </button>
                   {adminOpen && (
-                    <ul className="absolute right-0 top-full z-20 mt-2 w-44 rounded border border-osap-border bg-osap-surface shadow">
+                    <ul className="absolute right-0 top-full z-20 mt-2 w-64 rounded border border-osap-border bg-osap-surface shadow">
                       {ADMIN_MENU.map((item) => (
                         <li key={item.to}>
                           <Link
@@ -161,21 +169,67 @@ export function Header() {
                           </Link>
                         </li>
                       ))}
+                      <li className="border-t border-osap-border" aria-hidden="true" />
+                      <li>
+                        <span className="block px-3 pb-1 pt-2 text-xs font-medium uppercase tracking-wide text-osap-muted">
+                          {t("admin.maintTitle")}
+                        </span>
+                      </li>
+                      <li>
+                        <span className="block px-3 text-[11px] uppercase tracking-wide text-osap-muted">
+                          {t("admin.maintGroup")}
+                        </span>
+                      </li>
+                      <li>
+                        <Link
+                          to="/admin/composers"
+                          onClick={() => setAdminOpen(false)}
+                          className="block pl-5 pr-3 py-1.5 text-sm hover:bg-osap-surface"
+                        >
+                          {t("admin.composersFusion")}
+                        </Link>
+                      </li>
+                      <li>
+                        <Link
+                          to="/admin/aliases"
+                          onClick={() => setAdminOpen(false)}
+                          className="block pl-5 pr-3 py-1.5 text-sm hover:bg-osap-surface"
+                        >
+                          {t("admin.aliases")}
+                        </Link>
+                      </li>
                       <li>
                         <button
                           type="button"
-                          onClick={() => {
-                            setAdminOpen(false);
-                            void (async () => {
-                              try {
-                                const r = await apiClient.getStorageWebUrl();
-                                window.open(r.url, "_blank");
-                              } catch {
-                                /* storage web no disponible */
-                              }
-                            })();
-                          }}
-                          className="block w-full px-3 py-2 text-left text-sm hover:bg-osap-surface"
+                          onClick={() => openStorage("composers")}
+                          className="block w-full pl-5 pr-3 py-1.5 text-left text-sm hover:bg-osap-surface"
+                        >
+                          {t("admin.composerMaster")}
+                        </button>
+                      </li>
+                      <li>
+                        <Link
+                          to="/admin/providers"
+                          onClick={() => setAdminOpen(false)}
+                          className="block px-3 py-1.5 text-sm hover:bg-osap-surface"
+                        >
+                          {t("admin.providersAdmin")}
+                        </Link>
+                      </li>
+                      <li>
+                        <button
+                          type="button"
+                          onClick={() => openStorage("works")}
+                          className="block w-full px-3 py-1.5 text-left text-sm hover:bg-osap-surface"
+                        >
+                          {t("admin.storageWorks")}
+                        </button>
+                      </li>
+                      <li>
+                        <button
+                          type="button"
+                          onClick={() => openStorage(null)}
+                          className="block w-full px-3 py-1.5 text-left text-sm hover:bg-osap-surface"
                         >
                           {t("admin.storageMaint")}
                         </button>

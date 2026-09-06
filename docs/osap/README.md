@@ -43,3 +43,14 @@ osap/
 Chorus (producto independiente): `docs/chorus-vision.md` (visión),
 `docs/chorus-product.md` (producto/MVP), `docs/chorus-separation.md` (frontera OSAP ≠ Chorus),
 `docs/chorus-web.md` (web independiente).
+
+## Mejoras pendientes (anotadas)
+
+- **Catálogo de formaciones vocales (voicings)**: además de los términos normalizados de
+  búsqueda (`SATB`, `STTB`, `AATB`, `ATTB`, …), valorar una tabla/catálogo de voicings con
+  pequeña descripción de cada formación (voces, uso típico) para filtros/presentación.
+  Pendiente de decidir dónde vive (corpus CPDL/osap-storage) y si aporta valor real.
+- **Compositores desde CPDL**: posibilidad de importar compositores de CPDL si nos interesa
+  (evaluar coste/beneficio antes de construir el importer).
+- **Cron semanal de CPDL**: crear un proceso programado (cron) que actualice semanalmente
+  las works de CPDL (`import_cpdl_pages`/reindex de corpus) de forma reproducible.

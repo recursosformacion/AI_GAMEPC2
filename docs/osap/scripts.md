@@ -37,6 +37,7 @@ Uso: `python scripts/analyze_works_content.py --only-missing --root G:\osap-stor
 | Script | Propósito |
 |--------|-----------|
 | `backfill_works_pdmx.py` | Backfill de metadatos de obras desde `pdmx_index.db`. |
+| `backfill_cpdl_voicings.py` | Rellena `cpdl_voicings` (términos de búsqueda por voicing) desde `cpdl_pages.voicing` (migración 036); idempotente y reanudable (`--from-id`, `--limit`). No toca `works`. |
 | `backfill_attribution.py` | Mueve atribuciones no-persona (anónima/tradicional/popular/atribuida) de `works.composer` a `attribution_type`+`attribution_note`. |
 | `candidate_resolver.py` | Resuelve candidatos a Composer minimizando red: prolíficos (≥N obras) aceptados sin red; el resto solo con autoridad local. Propuestas en `composer_candidate`. |
 | `candidate_cleanup.py` | Clasifica los candidatos `unknown` (mojibake/no_persona/qualifier/real/review) y persiste los accionables en `composer_candidate`. |
@@ -152,6 +153,7 @@ python scripts/test_authority_coverage.py [--db BD] [--limit 100] [--from-id 0]
 |--------|-----------|
 | `list_providers.py` | Lista proveedores registrados en BD (`provider_id`, `name`, `wired`). |
 | `check_providers.py` | Alias de `list_providers.py` para comprobaciones rápidas. |
+| `enrich_provider_descriptions.py` | Reconstruye las descripciones multi-idioma de `providers` (nº de obras + formatos, sin estado de conexión). |
 | `seed_missing_providers.py` | Siembra proveedores faltantes desde `providers/*/provider.yaml` en BD (usa mapping procesado; no recomendado para proveedores nuevos). |
 | `reseed_providers.py` | Re-siembra proveedores desde `providers/{id}/` usando el mapping crudo de YAML. Recomendado para (re)crear `hymnary`, `iiif`, `zenodo` con su configuración completa. |
 | `build_composers_index.py` | Fusionar fuentes de compositores en `composers_index.json`. |
@@ -163,7 +165,8 @@ python scripts/test_authority_coverage.py [--db BD] [--limit 100] [--from-id 0]
 | `extract_composers_from_dump.py` | Extraer compositores del dump completo de Wikidata. |
 | `fichas_30.py` | Fichas de ground truth de los 30 (evidencia, procedencia, conflictos). |
 | `ground_truth_30.py` | Ground truth de resolución de los 30. |
-| `index_works.py` | **Indexador local de obras multi-proveedor** (paso 1 del índice): lee OMR (osap-storage), IMSLP (Worklist API), Mutopia (make-table.cgi) y MusicBrainz (dump local) y puebla `index_works`+`index_representations` (osap-api) con normalización y dedupe. Uso: `python script/index_works.py --providers omr,imslp,mutopia,musicbrainz`. OMR construye `download_url={storage}/api/download/{file_id}` y `available=1`. MusicBrainz filtra a tipos de música artística (`--mb-types art`) por defecto. |
+| `index_works.py` | **Indexador local de obras multi-proveedor** (paso 1 del índice): lee OMR (osap-storage), IMSLP (Worklist API), Mutopia (make-table.cgi) y MusicBrainz (dump local) y puebla `index_works`+`index_representations` (osap-api) con normalización y dedupe. CPDL **no** se indexa: es provider vivo sobre su corpus. Uso: `python script/index_works.py --providers omr,imslp,mutopia,musicbrainz`. OMR construye `download_url={storage}/api/download/{file_id}` y `available=1`. MusicBrainz filtra a tipos de música artística (`--mb-types art`) por defecto. |
+| `drop_cpdl_index_rows.py` | Elimina las representaciones `provider='cpdl'` del índice local y las `index_works` huérfanas (limpieza única tras pasar CPDL a provider vivo; idempotente). Uso: `python script/drop_cpdl_index_rows.py`. |
 | `sync_index.py` | **Sincronización incremental del índice** con estado persistido en `sync_state` (tabla de osap-api): relanza `index_works.py` reanudando donde terminó (IMSLP desde `start`, OMR desde el último `work_id`, Mutopia completo). Para programar con cron/crontab cada X tiempo. Uso: `python script/sync_index.py --providers imslp,omr,mutopia [--omr-base-url https://...]`. |
 | `identity_resolver.py` | **Resolver de identidad escalonado** (evidencia acumulada) sobre obras de storage. |
 | `inventory_title_noise.py` | Inventario de patrones de ruido en títulos (FASE 5.7.2). |
@@ -240,6 +243,16 @@ PYTHONPATH=<osap-api> python list_providers.py
 Alias práctico de `list_providers.py` con el mismo comportamiento.
 ```
 PYTHONPATH=<osap-api> python check_providers.py
+```
+
+### enrich_provider_descriptions.py
+Reconstruye la descripción multi-idioma de cada proveedor de la BD operativa a partir
+de la reseña base (YAML) + datos reales del índice (nº de obras y formatos). Idempotente:
+re-ejecutarlo reescribe las descripciones con datos actualizados. **No** incluye el estado
+de conexión en el texto; si quedó un sufijo "conectado / no conectado" de una ejecución
+antigua, basta re-ejecutarlo para limpiarlo.
+```
+PYTHONPATH=<osap-api> python script/enrich_provider_descriptions.py [--db-api osap_api]
 ```
 
 ### seed_missing_providers.py

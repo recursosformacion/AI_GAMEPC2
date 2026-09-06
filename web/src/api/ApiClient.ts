@@ -246,8 +246,9 @@ export class ApiClient {
     return this.get<AdminOverview>("/admin/overview");
   }
 
-  async getStorageWebUrl(): Promise<{ url: string }> {
-    return this.get<{ url: string }>("/admin/storage-web");
+  async getStorageWebUrl(section?: string): Promise<{ url: string }> {
+    const qs = section ? `?section=${encodeURIComponent(section)}` : "";
+    return this.get<{ url: string }>(`/admin/storage-web${qs}`);
   }
 
   async listOpProviders(): Promise<OpProvider[]> {

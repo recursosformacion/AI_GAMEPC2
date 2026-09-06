@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Envelope } from "../components/Envelope";
-import { Spinner } from "../components/Spinner";
 import { WorksListModule, groupWorks } from "../components/WorksListModule";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
@@ -38,14 +37,9 @@ export function ComposersPage() {
     setReview(value || null);
   };
 
-  const toggleWorks = (composerName: string, composerId: string) => {
-    // Cierra si ya está abierto; si no, abre y lanza la búsqueda de ese compositor.
-    if (openWorks === composerId) {
-      setOpenWorks(null);
-      return;
-    }
-    setOpenWorks(composerId);
-    void fetchList(composerName, LIMIT, 0, review);
+  const toggleWorks = (composerId: string) => {
+    // Cierra si ya está abierto; si no, abre (la búsqueda la lanza ComposerWorksInline).
+    setOpenWorks((current) => (current === composerId ? null : composerId));
   };
 
   return (
@@ -99,7 +93,7 @@ export function ComposersPage() {
                       <IconButton
                         title={t("composers.viewWorks")}
                         active={openWorks === c.id}
-                        onClick={() => toggleWorks(c.name, c.id)}
+                        onClick={() => toggleWorks(c.id)}
                         path="M5 3h14v18l-7-4-7 4z"
                       />
                       <Link
@@ -164,20 +158,54 @@ function IconButton({ title, onClick, path, active = false }: { title: string; o
 
 function ComposerWorksInline({ composerName }: { composerName: string }) {
   const { t } = useI18n();
-  const data = useComposers((s) => s.list);
-  const loading = useComposers((s) => s.loading);
-  const pipeline = useSearches((s) => s.data);
+  const data = useSearches((s) => s.data);
+  const loading = useSearches((s) => s.loading);
+  const polling = useSearches((s) => s.polling);
+  const lastRequest = useSearches((s) => s.lastRequest);
 
+  // Lanza la búsqueda por el MÉTODO NORMAL (POST /searches + polling): igual que el
+  // Estudio. Mientras corre, se muestra el progreso y los proveedores que responden.
   useEffect(() => {
-    if (data && data.items.length > 0 && data.items[0]?.name === composerName) {
-      void useSearches.getState().create({ query: "", composer: composerName, limit: 30 });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [composerName, data?.items[0]?.name]);
+    void useSearches.getState().create({ query: "", composer: composerName, limit: 30 });
+  }, [composerName]);
 
-  const pipelineWorks = pipeline?.results ? groupWorks(pipeline.results) : [];
+  // Solo se pintan resultados del pipeline si la última búsqueda es de ESTE compositor:
+  // evita mostrar en vacío/adelantado o resultados de una búsqueda anterior.
+  const isCurrent =
+    (lastRequest?.composer ?? "").trim().toLowerCase() === composerName.trim().toLowerCase();
+  const pipelineWorks = isCurrent && data?.results ? groupWorks(data.results) : [];
+  const pending =
+    !isCurrent || loading || polling || data?.status === "running" || data?.status === undefined;
 
-  if (loading) return <Spinner label={t("states.loading")} />;
+  if (pending && pipelineWorks.length === 0) {
+    return (
+      <div className="mt-2 rounded border border-osap-border bg-osap-surface p-3">
+        <div className="flex items-center justify-between gap-2 text-sm">
+          <span className="flex items-center gap-2 text-osap-muted">
+            <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-osap-accent border-t-transparent" />
+            {t("search.searching")}
+          </span>
+          <span className="text-xs text-osap-muted">{data?.progress ?? 0}%</span>
+        </div>
+        <div className="mt-2 h-1.5 overflow-hidden rounded bg-osap-border">
+          <div className="h-full bg-osap-accent transition-all" style={{ width: `${data?.progress ?? 5}%` }} />
+        </div>
+        {data?.providers && data.providers.length > 0 ? (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {data.providers.map((p) => (
+              <span
+                key={p}
+                className="inline-flex items-center gap-1 rounded-full border border-osap-border bg-osap-surface px-2 py-0.5 text-xs text-osap-ink"
+              >
+                <span className="text-green-600">✓</span>
+                {p}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
+    );
+  }
   if (pipelineWorks.length === 0) {
     return <p className="py-2 text-sm text-osap-muted">{t("states.empty")}</p>;
   }

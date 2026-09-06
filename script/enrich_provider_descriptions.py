@@ -6,9 +6,12 @@ script completa la descripción multi-idioma de cada proveedor combinando la res
 base (del YAML) con datos reales del índice local y del proveedor:
 
   * número de obras/representaciones indexadas,
-  * formatos disponibles,
-  * estado (conectado / no conectado),
-  * URL pública del proveedor.
+  * formatos disponibles.
+
+El estado de conexión NO se incluye en la descripción: aparece aparte en la UI
+(sí/no en línea) y concatenarlo al texto es ruido para el usuario. Re-ejecutar el
+script también elimina el sufijo "conectado/no conectado" que hubiera quedado de
+ejecuciones anteriores.
 
 El resultado se guarda en `providers.description` como JSON `{es, ca, fr, en, de}`.
 Es idempotente: re-ejecutarlo reescribe las descripciones con datos actualizados.
@@ -171,7 +174,6 @@ def main() -> int:
             continue
         fmts = list((reps_by_provider.get(pid) or {}).keys())
         count = sum((reps_by_provider.get(pid) or {}).values())
-        wired = bool(row["wired"])
         description: dict[str, str] = {}
         for lang, text in base.items():
             extras: list[str] = []
@@ -179,11 +181,7 @@ def main() -> int:
                 extras.append(_count_suffix(lang, count))
             if fmts:
                 extras.append(_fmt_list(fmts))
-            extras.append("conectado" if wired else ("no conectado" if lang == "es" else
-                                                    ("connected" if lang == "en" else
-                                                     ("connectat" if lang == "ca" else
-                                                      ("connecté" if lang == "fr" else "verbunden")))))
-            description[lang] = f"{text} {'. '.join(extras).rstrip('.')}."
+            description[lang] = f"{text} {'. '.join(extras)}." if extras else f"{text.rstrip('.')}."
         with conn.cursor() as cur:
             cur.execute(
                 "UPDATE providers SET description=%s WHERE provider_id=%s",
@@ -191,7 +189,7 @@ def main() -> int:
             )
         updated += 1
         print(f"  {pid:14} -> {len(description)} idiomas | "
-              f"{count:,} obras | {_fmt_list(fmts)} | {wired}", flush=True)
+              f"{count:,} obras | {_fmt_list(fmts)}", flush=True)
     conn.close()
     print(f"actualizados {updated} proveedores")
     return 0

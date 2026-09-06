@@ -21,6 +21,7 @@ class SearchRequest:
     instrumentation: tuple[str, ...] = field(default_factory=tuple)
     voices: tuple[str, ...] = field(default_factory=tuple)
     genre: str | None = None
+    genre_ids: tuple[int, ...] = field(default_factory=tuple)
     key: str | None = None
     year_range: tuple[int, int] | None = None
     language: str | None = None
@@ -46,6 +47,7 @@ class SearchRequest:
             composer=request.composer,
             catalogue=request.catalogue,
             genre=request.genre,
+            genre_ids=request.genre_ids,
             language=request.language,
             instrumentation=request.instrumentation,
             voices=request.voices,
@@ -69,7 +71,7 @@ class SearchRequest:
 
     @property
     def searches_by_genre(self) -> bool:
-        return bool(self.genre)
+        return bool(self.genre or self.genre_ids)
 
     @property
     def searches_by_key(self) -> bool:
@@ -106,6 +108,11 @@ class SearchRequestBuilder:
 
     def genre(self, value: str) -> "SearchRequestBuilder":
         return SearchRequestBuilder(replace(self._request, genre=value))
+
+    def genre_ids(self, *values: int) -> "SearchRequestBuilder":
+        return SearchRequestBuilder(
+            replace(self._request, genre_ids=self._request.genre_ids + values)
+        )
 
     def key(self, value: str) -> "SearchRequestBuilder":
         return SearchRequestBuilder(replace(self._request, key=value))

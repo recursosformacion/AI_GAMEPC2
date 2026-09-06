@@ -108,8 +108,8 @@ class CorrectionService:
                 raise CorrectionError(422, "FIELD_NOT_ALLOWED", "Solo se admite corregir el título de la obra")
             field = "title"
             entity_provider = WORK_ALLOWED_PROVIDER
-        if field and (not proposed_value or not proposed_value.strip()):
-            raise CorrectionError(422, "PROPOSED_REQUIRED", "El valor propuesto es obligatorio")
+        # field / proposed_value son metadatos opcionales: el detalle de la corrección
+        # puede describirse libremente en `message` (texto plano del usuario).
         if self._exists is not None and not self._exists(kind, str(entity_id)):
             raise CorrectionError(404, "ENTITY_NOT_FOUND", "La entidad indicada no existe")
         correction_id = f"corr-{uuid.uuid4().hex[:10]}"

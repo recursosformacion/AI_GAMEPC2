@@ -134,6 +134,20 @@ def _client(knowledge: KnowledgeStore | None = None) -> TestClient:
     return TestClient(create_platform_app(_container(), knowledge))
 
 
+def _poll_search(client: TestClient, search_id: str, timeout_ms: int = 5000) -> dict:
+    """Espera a que una búsqueda asíncrona termine y devuelve su `data`."""
+    import time
+
+    deadline = time.monotonic() * 1000 + timeout_ms
+    while True:
+        data = client.get(f"/api/v1/searches/{search_id}").json()["data"]
+        if data.get("status") in ("done", "error"):
+            return data
+        if time.monotonic() * 1000 > deadline:
+            raise AssertionError(f"search {search_id} did not finish in {timeout_ms}ms")
+        time.sleep(0.05)
+
+
 # --- envelope / request_id --------------------------------------------------
 
 
@@ -204,8 +218,12 @@ def test_search_creates_resource_and_returns_201() -> None:
     location = resp.headers["location"]
     search_id = body["data"]["search_id"]
     assert location == f"/api/v1/searches/{search_id}"
-    assert len(body["data"]["results"]) == 1
-    result = body["data"]["results"][0]
+    # La búsqueda es asíncrona: el POST devuelve el recurso en "running" y el
+    # resultado se completa al hacer polling con GET (igual que hace el frontend).
+    assert body["data"]["status"] == "running"
+    data = _poll_search(client, search_id)
+    assert len(data["results"]) == 1
+    result = data["results"][0]
     assert result["work"]["title"] == "Ave Verum Corpus"
     assert result["representation"]["provider"] == "fake"
     assert result["representation"]["format"] == "musicxml"

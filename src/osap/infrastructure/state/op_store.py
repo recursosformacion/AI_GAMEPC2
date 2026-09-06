@@ -321,6 +321,7 @@ class _MysqlStore(_MemoryStore):
                 catalogue_key VARCHAR(128),
                 year SMALLINT,
                 instrumentation VARCHAR(255),
+                genre_id INT UNSIGNED,
                 source_count TINYINT NOT NULL DEFAULT 0,
                 updated_at VARCHAR(64) NOT NULL,
                 PRIMARY KEY (id),

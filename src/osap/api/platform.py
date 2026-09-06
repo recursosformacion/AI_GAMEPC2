@@ -185,7 +185,60 @@ _PROVIDER_NAME_MAP = {
     "mutopia": "mutopia",
     "musicbrainz": "musicbrainz",
     "rism": "rism",
+    "cpdl": "cpdl",
 }
+
+# Etiquetas del bloque "Dónde" del Estudio (id -> opción). Cada opción debe resolverse
+# de vuelta a su id con _provider_id_for_name.
+_PROVIDER_OPTION_LABEL = {
+    "imslp": "IMSLP",
+    "openscore": "OpenScore",
+    "omr": "OpenMusicRepository",
+    "musicbrainz": "MusicBrainz",
+    "mutopia": "Mutopia",
+    "rism": "RISM",
+    "cpdl": "CPDL",
+}
+_PROVIDER_OPTION_ORDER = ("imslp", "openscore", "omr", "musicbrainz", "mutopia", "rism", "cpdl")
+
+# Opciones del bloque "Formación vocal" del Estudio. Son términos REALES observados en el
+# corpus CPDL (cpdl_pages.voicing): no se inventan valores. El matching lo hace el
+# proveedor CPDL contra cpdl_voicings con coincidencia exacta de token normalizado.
+_STUDIO_VOICING_OPTIONS = [
+    "SATB", "SATTB", "SSATB", "SSATTB", "SATB.SATB", "TTBB", "SAB", "SAATB",
+    "ATTB", "STTB", "SSAA", "SSA", "TTB", "ATB", "SST", "SSB", "SATT", "SSAT",
+    "TBB", "SA", "SS", "TT", "SAATTB", "SSAATTBB", "Unison", "Solo Soprano",
+]
+
+# Macro-familias de género (catálogo `genres` de osap-storage, semilla 040). El Estudio
+# las ofrece como bloque "Género"; el backend las resuelve a su `genre_id` y el filtro
+# solo se aplica en el índice local (obras OMR categorizadas). Espejo estático del
+# catálogo: mantener sincronizado con la migración 040_genres.sql de osap-storage.
+_STUDIO_GENRE_OPTIONS: list[tuple[int, str]] = [
+    (1, "Música Clásica / Docta"),
+    (2, "Música Sacra / Himnología"),
+    (3, "Tradición Folclórica y Etnomusicología"),
+    (4, "Jazz y Blues"),
+    (5, "Rock y Metal"),
+    (6, "Pop"),
+    (7, "Música Urbana y Hip Hop"),
+    (8, "Música Electrónica y Dance"),
+    (9, "Música Latina y Caribeña"),
+    (10, "Country, Folk y Americana"),
+    (11, "Soul, Funk y Disco"),
+    (12, "Música Escénica y Aplicada"),
+]
+_GENRE_ID_BY_NAME = {name: genre_id for genre_id, name in _STUDIO_GENRE_OPTIONS}
+
+
+def _genre_id_for_name(name: str) -> int | None:
+    """Resuelve el nombre visible de una macro-familia a su `genre_id` de osap-storage."""
+    return _GENRE_ID_BY_NAME.get(name.strip())
+
+
+def _studio_genre_names() -> list[str]:
+    """Nombres de las macro-familias de género para el bloque "Género" del Estudio."""
+    return [name for _, name in _STUDIO_GENRE_OPTIONS]
 
 
 def _provider_id_for_name(name: str) -> str | None:
@@ -719,6 +772,27 @@ class PlatformApi:
             return IntentResponse(type="collection", label=query.strip())
         return IntentResponse(type="work", label=query.strip())
 
+    def _studio_provider_options(self) -> list[str]:
+        """Opciones del bloque "Dónde" del Estudio: SOLO los proveedores disponibles.
+
+        La lista estática anterior marcaba fuentes caídas a las que no se podía
+        conectar. Se muestran únicamente los proveedores en línea (misma fuente de
+        verdad que la pantalla de proveedores). Si no hay ninguno, se mantiene la
+        lista conocida para no vaciar la pantalla.
+        """
+        try:
+            online = {r.provider_id for r in self.list_providers() if r.available}
+        except Exception:  # noqa: BLE001 — no bloquear el modelo por un store inaccesible
+            online = set()
+        options = [
+            _PROVIDER_OPTION_LABEL[pid]
+            for pid in _PROVIDER_OPTION_ORDER
+            if pid in online
+        ]
+        if options:
+            return options
+        return [_PROVIDER_OPTION_LABEL[pid] for pid in _PROVIDER_OPTION_ORDER]
+
     def search_model(self) -> SearchModel:
         return SearchModel(            blocks=[
                 SearchModelBlock(
@@ -736,13 +810,25 @@ class PlatformApi:
                     id="where",
                     label="WHERE",
                     kind="multi",
-                    options=["IMSLP", "OpenScore", "OpenMusicRepository", "MusicBrainz", "Mutopia", "RISM"],
+                    options=self._studio_provider_options(),
                 ),
                 SearchModelBlock(
                     id="what_kind",
                     label="WHAT KIND",
                     kind="multi",
                     options=["MusicXML", "PDF", "MIDI"],
+                ),
+                SearchModelBlock(
+                    id="voicing",
+                    label="VOICING",
+                    kind="multi",
+                    options=list(_STUDIO_VOICING_OPTIONS),
+                ),
+                SearchModelBlock(
+                    id="genre",
+                    label="GENRE",
+                    kind="multi",
+                    options=_studio_genre_names(),
                 ),
                 SearchModelBlock(
                     id="quality",
@@ -785,6 +871,16 @@ class PlatformApi:
             builder = builder.instrumentation(req.instrumentation)
         if req.language:
             builder = builder.language(req.language)
+        # Formación vocal (voices): criterio descriptivo, NO identidad. Cada provider
+        # decide si lo usa (solo CPDL lo consume hoy); el resto lo ignora.
+        for voice in req.voices or []:
+            builder = builder.voices(voice)
+        # Género (macro-familias): se resuelve a genre_id y solo el índice local lo
+        # aplica (obras OMR categorizadas); el resto de fuentes lo ignora.
+        for genre_name in req.genres or []:
+            genre_id = _genre_id_for_name(genre_name)
+            if genre_id is not None:
+                builder = builder.genre_ids(genre_id)
         # Filtros del Estudio: dónde (providers) y qué tipo (formats).
         if req.providers:
             for name in req.providers:
@@ -863,6 +959,17 @@ class PlatformApi:
                         reps.append(rep)
                 if not reps:
                     continue
+                # Dedupe por (provider, url): el merge de grupos puede duplicar una misma
+                # página/representación (p. ej. una página CPDL con varios voicings).
+                seen: set[tuple[str, str]] = set()
+                unique_reps: list[RepresentationInfo] = []
+                for rep in reps:
+                    key = (rep.provider, rep.url or "")
+                    if key in seen:
+                        continue
+                    seen.add(key)
+                    unique_reps.append(rep)
+                reps = unique_reps
                 best = max(reps, key=lambda r: r.confidence)
                 results.append(
                     SearchResultItem(
@@ -948,6 +1055,10 @@ class PlatformApi:
             "catalogue": getattr(work, "catalogue_number", None),
             "format": fmt.value if fmt is not None else None,
         }
+        # Metadatos específicos de la fuente (p. ej. voicing CPDL): viajan con la
+        # representación/origen, nunca se copian a `works`.
+        raw_metadata = getattr(m, "metadata", None)
+        metadata = dict(raw_metadata) if isinstance(raw_metadata, dict) and raw_metadata else None
         return RepresentationInfo(
             id=rep_id,
             provider=provider_id,
@@ -956,6 +1067,7 @@ class PlatformApi:
             title=str(getattr(descriptor, "title", None) or ""),
             url=url,
             available=available,
+            metadata=metadata,
         )
 
     def _merge_same_work(self, results: list[SearchResultItem]) -> list[SearchResultItem]:
@@ -1063,7 +1175,7 @@ class PlatformApi:
                 if len(providers_now) < 5:
                     candidates_to_enrich.append((len(providers_now), item))
             # Cache sin filtrar; el filtro del Estudio se aplica solo a la salida.
-            reps_all = list(current.values())
+            reps_all = self._dedupe_reps(list(current.values()))
             reps = _filt(reps_all)
             best = max(reps, key=lambda r: r.confidence) if reps else item.representation
             out.append(
@@ -1087,7 +1199,7 @@ class PlatformApi:
             merged = {r.id: r for r in item.representations}
             for r in focused:
                 merged[r.id] = r
-            reps_all = list(merged.values())
+            reps_all = self._dedupe_reps(list(merged.values()))
             self._cache_work_reps(key, reps_all)
             reps = _filt(reps_all)
             for it in out:
@@ -1097,6 +1209,18 @@ class PlatformApi:
                         work=it.work, representation=best, representations=reps,
                         score=it.score, evidence=it.evidence, relationships=it.relationships,
                     )
+        return out
+
+    def _dedupe_reps(self, reps: list[RepresentationInfo]) -> list[RepresentationInfo]:
+        """Elimina representaciones duplicadas (misma fuente y mismo enlace)."""
+        seen: set[tuple[str, str]] = set()
+        out: list[RepresentationInfo] = []
+        for rep in reps:
+            key = (rep.provider, rep.url or "")
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(rep)
         return out
 
     def _cache_work_reps(self, key: str, reps: list[RepresentationInfo]) -> None:
@@ -1823,14 +1947,23 @@ class PlatformApi:
             )
         return out
 
-    def storage_web(self, token: str | None) -> str:
+    def storage_web(self, token: str | None, section: str | None = None) -> str:
         self._require_admin(token)
         base = (self._container.storage_web_base() or self.composers().storage_base_url()).rstrip("/")
         if self._container.dev_auth_bypass():
             service_token = secrets.token_urlsafe(16)
         else:
             service_token = self.composers().storage_admin_token()
-        return f"{base}/admin?token={urllib.parse.quote(service_token)}"
+        url = f"{base}/admin?token={urllib.parse.quote(service_token)}"
+        # Mantenimientos standalone (osap-storage): Maestro = CRUD de compositores;
+        # el resto mantiene el multimantenimiento por pestaña.
+        if section == "composers":
+            url = f"{base}/admin/maestros?token={urllib.parse.quote(service_token)}"
+        elif section == "works":
+            url = f"{url}&tab=works"
+        elif section == "tables":
+            url = f"{url}&tab=tables"
+        return url
 
     def admin_overview(self, token: str | None) -> dict[str, object]:
         stats = self.composer_review_stats(token)

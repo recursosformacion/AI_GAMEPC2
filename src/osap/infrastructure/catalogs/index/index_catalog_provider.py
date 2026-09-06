@@ -230,6 +230,7 @@ def _build_sql(
     composer = (request.composer or "").strip()
     catalogue = (request.catalogue or "").strip()
     free = (request.query or "").strip()
+    genre_ids = tuple(sorted(set(request.genre_ids)))
     if not title and not composer and not catalogue and not free:
         return None, ()
     clauses: list[str] = []
@@ -292,6 +293,10 @@ def _build_sql(
                     free_args.append(f"%{variant}%")
         clauses.append("(" + " OR ".join(free_clauses) + ")")
         args.extend(free_args)
+    if genre_ids:
+        placeholders = ", ".join(["%s"] * len(genre_ids))
+        clauses.append(f"i.genre_id IN ({placeholders})")
+        args.extend(genre_ids)
     where = " AND ".join(clauses)
     providers = tuple(_INDEXED_PROVIDERS)
     if request.allowed_providers:

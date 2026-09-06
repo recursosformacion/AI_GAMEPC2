@@ -8,6 +8,12 @@ import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
 import { useSearches } from "../state/searches";
 import { useSearchModel } from "../state/searchModel";
+import { genresToSearch } from "./studioGenre";
+import {
+  loadVoicingSelection,
+  saveVoicingSelection,
+  voicingToSearch,
+} from "./studioVoicing";
 
 type Criteria = Record<string, string>;
 type Multi = Record<string, boolean>;
@@ -19,6 +25,8 @@ const BLOCK_LABELS: Record<string, string> = {
   what: "studio.what",
   where: "studio.where",
   what_kind: "studio.whatKind",
+  voicing: "studio.voicing",
+  genre: "studio.genre",
   quality: "studio.quality",
   options: "studio.options",
 };
@@ -30,6 +38,7 @@ export function SearchStudioPage() {
 
   const [text, setText] = useState<Criteria>({});
   const [multi, setMulti] = useState<Multi>({});
+  const [voice, setVoice] = useState("");
   const [confidence, setConfidence] = useState(0.5);
   const initialized = useRef(false);
 
@@ -46,7 +55,14 @@ export function SearchStudioPage() {
     const defaults: Multi = {};
     for (const block of model.blocks) {
       if (block.kind === "multi") {
-        for (const o of block.options) defaults[o] = true;
+        // voicing se gestiona como desplegable (formación única), no como checkboxes.
+        // genre es un filtro opcional: por defecto NINGUNA macro-familia activa (sin
+        // restricción); marcar familias restringe a esas categorías.
+        if (block.id !== "voicing" && block.id !== "genre") {
+          for (const o of block.options) defaults[o] = true;
+        } else if (block.id === "genre") {
+          for (const o of block.options) defaults[o] = false;
+        }
       } else if (block.kind === "boolean") {
         for (const c of block.criteria) defaults[c.key] = false;
       }
@@ -65,6 +81,10 @@ export function SearchStudioPage() {
       merged[key] = typeof saved[key] === "boolean" ? saved[key] : Boolean(defaults[key]);
     }
     setMulti(merged);
+    const voicingBlock = model.blocks.find((b) => b.id === "voicing");
+    const voicingOptions = voicingBlock?.options ?? [];
+    const savedVoice = loadVoicingSelection();
+    setVoice(voicingOptions.includes(savedVoice) ? savedVoice : "");
   }, [model]);
 
   const updateMulti = (next: Multi) => {
@@ -72,12 +92,20 @@ export function SearchStudioPage() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
   };
 
+  const updateVoice = (v: string) => {
+    setVoice(v);
+    saveVoicingSelection(v);
+  };
+
   const resolve = () => {
-    // Bloques multi: `where` -> providers (dónde), `what_kind` -> formats (qué tipo).
+    // Bloques multi: `where` -> providers (dónde), `what_kind` -> formats (qué tipo),
+    // `genre` -> macro-familias de género (solo el índice OMR las aplica).
+    // `voicing` -> formación vocal (solo lo consume el provider CPDL).
     // Solo se envían los checkboxes ACTIVOS; vacío = sin filtro.
     const providers: string[] = [];
     const formats: string[] = [];
     const options: Record<string, boolean> = {};
+    const genreOptions = model?.blocks.find((b) => b.id === "genre")?.options ?? [];
     for (const block of model?.blocks ?? []) {
       if (block.kind === "multi") {
         for (const o of block.options) {
@@ -92,6 +120,9 @@ export function SearchStudioPage() {
         }
       }
     }
+    const voices = voicingToSearch(voice);
+    // Género: sin selección O todas las familias marcadas = sin filtro de género.
+    const genreFilter = genresToSearch(multi, genreOptions);
     const payload = {
       query: text["title"] ?? "",
       limit: 30,
@@ -101,6 +132,8 @@ export function SearchStudioPage() {
       catalogue: text["catalogue"] || null,
       formats: formats.length > 0 ? formats : undefined,
       providers: providers.length > 0 ? providers : undefined,
+      voices,
+      genres: genreFilter,
     };
     void options;
     void confidence;
@@ -142,10 +175,27 @@ export function SearchStudioPage() {
                     setText={setText}
                     multi={multi}
                     setMulti={updateMulti}
+                    voice={voice}
+                    setVoice={updateVoice}
                     confidence={confidence}
                     setConfidence={setConfidence}
                   />
                 ))}
+              {/* Instrumento: sin datos categorizados todavía -> deshabilitado. */}
+              {m.blocks.some((b) => b.id === "genre") ? (
+                <Card title={t("studio.instrument")}>
+                  <label className="flex flex-col gap-1 text-xs opacity-60">
+                    <select
+                      disabled
+                      aria-label={t("studio.instrument")}
+                      className="rounded border border-osap-border bg-osap-surface px-2 py-1"
+                    >
+                      <option value="">—</option>
+                    </select>
+                  </label>
+                  <p className="mt-1 text-xs text-osap-muted">{t("studio.instrumentHint")}</p>
+                </Card>
+              ) : null}
             </div>
 
             {/* Barra lateral: calidad, opciones, resumen y acción */}
@@ -195,6 +245,8 @@ function Block(props: {
   setText: (c: Criteria) => void;
   multi: Multi;
   setMulti: (m: Multi) => void;
+  voice?: string;
+  setVoice?: (v: string) => void;
   confidence: number;
   setConfidence: (v: number) => void;
 }) {
@@ -202,6 +254,29 @@ function Block(props: {
   const { block } = props;
   const labelKey = BLOCK_LABELS[block.id] as TKey | undefined;
   const title = labelKey ? t(labelKey) : block.label;
+
+  if (block.id === "voicing") {
+    return (
+      <Card title={title}>
+        <label className="flex flex-col gap-1 text-xs">
+          <select
+            aria-label="formación vocal"
+            value={props.voice ?? ""}
+            onChange={(e) => props.setVoice?.(e.target.value)}
+            className="rounded border border-osap-border bg-osap-surface px-2 py-1"
+          >
+            <option value="">ALL</option>
+            {block.options.map((o) => (
+              <option key={o} value={o}>
+                {o}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className="mt-1 text-xs text-osap-muted">{t("studio.voicingHint")}</p>
+      </Card>
+    );
+  }
 
   if (block.kind === "text") {
     return (
@@ -237,6 +312,9 @@ function Block(props: {
             </label>
           ))}
         </div>
+        {block.id === "genre" ? (
+          <p className="mt-1 text-xs text-osap-muted">{t("studio.genreHint")}</p>
+        ) : null}
       </Card>
     );
   }

@@ -240,8 +240,8 @@ export function WorkDetailTabs({
 
           {allowWorkCorrections && work.work_id ? (
             <Link
-              to={`/corrections?kind=work&entity_id=${encodeURIComponent(work.work_id)}&field=title&current_value=${encodeURIComponent(work.title ?? "")}`}
-              className="mt-2 inline-block text-sm text-osap-accent hover:underline"
+              to={`/corrections?kind=work&entity_id=${encodeURIComponent(work.work_id)}`}
+              className="mt-2 inline-block rounded border border-osap-accent/40 px-3 py-1 text-sm font-medium text-osap-accent transition-colors hover:border-osap-accent hover:bg-osap-accent-soft"
             >
               {t("corrections.propose")}
             </Link>
