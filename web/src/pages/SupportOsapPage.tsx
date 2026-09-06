@@ -4,24 +4,29 @@ import { LoginForm } from "../components/LoginForm";
 import { RegisterForm } from "../components/RegisterForm";
 import { useOidcLogin } from "../components/useOidcLogin";
 import { useI18n } from "../i18n/I18n";
-import { useSupport } from "../support";
+import { startDonation, useSupport } from "../support";
+import { useAuth } from "../state/auth";
 
-// Página pública "Apoya a OSAP": explica el proyecto y prepara el flujo de apoyo.
-// Misma filosofía que la antigua "Apoya Chorus" (SupportPage, ahora obsoleta):
-// no vende agresivamente, comunica un proyecto cultural + comunidad + transparencia,
-// y no simula pagos ni crea datos de suscripción.
+// Página "Apoya a OSAP": explica el proyecto y ofrece el flujo de apoyo REAL contra
+// osap-support (PayPal). No simula pagos: el botón abre el checkout real de PayPal y el
+// estado mostrado es el que confirma osap-support (/membership/me).
 //
 // Fronteras:
 //  - Identidad (login/registro) → Auth (vía useOidcLogin + formularios Auth).
-//  - Relación de apoyo (estado/CTA) → SupportGateway (useSupport). En el MVP se deriva de
-//    Auth; cuando exista osap-support cambiará la implementación, no esta página.
+//  - Relación de apoyo (estado/CTA) → useSupport (osap-support HTTP).
+
+const DONATION_PRESET_MINOR = 500; // 5,00 EUR (centavos) — importe real validado en backend
+const RETURN_URL = typeof window === "undefined" ? "/support" : `${window.location.origin}/support`;
 
 export function SupportOsapPage() {
   const { t } = useI18n();
   const support = useSupport();
+  const accessToken = useAuth((s) => s.accessToken);
   const { start: startOidc, error: oidcError } = useOidcLogin();
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const [authOpen, setAuthOpen] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [starting, setStarting] = useState(false);
 
   const openLogin = () => {
     if (support.authenticated) return;
@@ -32,7 +37,27 @@ export function SupportOsapPage() {
   };
 
   const startSupport = () => {
-    // Preparado para la futura integración con el proveedor de Membership.
+    // Donación puntual real: osap-support → PayPal. Nunca se marca pago localmente.
+    if (!accessToken) {
+      openLogin();
+      return;
+    }
+    setStarting(true);
+    setActionError(null);
+    void (async () => {
+      try {
+        const checkout = await startDonation(
+          accessToken,
+          DONATION_PRESET_MINOR,
+          "EUR",
+          RETURN_URL,
+        );
+        window.location.assign(checkout.checkout_url);
+      } catch (error) {
+        setActionError(error instanceof Error ? error.message : "support unavailable");
+        setStarting(false);
+      }
+    })();
   };
 
   return (
@@ -116,10 +141,27 @@ export function SupportOsapPage() {
               </div>
             )}
           </>
+        ) : support.status === "loading" ? (
+          <p className="text-sm text-osap-muted">…</p>
+        ) : support.status === "member" ? (
+          <>
+            <p className="text-sm font-medium text-osap-accent">{t("osapSupport.memberStatus")}</p>
+            <p className="mt-1 text-sm text-osap-muted">
+              {support.membership?.level ?? ""} · {support.membership?.status ?? ""}
+            </p>
+          </>
+        ) : support.status === "no_membership" ? (
+          <>
+            <p className="text-sm text-osap-muted">{t("osapSupport.noMember")}</p>
+            <Button onClick={startSupport} disabled={starting}>
+              {starting ? "…" : t("osapSupport.donateCta")}
+            </Button>
+            {actionError && <p className="mt-2 text-xs text-red-500">{actionError}</p>}
+          </>
         ) : (
           <>
-            <Button onClick={startSupport}>{t("osapSupport.startCta")}</Button>
-            <p className="mt-3 text-sm text-osap-muted">{t("osapSupport.authenticatedInfo")}</p>
+            <p className="text-sm text-osap-muted">{t("osapSupport.membershipUnavailable")}</p>
+            {actionError && <p className="mt-2 text-xs text-red-500">{actionError}</p>}
           </>
         )}
       </section>

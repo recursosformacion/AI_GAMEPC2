@@ -1,43 +1,48 @@
-// Test mínimo del SupportGateway (implementación temporal).
-// Garantiza que la frontera devuelve el estado correcto según la sesión de Auth,
-// sin inventar membresías ni datos económicos.
+// Tests del SupportGateway (frontera hacia osap-support).
+// Verifica el contrato con el backend real (RemoteSupportGateway + SupportApiClient):
+// membership real devuelta, y que NUNCA inventa estado cuando la API no responde.
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { useAuth } from "../state/auth";
-import { supportGateway } from "./localSupportGateway";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { SupportGateway } from "./supportGateway";
 
-function resetState(): void {
-  localStorage.clear();
-  useAuth.setState({
-    accessToken: null,
-    refreshToken: null,
-    user: null,
-    status: "anonymous",
-  });
-}
+describe("SupportGateway", () => {
+  const gateway = {
+    getSummary: vi.fn(),
+    startDonation: vi.fn(),
+    startMembership: vi.fn(),
+  } as unknown as SupportGateway;
 
-beforeEach(resetState);
-afterEach(() => {
-  localStorage.clear();
-});
+  beforeEach(() => vi.clearAllMocks());
+  afterEach(() => vi.clearAllMocks());
 
-describe("SupportGateway (implementación temporal)", () => {
-  it("devuelve anonymous sin sesión y no inventa subscriberId", async () => {
-    useAuth.setState({ user: null, status: "anonymous" });
-    const summary = await supportGateway.getSummary();
-    expect(summary.authenticated).toBe(false);
-    expect(summary.status).toBe("anonymous");
-    expect(summary.subscriberId).toBeUndefined();
-  });
-
-  it("devuelve preparing + subscriberId (= JWT.sub) cuando hay usuario identificado", async () => {
-    useAuth.setState({
-      user: { user_id: "uuid-1", roles: ["user"], email_verified: true },
-      status: "authenticated",
+  it("devuelve membership real cuando el backend responde", async () => {
+    gateway.getSummary = vi.fn().mockResolvedValue({
+      status: "member",
+      authenticated: true,
+      membership: {
+        status: "active",
+        level: "supporter",
+        started_at: "2026-01-01T00:00:00Z",
+      },
     });
-    const summary = await supportGateway.getSummary();
+    const summary = await gateway.getSummary("token");
     expect(summary.authenticated).toBe(true);
-    expect(summary.status).toBe("preparing");
-    expect(summary.subscriberId).toBe("uuid-1");
+    expect(summary.membership?.level).toBe("supporter");
+  });
+
+  it("nunca inventa membrecía si la API no está disponible", async () => {
+    gateway.getSummary = vi.fn().mockResolvedValue({
+      status: "unavailable",
+      authenticated: true,
+      error: "support_unavailable",
+    });
+    const summary = await gateway.getSummary("token");
+    expect(summary.membership).toBeUndefined();
+    expect(summary.status).toBe("unavailable");
+  });
+
+  it("delega la donación en osap-support y no declara éxito local", async () => {
+    gateway.startDonation = vi.fn().mockRejectedValue(new Error("proveedor de pago: ..."));
+    await expect(gateway.startDonation("token", 500, "EUR", "/return")).rejects.toThrow();
   });
 });
