@@ -293,3 +293,16 @@ PYTHONPATH=<osap-api> python reseed_providers.py
 - **Operaciones**: `deploy.ps1` (despliegue a producción, host `RemoteIA`),
   `pre_dbadmin_tunnel.ps1` (túnel SSH de phpMyAdmin del entorno PRE — script residual de
   otro proyecto, no parte de la operación de OSAP).
+
+---
+
+## osap-support/scripts
+
+### backfill_founder.py
+Backfill de reconocimientos **FOUNDER** (históricos) desde `memberships.is_founder`
+(ADR-015, criterio congelado). Crea reconocimientos `historical/active` permanentes en el
+proyecto canónico `ecosystem` con `origin = criterion:founder.<id>`; **idempotente** (si ya
+existe el par user+ecosystem+founder se omite, nunca duplica) y con `--dry-run` para
+validar sin escribir. `granted_at` = `MIN(started_at)` de las membresías founder del
+usuario. Requiere la migración `0002` de osap-support (tablas de reconocimientos).
+Uso: `python scripts/backfill_founder.py [--dry-run] [--criterion-id founder-2026]`

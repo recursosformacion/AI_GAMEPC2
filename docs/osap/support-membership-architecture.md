@@ -5,6 +5,22 @@
 
 ---
 
+> **Estado documental (2026-09-06):** documento de **análisis y fase previa** (2026-08-28),
+> anterior a la implementación de `osap-support`. **Parcialmente superado por las ADR del
+> registro `support-decisions.md`:**
+> - **ADR-013** — las categorías/niveles musicales propuestas (§E-§F: "Amigo de Chorus",
+>   "Voz del coro", "Director/a", estrellas, etc.) quedan superadas: hoy existen productos
+>   económicos de suscripción reales (cuya revisión comercial queda ABIERTA) y los
+>   reconocimientos serán una entidad distinta con su propia semántica.
+> - **ADR-015** — el perfil público/consentimiento (§E-§G, `user_public_profiles` con
+>   `visibility`) se concreta como consentimiento por reconocimiento (`public`/
+>   `public_since`/`public_revoked_at`); el distintivo "Miembro fundador" (§F) es
+>   compatible como reconocimiento de tipo histórico derivado de criterio congelado.
+>
+> No se reescribe el documento: se conserva como historial del diseño.
+
+---
+
 ## 0. Punto de partida (lo que existe hoy, verificado en código)
 
 ### Chorus (osap-api + web)

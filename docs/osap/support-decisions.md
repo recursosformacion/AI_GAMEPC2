@@ -1,10 +1,13 @@
 # OSAP Support — Decisiones arquitectónicas (ADR) y registro de variantes
 
-> **Registro consolidado de decisiones.** Fase documental. **Sin código, sin repo, sin BD, sin integraciones.**
+> **Registro consolidado de decisiones de OSAP Support.** Nacido en la **fase documental**
+> (2026-08-29, ADR-001…012); el servicio `osap-support` se implementó y se cerró para
+> producción (2026-09-05) siguiendo esas decisiones. ADR-013…017 (2026-09-06) amplían el
+> registro con el dominio de reconocimientos y contribuciones.
 > Fuentes: `support-architecture-separation.md`, `support-frontend-boundary-v1.md`,
 > `support-ecosystem-architecture.md`, `osap-support-architecture.md`, `support-phase1-support-page.md`,
 > + inspección de la implementación actual (`web/src/support`, `web/src/pages/SupportPage.tsx`, `web/src/state/auth.ts`).
-> Fecha: 2026-08-29
+> Fecha: 2026-08-29 · Actualizado: 2026-09-06
 
 ---
 
@@ -201,6 +204,8 @@ PUT /membership/{id}
 **Evita:** exponer/romper el ID de otro usuario; autorización por URL.
 **Queda libre:** endpoints administrativos `/admin/*` (rol admin).
 
+**Excepciones acotadas (sin derogación):** ADR-008 sigue siendo la **regla general** para las superficies de usuario. ADR-015/017 introducen **excepciones explícitas y acotadas**: (1) **lectura pública consentida** de reconocimientos de un tercero (solo registros con `public=true`, sin datos económicos) y (2) **comunicación M2M** service-to-service con service token (p. ej. contribuciones OMR → Support). Los endpoints `.../me` de usuario no cambian.
+
 ---
 
 ### ADR-009 — SupportGateway (frontera frontend)
@@ -294,6 +299,241 @@ Python **≥ 3.12** recomendado (consistentemente con osap-api).
 
 ---
 
+### ADR-013 — Planes económicos, `user_tier` y reconocimientos son dimensiones distintas
+
+**Estado: FIJADA.** (2026-09-06, tras la pasada de coherencia documental con ADR-001…012).
+
+**Decisión fijada:**
+
+Existen **tres dimensiones independientes** que nunca deben fusionarse ni ordenarse como una jerarquía única:
+
+| Dimensión | Significado | Propietario |
+|---|---|---|
+| `user_tier` | clasificación/capacidad de la cuenta de Auth (free/basic/premium, …) | osap-auth |
+| **Plan económico** | relación comercial con Support: producto con importe y periodicidad, anclado a un plan PayPal | osap-support |
+| **Reconocimiento** | badge sobre la relación de una persona con un proyecto, con reglas de concesión propias | osap-support |
+
+Los nombres `supporter`, `contributor`, `voice`, `founder` existen hoy en dos de esas dimensiones con significados distintos que **no se fusionan**:
+
+| Dominio | Qué es | Dónde vive hoy |
+|---|---|---|
+| **Producto económico** | Suscripción/donación con importe y periodicidad, anclada a un plan PayPal | `memberships`/`donations`, `PaymentConfig.plan_*`, `docs/paypal.md` |
+| **Reconocimiento** | badge con reglas de concesión propias | no existe todavía (entidad nueva, ADR-015) |
+
+Que los nombres **coincidan visualmente** (`membership.plan = supporter_monthly`, `recognition.type = supporter`) no es un problema técnico, siempre que nunca se traten como la misma entidad.
+
+**Por qué:** hoy "¿el usuario es supporter?" es ambiguo (¿tiene el plan?, ¿donó?, ¿tiene el badge?, ¿lo es ahora?, ¿lo fue?), y con `user_tier` de Auth podría aparecer además "premium". Fijar las tres dimensiones como independientes elimina la bomba semántica antes de añadir reconocimientos.
+
+**Obliga a:**
+- No tocar ahora `support_members`, `memberships`, `donations`, planes PayPal, webhooks ni la máquina de estados (ADR-004 intacto).
+- Crear reconocimientos como entidad independiente con su propia semántica (ADR-015).
+- No mezclar `user_tier` (Auth) con planes económicos ni con reconocimientos en ningún contrato/UI agregada.
+- Corregir la contradicción documental: `osap-support-architecture.md` §4.2 describía los niveles como "niveles de apoyo (no económico)" cuando son productos con importe → reescrito como producto económico cuyo nombre coincide con reconocimientos (**aplicado 2026-09-06**).
+
+**Evita:** tratar badges como tiers económicos, tiers económicos como badges y cualquiera de ellos como `user_tier`; decisiones de negocio disfrazadas de accidentes de código.
+
+**Queda libre (ABIERTA):** ADR-013 **no decide la revisión comercial** de los productos económicos actuales: no aprueba ni descarta los 8 planes (`supporter/contributor/voice/founder` × monthly/yearly, con sus importes, periodicidades y continuidad). Decide **únicamente** que esa revisión pertenece al dominio económico y que no debe confundirse con los reconocimientos. La semántica concreta de `user_tier` pertenece a osap-auth.
+
+---
+
+### ADR-014 — Una persona = una relación de apoyo al ecosistema (no por aplicación)
+
+**Estado: FIJADA.** (2026-09-06, tras la pasada de coherencia documental).
+
+**Decisión fijada:**
+
+Se mantiene la decisión existente, ahora explícita:
+
+> Una identidad OSAP tiene **una única relación de apoyo al ecosistema** (`support_members`), no una relación por aplicación/proyecto.
+
+No se modela ahora:
+
+```
+María ── apoya OMR
+María ── apoya Chorus        ← descartado en esta fase
+```
+
+**Por qué:** soportar relaciones de apoyo simultáneas por proyecto multiplica la complejidad de PayPal, planes, webhooks, renovaciones, identidad, UX y contabilidad, sin necesidad actual.
+
+**El ámbito `project` se introduce solo donde tiene sentido semántico**, no en la economía:
+- **Reconocimientos**: sí tienen `project_id` (OMR → Contributor; Chorus → Voice) — ADR-015.
+- **Contribuciones**: sí tienen `project_id` — ADR-017.
+- **Economía** (memberships/donations): sin `project` por ahora; la relación es al ecosistema.
+
+**Obliga a:** no migrar `support_members` ni `memberships`/`donations` para añadir dimensión de proyecto en esta fase; los proyectos (y sus reconocimientos/reglas) se registran de forma whitelisted cuando se cree la entidad `projects` (fase 2).
+
+**Evita:** la explosión de membresías simultáneas, mapeos plan→proyecto en webhooks y duplicación de circuitos de pago.
+
+**Queda libre (FUTURA/ABIERTA):** abrir apoyos etiquetados por proyecto si algún día el negocio lo exige; registro canónico de proyectos del ecosistema.
+
+---
+
+### ADR-015 — Modelo de reconocimientos: histórico / derivado / otorgado + consentimiento
+
+**Estado: FIJADA.** (2026-09-06, tras la pasada de coherencia documental).
+
+**Decisión fijada:**
+
+Se crea la entidad de dominio:
+
+```
+recognition
+  id                PK
+  user_id           FK → support_members.user_id (nunca una identidad local)
+  project_id        ámbito del reconocimiento. FK → projects (whitelisted). Siempre poblado.
+  type              SUPPORTER | CONTRIBUTOR | VOICE | FOUNDER
+  kind              historical | derived | granted   (naturaleza)
+  granted_at        momento en que el reconocimiento es efectivo
+  granted_by        nullable. SOLO cuando kind=granted: admin {user_id} o system.
+                    NULL en historical/derived: no hay concesión manual.
+  origin            nullable. Mecanismo de producción cuando NO es concesión manual:
+                      · derived   → referencia a la regla (ej. rule:supporter.active_or_donated_12m,
+                                     rule:contributor.omr_evidence)
+                      · historical→ referencia al criterio congelado (ej. criterion:founder.window_2026)
+                      · granted   → NULL (el mecanismo es la concesión; vive en granted_by)
+  reason            texto corto, auditable
+  active_until      nullable → NULL = no caduca
+  public            bool  = consentimiento expreso opt-in
+  public_since      nullable
+  public_revoked_at nullable
+```
+
+**`granted_by` es opcional y solo significa concesión manual para `kind=granted`.** Para FOUNDER y SUPPORTER la columna queda NULL y quien explica la existencia del reconocimiento es `origin` (criterio o regla). Así no hay una columna obligatoria que conceptualmente no corresponde a los reconocimientos derivados.
+
+**Ámbito por proyecto y proyecto canónico de ecosistema.** El registro `projects` futuro incluirá un **proyecto canónico de ámbito `ecosystem`** (distingo de OMR, Chorus, etc.). Los reconocimientos que se derivan de la relación económica global — SUPPORTER (ADR-016) y el criterio histórico FOUNDER — usan ese proyecto canónico, porque su relación de origen no pertenece a OMR ni a Chorus. Esto mantiene `project_id` siempre poblado y el modelo uniforme, **sin NULL semántico** como sustituto de "global".
+
+Naturaleza y concesión por tipo:
+
+| type | Naturaleza | project_id | Cómo se produce |
+|---|---|---|---|
+| FOUNDER | histórica | canónico `ecosystem` | derivado del criterio temporal congelado; `origin = criterion:founder.*`; `active_until = NULL` |
+| SUPPORTER | derivado | canónico `ecosystem` | regla de vigencia ADR-016; nunca manual; `origin = rule:supporter.*` |
+| CONTRIBUTOR | derivado u otorgado | proyecto concreto (ej. OMR) | derivado por Support a partir de evidencia del proyecto, **o** concedido por administración según esa evidencia (ADR-017) |
+| VOICE | otorgado | proyecto concreto (ej. Chorus) | concedido por administración (`kind=granted`, `granted_by`); no se deriva de evidencia |
+
+**Consentimiento:** `public = true` significa *"el usuario ha autorizado expresamente que este reconocimiento aparezca en público"*, y es **revocable** (→ `public_revoked_at`, se oculta). Chorus y cualquier app solo leen reconocimientos consentidos y **nunca** datos económicos (importes, historial, método).
+
+**Por qué:** "todo es un badge y alguien pulsa un botón" pierde la distinción esencial entre lo que se deriva de un criterio (Founder), lo que se deriva de una condición (Supporter) y lo que se otorga con evidencia o administración (Contributor/Voice). Y `public=true` sin consentimiento revocable no es privacidad.
+
+**Obliga a:**
+- Reconocimientos con ámbito de proyecto (con canónico `ecosystem`), producción auditable (`origin`/`granted_by`/`reason`), y reglas de derivación en Support (no en las apps).
+- Superficies API nuevas que matizan ADR-008: `.../me` (usuario), lectura **pública consentida** (badges de un tercero con `public=true`) y **M2M** con service token para contextos internos. Ninguna devuelve datos económicos.
+- Migración futura: tabla `recognitions` + registro `projects` (fase 2).
+
+**Evita:** autobombo, badges inventados por apps, reconocimientos globales que arrastran la comunidad de OMR a Chorus, NULL con significado semántico, y exposición pública sin control del usuario.
+
+**Queda libre (ABIERTA):** otros tipos de reconocimiento futuros por proyecto; si algún reconocimiento otorgado debe caducar (`active_until` poblado); criterio concreto del Founder; forma exacta del registro `projects`.
+
+---
+
+### ADR-016 — Vigencia de Supporter: regla derivada "C" (vigente vs histórico)
+
+**Estado: FIJADA.** (2026-09-06, tras la pasada de coherencia documental).
+
+**Decisión fijada:**
+
+`SUPPORTER` es un reconocimiento **derivado** (ADR-015), nunca otorgado manualmente, con esta regla de negocio explícita:
+
+> Supporter está **vigente** mientras exista **una membresía activa** **o** **una donación completada en los últimos 12 meses**.
+
+La ventana (12 meses) es un **parámetro de negocio de Support/ecosistema**, no por proyecto. Dado que la relación económica es global al ecosistema (ADR-014), la regla de vigencia es **única** para el servicio; si en el futuro campañas o proyectos necesitan reglas distintas, eso será una decisión nueva (queda ABIERTA), no un ajuste local.
+
+**Estados de la regla:**
+
+- **Vigente** — se muestra como Supporter (en público solo si existe consentimiento, ADR-015).
+- **Histórico** — deja de cumplir la condición; permanece en auditoría, pero **no aparece como badge vigente** ni en lecturas públicas.
+
+La ADR fija la **regla de negocio**; **no** obliga todavía a una estrategia concreta de filas para las sucesivas activaciones/desactivaciones (fila mutable, pares vigente/histórico, tabla de estados…). Eso se decide en el diseño de la tabla/migración (fase 2).
+
+**Variantes descartadas:**
+- **A** (solo membresía activa): deja fuera a las donaciones puntuales, que hoy son un circuito real y cerrado.
+- **B** (solo donación ≤12m): excluye la relación recurrente, que es el núcleo actual.
+- "Donó alguna vez → Supporter para siempre": badge perpetuo sin relación, filtra información económica antigua y no refleja el estado real.
+
+**Comportamiento resultante:**
+- La derivación la computa Support (al completarse un pago, al renovar, al cancelar/expirar y al vencerse la ventana). Las apps nunca la calculan.
+- Al dejar de cumplirse la condición, el reconocimiento pasa a **histórico** y se **oculta de lo público** automáticamente (si estaba consentido).
+
+**Por qué:** una regla única y explícita elimina la ambigüedad de "¿es Supporter?" (ADR-013) y da reconocimiento también a quien apoya de forma puntual, sin convertirlo en un distintivo eterno.
+
+**Obliga a:** definir la derivación como caso de uso (o job) en Support con las transiciones descritas; alinear la caducidad con la ocultación pública (ADR-015); parametrizar la ventana en la configuración del servicio.
+
+**Evita:** Supporter perpetuo por una donación antigua; badge que miente sobre el estado actual; interpretaciones distintas según la app o el proyecto.
+
+**Queda libre (ABIERTA):** ajustar la duración de la ventana; política de "Supporter histórico" interno para la wall de supporters; reglas por proyecto/campaña en el futuro (decisión separada); estrategia de persistencia de vigente/histórico.
+
+---
+
+### ADR-017 — Contrato de contribuciones y composición (OMR → Support → Chorus)
+
+**Estado: FIJADA.** (2026-09-06, tras la pasada de coherencia documental).
+
+**Decisión fijada:**
+
+**A. Las contribuciones son agregados con origen, nunca autodeclaraciones**
+
+`osap-support` **no** almacena el detalle ("María corrigió 247 obras"). Almacena referencias de contribución emitidas por el sistema fuente:
+
+```
+contribution
+  user_id
+  project_id
+  type            CONTENT | REVIEW | TRANSLATION | DEVELOPMENT |
+                  DOCUMENTATION | COMMUNITY | PROMOTION | OTHER
+  summary         agregado corto, human-readable (ej. "revisión de 247 obras")
+  source          sistema que emite la contribución (ej. "omr")
+  source_reference  id idempotente del origen (ej. omr/review-summary/1234)
+  created_at
+  UNIQUE(source, source_reference)
+```
+
+**B. El usuario nunca declara su propia contribución**
+
+No se permite "He revisado 2.000 partituras". El flujo es:
+
+```
+OMR detecta actividad → emite evento/contribución (M2M, idempotente)
+    → osap-support registra la referencia + evalúa reconocimiento
+```
+
+La evidencia la genera el sistema correspondiente; el usuario, como mucho, solicita colaborar.
+
+**C. Una contribución registrada no implica necesariamente un reconocimiento**
+
+`contribution` y `recognition` son cosas distintas: puede existir una contribución registrada **sin** que alcance el criterio de CONTRIBUTOR. No toda actividad se convierte en un badge; el reconocimiento solo nace cuando la regla/criterio definido en Support se cumple. La contribución sin reconocimiento sigue siendo dato útil de Support (historial de actividad reconocida por el sistema), pero no produce badge por sí sola.
+
+Semántica de los reconocimientos derivados de contribución:
+
+- **CONTRIBUTOR** puede producirse de dos formas, siempre sobre evidencia del proyecto (OMR):
+  - **derivado** automáticamente por Support cuando la evidencia acumulada alcanza el criterio de la regla (`kind=derived`, `origin = rule:contributor.omr_evidence`), o
+  - **otorgado** por administración que revisa y confirma esa misma evidencia (`kind=granted`, `granted_by = admin {user_id}`).
+- **VOICE** es propiamente otorgado por administración; no se deriva de evidencia musical.
+
+**D. Fuentes de verdad por dominio**
+
+| Dato | Fuente de verdad |
+|---|---|
+| Identidad (`user_id`, nombre, avatar) | osap-auth |
+| Actividad musical (obras aportadas, revisiones, evidencia) | OMR |
+| Apoyos, reconocimientos públicos, contribuciones-ref | osap-support |
+| Perfil comunitario compuesto | osap-chorus (compone, no duplica) |
+
+Chorus construye el perfil compuesto leyendo a Auth, OMR y Support, y **no** se convierte en dueño de ninguno de esos datos ni en una base de datos paralela del ecosistema.
+
+**Por qué:** duplicar el detalle en Support crea deriva y superficie RGPD; permitir autodeclaraciones abre la puerta al autobombo y la manipulación; la composición por Chorus evita una cuarta copia de usuarios/donaciones/badges; y forzar que cada contribución sea un reconocimiento degradaría los badges.
+
+**Obliga a:**
+- Contrato M2M idempotente (service token) OMR→Support con `UNIQUE(source, source_reference)`.
+- Matizar ADR-008: además de `.../me`, existirán superficies **pública consentida** y **M2M** para reconocimientos/contribuciones; los endpoints de usuario siguen sin exponer IDs ajenos por URL.
+- No guardar en Support: las 247 obras, el detalle de actividad ni datos económicos en entidades consumibles por la comunidad.
+- Reglas de derivación de CONTRIBUTOR en Support (criterio sobre evidencia), alineadas con ADR-015.
+
+**Evita:** el ecosistema con cuatro "usuarios" duplicados (Auth/OMR/Support/Chorus), drift de contadores, manipulación de contribuciones por autodeclaración y la inflación de badges (cada actividad → badge).
+
+**Queda libre (ABIERTA):** tipos de contribución adicionales, cadencia/eventos exactos que OMR emite, criterio numérico de la regla de CONTRIBUTOR, plantillas de resumen por proyecto, y el formato concreto del evento OMR→Support cuando se implemente la fase 4.
+
+---
+
 ## Tabla global de variantes
 
 | ID | Decisión | Variante | Estado | Motivo |
@@ -371,8 +611,8 @@ Python **≥ 3.12** recomendado (consistentemente con osap-api).
 - Frecuencia exacta del scheduler.
 - Política definitiva de retención fiscal.
 - Comunidad/social (perfil público, "Descubrir").
-- Recompensas por donación.
-- Niveles definitivos de membresía (nombres/umbrales).
+- Recompensas por donación (relacionado con la vigencia de Supporter, ADR-016).
+- **Revisión comercial de los productos económicos actuales** (nombres/umbrales/continuidad). ADR-013 **no la decide**: solo fija que pertenece al dominio económico y no debe confundirse con los reconocimientos.
 - Diseño final del checkout.
 - Panel administrativo.
 - Implementación definitiva de `SupportApiClient`.

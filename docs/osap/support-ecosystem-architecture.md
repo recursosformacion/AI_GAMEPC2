@@ -6,6 +6,23 @@
 
 ---
 
+> **Estado documental (2026-09-06):** documento de **análisis y fase previa** (2026-08-28),
+> anterior a la implementación de `osap-support`. Su núcleo sigue vigente (servicio único de
+> apoyo del ecosistema; "una persona = una relación de apoyo" → ADR-014). **Parcialmente
+> superado por las ADR del registro `support-decisions.md`:**
+> - **ADR-013** — el servicio se llama `osap-support` (no `osap-membership`); los niveles
+>   propuestos "Amigo/Voz/Coro/Miembro fundador" (§13-§14) quedan superados por los
+>   productos económicos reales (cuya revisión comercial queda ABIERTA); se distingue
+>   producto económico (memberships/donations) de reconocimiento (entidad propia).
+> - **ADR-015** — el consentimiento/perfil público (§7-§9, tabla `public_profiles` con
+>   `visibility`) se concreta como consentimiento por reconocimiento
+>   (`public`/`public_since`/`public_revoked_at`) sobre la entidad `recognition`, con ámbito
+>   de proyecto y un proyecto canónico de ecosistema.
+>
+> No se reescribe el documento: se conserva como historial del diseño.
+
+---
+
 ## 0. Aclaración de conceptos (naming)
 
 Para no arrastrar ambigüedad, fijamos la terminología **tal y como está en el código y docs**:

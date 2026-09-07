@@ -76,7 +76,7 @@ Propósito: es la entidad estable que identifica "un usuario de OSAP con relaci�
 | `id` | bigint PK auto | id interno |
 | `user_id` | CHAR(36) FK→support_members | |
 | `status` | enum(pending, active, past_due, cancelled, expired) | máquina de estados §5 |
-| `level` | enum(supporter, contributor, voice, founder) | niveles de apoyo (no económico) |
+| `level` | enum(supporter, contributor, voice, founder) | **producto económico** (suscripción con importe/periodicidad anclados a un plan del proveedor). El nombre coincide con reconocimientos futuros, pero son dominios distintos (ADR-013). Los reconocimientos viven en entidad propia (ADR-015) |
 | `periodicity` | enum(monthly, yearly) | |
 | `amount_minor` | int | importe en **mínimas unidades** (céntimos) |
 | `currency` | char(3) | ISO 4217 |

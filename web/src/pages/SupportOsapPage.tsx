@@ -4,7 +4,7 @@ import { LoginForm } from "../components/LoginForm";
 import { RegisterForm } from "../components/RegisterForm";
 import { useOidcLogin } from "../components/useOidcLogin";
 import { useI18n } from "../i18n/I18n";
-import { startDonation, useSupport } from "../support";
+import { startDonation, startMembership, useSupport } from "../support";
 import { useAuth } from "../state/auth";
 
 // Página "Apoya a OSAP": explica el proyecto y ofrece el flujo de apoyo REAL contra
@@ -18,6 +18,24 @@ import { useAuth } from "../state/auth";
 const DONATION_PRESET_MINOR = 500; // 5,00 EUR (centavos) — importe real validado en backend
 const RETURN_URL = typeof window === "undefined" ? "/support" : `${window.location.origin}/support`;
 
+// Estados no activos de membership que el backend confirma (frontend NO decide);
+// solo se traducen a i18n los valores que osap-support ya respondió en /membership/me.
+
+const SUPPORTER_PLANS = [
+  {
+    periodicity: "monthly",
+    titleKey: "osapSupport.planMonthly",
+    priceKey: "osapSupport.planMonthlyPrice",
+    ctaKey: "osapSupport.joinMonthly",
+  },
+  {
+    periodicity: "yearly",
+    titleKey: "osapSupport.planYearly",
+    priceKey: "osapSupport.planYearlyPrice",
+    ctaKey: "osapSupport.joinYearly",
+  },
+] as const;
+
 export function SupportOsapPage() {
   const { t } = useI18n();
   const support = useSupport();
@@ -27,6 +45,8 @@ export function SupportOsapPage() {
   const [authOpen, setAuthOpen] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
   const [starting, setStarting] = useState(false);
+  const [membershipStarting, setMembershipStarting] = useState<string | null>(null);
+  const [membershipError, setMembershipError] = useState<string | null>(null);
 
   const openLogin = () => {
     if (support.authenticated) return;
@@ -59,6 +79,39 @@ export function SupportOsapPage() {
       }
     })();
   };
+
+  const startMembershipPlan = (periodicity: "monthly" | "yearly") => {
+    // Membresía real: osap-support → PayPal. Sin token no se intenta el checkout.
+    if (!accessToken) {
+      openLogin();
+      return;
+    }
+    setMembershipStarting(periodicity);
+    setMembershipError(null);
+    void (async () => {
+      try {
+        const checkout = await startMembership(accessToken, "supporter", periodicity, RETURN_URL);
+        window.location.assign(checkout.checkout_url);
+      } catch (error) {
+        setMembershipError(error instanceof Error ? error.message : "support unavailable");
+        setMembershipStarting(null);
+      }
+    })();
+  };
+
+  const membershipView = support.membership;
+  const activeSupporter = membershipView?.status === "active";
+  const membershipStatus = membershipView?.status;
+  const statusText =
+    membershipStatus === "pending"
+      ? t("osapSupport.statePending")
+      : membershipStatus === "past_due"
+        ? t("osapSupport.statePastDue")
+        : membershipStatus === "cancelled"
+          ? t("osapSupport.stateCancelled")
+          : membershipStatus === "expired"
+            ? t("osapSupport.stateExpired")
+            : null;
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
@@ -101,6 +154,59 @@ export function SupportOsapPage() {
       <section className="rounded border border-osap-border bg-osap-surface p-5">
         <h2 className="text-lg font-semibold">{t("osapSupport.meanTitle")}</h2>
         <p className="mt-2 text-sm text-osap-muted">{t("osapSupport.meanBody")}</p>
+      </section>
+
+      {/* Membresía Supporter (backend real /membership/me + checkout) */}
+      <section className="rounded border border-osap-border bg-osap-surface p-5">
+        <h2 className="text-lg font-semibold">{t("osapSupport.membershipTitle")}</h2>
+        <p className="mt-2 text-sm text-osap-muted">{t("osapSupport.membershipIntro")}</p>
+
+        {!support.authenticated ? (
+          <div className="mt-4 text-center">
+            <p className="text-sm text-osap-muted">{t("osapSupport.loginToJoin")}</p>
+            <div className="mt-3">
+              <Button onClick={openLogin}>{t("auth.login")}</Button>
+            </div>
+          </div>
+        ) : support.status === "loading" ? (
+          <p className="mt-4 text-sm text-osap-muted">…</p>
+        ) : support.status === "unavailable" ? null : activeSupporter ? (
+          <div className="mt-4 text-center">
+            <p className="text-sm font-medium text-osap-accent">{t("osapSupport.activeMember")}</p>
+            <p className="mt-1 text-sm text-osap-muted">
+              {membershipView?.periodicity === "yearly"
+                ? t("osapSupport.planYearly")
+                : t("osapSupport.planMonthly")}
+            </p>
+          </div>
+        ) : statusText ? (
+          <p className="mt-4 text-sm text-osap-muted">{statusText}</p>
+        ) : (
+          <>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {SUPPORTER_PLANS.map((plan) => (
+                <div
+                  key={plan.periodicity}
+                  className="rounded border border-osap-border bg-osap-bg p-4 text-center"
+                >
+                  <p className="text-sm font-semibold">{t(plan.titleKey)}</p>
+                  <p className="mt-1 text-sm text-osap-muted">{t(plan.priceKey)}</p>
+                  <div className="mt-3">
+                    <Button
+                      onClick={() => startMembershipPlan(plan.periodicity)}
+                      disabled={membershipStarting !== null}
+                    >
+                      {membershipStarting === plan.periodicity ? "…" : t(plan.ctaKey)}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {membershipError && (
+              <p className="mt-3 text-xs text-red-500">{membershipError}</p>
+            )}
+          </>
+        )}
       </section>
 
       {/* Qué ocurrirá después */}

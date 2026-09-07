@@ -6,6 +6,19 @@
 
 ---
 
+> **Estado documental (2026-09-06):** documento de **planificación de fase previa**
+> (2026-08-28). Muchas de sus decisiones abiertas ya se resolvieron y quedaron registradas
+> en `support-decisions.md` (ADR-001…012, FIJADAS) y en las ADR posteriores de esta misma
+> familia de apoyo: **ADR-013** (producto económico vs reconocimiento; revisión comercial
+> ABIERTA), **ADR-014** (una persona = una relación de apoyo al ecosistema), **ADR-015**
+> (modelo de reconocimientos + consentimiento), **ADR-016** (vigencia de Supporter) y
+> **ADR-017** (contrato de contribuciones OMR → Support → Chorus). Los nombres
+> `osap-membership`/niveles que aparecen en este plan quedan superados por esas ADR.
+>
+> No se reescribe el documento: se conserva como historial del diseño.
+
+---
+
 ## 1. Revisión de conclusiones anteriores (y señalamientos)
 
 ### Lo ya resuelto y en marcha
