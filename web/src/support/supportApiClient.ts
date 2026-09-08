@@ -15,6 +15,8 @@ const SUPPORT_BASE =
   (globalThis as { VITE_SUPPORT_API?: string }).VITE_SUPPORT_API?.replace(/\/$/, "") ??
   "/support-api/api/v1";
 
+import { useAuth } from "../state/auth";
+
 export class SupportApiClient {
   constructor(
     private readonly baseUrl: string = SUPPORT_BASE,
@@ -49,23 +51,50 @@ export class SupportApiClient {
   }
 
   private async get(path: string, token: string): Promise<unknown> {
-    const res = await this.doFetch(`${this.baseUrl}${path}`, {
-      headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
-    });
-    return this.decode(res);
+    return this.decode(
+      await this._authorizedFetch(`${this.baseUrl}${path}`, {
+        headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+      }, token),
+    );
   }
 
   private async post(path: string, token: string, body: unknown): Promise<unknown> {
-    const res = await this.doFetch(`${this.baseUrl}${path}`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-    return this.decode(res);
+    return this.decode(
+      await this._authorizedFetch(`${this.baseUrl}${path}`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify(body),
+      }, token),
+    );
+  }
+
+  // 401 → refresh (una vez) → reintento. Si vuelve a fallar, sesión expirada: logout.
+  private async _authorizedFetch(
+    input: string,
+    init: RequestInit,
+    _token: string,
+  ): Promise<Response> {
+    let res = await this.doFetch(input, init);
+    if (res.status !== 401) {
+      return res;
+    }
+    const { refreshSession } = useAuth.getState();
+    const refreshed = await refreshSession();
+    if (!refreshed) {
+      return res; // refreshSession ya hizo logout
+    }
+    const newToken = useAuth.getState().accessToken ?? "";
+    const headers = new Headers(init.headers);
+    headers.set("Authorization", `Bearer ${newToken}`);
+    res = await this.doFetch(input, { ...init, headers });
+    if (res.status === 401) {
+      useAuth.getState().logout();
+    }
+    return res;
   }
 
   private async decode(res: Response): Promise<unknown> {

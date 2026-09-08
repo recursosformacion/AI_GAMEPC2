@@ -18,6 +18,19 @@ function stubFetch() {
         headers: { "Content-Type": "application/json" },
       });
     }
+    if (url.includes("/providers")) {
+      // Discover usa el catálogo de proveedores: CPDL no disponible (candidato),
+      // IMSLP/OMR disponibles (ya cableados → no aparecen en Descubrir).
+      const providers = [
+        { provider_id: "cpdl", name: "CPDL", available: false, description: { en: "CPDL provider" }, formats: ["musicxml"] },
+        { provider_id: "imslp", name: "IMSLP", available: true, description: { en: "IMSLP" }, formats: [] },
+        { provider_id: "omr", name: "Open Music Repository", available: true, description: { en: "OMR" }, formats: [] },
+      ];
+      return new Response(JSON.stringify({ success: true, request_id: "r", data: providers }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
     return new Response(JSON.stringify({ success: true, request_id: "r", data: [] }), {
       status: 200,
       headers: { "Content-Type": "application/json" },

@@ -15,16 +15,16 @@ import { useSystem } from "../state/system";
 
 const MAIN_NAV = [
   { to: "/", key: "nav.home" },
-  { to: "/studio", key: "nav.studio" },
-  { to: "/discover", key: "nav.discover" },
-  { to: "/catalog", key: "nav.sources" },
+  { to: "/explore", key: "nav.explore" },
   { to: "/composers", key: "nav.composers" },
-  { to: "/knowledge/observations", key: "nav.knowledge" },
+  { to: "/collaborators", key: "nav.collaborators" },
+  { to: "/about/how-it-works", key: "nav.howItWorks" },
   { to: "/support", key: "nav.support" },
-  { to: "/about", key: "nav.about" },
 ] as const;
 
 const ADMIN_MENU = [
+  { to: "/admin", key: "admin.resumen" },
+  { to: "/admin/users", key: "adminUsers.title" },
   { to: "/admin/source-suggestions", key: "admin.sourceSuggestions" },
   { to: "/admin/corrections", key: "admin.corrections" },
   { to: "/jobs", key: "jobs" },
@@ -85,8 +85,8 @@ export function Header() {
     })();
   };
 
-  // Sin sesión: pulsar 👤 abre directamente el login OIDC (popup). Si OIDC no está
-  // configurado, cae al desplegable con login/registro de respaldo (email/password).
+  // Sin sesión: pulsar 👤 abre el login de OSAP (popup OIDC). Si no se puede abrir el
+  // popup (bloqueado / OIDC no configurado), cae al panel login/registro de respaldo.
   const openAuth = () => {
     void (async () => {
       const opened = await startOidc();

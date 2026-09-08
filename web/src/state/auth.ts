@@ -50,6 +50,8 @@ function decodeUser(accessToken: string): FrontendUser {
   }
 }
 
+let refreshInFlight: Promise<boolean> | null = null;
+
 export const useAuth = create<AuthState>((set, get) => ({
   accessToken: null,
   refreshToken: null,
@@ -107,26 +109,38 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   refreshSession: async () => {
-    const refreshToken = get().refreshToken;
-    if (!refreshToken) {
-      get().logout();
-      return false;
+    // Single-flight: si ya hay un refresh en curso, se reutiliza (evita que la
+    // rotación del refresh token genere 401 en llamadas concurrentes y cierre sesión).
+    if (refreshInFlight) {
+      return refreshInFlight;
     }
-    set({ status: "refreshing" });
+    refreshInFlight = (async () => {
+      const refreshToken = get().refreshToken;
+      if (!refreshToken) {
+        get().logout();
+        return false;
+      }
+      set({ status: "refreshing" });
+      try {
+        const session = await authClient.refresh(refreshToken);
+        // Rotación: se guarda SIEMPRE el nuevo refresh (el anterior queda consumido).
+        localStorage.setItem(REFRESH_KEY, session.refresh_token);
+        set({
+          accessToken: session.access_token,
+          refreshToken: session.refresh_token,
+          user: decodeUser(session.access_token),
+          status: "authenticated",
+        });
+        return true;
+      } catch {
+        get().logout();
+        return false;
+      }
+    })();
     try {
-      const session = await authClient.refresh(refreshToken);
-      // Rotación: se guarda SIEMPRE el nuevo refresh (el anterior queda consumido).
-      localStorage.setItem(REFRESH_KEY, session.refresh_token);
-      set({
-        accessToken: session.access_token,
-        refreshToken: session.refresh_token,
-        user: decodeUser(session.access_token),
-        status: "authenticated",
-      });
-      return true;
-    } catch {
-      get().logout();
-      return false;
+      return await refreshInFlight;
+    } finally {
+      refreshInFlight = null;
     }
   },
 

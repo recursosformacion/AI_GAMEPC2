@@ -29,8 +29,14 @@ describe("Routing and navigation (V3.4)", () => {
 
   it("renders Home with the brand at /", () => {
     renderAt("/");
-    expect(screen.getByRole("heading", { name: "OpenMusicRepository" })).toBeInTheDocument();
+    expect(screen.getAllByText("OpenMusicRepository").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("search")).toBeInTheDocument();
+  });
+
+  it("renders Explore (container) at /explore", () => {
+    renderAt("/explore");
+    expect(screen.getByRole("heading", { name: "Explore" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Discover" })).toBeInTheDocument();
   });
 
   it("renders Discover at /discover", () => {
@@ -64,8 +70,9 @@ describe("Routing and navigation (V3.4)", () => {
     expect(screen.getByRole("navigation", { name: /breadcrumb/ })).toBeInTheDocument();
     expect(screen.getAllByText(/powered by OSAP/).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "Home" }).length).toBeGreaterThan(0);
-    expect(screen.getByRole("link", { name: "Discover" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Sources" })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Knowledge" })).toBeInTheDocument();
+    expect(screen.getAllByRole("link", { name: "Explore" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: "Collaborators" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: "How it works" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: "Support OSAP" }).length).toBeGreaterThan(0);
   });
 });

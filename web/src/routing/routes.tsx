@@ -5,15 +5,19 @@ import { AdminComposerDetailPage } from "../pages/AdminComposerDetailPage";
 import { AdminComposersPage } from "../pages/AdminComposersPage";
 import { AdminSourceSuggestionsPage } from "../pages/AdminSourceSuggestionsPage";
 import { AdminProvidersPage } from "../pages/AdminProvidersPage";import { AdminCorrectionsPage } from "../pages/AdminCorrectionsPage";
+import { AdminUserDetailPage } from "../pages/AdminUserDetailPage";
+import { AdminUsersPage } from "../pages/AdminUsersPage";
 import { AdminPage } from "../pages/AdminPage";
 import { AliasPage } from "../pages/AliasPage";
 import { AuthCallbackPage } from "../pages/AuthCallbackPage";
+import { CollaboratorsPage } from "../pages/CollaboratorsPage";
 import { HowItWorksPage } from "../pages/HowItWorksPage";
 import { CandidatesPage } from "../pages/CandidatesPage";
 import { ComposerDetailPage } from "../pages/ComposerDetailPage";
 import { ComposerPage } from "../pages/ComposerPage";
 import { ComposersPage } from "../pages/ComposersPage";
 import { DiscoverPage } from "../pages/DiscoverPage";
+import { ExplorePage } from "../pages/ExplorePage";
 import { HomePage } from "../pages/HomePage";
 import { JobsPage } from "../pages/JobsPage";
 import { FactsPage, ObservationsPage, SuggestionsPage } from "../pages/KnowledgePages";
@@ -29,6 +33,7 @@ export function AppRoutes() {
     <Routes>
       <Route element={<Layout />}>
         <Route path="/" element={<HomePage />} />
+        <Route path="/explore" element={<ExplorePage />} />
         <Route path="/oidc/callback" element={<AuthCallbackPage />} />
         <Route path="/discover" element={<DiscoverPage />} />
         <Route path="/support" element={<SupportOsapPage />} />
@@ -40,6 +45,8 @@ export function AppRoutes() {
         <Route path="/composers" element={<ComposersPage />} />
         <Route path="/composers/:composerId" element={<ComposerDetailPage />} />
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/admin/users" element={<AdminUsersPage />} />
+        <Route path="/admin/users/:userId" element={<AdminUserDetailPage />} />
         <Route path="/admin/composers" element={<AdminComposersPage />} />
         <Route path="/admin/composers/:composerId" element={<AdminComposerDetailPage />} />
         <Route path="/admin/aliases" element={<AliasPage />} />
@@ -48,6 +55,7 @@ export function AppRoutes() {
         <Route path="/admin/corrections" element={<AdminCorrectionsPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/about/how-it-works" element={<HowItWorksPage />} />
+        <Route path="/collaborators" element={<CollaboratorsPage />} />
         <Route path="/candidates" element={<CandidatesPage />} />
         <Route path="/resolution" element={<WorkResolutionPage />} />
         <Route path="/knowledge" element={<Navigate to="/knowledge/observations" replace />} />

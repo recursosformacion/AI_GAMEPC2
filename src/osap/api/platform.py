@@ -67,7 +67,15 @@ from src.osap.domain.output_format import OutputFormat
 from src.osap.domain.principal import Principal
 from src.osap.domain.resolve_request import ResolveRequestBuilder
 from src.osap.domain.value_objects import ProviderId
-from src.osap.domain.votes import ComposerStats, WorkStats, WorkVote
+from src.osap.domain.votes import (
+    ComposerStats,
+    ForbiddenError,
+    UnauthenticatedError,
+    WorkNotFoundError,
+    WorkStats,
+    WorkVote,
+)
+from src.osap.infrastructure.auth.auth_proxy_client import AuthProxyError
 from src.osap.infrastructure.resolution.acquisition_service import AcquisitionService
 from src.osap.infrastructure.resolution.provider_acquirer import CatalogAcquirer, IProviderAcquirer
 from src.osap.infrastructure.resolution.universe_matching import SimpleUniverseMatcher
@@ -1975,6 +1983,56 @@ class PlatformApi:
             "source_suggestions": suggestions,
             "storage": storage,
         }
+
+    # --- mantenimiento de usuarios (façade → osap-auth; la BD es de Auth) ----
+
+    def admin_users_list(self, token: str | None) -> object:
+        self._require_admin(token)
+        bearer = token or ""
+        return self._auth_result(*self._container.auth_proxy().admin_users(bearer))
+
+    def admin_user_get(self, token: str | None, user_id: str) -> object:
+        self._require_admin(token)
+        bearer = token or ""
+        return self._auth_result(*self._container.auth_proxy().admin_user(bearer, user_id))
+
+    def admin_user_update(
+        self,
+        token: str | None,
+        user_id: str,
+        *,
+        name: str | None = None,
+        roles: list[str] | None = None,
+        status: str | None = None,
+    ) -> object:
+        self._require_admin(token)
+        bearer = token or ""
+        payload: dict[str, object] = {}
+        if name is not None:
+            payload["name"] = name
+        if roles is not None:
+            payload["roles"] = roles
+        if status is not None:
+            payload["status"] = status
+        return self._auth_result(
+            *self._container.auth_proxy().admin_update_user(bearer, user_id, payload)
+        )
+
+    def admin_user_disable(self, token: str | None, user_id: str) -> object:
+        """Soft delete: deshabilitar (conserva identidad e historial en Auth)."""
+        return self.admin_user_update(token, user_id, status="disabled")
+
+    @staticmethod
+    def _auth_result(code: int, doc: object) -> object:
+        if 200 <= code < 300:
+            return doc
+        if code == 401:
+            raise UnauthenticatedError("osap-auth: credenciales de administración inválidas")
+        if code == 403:
+            raise ForbiddenError("osap-auth: rol admin requerido")
+        if code == 404:
+            raise WorkNotFoundError("User not found")
+        raise AuthProxyError(f"osap-auth devolvió HTTP {code}")
 
     # --- proveedores dinámicos + config (BD operativa) -----------------------
 

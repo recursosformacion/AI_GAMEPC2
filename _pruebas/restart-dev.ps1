@@ -29,8 +29,25 @@ $logs = Join-Path $root '_pruebas\logs'
 New-Item -ItemType Directory -Force -Path $logs | Out-Null
 
 function Stop-Port([int]$port) {
+  # Mata el proceso que escucha en el puerto y, si no aparece, cualquier python cuyo
+  # CommandLine contenga ese puerto (evita "fantasmas" tras uvicorn con reload).
   Get-NetTCPConnection -LocalPort $port -State Listen -ErrorAction SilentlyContinue |
     ForEach-Object { Stop-Process -Id $_.OwningProcess -Force -ErrorAction SilentlyContinue }
+  Get-CimInstance Win32_Process -Filter "Name LIKE '%python%'" -ErrorAction SilentlyContinue |
+    Where-Object { $_.CommandLine -match "--port $port" } |
+    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+  Start-Sleep -Milliseconds 700
+}
+
+function Wait-Port([int]$port, [string]$path, [string]$name) {
+  for ($i = 0; $i -lt 12; $i++) {
+    try {
+      $r = Invoke-WebRequest -Uri "http://127.0.0.1:$port$path" -TimeoutSec 2 -SkipHttpErrorCheck
+      if ($r.StatusCode -lt 500) { return }
+    } catch { }
+    Start-Sleep -Milliseconds 600
+  }
+  throw "No responde $name en http://127.0.0.1:$port$path"
 }
 
 function Start-Uvi([string]$dir, [string]$py, [string[]]$argsList, [string]$name) {
@@ -57,6 +74,7 @@ if (-not $SkipBuild) {
 Write-Host '== Parando servicios =='
 Stop-Port 8000
 Stop-Port 8001
+Stop-Port 8300
 if (-not $NoAuth) { Stop-Port 8200 }
 Start-Sleep -Seconds 1
 
@@ -65,10 +83,18 @@ Start-Uvi (Join-Path $root 'osap-storage') (Join-Path $root 'osap-storage\.venv\
   @('-m', 'uvicorn', 'api.main:app', '--host', '127.0.0.1', '--port', '8000') 'storage'
 Start-Uvi (Join-Path $root 'osap-api') 'python' `
   @('-m', 'uvicorn', '--factory', 'src.osap.api.platform_app:create_platform_app', '--host', '127.0.0.1', '--port', '8001') 'api'
+Start-Uvi (Join-Path $root 'osap-support') 'python' `
+  @('-m', 'uvicorn', '--factory', 'api.main:create_app_from_settings', '--host', '127.0.0.1', '--port', '8300') 'support'
 if (-not $NoAuth) {
   Start-Uvi (Join-Path $root 'osap-auth') (Join-Path $root 'osap-auth\.venv\Scripts\python.exe') `
     @('-m', 'uvicorn', 'api.main:create_app_from_settings', '--factory', '--host', '127.0.0.1', '--port', '8200') 'auth'
 }
-Start-Sleep -Seconds 3
-Write-Host 'Listo: http://osap-app (Apache) | API 8001 | storage 8000 | auth 8200'
+
+Write-Host '== Verificando arranque =='
+Wait-Port 8000 '/health' 'storage'
+Wait-Port 8001 '/api/v1/system/health' 'osap-api'
+Wait-Port 8300 '/health' 'osap-support'
+if (-not $NoAuth) { Wait-Port 8200 '/openapi.json' 'osap-auth' }
+
+Write-Host 'Listo: http://osap-app (Apache) | API 8001 | storage 8000 | auth 8200 | support 8300'
 Write-Host 'si da error, taskkill /IM "python3.exe" /F y volver a lanzar este script'

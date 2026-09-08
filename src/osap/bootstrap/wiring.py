@@ -64,7 +64,9 @@ DEFAULT_PROVIDER_ORDER = (
 _LOCAL_ROUTES = {
     "storage": "http://127.0.0.1:8000",
     "auth_token": "http://127.0.0.1:8200/oauth/token",
-    "auth_base": "http://127.0.0.1:8200/auth",
+    # Raíz de osap-auth local: sus rutas ya llevan el prefijo /auth (AuthProxyClient
+    # añade "/auth/..."). Poner aquí ".../auth" generaría "/auth/auth/..." → 404.
+    "auth_base": "http://127.0.0.1:8200",
 }
 _REAL_ROUTES = {
     "storage": "https://storage.openmusicrepository.com",

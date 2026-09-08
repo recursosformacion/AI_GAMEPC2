@@ -42,6 +42,15 @@ export function HomePage() {
 
   const wiredSources = (list.data ?? []).filter((s) => s.status === "Online").slice(0, 6);
 
+  const curatingHint = (target: string, label: string) => (
+    <div>
+      <p className="text-sm text-osap-muted">{t("home.curating")}</p>
+      <Link to={target} className="mt-2 inline-block text-sm font-medium text-osap-accent hover:underline">
+        {label} →
+      </Link>
+    </div>
+  );
+
   return (
     <div className="space-y-8">
       {/* Hero */}
@@ -145,18 +154,12 @@ export function HomePage() {
 
       {/* Explorar */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <Card title={t("home.recent")}>
-          <p className="text-sm text-osap-muted">{t("home.recentEmpty")}</p>
-        </Card>
-        <Card title={t("home.mostAccessed")}>
-          <p className="text-sm text-osap-muted">{t("home.mostAccessedEmpty")}</p>
-        </Card>
-        <Card title={t("home.recentlyAdded")}>
-          <p className="text-sm text-osap-muted">{t("home.recentlyAddedEmpty")}</p>
-        </Card>
+        <Card title={t("home.recent")}>{curatingHint("/discover", t("nav.discover"))}</Card>
+        <Card title={t("home.mostAccessed")}>{curatingHint("/discover", t("nav.discover"))}</Card>
+        <Card title={t("home.recentlyAdded")}>{curatingHint("/discover", t("nav.discover"))}</Card>
         <Card title={t("home.sourcesAvailable")}>
           {wiredSources.length === 0 ? (
-            <p className="text-sm text-osap-muted">{t("home.sourcesEmpty")}</p>
+            curatingHint("/catalog", t("nav.sources"))
           ) : (
             <ul className="space-y-1">
               {wiredSources.map((s) => (

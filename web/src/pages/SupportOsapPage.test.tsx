@@ -41,13 +41,16 @@ afterEach(() => {
 });
 
 describe("SupportOsapPage", () => {
-  it("muestra el CTA de iniciar sesión cuando no hay usuario", () => {
+  it("anónimo: ve las opciones (donación y Supporter) sin login previo", () => {
     renderSupportOsapPage();
-    const loginButtons = screen.getAllByRole("button", { name: /login|sign in|iniciar/i });
-    expect(loginButtons.length).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /make a donation/i })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /become supporter \(monthly\)/i }),
+    ).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /login|sign in|iniciar/i })).toBeNull();
   });
 
-  it("muestra estado real 'no miembro' y el botón de donación cuando el backend responde", async () => {
+  it("autenticado sin membresía: donación y planes Supporter disponibles", async () => {
     useAuth.setState({
       accessToken: "token",
       refreshToken: "rt",
@@ -61,11 +64,16 @@ describe("SupportOsapPage", () => {
       membership: { status: null, level: null, is_founder: false },
     });
     renderSupportOsapPage();
-    expect(await screen.findByText(/not a member yet/i)).toBeTruthy();
-    expect(screen.getByRole("button", { name: /make a donation/i })).toBeTruthy();
+    expect(await screen.findByRole("button", { name: /make a donation/i })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /become supporter \(monthly\)/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /become supporter \(yearly\)/i }),
+    ).toBeTruthy();
   });
 
-  it("no muestra 'miembro' por defecto cuando el servicio no está disponible", async () => {
+  it("servicio no disponible: las opciones siguen visibles (sin estado falso)", async () => {
     useAuth.setState({
       accessToken: "token",
       refreshToken: "rt",
@@ -78,8 +86,10 @@ describe("SupportOsapPage", () => {
       error: "support_unavailable",
     });
     renderSupportOsapPage();
-    expect(await screen.findByText(/temporarily unavailable/i)).toBeTruthy();
-    expect(screen.queryByText("Member")).toBeNull();
+    expect(await screen.findByRole("button", { name: /make a donation/i })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /become supporter \(monthly\)/i }),
+    ).toBeTruthy();
   });
 });
 
@@ -114,19 +124,25 @@ describe("SupportOsapPage · membresía", () => {
     return assign;
   }
 
-  it("anónimo: muestra el CTA de iniciar sesión, no el checkout", () => {
+  it("anónimo: ve los planes y no necesita cuenta para leerlos", () => {
     renderSupportOsapPage();
-    expect(screen.getByText(/log in to become a supporter/i)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: /become supporter \(monthly\)/i })).toBeNull();
+    expect(
+      screen.getByRole("button", { name: /become supporter \(monthly\)/i }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: /become supporter \(yearly\)/i }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/log in to become a supporter/i)).toBeNull();
   });
 
   it("sin membresía: muestra los planes mensual y anual junto a la donación", async () => {
     setAuthenticated({ status: null, level: null, is_founder: false });
     renderSupportOsapPage();
-    expect(await screen.findByText(/not a member yet/i)).toBeTruthy();
+    expect(
+      await screen.findByRole("button", { name: /make a donation/i }),
+    ).toBeTruthy();
     expect(screen.getByRole("button", { name: /become supporter \(monthly\)/i })).toBeTruthy();
     expect(screen.getByRole("button", { name: /become supporter \(yearly\)/i })).toBeTruthy();
-    expect(screen.getByRole("button", { name: /make a donation/i })).toBeTruthy();
   });
 
   it("mensual: llama a /checkouts/membership y redirige a checkout_url", async () => {

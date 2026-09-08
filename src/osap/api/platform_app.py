@@ -1690,6 +1690,118 @@ def create_platform_app(
             return fail(502, response, "BAD_GATEWAY", "Identity service unavailable")
         return ok(doc)
 
+    # --- mantenimiento de usuarios (façade → osap-auth; la BD es de Auth) -----
+
+    @app.get(
+        "/api/v1/admin/users",
+        tags=["Admin"],
+        summary="List OSAP users (admin)",
+        description="Listado de usuarios desde osap-auth (nombre y email incluidos). "
+        "La identidad y su BD viven en osap-auth; osap-api solo reenvía. Exige role=admin.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={200: _resp("User list", _example([])), 401: _UNAUTHORIZED_401, 403: _FORBIDDEN_403},
+    )
+    def admin_users_list(
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            data = api.admin_users_list(authorization)
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+        except Exception as exc:  # noqa: BLE001 — osap-auth no disponible
+            return fail(502, response, "AUTH_UNAVAILABLE", str(exc))
+        return ok(data)
+
+    @app.get(
+        "/api/v1/admin/users/{user_id}",
+        tags=["Admin"],
+        summary="Get OSAP user (admin)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={200: _resp("User", _example({})), 401: _UNAUTHORIZED_401, 403: _FORBIDDEN_403, 404: _NOT_FOUND_404},
+    )
+    def admin_user_get(
+        user_id: str,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            data = api.admin_user_get(authorization, user_id)
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return fail(404, response, "NOT_FOUND", "User not found")
+        except Exception as exc:  # noqa: BLE001 — osap-auth no disponible
+            return fail(502, response, "AUTH_UNAVAILABLE", str(exc))
+        return ok(data)
+
+    @app.patch(
+        "/api/v1/admin/users/{user_id}",
+        tags=["Admin"],
+        summary="Update OSAP user (admin)",
+        description="Edita nombre, roles y/o estado. Exige role=admin.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={200: _resp("User", _example({})), 401: _UNAUTHORIZED_401, 403: _FORBIDDEN_403, 404: _NOT_FOUND_404},
+    )
+    def admin_user_update(
+        user_id: str,
+        payload: dict[str, object],
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            data = api.admin_user_update(
+                authorization,
+                user_id,
+                name=cast("str | None", payload.get("name")),
+                roles=cast("list[str] | None", payload.get("roles")),
+                status=cast("str | None", payload.get("status")),
+            )
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return fail(404, response, "NOT_FOUND", "User not found")
+        except Exception as exc:  # noqa: BLE001 — osap-auth no disponible
+            return fail(502, response, "AUTH_UNAVAILABLE", str(exc))
+        return ok(data)
+
+    @app.delete(
+        "/api/v1/admin/users/{user_id}",
+        tags=["Admin"],
+        summary="Disable OSAP user (admin, soft delete)",
+        description="Deshabilita la cuenta (soft delete): se conserva la identidad e historial "
+        "en osap-auth y se bloquea el acceso. Nunca borra físicamente.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={
+            200: _resp("User disabled", _example({})),
+            401: _UNAUTHORIZED_401,
+            403: _FORBIDDEN_403,
+            404: _NOT_FOUND_404,
+        },
+    )
+    def admin_user_disable(
+        user_id: str,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            data = api.admin_user_disable(authorization, user_id)
+        except UnauthenticatedError:
+            return fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return fail(404, response, "NOT_FOUND", "User not found")
+        except Exception as exc:  # noqa: BLE001 — osap-auth no disponible
+            return fail(502, response, "AUTH_UNAVAILABLE", str(exc))
+        return ok(data)
+
     # --- compositores (consulta pública + fusión admin) ----------------------
 
     @app.get(
