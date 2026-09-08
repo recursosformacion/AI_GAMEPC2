@@ -2,10 +2,10 @@
 #
 #   - Construye el frontend (web/dist) localmente.
 #   - Empaqueta el backend (src/, providers/, resources/, run.py, pyproject.toml).
-#   - Sube los tarballs al servidor y los extrae sobre ~/osap-api (backend) y
-#     ~/openmusicrepository.com/app (SPA).
+#   - Sube los tarballs al servidor y los extrae sobre ~/openmusicrepository.com/osap-api
+#     (backend) y ~/openmusicrepository.com/app (SPA).
 #   - Despliega la configuración de producción: osap.production.toml (imagen local)
-#     se sube y se graba como ~/osap-api/osap.toml en el servidor.
+#     se sube y se graba como ~/openmusicrepository.com/osap-api/osap.toml en el servidor.
 #   - Reinicia el servicio systemd osap-api.
 #
 # NOTA de seguridad: osap.production.toml NO debe contener secretos (client_secret vacío).
@@ -17,7 +17,7 @@
 
 param(
     [string]$HostAlias = "RemoteIA",
-    [string]$BackendDir = "~/osap-api",
+    [string]$BackendDir = "~/openmusicrepository.com/osap-api",
     [string]$SpaDir = "~/openmusicrepository.com/app"
 )
 
