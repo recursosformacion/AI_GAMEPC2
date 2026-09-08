@@ -1963,12 +1963,12 @@ class PlatformApi:
         else:
             service_token = self.composers().storage_admin_token()
         url = f"{base}/admin?token={urllib.parse.quote(service_token)}"
-        # Mantenimientos standalone (osap-storage): Maestro = CRUD de compositores;
-        # el resto mantiene el multimantenimiento por pestaña.
+        # Mantenimientos standalone (osap-storage): Maestros = CRUD compositores;
+        # Obras = CRUD works (listado + Ver/Editar); el resto multimantenimiento.
         if section == "composers":
             url = f"{base}/admin/maestros?token={urllib.parse.quote(service_token)}"
         elif section == "works":
-            url = f"{url}&tab=works"
+            url = f"{base}/admin/obras?token={urllib.parse.quote(service_token)}"
         elif section == "tables":
             url = f"{url}&tab=tables"
         return url

@@ -16,34 +16,40 @@ interface AdminItem {
 }
 
 interface AdminSection {
-  label?: TKey;
+  caption?: string;
   items: AdminItem[];
 }
 
 const SECTIONS: AdminSection[] = [
+  { items: [{ to: "/admin", key: "admin.resumen", end: true }] },
   {
-    items: [{ to: "/admin", key: "admin.resumen", end: true }],
+    caption: "Gestión de pagos",
+    items: [
+      // TODO(v1.1): listado de pagos y membresías (backend osap-support + pantalla).
+    ],
   },
   {
-    label: "admin.maintTitle",
+    caption: "Mantenimiento tablas",
     items: [
       { to: "/admin/users", key: "adminUsers.title" },
-      { to: "/admin/composers", key: "admin.composersFusion" },
-      { to: "/admin/aliases", key: "admin.aliases" },
-      { to: "/admin/source-suggestions", key: "admin.sourceSuggestions" },
-      { to: "/admin/corrections", key: "admin.corrections" },
+      { action: "storage-composers", key: "admin.composerMaster" },
+      { action: "storage-works", key: "admin.storageWorks" },
       { to: "/admin/providers", key: "admin.providersAdmin" },
     ],
   },
   {
-    label: "admin.maintGroup",
+    caption: "Gestión compositores",
     items: [
-      { action: "storage-composers", key: "admin.composerMaster" },
-      { action: "storage-works", key: "admin.storageWorks" },
-      { action: "storage-main", key: "admin.storageMaint" },
-      { to: "/jobs", key: "jobs" },
+      { to: "/admin/composers", key: "admin.composersFusion" },
+      { to: "/admin/aliases", key: "admin.aliases" },
     ],
   },
+  { items: [{ to: "/admin/source-suggestions", key: "admin.sourceSuggestions" }] },
+  { items: [{ to: "/admin/corrections", key: "admin.corrections" }] },
+  {
+    items: [{ action: "storage-main", key: "admin.storageMaint" }],
+  },
+  { items: [{ to: "/jobs", key: "jobs" }] },
 ];
 
 export function AdminLayout(): ReactNode {
@@ -90,11 +96,11 @@ export function AdminLayout(): ReactNode {
           </Link>
         </div>
         <nav className="flex-1 overflow-y-auto px-2 py-3">
-          {SECTIONS.map((section, i) => (
+          {SECTIONS.filter((s) => s.items.length).map((section, i) => (
             <div key={i} className="mb-4">
-              {section.label && (
+              {section.caption && (
                 <p className="px-2 pb-1 text-[11px] font-medium uppercase tracking-wide text-osap-muted">
-                  {t(section.label)}
+                  {section.caption}
                 </p>
               )}
               <ul className="space-y-0.5">

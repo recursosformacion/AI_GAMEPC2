@@ -39,8 +39,8 @@ function Stop-Port([int]$port) {
   Start-Sleep -Milliseconds 700
 }
 
-function Wait-Port([int]$port, [string]$path, [string]$name) {
-  for ($i = 0; $i -lt 12; $i++) {
+function Wait-Port([int]$port, [string]$path, [string]$name, [int]$attempts = 12) {
+  for ($i = 0; $i -lt $attempts; $i++) {
     try {
       $r = Invoke-WebRequest -Uri "http://127.0.0.1:$port$path" -TimeoutSec 2 -SkipHttpErrorCheck
       if ($r.StatusCode -lt 500) { return }
@@ -92,7 +92,8 @@ if (-not $NoAuth) {
 
 Write-Host '== Verificando arranque =='
 Wait-Port 8000 '/health' 'storage'
-Wait-Port 8001 '/api/v1/system/health' 'osap-api'
+# osap-api tarda ~20s en frío (imports), más que el resto de servicios.
+Wait-Port 8001 '/api/v1/system/health' 'osap-api' -attempts 80
 Wait-Port 8300 '/health' 'osap-support'
 if (-not $NoAuth) { Wait-Port 8200 '/openapi.json' 'osap-auth' }
 
