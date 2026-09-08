@@ -1,5 +1,6 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 import { Layout } from "../layouts/Layout";
+import { AdminLayout } from "../layouts/AdminLayout";
 import { AboutPage } from "../pages/AboutPage";
 import { AdminComposerDetailPage } from "../pages/AdminComposerDetailPage";
 import { AdminComposersPage } from "../pages/AdminComposersPage";
@@ -44,15 +45,6 @@ export function AppRoutes() {
         <Route path="/composer" element={<ComposerPage />} />
         <Route path="/composers" element={<ComposersPage />} />
         <Route path="/composers/:composerId" element={<ComposerDetailPage />} />
-        <Route path="/admin" element={<AdminPage />} />
-        <Route path="/admin/users" element={<AdminUsersPage />} />
-        <Route path="/admin/users/:userId" element={<AdminUserDetailPage />} />
-        <Route path="/admin/composers" element={<AdminComposersPage />} />
-        <Route path="/admin/composers/:composerId" element={<AdminComposerDetailPage />} />
-        <Route path="/admin/aliases" element={<AliasPage />} />
-        <Route path="/admin/source-suggestions" element={<AdminSourceSuggestionsPage />} />
-        <Route path="/admin/providers" element={<AdminProvidersPage />} />
-        <Route path="/admin/corrections" element={<AdminCorrectionsPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/about/how-it-works" element={<HowItWorksPage />} />
         <Route path="/collaborators" element={<CollaboratorsPage />} />
@@ -65,6 +57,17 @@ export function AppRoutes() {
         <Route path="/providers" element={<ProvidersPage />} />
         <Route path="/jobs" element={<JobsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
+      </Route>
+      <Route element={<AdminLayout />}>
+        <Route path="/admin" element={<AdminPage />} />
+        <Route path="/admin/users" element={<AdminUsersPage />} />
+        <Route path="/admin/users/:userId" element={<AdminUserDetailPage />} />
+        <Route path="/admin/composers" element={<AdminComposersPage />} />
+        <Route path="/admin/composers/:composerId" element={<AdminComposerDetailPage />} />
+        <Route path="/admin/aliases" element={<AliasPage />} />
+        <Route path="/admin/source-suggestions" element={<AdminSourceSuggestionsPage />} />
+        <Route path="/admin/providers" element={<AdminProvidersPage />} />
+        <Route path="/admin/corrections" element={<AdminCorrectionsPage />} />
       </Route>
     </Routes>
   );

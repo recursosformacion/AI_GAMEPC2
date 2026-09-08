@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
-import { apiClient } from "../api/ApiClient";
 import { DarkModeToggle } from "../components/DarkModeToggle";
 import { GlobalSearch } from "../components/GlobalSearch";
 import { LanguageSelect } from "../components/LanguageSelect";
@@ -20,14 +19,6 @@ const MAIN_NAV = [
   { to: "/collaborators", key: "nav.collaborators" },
   { to: "/about/how-it-works", key: "nav.howItWorks" },
   { to: "/support", key: "nav.support" },
-] as const;
-
-const ADMIN_MENU = [
-  { to: "/admin", key: "admin.resumen" },
-  { to: "/admin/users", key: "adminUsers.title" },
-  { to: "/admin/source-suggestions", key: "admin.sourceSuggestions" },
-  { to: "/admin/corrections", key: "admin.corrections" },
-  { to: "/jobs", key: "jobs" },
 ] as const;
 
 // Semantic labels for the breadcrumb (never routes/URLs).
@@ -69,21 +60,8 @@ export function Header() {
   const { t } = useI18n();
   const { user, logout, isAdmin } = useAuth();
   const [loginOpen, setLoginOpen] = useState(false);
-  const [adminOpen, setAdminOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const { start: startOidc, error: oidcError } = useOidcLogin();
-
-  const openStorage = (section: string | null) => {
-    setAdminOpen(false);
-    void (async () => {
-      try {
-        const r = await apiClient.getStorageWebUrl(section ?? undefined);
-        window.open(r.url, "_blank");
-      } catch {
-        /* storage web no disponible */
-      }
-    })();
-  };
 
   // Sin sesión: pulsar 👤 abre el login de OSAP (popup OIDC). Si no se puede abrir el
   // popup (bloqueado / OIDC no configurado), cae al panel login/registro de respaldo.
@@ -149,94 +127,12 @@ export function Header() {
             <>
               <span className="rounded-full border border-osap-border px-3 py-1 text-sm">👤</span>
               {isAdmin() && (
-                <div className="relative">
-                  <button
-                    onClick={() => setAdminOpen((o) => !o)}
-                    className="rounded-full border border-osap-border px-3 py-1 text-sm hover:bg-osap-surface"
-                  >
-                    {t("admin.title")} ▾
-                  </button>
-                  {adminOpen && (
-                    <ul className="absolute right-0 top-full z-20 mt-2 w-64 rounded border border-osap-border bg-osap-surface shadow">
-                      {ADMIN_MENU.map((item) => (
-                        <li key={item.to}>
-                          <Link
-                            to={item.to}
-                            onClick={() => setAdminOpen(false)}
-                            className="block px-3 py-2 text-sm hover:bg-osap-surface"
-                          >
-                            {t(item.key)}
-                          </Link>
-                        </li>
-                      ))}
-                      <li className="border-t border-osap-border" aria-hidden="true" />
-                      <li>
-                        <span className="block px-3 pb-1 pt-2 text-xs font-medium uppercase tracking-wide text-osap-muted">
-                          {t("admin.maintTitle")}
-                        </span>
-                      </li>
-                      <li>
-                        <span className="block px-3 text-[11px] uppercase tracking-wide text-osap-muted">
-                          {t("admin.maintGroup")}
-                        </span>
-                      </li>
-                      <li>
-                        <Link
-                          to="/admin/composers"
-                          onClick={() => setAdminOpen(false)}
-                          className="block pl-5 pr-3 py-1.5 text-sm hover:bg-osap-surface"
-                        >
-                          {t("admin.composersFusion")}
-                        </Link>
-                      </li>
-                      <li>
-                        <Link
-                          to="/admin/aliases"
-                          onClick={() => setAdminOpen(false)}
-                          className="block pl-5 pr-3 py-1.5 text-sm hover:bg-osap-surface"
-                        >
-                          {t("admin.aliases")}
-                        </Link>
-                      </li>
-                      <li>
-                        <button
-                          type="button"
-                          onClick={() => openStorage("composers")}
-                          className="block w-full pl-5 pr-3 py-1.5 text-left text-sm hover:bg-osap-surface"
-                        >
-                          {t("admin.composerMaster")}
-                        </button>
-                      </li>
-                      <li>
-                        <Link
-                          to="/admin/providers"
-                          onClick={() => setAdminOpen(false)}
-                          className="block px-3 py-1.5 text-sm hover:bg-osap-surface"
-                        >
-                          {t("admin.providersAdmin")}
-                        </Link>
-                      </li>
-                      <li>
-                        <button
-                          type="button"
-                          onClick={() => openStorage("works")}
-                          className="block w-full px-3 py-1.5 text-left text-sm hover:bg-osap-surface"
-                        >
-                          {t("admin.storageWorks")}
-                        </button>
-                      </li>
-                      <li>
-                        <button
-                          type="button"
-                          onClick={() => openStorage(null)}
-                          className="block w-full px-3 py-1.5 text-left text-sm hover:bg-osap-surface"
-                        >
-                          {t("admin.storageMaint")}
-                        </button>
-                      </li>
-                    </ul>
-                  )}
-                </div>
+                <Link
+                  to="/admin"
+                  className="rounded-full border border-osap-border px-3 py-1 text-sm text-osap-accent hover:bg-osap-surface"
+                >
+                  {t("admin.title")}
+                </Link>
               )}
               <button
                 onClick={logout}
