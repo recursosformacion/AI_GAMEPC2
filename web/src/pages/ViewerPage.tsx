@@ -1,22 +1,36 @@
-// Página "Viewer": visualiza en el navegador un PDF (inline) o un MusicXML (.xml/.mxl)
-// con OpenSheetMusicDisplay. Se abre en pestaña nueva desde la ficha de obra.
+// Página "Viewer": PDF inline, MusicXML con OSMD + reproducción (osmd-audio-player)
+// y MIDI con <midi-player>. Se abre en pestaña nueva desde la ficha de obra.
 
-import { useEffect, useRef, useState } from "react";
+import { createElement, useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import { useI18n } from "../i18n/I18n";
-import { loadJSZip, loadOsmd, looksLikeZip, musicXmlFromMxl } from "../viewer/osmdLoader";
+import {
+  isMidiContentType,
+  loadAudioPlayer,
+  loadJSZip,
+  loadMidiPlayer,
+  loadOsmd,
+  looksLikeZip,
+  musicXmlFromMxl,
+  type AudioPlayerLike,
+} from "../viewer/osmdLoader";
 
-type State = "loading" | "rendering" | "ready" | "error" | "pdf";
+type State = "loading" | "rendering" | "ready" | "midi" | "pdf" | "error";
 
 export function ViewerPage() {
   const { t } = useI18n();
   const [params] = useSearchParams();
   const rep = params.get("rep");
+  const format = params.get("format");
   const title = params.get("title") ?? "";
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const playerRef = useRef<AudioPlayerLike | null>(null);
   const [state, setState] = useState<State>("loading");
   const [message, setMessage] = useState<string>("");
+  const [playing, setPlaying] = useState(false);
+  const [audioReady, setAudioReady] = useState(false);
+  const [tempo, setTempo] = useState(100);
 
   useEffect(() => {
     let alive = true;
@@ -31,8 +45,12 @@ export function ViewerPage() {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const contentType = response.headers.get("content-type") ?? "";
         if (contentType.startsWith("application/pdf")) {
-          if (!alive) return;
-          setState("pdf");
+          if (alive) setState("pdf");
+          return;
+        }
+        if (isMidiContentType(contentType, format)) {
+          await loadMidiPlayer();
+          if (alive) setState("midi");
           return;
         }
         const buffer = await response.arrayBuffer();
@@ -51,6 +69,20 @@ export function ViewerPage() {
         await osmd.load(xml);
         osmd.render();
         if (alive) setState("ready");
+        try {
+          const AudioPlayer = await loadAudioPlayer();
+          const player = new AudioPlayer(osmd);
+          await player.load();
+          if (!alive) {
+            player.stop();
+            return;
+          }
+          playerRef.current = player;
+          player.on?.("stateChange", (s: string) => setPlaying(s === "PLAYING"));
+          setAudioReady(true);
+        } catch {
+          setAudioReady(false); // render sin sonido: no es un error bloqueante
+        }
       } catch (error) {
         if (!alive) return;
         setState("error");
@@ -60,21 +92,68 @@ export function ViewerPage() {
     void run();
     return () => {
       alive = false;
+      playerRef.current?.stop();
+      playerRef.current = null;
     };
-  }, [rep, t]);
+  }, [rep, format, t]);
+
+  const togglePlay = () => {
+    const player = playerRef.current;
+    if (!player) return;
+    if (playing) player.pause();
+    else player.play();
+    setPlaying(!playing);
+  };
+
+  const changeTempo = (value: number) => {
+    setTempo(value);
+    playerRef.current?.setBpm?.(value);
+  };
 
   return (
     <div className="mx-auto max-w-5xl space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{title || t("viewer.title")}</h1>
-        {rep ? (
+        <div className="flex items-center gap-3">
+          {state === "ready" && audioReady ? (
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={togglePlay}
+                className="rounded bg-osap-accent px-3 py-1 text-sm text-white"
+              >
+                {playing ? t("viewer.pause") : t("viewer.play")}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  playerRef.current?.stop();
+                  setPlaying(false);
+                }}
+                className="rounded border border-osap-border px-3 py-1 text-sm"
+              >
+                {t("viewer.stop")}
+              </button>
+              <label className="flex items-center gap-1 text-xs text-osap-muted">
+                {t("viewer.tempo")}
+                <input
+                  type="number"
+                  min={20}
+                  max={300}
+                  value={tempo}
+                  onChange={(event) => changeTempo(Number(event.target.value))}
+                  className="w-16 rounded border border-osap-border px-1 py-0.5"
+                />
+              </label>
+            </div>
+          ) : null}
           <a
             className="text-sm text-osap-accent hover:underline"
-            href={`/api/v1/representations/${encodeURIComponent(rep)}/download`}
+            href={`/api/v1/representations/${encodeURIComponent(rep ?? "")}/download`}
           >
             {t("actions.download")}
           </a>
-        ) : null}
+        </div>
       </div>
 
       {state === "pdf" && rep ? (
@@ -83,6 +162,17 @@ export function ViewerPage() {
           src={`/api/v1/representations/${encodeURIComponent(rep)}/download?view=1`}
           className="h-[80vh] w-full rounded border border-osap-border"
         />
+      ) : null}
+
+      {state === "midi" && rep
+        ? createElement("midi-player", {
+            src: `/api/v1/representations/${encodeURIComponent(rep)}/download?view=1`,
+            "sound-font": true,
+          })
+        : null}
+
+      {state === "ready" && !audioReady ? (
+        <p className="text-xs text-osap-muted">{t("viewer.audioUnavailable")}</p>
       ) : null}
 
       {state === "loading" || state === "rendering" ? (

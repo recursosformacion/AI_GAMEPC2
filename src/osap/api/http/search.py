@@ -22,6 +22,20 @@ if TYPE_CHECKING:
     from src.osap.api.http.context import HttpContext
 
 _LOCAL_STORAGE_HOSTS = {"127.0.0.1", "localhost"}
+_INLINE_FILE_SUFFIXES = (
+    ".pdf",
+    ".mxl",
+    ".xml",
+    ".musicxml",
+    ".mid",
+    ".midi",
+    ".mei",
+    ".krn",
+)
+
+
+def _is_file_url(url: str) -> bool:
+    return urllib.parse.urlparse(url).path.lower().endswith(_INLINE_FILE_SUFFIXES)
 
 
 def _belongs_to_storage(url: str, storage_base: str) -> bool:
@@ -71,7 +85,7 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
         storage_base = (ctx.container.storage_web_base() or "").rstrip("/")
         url_normalized = url.rstrip("/")
 
-        if _belongs_to_storage(url_normalized, storage_base):
+        if _belongs_to_storage(url_normalized, storage_base) or (view and _is_file_url(url_normalized)):
             try:
                 upstream = requests.get(url, timeout=120)
             except requests.RequestException:

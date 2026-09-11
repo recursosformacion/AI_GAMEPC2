@@ -27,6 +27,20 @@ export interface JSZipLike {
 
 const OSMD_URL = "https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@1.8.9/build/opensheetmusicdisplay.min.js";
 const JSZIP_URL = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
+const AUDIO_PLAYER_URL = "https://cdn.jsdelivr.net/npm/osmd-audio-player@0.7.0/umd/OsmdAudioPlayer.min.js";
+const MIDI_PLAYER_URL = "https://cdn.jsdelivr.net/npm/html-midi-player@1.5.0/dist/midi-player.min.js";
+
+export interface AudioPlayerLike {
+  load: () => Promise<void>;
+  play: () => void;
+  pause: () => void;
+  stop: () => void;
+  setBpm?: (bpm: number) => void;
+  on?: (event: string, listener: (state: string) => void) => void;
+  state?: string;
+}
+
+export type AudioPlayerCtor = new (osmd: unknown) => AudioPlayerLike;
 
 function loadScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -60,6 +74,32 @@ export async function loadJSZip(): Promise<JSZipLike> {
   }
   if (!window.JSZip) throw new Error("JSZip no disponible");
   return window.JSZip;
+}
+
+/** Carga el reproductor de OSMD (UMD) y devuelve su constructor. */
+export async function loadAudioPlayer(): Promise<AudioPlayerCtor> {
+  const raw = (window as unknown as { OsmdAudioPlayer?: unknown }).OsmdAudioPlayer;
+  if (!raw) {
+    await loadScript(AUDIO_PLAYER_URL);
+  }
+  const loaded = (window as unknown as { OsmdAudioPlayer?: unknown }).OsmdAudioPlayer;
+  const ctor =
+    typeof loaded === "function"
+      ? (loaded as AudioPlayerCtor)
+      : (loaded as { OsmdAudioPlayer?: AudioPlayerCtor } | undefined)?.OsmdAudioPlayer;
+  if (!ctor) throw new Error("Reproductor de audio no disponible");
+  return ctor;
+}
+
+/** Carga el elemento <midi-player> (para representaciones MIDI). */
+export async function loadMidiPlayer(): Promise<void> {
+  if (customElements.get("midi-player")) return;
+  await loadScript(MIDI_PLAYER_URL);
+}
+
+export function isMidiContentType(contentType: string, format?: string | null): boolean {
+  const fmt = (format ?? "").toLowerCase();
+  return contentType.startsWith("audio/midi") || contentType.includes("midi") || fmt === "midi";
 }
 
 /** True si los bytes empiezan por firma ZIP (PK\x03\x04): probable .mxl. */

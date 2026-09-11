@@ -372,12 +372,13 @@ function RepresentationsTab({
                     href={_viewHref(rep.id, rep.format, workTitle)}
                     target="_blank"
                     rel="noreferrer"
-                    title={t("work.view")}
-                    aria-label={t("work.view")}
+                    title={(rep.format ?? "").toLowerCase() === "midi" ? t("actions.playPause") : t("work.view")}
+                    aria-label={(rep.format ?? "").toLowerCase() === "midi" ? t("actions.playPause") : t("work.view")}
                     onClick={(e) => e.stopPropagation()}
                     className="inline-flex items-center gap-1.5 rounded border border-osap-border px-3 py-1 text-sm text-osap-accent"
                   >
-                    <_EyeIcon /> {t("work.view")}
+                    <_EyeIcon />{" "}
+                    {(rep.format ?? "").toLowerCase() === "midi" ? t("actions.playPause") : t("work.view")}
                   </a>
                   <a
                     href={`/api/v1/representations/${rep.id}/download`}
@@ -448,6 +449,9 @@ function ProvidersTab({ byProvider }: { byProvider: Map<string, RepresentationIn
 
 function _viewHref(repId: string, format: string | null | undefined, workTitle?: string | null): string {
   const fmt = (format ?? "").toLowerCase();
+  if (fmt === "midi") {
+    return `/viewer?rep=${encodeURIComponent(repId)}&format=midi&title=${encodeURIComponent(workTitle ?? "")}`;
+  }
   if (["musicxml", "mxl", "xml", "mei"].includes(fmt)) {
     return `/viewer?rep=${encodeURIComponent(repId)}&title=${encodeURIComponent(workTitle ?? "")}`;
   }
