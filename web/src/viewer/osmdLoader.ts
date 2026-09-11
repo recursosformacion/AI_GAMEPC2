@@ -25,10 +25,12 @@ export interface JSZipLike {
   loadAsync: (data: ArrayBuffer) => Promise<{ files: Record<string, JSZipObjectLike> }>;
 }
 
-const OSMD_URL = "https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@1.8.9/build/opensheetmusicdisplay.min.js";
+const OSMD_URL = "https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@0.8.4/build/opensheetmusicdisplay.min.js";
 const JSZIP_URL = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
 const AUDIO_PLAYER_URL = "https://cdn.jsdelivr.net/npm/osmd-audio-player@0.7.0/umd/OsmdAudioPlayer.min.js";
-const MIDI_PLAYER_URL = "https://cdn.jsdelivr.net/npm/html-midi-player@1.5.0/dist/midi-player.min.js";
+// Bundle documentado de html-midi-player: Tone + Magenta core + focus-visible + player.
+const MIDI_PLAYER_URL =
+  "https://cdn.jsdelivr.net/combine/npm/tone@14.7.58,npm/@magenta/music@1.23.1/es6/core.js,npm/focus-visible@5,npm/html-midi-player@1.4.0";
 
 export interface AudioPlayerLike {
   load: () => Promise<void>;

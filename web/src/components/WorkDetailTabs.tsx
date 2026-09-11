@@ -32,12 +32,10 @@ function KnownSelectionBlock({
   workId,
   representations,
   workTitle,
-  workComposer,
 }: {
   workId?: string | null;
   representations: RepresentationInfo[];
   workTitle?: string | null;
-  workComposer?: string | null;
 }) {
   const { t } = useI18n();
   const [busy, setBusy] = useState(false);
@@ -118,26 +116,19 @@ function KnownSelectionBlock({
               {t("work.resolveReason")}: {sel.reason}
             </p>
           ) : null}
-          {sel.url ? (
-            sel.provider === "omr" || sel.provider === "osap-storage" ? (
-              <a
-                href={`/api/v1/omr/download?url=${encodeURIComponent(sel.url)}&title=${encodeURIComponent(workTitle ?? "")}&composer=${encodeURIComponent(workComposer ?? "")}`}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-1 inline-block rounded bg-osap-accent px-2 py-0.5 text-xs text-white"
-              >
-                {t("actions.download")}
-              </a>
-            ) : (
-              <a
-                href={sel.url}
-                target="_blank"
-                rel="noreferrer"
-                className="mt-1 inline-block rounded bg-osap-accent px-2 py-0.5 text-xs text-white"
-              >
-                {t("actions.download")}
-              </a>
-            )
+          {sel.source_id || sel.url ? (
+            <a
+              href={
+                sel.source_id
+                  ? `/api/v1/representations/${encodeURIComponent(sel.source_id)}/download`
+                  : (sel.url as string)
+              }
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 inline-block rounded bg-osap-accent px-2 py-0.5 text-xs text-white"
+            >
+              {t("actions.download")}
+            </a>
           ) : null}
           {sel.source_id ? (
             <a
@@ -265,7 +256,6 @@ export function WorkDetailTabs({
           representations={representations}
           byProvider={byProvider}
           workTitle={work.title}
-          workComposer={work.composer}
           workId={work.work_id}
         />
       ) : null}
@@ -310,13 +300,11 @@ function RepresentationsTab({
   representations,
   byProvider,
   workTitle,
-  workComposer,
   workId,
 }: {
   representations: RepresentationInfo[];
   byProvider: Map<string, RepresentationInfo[]>;
   workTitle?: string | null;
-  workComposer?: string | null;
   workId?: string | null;
 }) {
   const { t } = useI18n();
@@ -399,12 +387,11 @@ function RepresentationsTab({
         ))}
       </ul>
       <p className="mt-2 text-xs text-osap-muted">{t("work.titlesFromSources")}</p>
-      <KnownSelectionBlock
-        workId={workId}
-        representations={representations}
-        workTitle={workTitle}
-        workComposer={workComposer}
-      />
+              <KnownSelectionBlock
+                workId={workId}
+                representations={representations}
+                workTitle={workTitle}
+              />
     </div>
   );
 }
