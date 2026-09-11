@@ -2,18 +2,18 @@ from collections.abc import Iterable
 from statistics import fmean
 from typing import assert_never
 
-from src.osap.application.execution_plan import WorkGroup
 from src.osap.domain.candidate_representation import CandidateRepresentation
 from src.osap.domain.normalization import normalize_name
 from src.osap.domain.ranking import (
-    RankingConfig,
     RankingContext,
     RankingCriterion,
+    RankingPolicy,
     RankingReason,
     RankingResult,
     RankingScore,
 )
 from src.osap.domain.work_descriptor import WorkDescriptor
+from src.osap.domain.work_group import WorkGroup
 from src.osap.ports.work_ranker import IWorkRanker
 
 _TITLE_PARTIAL_SCORE = 0.6
@@ -27,8 +27,8 @@ class DefaultWorkRanker(IWorkRanker):
     never uses AI. It only computes a score per `WorkGroup` and orders the works.
     """
 
-    def rank(self, works: tuple[WorkGroup, ...], context: RankingContext, config: RankingConfig) -> RankingResult:
-        scored = [self._score(work, context, config) for work in works]
+    def rank(self, works: tuple[WorkGroup, ...], context: RankingContext, policy: RankingPolicy) -> RankingResult:
+        scored = [self._score(work, context, policy) for work in works]
         # Stable sort (ties keep the input order). Only SortingPolicy.STABLE is
         # implemented; the rest are prepared for the future.
         scored.sort(key=lambda item: item.score, reverse=True)
@@ -36,15 +36,15 @@ class DefaultWorkRanker(IWorkRanker):
         evaluated = tuple(criterion for criterion in RankingCriterion if criterion in used)
         return RankingResult(order=tuple(scored), context=context, evaluated_criteria=evaluated)
 
-    def _score(self, work: WorkGroup, context: RankingContext, config: RankingConfig) -> RankingScore:
+    def _score(self, work: WorkGroup, context: RankingContext, policy: RankingPolicy) -> RankingScore:
         reasons: list[RankingReason] = []
         numerator = 0.0
         denominator = 0.0
-        for criterion in config.enabled_criteria:
+        for criterion in policy.enabled_criteria:
             field_score = _evaluate(criterion, work, context)
             if field_score is None:
                 continue  # criterion absent/not applicable: never penalizes
-            weight = config.weights.get(criterion, 0.0)
+            weight = policy.weights.get(criterion, 0.0)
             reasons.append(
                 RankingReason(
                     criterion=criterion,

@@ -1,6 +1,5 @@
 from statistics import fmean
 
-from src.osap.application.execution_plan import WorkGroup
 from src.osap.domain.evidence import EvidenceCode, EvidenceField, EvidenceItem, EvidenceSource, EvidenceStrength
 from src.osap.domain.merge import (
     MergeConflict,
@@ -12,6 +11,7 @@ from src.osap.domain.merge import (
     MergeResult,
 )
 from src.osap.domain.work_descriptor import WorkDescriptor
+from src.osap.domain.work_group import WorkGroup
 from src.osap.ports.merge_service import IMergeService
 
 _IDENTITY_FIELDS = ("catalogue_number", "opus", "composer", "title")

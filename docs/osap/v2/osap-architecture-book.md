@@ -165,6 +165,13 @@ puertos; los puertos se implementan en el dominio/aplicación. `domain/` y `port
 Esta diapositiva es la más importante: es el flujo que recorre **cada** búsqueda y cada
 decisión.
 
+> **Estado real (2026-09, ver ADR-0035 y `docs/osap/code-audit-2026.md`):** esta pipeline
+> (V2.1, dominio puro) está implementada y testeada como subsistema, pero el flujo activo
+> de la búsqueda web sigue usando la vía V1 legacy (`WorkResolutionEngine` +
+> `DefaultRankingEngine`) y la resolución por sesiones (ADR-0033/0034) usa una capa de
+> dicts JSON en `infrastructure/resolution/`. Por decisión (ADR-0035) la pipeline V2.1 es
+> la **capa canónica** y se integrará primero en sesiones y después en la búsqueda web.
+
 ---
 
 ## 6. Evolución

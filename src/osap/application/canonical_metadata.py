@@ -2,47 +2,40 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from pathlib import Path
+from typing import TYPE_CHECKING, cast
+
+import yaml  # type: ignore[import-untyped]
 
 from src.osap.application.metadata_normalizer import MetadataNormalizer
 from src.osap.application.metadata_parser import extract_metadata
+
+_CANONICAL_DIR = Path(__file__).resolve().parents[3] / "resources" / "canonical"
+
+
+def _load_table(filename: str) -> dict[str, object]:
+    loaded = yaml.safe_load((_CANONICAL_DIR / filename).read_text(encoding="utf-8"))
+    return cast("dict[str, object]", loaded if loaded is not None else {})
+
+
+def _load_patterns() -> list[dict[str, object]]:
+    return cast("list[dict[str, object]]", _load_table("voice_patterns.yaml").get("patterns") or [])
+
+
+_GENRE_MAP: dict[str, str] = {str(k): str(v) for k, v in _load_table("genre_map.yaml").items()}
+_VOICE_PATTERNS: list[tuple[str, re.Pattern[str]]] = [
+    (
+        str(item["label"]),
+        re.compile(str(item["pattern"]), int(cast("int", item.get("flags", 0)))),
+    )
+    for item in _load_patterns()
+]
 
 if TYPE_CHECKING:
     from src.osap.application.work_merge_service import WorkGroup
     from src.osap.domain.candidate_representation import CandidateRepresentation
 
-_GENRE_MAP: dict[str, str] = {
-    "mass": "Mass",
-    "missa": "Mass",
-    "messe": "Mass",
-    "motet": "Motet",
-    "motete": "Motet",
-    "anthem": "Anthem",
-    "hymn": "Hymn",
-    "hymne": "Hymn",
-    "chorale": "Chorale",
-    "choral": "Choral",
-    "symphony": "Symphony",
-    "sinfonie": "Symphony",
-    "concerto": "Concerto",
-    "sonata": "Sonata",
-    "nocturne": "Nocturne",
-    "song": "Song",
-    "lied": "Lied",
-    "opera": "Opera",
-    "requiem": "Requiem",
-    "cantata": "Cantata",
-    "overture": "Overture",
-}
 
-_VOICE_PATTERNS = [
-    ("SATB", re.compile(r"SATB", re.IGNORECASE)),
-    ("SSA", re.compile(r"\bSSA\b", re.IGNORECASE)),
-    ("TTBB", re.compile(r"TTBB", re.IGNORECASE)),
-    ("TTB", re.compile(r"\bTTB\b", re.IGNORECASE)),
-    ("SAB", re.compile(r"\bSAB\b", re.IGNORECASE)),
-    ("SSAATTBB", re.compile(r"SSAATTBB", re.IGNORECASE)),
-]
 
 
 @dataclass(frozen=True)

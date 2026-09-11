@@ -45,6 +45,7 @@ function KnownSelectionBlock({
   const [error, setError] = useState<string | null>(null);
 
   const knownCount = representations.length;
+  const providersCount = new Set(representations.map((r) => r.provider)).size;
   const inputs = representations
     .filter((r) => r.url)
     .map((r) => ({
@@ -89,7 +90,7 @@ function KnownSelectionBlock({
     <div className="mt-3 rounded border border-dashed border-osap-border p-3">
       <h4 className="text-sm font-semibold">{t("work.resolveTitleAlt")}</h4>
       <p className="mt-1 text-xs text-osap-muted">
-        {t("work.foundReps").replace("{n}", String(knownCount)).replace("{p}", "1")}
+        {t("work.foundReps").replace("{n}", String(knownCount)).replace("{p}", String(providersCount))}
       </p>
       <button
         type="button"
@@ -315,6 +316,12 @@ function RepresentationsTab({
     <div className="p-3">
       <p className="mb-2 text-sm text-osap-muted">
         {t("work.foundReps").replace("{n}", String(representations.length)).replace("{p}", String(byProvider.size))}
+      </p>
+      <p className="mb-2 text-xs text-osap-muted">
+        {t("how.downloadsNote")}{" "}
+        <Link to="/about/how-it-works#downloads" className="text-osap-accent hover:underline">
+          {t("how.accessTitle")}
+        </Link>
       </p>
 
       <ul className="divide-y divide-osap-border">

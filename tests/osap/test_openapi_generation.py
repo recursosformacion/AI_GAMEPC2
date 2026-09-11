@@ -179,7 +179,7 @@ def test_all_endpoints_present() -> None:
     assert set(spec["paths"]) >= _PATHS
 
 
-def test_five_tags_grouped() -> None:
+def test_tags_grouped() -> None:
     spec = _spec()
     assert isinstance(spec["paths"], dict)
     tags = {
@@ -190,17 +190,21 @@ def test_five_tags_grouped() -> None:
         if isinstance(operation, dict)
     }
     assert tags == {
-        "Searches",
-        "Jobs",
-        "Providers",
-        "Knowledge",
-        "Votes",
-        "Composers",
-        "System",
+        "Admin",
         "Auth",
+        "Composers",
+        "Jobs",
+        "Knowledge",
+        "Providers",
+        "Searches",
         "Sources",
+        "Support",
+        "System",
+        "Votes",
         "Works",
     }
+    declared = {tag["name"] for tag in spec.get("tags", [])}
+    assert tags <= declared, f"tags used but not declared in openapi_tags: {tags - declared}"
 
 
 def test_examples_in_all_endpoints() -> None:

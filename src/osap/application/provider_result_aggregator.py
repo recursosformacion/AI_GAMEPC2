@@ -1,8 +1,9 @@
-from src.osap.application.execution_plan import AggregatedProviderResult, WorkGroup
+from src.osap.application.execution_plan import AggregatedProviderResult
 from src.osap.domain.candidate_representation import CandidateRepresentation
 from src.osap.domain.normalization import normalize_name
 from src.osap.domain.value_objects import ProviderId
 from src.osap.domain.work_descriptor import WorkDescriptor
+from src.osap.domain.work_group import WorkGroup
 
 
 class ProviderResultAggregator:

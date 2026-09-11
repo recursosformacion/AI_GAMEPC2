@@ -7,9 +7,11 @@ from typing import TYPE_CHECKING
 from src.osap.application.metadata_normalizer import MetadataNormalizer
 from src.osap.application.metadata_parser import extract_metadata
 from src.osap.application.work_grouping_matcher import WorkGroupingMatcher
+from src.osap.domain.normalization import stable_id
 from src.osap.domain.output_format import OutputFormat
 from src.osap.domain.value_objects import WorkId
 from src.osap.domain.work_descriptor import WorkDescriptor
+from src.osap.domain.work_group import WorkGroup
 
 if TYPE_CHECKING:
     from src.osap.domain.candidate_representation import CandidateRepresentation
@@ -75,7 +77,13 @@ class WorkGrouper:
         groups: list[WorkGroup] = []
         for cluster in clusters:
             work = self._canonical(cluster)
-            groups.append(WorkGroup(key=work.canonical_key or "", work=work, representations=tuple(cluster)))
+            groups.append(
+                WorkGroup(
+                    work=work,
+                    representations=tuple(cluster),
+                    providers=tuple(sorted({r.provider_id for r in cluster}, key=lambda p: p.value)),
+                )
+            )
         groups.sort(key=lambda g: (-len(g.representations), g.work.title.lower()))
         return tuple(groups)
 
@@ -115,7 +123,7 @@ class WorkGrouper:
         signature = self._normalizer.normalize(title, composer).signature()
 
         return WorkDescriptor(
-            work_id=WorkId(f"work-{abs(hash(signature))}"),
+            work_id=WorkId(f"work-{stable_id(signature)}"),
             title=display,
             composer=comp_norm,
             catalogue_number=catalogue,
@@ -124,21 +132,3 @@ class WorkGrouper:
             canonical_title=core,
             canonical_key=signature,
         )
-
-
-class WorkGroup:
-    """A merged work with ALL its equivalent representations preserved."""
-
-    __slots__ = ("key", "work", "representations", "primary", "canonical_score")
-
-    def __init__(
-        self,
-        key: str,
-        work: WorkDescriptor,
-        representations: tuple[CandidateRepresentation, ...],
-    ) -> None:
-        self.key = key
-        self.work = work
-        self.representations = tuple(sorted(representations, key=_sort_key))
-        self.primary = self.representations[0] if self.representations else None
-        self.canonical_score = -_preference_key(self.primary)[0] if self.primary is not None else 0.0

@@ -22,7 +22,7 @@ from src.osap.domain.evidence import (
 )
 from src.osap.domain.matching import MatchingConfig, MatchLevel, MatchResult
 from src.osap.domain.output_format import OutputFormat
-from src.osap.domain.ranking import RankingConfig, RankingContext, RankingCriterion, RankingResult
+from src.osap.domain.ranking import RankingContext, RankingCriterion, RankingPolicy, RankingResult
 from src.osap.domain.value_objects import CandidateId, Confidence, ProviderId, WorkId, WorkIdentifier
 from src.osap.domain.work_descriptor import WorkDescriptor
 
@@ -50,7 +50,7 @@ def _ranking(catalogue: str | None = "KV 618") -> RankingResult:
         work=_work(catalogue=catalogue), representations=(_rep(catalogue),), providers=(ProviderId("omr"),)
     )
     context = RankingContext(query_descriptor=_work(catalogue="KV 618"))
-    config = RankingConfig(enabled_criteria=(RankingCriterion.RELEVANCE_CATALOGUE,))
+    config = RankingPolicy(enabled_criteria=(RankingCriterion.RELEVANCE_CATALOGUE,))
     return DefaultWorkRanker().rank((group,), context, config)
 
 
@@ -197,7 +197,7 @@ def test_evidence_pipeline_integration() -> None:
     ranking = DefaultWorkRanker().rank(
         (group,),
         RankingContext(query_descriptor=query),
-        RankingConfig(enabled_criteria=tuple(RankingCriterion)),
+        RankingPolicy(enabled_criteria=tuple(RankingCriterion)),
     )
     selection = _selection_evidence()
 

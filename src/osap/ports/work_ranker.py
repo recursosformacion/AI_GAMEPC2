@@ -1,10 +1,10 @@
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
-from ..domain.ranking import RankingConfig, RankingContext, RankingResult
+from ..domain.ranking import RankingContext, RankingPolicy, RankingResult
 
 if TYPE_CHECKING:
-    from ..application.execution_plan import WorkGroup
+    from ..domain.work_group import WorkGroup
 
 
 class IWorkRanker(ABC):
@@ -15,6 +15,6 @@ class IWorkRanker(ABC):
 
     @abstractmethod
     def rank(
-        self, works: tuple["WorkGroup", ...], context: RankingContext, config: RankingConfig
+        self, works: tuple["WorkGroup", ...], context: RankingContext, policy: RankingPolicy
     ) -> RankingResult:
         raise NotImplementedError

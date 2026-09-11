@@ -32,6 +32,12 @@ export function HowItWorksPage() {
         </ul>
       </section>
 
+      <section id="downloads" className="rounded border border-osap-border bg-osap-surface p-4">
+        <h2 className="mb-2 text-lg font-semibold">{t("how.accessTitle")}</h2>
+        <p className="text-sm">{t("how.accessFree")}</p>
+        <p className="mt-2 text-sm text-osap-muted">{t("how.accessDownloads")}</p>
+      </section>
+
       <section className="rounded border border-osap-border bg-osap-surface p-4">
         <h2 className="mb-2 text-lg font-semibold">{t("how.futureTitle")}</h2>
         <p className="text-sm text-osap-muted">{t("how.futureBody")}</p>

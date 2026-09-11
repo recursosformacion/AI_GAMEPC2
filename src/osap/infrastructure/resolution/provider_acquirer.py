@@ -9,7 +9,7 @@ proveedor.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Protocol
+from typing import TYPE_CHECKING, Protocol, cast
 
 from src.osap.domain.search_request import SearchRequest
 from src.osap.infrastructure.providers.adapters.generic_provider_adapter import (
@@ -24,6 +24,7 @@ from src.osap.infrastructure.providers.contracts import (
     ProviderStatistics,
     ProviderWork,
 )
+from src.osap.infrastructure.resolution.domain_adapter import provider_works_to_candidates
 
 if TYPE_CHECKING:
     from src.osap.domain.candidate_representation import CandidateRepresentation
@@ -35,6 +36,10 @@ class AcquiredPage:
     provider: str
     cursor_value: str
     works: tuple[ProviderWork, ...] = ()
+    # Objetos de dominio vivos (vía sin pérdida, F3/ADR-0035): los acquirers que parten de
+    # CandidateRepresentation los conservan aquí. `works` (ProviderWork) sigue siendo el
+    # contrato de persistencia (provider_results JSON) para reanudación sin HTTP.
+    candidates: tuple[CandidateRepresentation, ...] = ()
     next_cursor: str | None = None
     end_of_provider: bool = False
     error: str | None = None
@@ -70,6 +75,7 @@ class ProviderAdapterAcquirer:
             provider=provider,
             cursor_value=cursor_value or "1",
             works=works,
+            candidates=provider_works_to_candidates(provider, works),
             next_cursor=None,
             end_of_provider=True,
         )
@@ -99,6 +105,7 @@ class CatalogAcquirer:
             provider=provider,
             cursor_value=cursor_value,
             works=works,
+            candidates=candidates,
             next_cursor=None,
             end_of_provider=True,
         )
@@ -274,3 +281,86 @@ def provider_works_to_json(works: tuple[ProviderWork, ...]) -> str:
     import json
 
     return json.dumps([provider_work_to_dict(w) for w in works], ensure_ascii=False)
+
+
+def provider_work_from_dict(data: dict[str, object]) -> ProviderWork:
+    """Inverso de `provider_work_to_dict`: JSON → dataclass ProviderWork.
+
+    Es el punto de entrada de la vía de reanudación (provider_results.payload_json,
+    ADR-0033): reconstruye el contrato v1.3 sin HTTP para volver a resolver.
+    """
+    identity_raw = _as_dict(data.get("identity"))
+    metadata_raw = _as_dict(data.get("metadata"))
+    resources_raw = data.get("resources") or []
+    resources = (
+        tuple(_resource_from_dict(item) for item in resources_raw if isinstance(item, dict))
+        if isinstance(resources_raw, list)
+        else ()
+    )
+    return ProviderWork(
+        identity=ProviderIdentity(
+            id=str(identity_raw.get("id") or ""),
+            title=str(identity_raw.get("title") or ""),
+            composer=_opt_str(identity_raw.get("composer")),
+            catalogue=_opt_str(identity_raw.get("catalogue")),
+            confidence=float(cast("float", identity_raw.get("confidence") or 0.0)),
+        ),
+        metadata=ProviderMetadata(
+            subtitle=_opt_str(metadata_raw.get("subtitle")),
+            opus=_opt_str(metadata_raw.get("opus")),
+            musical_key=_opt_str(metadata_raw.get("musical_key")),
+            license=_opt_str(metadata_raw.get("license")),
+            public_domain=(
+                bool(metadata_raw["public_domain"]) if metadata_raw.get("public_domain") is not None else None
+            ),
+            genres=tuple(str(g) for g in _as_list(metadata_raw.get("genres"))),
+            tags=tuple(str(t) for t in _as_list(metadata_raw.get("tags"))),
+            instruments=tuple(str(i) for i in _as_list(metadata_raw.get("instruments"))),
+        ),
+        statistics=ProviderStatistics(),
+        resources=resources,
+    )
+
+
+def provider_works_from_json(payload: str) -> tuple[ProviderWork, ...]:
+    """JSON de provider_results → tuple[ProviderWork] (vía de reanudación)."""
+    import json
+
+    try:
+        rows = json.loads(payload or "[]")
+    except ValueError:
+        return ()
+    if not isinstance(rows, list):
+        return ()
+    return tuple(provider_work_from_dict(row) for row in rows if isinstance(row, dict))
+
+
+def _resource_from_dict(data: dict[str, object]) -> ProviderResource:
+    links_raw = _as_dict(data.get("links"))
+    return ProviderResource(
+        id=str(data.get("id") or ""),
+        format=str(data.get("format") or ""),
+        mime_type=_opt_str(data.get("mime_type")),
+        available=bool(data.get("available", True)),
+        license=_opt_str(data.get("license")),
+        links=ProviderLinks(
+            download=_opt_str(links_raw.get("download")),
+            view=_opt_str(links_raw.get("view")),
+            thumbnail=_opt_str(links_raw.get("thumbnail")),
+        ),
+    )
+
+
+def _as_dict(value: object) -> dict[str, object]:
+    return value if isinstance(value, dict) else {}
+
+
+def _as_list(value: object) -> list[object]:
+    return value if isinstance(value, list) else []
+
+
+def _opt_str(value: object) -> str | None:
+    if value is None:
+        return None
+    text = str(value)
+    return text if text else None

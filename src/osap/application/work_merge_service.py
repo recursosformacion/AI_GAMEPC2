@@ -10,7 +10,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from src.osap.application.work_grouper import WorkGroup, WorkGrouper, _sort_key
+from src.osap.application.work_grouper import WorkGrouper, _sort_key
+from src.osap.domain.work_group import WorkGroup
 
 if TYPE_CHECKING:
     from src.osap.domain.candidate_representation import CandidateRepresentation

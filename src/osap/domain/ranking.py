@@ -2,11 +2,11 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from src.osap.domain.output_format import OutputFormat
-from src.osap.domain.work_descriptor import WorkDescriptor
+from .output_format import OutputFormat
+from .work_descriptor import WorkDescriptor
 
 if TYPE_CHECKING:
-    from src.osap.application.execution_plan import WorkGroup
+    from .work_group import WorkGroup
 
 
 class RankingCriterion(Enum):
@@ -85,8 +85,13 @@ _DEFAULT_WEIGHTS: dict[RankingCriterion, float] = {
 
 
 @dataclass(frozen=True)
-class RankingConfig:
-    """Policy for ranking (criteria enabled, weights, sorting)."""
+class RankingPolicy:
+    """Policy for ranking by criteria (enabled criteria, weights, sorting).
+
+    Domain-pure ranking policy used by the canonical V2.1 pipeline. Not to be confused
+    with the V1 ``RankingConfig`` (``domain/ranking_config``) used by the legacy
+    ``DefaultRankingEngine`` while the search flow migrates (ADR-0035, F4).
+    """
 
     enabled_criteria: tuple[RankingCriterion, ...] = field(
         default_factory=lambda: tuple(RankingCriterion)

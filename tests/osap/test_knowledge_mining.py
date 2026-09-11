@@ -25,7 +25,7 @@ from src.osap.domain.knowledge import (
 from src.osap.domain.matching import MatchingConfig, MatchLevel
 from src.osap.domain.merge import MergePolicy
 from src.osap.domain.output_format import OutputFormat
-from src.osap.domain.ranking import RankingConfig, RankingContext, UserPreferences
+from src.osap.domain.ranking import RankingContext, RankingPolicy, UserPreferences
 from src.osap.domain.value_objects import CandidateId, Confidence, ProviderId, WorkId
 from src.osap.domain.work_descriptor import WorkDescriptor
 from src.osap.ports.knowledge_collector import IKnowledgeCollector
@@ -270,7 +270,7 @@ def test_integration_pipeline_produces_verifiable_suggestion() -> None:
     )
 
     context = RankingContext(query_descriptor=query, user_preferences=UserPreferences())
-    ranked = DefaultWorkRanker().rank((group,), context, RankingConfig())
+    ranked = DefaultWorkRanker().rank((group,), context, RankingPolicy())
     assert len(ranked.order) == 1
 
     merge = DefaultMergeService().merge(group, MergePolicy())

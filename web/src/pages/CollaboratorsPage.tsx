@@ -21,16 +21,22 @@ const WAYS = [
     icon: "🤝",
     titleKey: "collaborators.contributeTitle",
     subKey: "collaborators.contributeSub",
+    ctaKey: "collaborators.createAccountCta",
+    to: "/support?mode=register",
   },
   {
     icon: "📣",
     titleKey: "collaborators.shareTitle",
     subKey: "collaborators.shareSub",
+    ctaKey: "collaborators.createAccountCta",
+    to: "/support?mode=register",
   },
   {
     icon: "🎼",
     titleKey: "collaborators.contentTitle",
     subKey: "collaborators.contentSub",
+    ctaKey: "collaborators.createAccountCta",
+    to: "/support?mode=register",
   },
 ] as const;
 

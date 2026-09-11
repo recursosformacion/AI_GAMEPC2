@@ -1,10 +1,10 @@
 from dataclasses import dataclass, field
 
-from src.osap.domain.candidate_representation import CandidateRepresentation
-from src.osap.domain.evidence import Evidence
-from src.osap.domain.resolve_request import ResolveRequest
-from src.osap.domain.value_objects import Duration, ProviderId
-from src.osap.domain.work_descriptor import WorkDescriptor
+from .candidate_representation import CandidateRepresentation
+from .evidence import Evidence
+from .resolve_request import ResolveRequest
+from .value_objects import Duration, ProviderId
+from .work_descriptor import WorkDescriptor
 
 
 @dataclass(frozen=True)

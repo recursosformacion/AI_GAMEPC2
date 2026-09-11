@@ -29,10 +29,12 @@ class WorkComposerMatcher:
         builder = ResolveRequestBuilder().title(query.work_title)
         if query.composer:
             builder = builder.composer(query.composer)
-        result = self._engine.resolve(builder.build())
+        # F4.E1: la fase catálogo solo necesita el CONJUNTO de candidatos (sin ranking V1);
+        # el orden lo decide la pipeline V2.1, aquí es irrelevante.
+        candidates = self._engine.gather(builder.build()).candidates
 
         best: dict[tuple[str, str], tuple[float, ResolverCandidate]] = {}
-        for candidate in result.ranking:
+        for candidate in candidates:
             composer = candidate.work_descriptor.composer
             if not composer:
                 continue

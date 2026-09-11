@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from src.osap.domain.candidate_representation import CandidateRepresentation
 from src.osap.domain.cost_level import CostLevel
 from src.osap.domain.value_objects import ProviderId
-from src.osap.domain.work_descriptor import WorkDescriptor
+from src.osap.domain.work_group import WorkGroup
 
 _COST_RANK: dict[CostLevel, int] = {
     CostLevel.FREE: 0,
@@ -37,15 +37,6 @@ class ProviderExecutionPlan:
 
     steps: tuple[ProviderStep, ...] = field(default_factory=tuple)
     reused_cache: bool = False
-
-
-@dataclass(frozen=True)
-class WorkGroup:
-    """All normalized representations of a single work, from any provider."""
-
-    work: WorkDescriptor
-    representations: tuple[CandidateRepresentation, ...] = field(default_factory=tuple)
-    providers: tuple[ProviderId, ...] = field(default_factory=tuple)
 
 
 @dataclass(frozen=True)

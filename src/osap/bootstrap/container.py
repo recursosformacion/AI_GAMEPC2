@@ -5,12 +5,14 @@ from src.osap.application.evidence_engine import EvidenceEngine
 from src.osap.application.export_manager import ExportManager
 from src.osap.application.library_manager import LibraryManager
 from src.osap.application.provider_orchestrator import ProviderOrchestrator
+from src.osap.application.ranker import DefaultWorkRanker
 from src.osap.application.use_cases.resolve_composer import ResolveComposerUseCase
 from src.osap.application.use_cases.resolve_works import ResolveWorksUseCase
 from src.osap.application.votes_service import VotesService
 from src.osap.application.work_merge_service import WorkMergeService
 from src.osap.application.work_resolution_engine import WorkResolutionEngine
 from src.osap.application.work_resolver import WorkResolver
+from src.osap.domain.ranking import RankingPolicy
 from src.osap.domain.ranking_config import RankingConfig
 from src.osap.infrastructure.auth.auth_proxy_client import AuthProxyClient
 from src.osap.infrastructure.auth.oidc_rp_client import OidcRpClient
@@ -262,6 +264,12 @@ class Container:
 
     def work_merge_service(self) -> WorkMergeService:
         return WorkMergeService()
+
+    def work_ranker(self) -> DefaultWorkRanker:
+        return DefaultWorkRanker()
+
+    def work_ranking_policy(self) -> RankingPolicy:
+        return RankingPolicy()
 
     def catalog_manager(self) -> CatalogManager:
         manager = CatalogManager()

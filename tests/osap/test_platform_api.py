@@ -249,20 +249,16 @@ def test_search_missing_returns_404() -> None:
 # --- jobs -------------------------------------------------------------------
 
 
-def test_create_and_list_and_get_job() -> None:
+def test_create_job_is_pending_spec_501() -> None:
+    """POST /api/v1/jobs devuelve 501 hasta V3.2 (decisión deliberada: no simular
+    una ejecución 'completed' falsa — ver platform_app.create_job)."""
     client = _client()
     created = client.post("/api/v1/jobs", json={"type": "provider-sync"})
-    assert created.status_code == 201
-    job = created.json()["data"]
-    assert job["type"] == "provider-sync"
-    assert job["state"] == "completed"
-    assert created.headers["location"] == f"/api/v1/jobs/{job['job_id']}"
+    assert created.status_code == 501
+    assert created.json()["error"]["code"] == "NOT_IMPLEMENTED"
 
     jobs = client.get("/api/v1/jobs").json()["data"]
-    assert [j["job_id"] for j in jobs] == [job["job_id"]]
-
-    got = client.get(f"/api/v1/jobs/{job['job_id']}").json()["data"]
-    assert got["job_id"] == job["job_id"]
+    assert jobs == []
 
 
 def test_job_missing_returns_404() -> None:

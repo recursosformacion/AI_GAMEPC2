@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from ..domain.merge import MergePolicy, MergeResult
 
 if TYPE_CHECKING:
-    from ..application.execution_plan import WorkGroup
+    from ..domain.work_group import WorkGroup
 
 
 class IMergeService(ABC):

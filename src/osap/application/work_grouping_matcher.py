@@ -33,6 +33,7 @@ from typing import TYPE_CHECKING
 from src.osap.application.metadata_normalizer import MetadataNormalizer
 from src.osap.application.metadata_parser import extract_metadata
 from src.osap.application.representation_identity import RepresentationIdentity, build_identity
+from src.osap.domain.normalization import stable_id
 
 if TYPE_CHECKING:
     from src.osap.domain.candidate_representation import CandidateRepresentation
@@ -190,7 +191,7 @@ class WorkGroupingMatcher:
                 confidence=self._confidence(score, a.confidence.value, b.confidence.value),
                 breakdown=_breakdown(na, nb),
                 work_key=work_key,
-                work_id=f"work-{abs(hash(work_key))}" if work_key else None,
+                work_id=f"work-{stable_id(work_key)}" if work_key else None,
             )
 
         ca, ca_key = _composer_signal(a.work_descriptor.composer)
@@ -237,7 +238,7 @@ class WorkGroupingMatcher:
             and na.work_number == nb.work_number
             and na.key
             and nb.key
-            and na.key == nb.key
+            and _keys_compatible(na.key, nb.key)
         ):
             return decision(
                 0.85,
@@ -248,33 +249,40 @@ class WorkGroupingMatcher:
         # 7. Fallback por título, SOLO con atribución compatible (mismo compositor
         #    específico, o ambos sin atribución/anónimos). El caso "específico +
         #    sin dato" ya se vetó en 2 salvo catálogo igual, resuelto en 5.
-        #    PROTECCIÓN: títulos genéricos (≤2 tokens, p. ej. "sonata") no se fusionan
-        #    si un lado aporta catálogo/número/clave que el otro no tiene o contradice.
+        #    Reglas de metadatos:
+        #      - un valor AUSENTE no es un conflicto (solo se veta si AMBOS lados
+        #        aportan el campo y difieren);
+        #      - títulos genéricos (núcleo corto) solo se fusionan con detalle
+        #        unidireccional si hay ANCLAJE: mismo número en ambos lados, o un
+        #        lado completamente sin identificadores frente a uno con catálogo.
+        #        Sin anclaje, dos obras del mismo género con identificadores
+        #        distintos (p. ej. preludios de Chopin) NO se fusionan.
         if not (same_composer or both_nonspecific):
             return decision(0.0, MergeVerdict.NOT_MERGED, [])
-        core_tokens = (na.title or "").split()
-        generic_title = len(core_tokens) <= 2
-        if generic_title:
-            if (na.catalog or nb.catalog) and na.catalog != nb.catalog:
-                return decision(0.0, MergeVerdict.NOT_MERGED, [])
-            if (na.work_number or nb.work_number) and na.work_number != nb.work_number:
-                return decision(0.0, MergeVerdict.NOT_MERGED, [])
-            if (na.key or nb.key) and na.key != nb.key:
-                return decision(0.0, MergeVerdict.NOT_MERGED, [])
-        else:
-            if (
-                na.catalog
-                and nb.catalog
-                and na.catalog != nb.catalog
-            ) or (
+        if (
+            (na.catalog and nb.catalog and na.catalog != nb.catalog)
+            or (
                 na.work_number
                 and nb.work_number
                 and na.work_number != nb.work_number
-            ) or (
-                na.key
-                and nb.key
-                and na.key != nb.key
-            ):
+            )
+            or (na.key and nb.key and not _keys_compatible(na.key, nb.key))
+        ):
+            return decision(0.0, MergeVerdict.NOT_MERGED, [])
+        core_tokens = (na.title or "").split()
+        if len(core_tokens) <= 2:
+            same_number = bool(
+                na.work_number and nb.work_number and na.work_number == nb.work_number
+            )
+            blank_a = not (na.catalog or na.work_number or na.key)
+            blank_b = not (nb.catalog or nb.work_number or nb.key)
+            anchored = same_number or (na.catalog and blank_b) or (nb.catalog and blank_a)
+            one_sided_detail = bool(
+                (na.catalog or nb.catalog)
+                or (na.work_number or nb.work_number)
+                or (na.key or nb.key)
+            )
+            if one_sided_detail and not anchored:
                 return decision(0.0, MergeVerdict.NOT_MERGED, [])
         sim = _token_similarity(na.title or "", nb.title or "")
         if sim >= _TITLE_FALLBACK_SIM:
@@ -358,3 +366,25 @@ def _token_similarity(a: str, b: str) -> float:
     inter = len(ta & tb)
     union = len(ta | tb)
     return inter / union if union else 0.0
+
+
+def _keys_compatible(a: str, b: str) -> bool:
+    """Dos claves son compatibles si son iguales o comparten tónica sin modo explícito
+    en al menos un lado ("A" ≈ "A major"). Dos modos explícitos distintos NO lo son
+    ("G major" ≠ "G minor"). La ausencia de clave se resuelve antes de llamar aquí."""
+    if a == b:
+        return True
+    mode_a = _key_mode(a)
+    mode_b = _key_mode(b)
+    if mode_a and mode_b:
+        return False
+    return _key_tonic(a) == _key_tonic(b)
+
+
+def _key_tonic(key: str) -> str:
+    return key.split(" ", 1)[0].strip()
+
+
+def _key_mode(key: str) -> str:
+    parts = key.split(" ", 1)
+    return parts[1].strip().lower() if len(parts) > 1 else ""

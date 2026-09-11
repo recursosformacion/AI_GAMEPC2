@@ -77,6 +77,7 @@ from .quality_report import QualityDimension, QualityReport
 from .ranking import (
     RankingContext,
     RankingCriterion,
+    RankingPolicy,
     RankingReason,
     RankingResult,
     RankingScore,
@@ -115,6 +116,7 @@ from .value_objects import (
     WorkIdentifier,
 )
 from .work_descriptor import WorkDescriptor
+from .work_group import WorkGroup
 
 __all__ = [
     "RequestId",
@@ -172,6 +174,7 @@ __all__ = [
     "MergeResult",
     "MergedWorkDescriptor",
     "WorkDescriptor",
+    "WorkGroup",
     "Edition",
     "Arrangement",
     "AuthType",
@@ -210,6 +213,7 @@ __all__ = [
     "CanonicalResult",
     "ResolveRequest",
     "RankingCriterion",
+    "RankingPolicy",
     "RankingReason",
     "RankingScore",
     "RankingResult",

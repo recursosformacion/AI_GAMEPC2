@@ -8,6 +8,7 @@ import { AdminSourceSuggestionsPage } from "../pages/AdminSourceSuggestionsPage"
 import { AdminProvidersPage } from "../pages/AdminProvidersPage";import { AdminCorrectionsPage } from "../pages/AdminCorrectionsPage";
 import { AdminUserDetailPage } from "../pages/AdminUserDetailPage";
 import { AdminUsersPage } from "../pages/AdminUsersPage";
+import { AdminPaymentsPage } from "../pages/AdminPaymentsPage";
 import { AdminPage } from "../pages/AdminPage";
 import { AliasPage } from "../pages/AliasPage";
 import { AuthCallbackPage } from "../pages/AuthCallbackPage";
@@ -61,6 +62,7 @@ export function AppRoutes() {
       <Route element={<AdminLayout />}>
         <Route path="/admin" element={<AdminPage />} />
         <Route path="/admin/users" element={<AdminUsersPage />} />
+        <Route path="/admin/payments" element={<AdminPaymentsPage />} />
         <Route path="/admin/users/:userId" element={<AdminUserDetailPage />} />
         <Route path="/admin/composers" element={<AdminComposersPage />} />
         <Route path="/admin/composers/:composerId" element={<AdminComposerDetailPage />} />

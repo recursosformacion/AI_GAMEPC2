@@ -1,5 +1,8 @@
+import logging
 from pathlib import Path
 from typing import Any
+
+import pymysql
 
 from src.osap.application.composers_service import ComposersService
 from src.osap.application.votes_service import VotesService
@@ -59,6 +62,9 @@ DEFAULT_PROVIDER_ORDER = (
     "hymnary",
     "iiif",
 )
+
+_LOGGER = logging.getLogger("osap.wiring")
+_DB_ERRORS = (pymysql.err.OperationalError, pymysql.err.ProgrammingError, KeyError, ValueError, TypeError)
 
 
 _LOCAL_ROUTES = {
@@ -123,7 +129,8 @@ def _provider_definition(
             load_definition_from_config(provider_id, config) if config else load_definition(fallback_path)
         )
         wired = bool(row.get("wired")) if row else True
-    except Exception:  # noqa: BLE001
+    except _DB_ERRORS:
+        _LOGGER.warning("No se pudo cargar la definición de %s (BD/YAML); usando fallback", provider_id, exc_info=True)
         definition = load_definition(fallback_path)
         wired = True
     if base_url:
@@ -177,7 +184,8 @@ def _db_provider_metadata(container: Container) -> list[tuple[str, str, str | No
                 )
             )
         return out
-    except Exception:  # noqa: BLE001
+    except _DB_ERRORS:
+        _LOGGER.warning("No se pudo listar la metadata de proveedores desde la BD operativa", exc_info=True)
         return []
 
 
@@ -306,7 +314,8 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
             for r in op_store.list_providers()
             if str(r.get("provider_id") or "") == "cpdl"
         )
-    except Exception:  # noqa: BLE001 — sin BD operativa no se activa
+    except _DB_ERRORS:
+        _LOGGER.warning("Sin BD operativa no se activa CPDL", exc_info=True)
         cpdl_wired = False
     if cpdl_wired:
         # Base del corpus CPDL: permite apuntar a otra instancia de osap-storage

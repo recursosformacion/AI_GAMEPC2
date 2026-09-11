@@ -6,6 +6,7 @@
 // guardado (donation/one_time | membership/supporter/monthly|yearly).
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "../components/Button";
 import { LoginForm } from "../components/LoginForm";
 import { RegisterForm } from "../components/RegisterForm";
@@ -49,6 +50,15 @@ export function SupportOsapPage() {
   const [starting, setStarting] = useState(false);
   const [membershipStarting, setMembershipStarting] = useState<string | null>(null);
   const [membershipError, setMembershipError] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+
+  // Enlaces desde Colaboradores ("Crear cuenta"): abrir directamente el registro.
+  useEffect(() => {
+    if (searchParams.get("mode") === "register") {
+      setAuthMode("register");
+      setAuthOpen(true);
+    }
+  }, [searchParams]);
 
   const openLogin = () => {
     if (support.authenticated) return;
@@ -250,6 +260,12 @@ export function SupportOsapPage() {
             </li>
           ))}
         </ul>
+        <p className="mt-3 text-sm text-osap-muted">
+          {t("osapSupport.infraNote")}{" "}
+          <a href="/about/how-it-works#downloads" className="text-osap-accent hover:underline">
+            {t("how.accessTitle")}
+          </a>
+        </p>
       </section>
 
       {/* Tu cuenta es tu relación con OSAP */}

@@ -1,6 +1,6 @@
 from src.osap.domain.candidate_representation import CandidateRepresentation
 from src.osap.domain.errors import ScoreResolutionError
-from src.osap.domain.normalization import normalize_name
+from src.osap.domain.normalization import normalize_name, stable_id
 from src.osap.domain.resolve_request import ResolveRequest
 from src.osap.domain.value_objects import WorkId, WorkIdentifier
 from src.osap.domain.work_descriptor import WorkDescriptor
@@ -15,7 +15,7 @@ class WorkResolver(IWorkResolver):
         if not title:
             raise ScoreResolutionError("Cannot resolve a work without a title or query")
         return WorkDescriptor(
-            work_id=WorkId(f"work-{abs(hash(title))}"),
+            work_id=WorkId(f"work-{stable_id(title)}"),
             title=title,
             composer=request.composer.strip() if request.composer else None,
             language=request.language,

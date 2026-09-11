@@ -21,9 +21,9 @@ from src.osap.domain.candidate_representation import CandidateRepresentation
 from src.osap.domain.matching import MatchingConfig, MatchLevel
 from src.osap.domain.output_format import OutputFormat
 from src.osap.domain.ranking import (
-    RankingConfig,
     RankingContext,
     RankingCriterion,
+    RankingPolicy,
     UserPreferences,
 )
 from src.osap.domain.value_objects import CandidateId, Confidence, ProviderId, WorkId
@@ -91,15 +91,15 @@ def _cluster(candidates: list[CandidateRepresentation], matcher: DefaultWorkMatc
 def _rank(
     works: tuple[WorkGroup, ...],
     query: WorkDescriptor,
-    config: RankingConfig,
+    config: RankingPolicy,
     prefs: UserPreferences | None = None,
 ):
     context = RankingContext(query_descriptor=query, user_preferences=prefs or UserPreferences())
     return DefaultWorkRanker().rank(works, context, config)
 
 
-def _full_config() -> RankingConfig:
-    return RankingConfig(enabled_criteria=tuple(RankingCriterion))
+def _full_config() -> RankingPolicy:
+    return RankingPolicy(enabled_criteria=tuple(RankingCriterion))
 
 
 def test_case1_k618_canonicalized_then_grouped_and_ranked() -> None:
@@ -153,7 +153,7 @@ def test_case3_sonata_multiple_composers_multiple_groups() -> None:
     groups = _cluster(candidates, matcher)
     assert len(groups) == 3  # composer differs -> three distinct works
 
-    config = RankingConfig(
+    config = RankingPolicy(
         enabled_criteria=(RankingCriterion.RELEVANCE_TITLE, RankingCriterion.QUALITY_CONFIDENCE),
         weights={
             RankingCriterion.RELEVANCE_TITLE: 0.25,
@@ -180,7 +180,7 @@ def test_case4_same_work_three_formats_prefers_musicxml() -> None:
     assert len(groups[0].representations) == 3
 
     prefs = UserPreferences(desired_format=OutputFormat.MUSICXML)
-    config = RankingConfig(
+    config = RankingPolicy(
         enabled_criteria=(RankingCriterion.PREFERENCE_FORMAT,),
         weights={RankingCriterion.PREFERENCE_FORMAT: 1.0},
     )
@@ -213,7 +213,7 @@ def test_ranking_keeps_identity() -> None:
         _rep("b", OutputFormat.PDF, "Sonata", "Beethoven", confidence=0.5),
     ]
     groups = _cluster(candidates, matcher)
-    config = RankingConfig(enabled_criteria=(RankingCriterion.QUALITY_CONFIDENCE,))
+    config = RankingPolicy(enabled_criteria=(RankingCriterion.QUALITY_CONFIDENCE,))
     result = _rank(tuple(groups), _descriptor("Sonata"), config)
     # Ranking only orders; it does not change how many works exist.
     assert {score.work.work.composer for score in result.order} == {"Mozart", "Beethoven"}

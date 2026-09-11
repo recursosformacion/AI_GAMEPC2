@@ -21,10 +21,11 @@ from typing import TYPE_CHECKING
 
 from src.osap.application.acquisition import AcquisitionInfo, AcquisitionMethod, AcquisitionResolver
 from src.osap.application.metadata_normalizer import MetadataNormalizer
-from src.osap.application.work_grouper import WorkGroup, _preference_key
+from src.osap.application.work_grouper import _preference_key
 
 if TYPE_CHECKING:
     from src.osap.domain.candidate_representation import CandidateRepresentation
+    from src.osap.domain.work_group import WorkGroup
 
 # Apellidos de compositores conocidos -> nombre canónico (para el "mejor compositor").
 _KNOWN_LAST_NAMES: dict[str, str] = {

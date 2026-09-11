@@ -154,9 +154,15 @@ export function HomePage() {
 
       {/* Explorar */}
       <div className="grid gap-4 sm:grid-cols-2">
-        <Card title={t("home.recent")}>{curatingHint("/discover", t("nav.discover"))}</Card>
-        <Card title={t("home.mostAccessed")}>{curatingHint("/discover", t("nav.discover"))}</Card>
-        <Card title={t("home.recentlyAdded")}>{curatingHint("/discover", t("nav.discover"))}</Card>
+        <Card title={t("home.recent")}>
+          <p className="text-sm text-osap-muted">{t("home.recentEmpty")}</p>
+        </Card>
+        <Card title={t("home.mostAccessed")}>
+          <p className="text-sm text-osap-muted">{t("home.mostAccessedEmpty")}</p>
+        </Card>
+        <Card title={t("home.recentlyAdded")}>
+          <p className="text-sm text-osap-muted">{t("home.recentlyAddedEmpty")}</p>
+        </Card>
         <Card title={t("home.sourcesAvailable")}>
           {wiredSources.length === 0 ? (
             curatingHint("/catalog", t("nav.sources"))

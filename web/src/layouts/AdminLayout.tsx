@@ -24,9 +24,7 @@ const SECTIONS: AdminSection[] = [
   { items: [{ to: "/admin", key: "admin.resumen", end: true }] },
   {
     caption: "Gestión de pagos",
-    items: [
-      // TODO(v1.1): listado de pagos y membresías (backend osap-support + pantalla).
-    ],
+    items: [{ to: "/admin/payments", key: "admin.paymentsTitle" }],
   },
   {
     caption: "Mantenimiento tablas",

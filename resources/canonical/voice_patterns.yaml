@@ -1,0 +1,19 @@
+patterns:
+- label: SATB
+  pattern: SATB
+  flags: 2
+- label: SSA
+  pattern: \bSSA\b
+  flags: 2
+- label: TTBB
+  pattern: TTBB
+  flags: 2
+- label: TTB
+  pattern: \bTTB\b
+  flags: 2
+- label: SAB
+  pattern: \bSAB\b
+  flags: 2
+- label: SSAATTBB
+  pattern: SSAATTBB
+  flags: 2

@@ -17,6 +17,50 @@ const SUPPORT_BASE =
 
 import { useAuth } from "../state/auth";
 
+export interface AdminMembershipItem {
+  id: number;
+  user_id: string;
+  status: string;
+  level: string;
+  periodicity: string;
+  amount_minor: number;
+  currency: string;
+  provider: string;
+  subscription_id: string;
+  started_at: string | null;
+  renewed_at: string | null;
+  next_renewal_at: string | null;
+  cancelled_at: string | null;
+  expires_at: string | null;
+  email_contact: string;
+  is_founder: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AdminMembershipsPage {
+  total: number;
+  items: AdminMembershipItem[];
+}
+
+export interface AdminDonationItem {
+  id: number;
+  user_id: string;
+  amount_minor: number;
+  currency: string;
+  provider: string;
+  charge_id: string;
+  receipt_id: string | null;
+  email_receipt: string;
+  donated_at: string;
+  created_at: string;
+}
+
+export interface AdminDonationsPage {
+  total: number;
+  items: AdminDonationItem[];
+}
+
 export class SupportApiClient {
   constructor(
     private readonly baseUrl: string = SUPPORT_BASE,
@@ -48,6 +92,54 @@ export class SupportApiClient {
     body: { level: string; periodicity: string; return_url: string },
   ): Promise<CheckoutResult> {
     return (await this.post("/checkouts/membership", accessToken, body)) as CheckoutResult;
+  }
+
+  /** Listado admin de membresías (rol support:admin, osap-support). */
+  async listAdminMemberships(
+    accessToken: string,
+    filters: {
+      user_id?: string;
+      status?: string;
+      level?: string;
+      periodicity?: string;
+      limit: number;
+      offset: number;
+    },
+  ): Promise<AdminMembershipsPage> {
+    return (await this.get(
+      `/admin/payments/memberships${this.qs(filters)}`,
+      accessToken,
+    )) as AdminMembershipsPage;
+  }
+
+  /** Listado admin de donaciones (rol support:admin, osap-support). */
+  async listAdminDonations(
+    accessToken: string,
+    filters: {
+      user_id?: string;
+      date_from?: string;
+      date_to?: string;
+      limit: number;
+      offset: number;
+    },
+  ): Promise<AdminDonationsPage> {
+    return (await this.get(
+      `/admin/payments/donations${this.qs(filters)}`,
+      accessToken,
+    )) as AdminDonationsPage;
+  }
+
+  private qs(
+    params: Record<string, string | number | undefined>,
+  ): string {
+    const search = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== "") {
+        search.set(key, String(value));
+      }
+    }
+    const raw = search.toString();
+    return raw ? `?${raw}` : "";
   }
 
   private async get(path: string, token: string): Promise<unknown> {

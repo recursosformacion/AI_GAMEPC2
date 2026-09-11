@@ -7,13 +7,18 @@ from src.osap.application.catalog_manager import CatalogManager
 from src.osap.application.evidence_engine import EvidenceEngine
 from src.osap.application.execution_plan import AggregatedProviderResult
 from src.osap.application.library_manager import LibraryManager
+from src.osap.application.merge_service import DefaultMergeService
 from src.osap.application.provider_orchestrator import ProviderOrchestrator
 from src.osap.application.provider_orchestrator import ProviderReport as ProviderReport
+from src.osap.application.ranker import DefaultWorkRanker
+from src.osap.application.work_grouper import WorkGrouper
 from src.osap.application.work_merge_service import _sort_key
 from src.osap.application.work_resolver import WorkResolver
 from src.osap.domain.acquisition_result import AcquisitionResult
 from src.osap.domain.candidate_representation import CandidateRepresentation
 from src.osap.domain.errors import ResourceUnavailableError, ScoreResolutionError
+from src.osap.domain.evidence import Evidence, EvidenceMetrics, EvidenceReason, EvidenceReasonKind
+from src.osap.domain.ranking import RankingContext, RankingPolicy, UserPreferences
 from src.osap.domain.ranking_config import RankingConfig
 from src.osap.domain.resolve_request import ResolveRequest
 from src.osap.domain.resolve_result import ResolveResult
@@ -21,6 +26,13 @@ from src.osap.domain.search_request import SearchRequest
 from src.osap.domain.value_objects import Duration, LibraryId, ProviderId, WorkId
 from src.osap.domain.work_descriptor import WorkDescriptor
 from src.osap.ports.ranking_engine import IRankingEngine
+
+_QUALITY_VALUE: dict[str, float] = {
+    "unreadable": 0.1,
+    "reader": 0.4,
+    "good_reader": 0.7,
+    "high_quality": 0.95,
+}
 
 # Normalized provider statuses (the only values visible to the user/UI).
 STATUS_OK = "ok"
@@ -64,6 +76,12 @@ class WorkResolutionEngine:
         self._config = config
         self._library_manager = library_manager
         self._evidence_engine = evidence_engine or EvidenceEngine()
+        # Pipeline V2.1 (F4.E): agrupar obras (WorkGrouper) → rankear obra
+        # (DefaultWorkRanker) → elegir representación por preferencia de adquisición.
+        self._work_grouper = WorkGrouper()
+        self._work_ranker = DefaultWorkRanker()
+        self._work_merger = DefaultMergeService()
+        self._work_policy = RankingPolicy()
 
     def resolve(
         self,
@@ -87,14 +105,35 @@ class WorkResolutionEngine:
             ranking = tuple(sorted(candidates, key=_sort_key))
             providers: list[ProviderId] = [c.provider_id for c in candidates]
             diagnostics: list[str] = []
+            work_score: float | None = None
             chosen = self._pick(ranking, index)
         else:
             result = self._collect(request, on_progress)
             candidates = result.candidates
             providers = list(result.providers_used)
             diagnostics = list(result.diagnostics)
-            ranking = self._ranking_engine.rank(candidates, request, self._config)
-            chosen = self._pick(ranking, index)
+            if not candidates:
+                ranking = ()
+                work_score = None
+                chosen = None
+            else:
+                # F4.E (V2.1): representaciones → agrupación en obras → score de obra →
+                # representación elegida dentro de la mejor obra por preferencia.
+                groups = self._work_grouper.group(candidates)
+                query_descriptor = WorkDescriptor(
+                    work_id=WorkId("resolution"),
+                    title=(request.title or request.query or " "),
+                    composer=request.composer,
+                )
+                ranked_works = self._work_ranker.rank(
+                    groups,
+                    RankingContext(query_descriptor=query_descriptor, user_preferences=UserPreferences()),
+                    self._work_policy,
+                )
+                best_group = ranked_works.order[0].work
+                work_score = ranked_works.order[0].score
+                ranking = tuple(sorted(best_group.representations, key=_sort_key))
+                chosen = self._pick(ranking, index)
         duration = Duration(time.monotonic() - started)
 
         work = chosen.work_descriptor if chosen is not None else (requested_work or self._fallback_work(request))
@@ -163,8 +202,7 @@ class WorkResolutionEngine:
 
         evidence = None
         if chosen is not None and ranking:
-            scores = self._ranking_engine.rank_detailed(ranking, request, self._config)
-            evidence = self._evidence_engine.explain(chosen, request, scores)
+            evidence = self._build_evidence(chosen, work_score)
 
         return ResolveResult(
             request=request,
@@ -173,7 +211,9 @@ class WorkResolutionEngine:
             ranking=ranking,
             providers_used=tuple(providers),
             duration=duration,
-            selection_reason=f"Top-ranked by RankingEngine (provider {chosen.provider_id.value})",
+            selection_reason="Mejor obra por DefaultWorkRanker (V2.1); representación por preferencia de adquisición"
+            if chosen is not None
+            else "No viable representation could be acquired",
             evidence=evidence,
             local_path=local_path,
             score_id=score_id,
@@ -194,6 +234,19 @@ class WorkResolutionEngine:
         result = self._collect(request, on_progress, on_index_partial)
         return self._ranking_engine.rank(result.candidates, request, self._config)
 
+    def gather(
+        self,
+        request: ResolveRequest,
+        on_progress: ProgressCallback | None = None,
+        on_index_partial: Callable[[tuple[CandidateRepresentation, ...]], None] | None = None,
+    ) -> AggregatedProviderResult:
+        """Recolecta candidatos de los proveedores SIN el ranking V1.
+
+        La agrupación y el orden de obras los decide la pipeline V2.1 (ADR-0035/F4.C):
+        las representaciones son evidencia sin orden predefinido.
+        """
+        return self._collect(request, on_progress, on_index_partial)
+
     def provider_status(
         self, request: ResolveRequest, on_progress: ProgressCallback | None = None
     ) -> tuple[ProviderReport, ...]:
@@ -206,6 +259,37 @@ class WorkResolutionEngine:
         if index is not None and index < len(ranking):
             return ranking[index]
         return ranking[0]
+
+    @staticmethod
+    def _build_evidence(chosen: CandidateRepresentation, work_score: float | None) -> Evidence:
+        """Explicación estructural V2.1 de la representación elegida (sin EvidenceEngine V1)."""
+        confidence = chosen.confidence.value
+        reasons = (
+            EvidenceReason(EvidenceReasonKind.CONFIDENCE, True, f"confidence={confidence:.2f}"),
+            EvidenceReason(EvidenceReasonKind.FORMAT, bool(chosen.downloadable), chosen.format.value),
+            EvidenceReason(
+                EvidenceReasonKind.PUBLIC_DOMAIN,
+                bool(chosen.public_domain),
+                "public_domain" if chosen.public_domain else "not_public_domain",
+            ),
+            EvidenceReason(
+                EvidenceReasonKind.COMPLETENESS,
+                chosen.completeness >= 1.0,
+                f"completeness={chosen.completeness}",
+            ),
+        )
+        quality_value = _QUALITY_VALUE.get(chosen.quality.name.lower(), 0.5)
+        return Evidence(
+            provider_id=chosen.provider_id,
+            reasons=reasons,
+            metrics=EvidenceMetrics(
+                confidence=confidence,
+                quality=quality_value,
+                completeness=chosen.completeness,
+            ),
+            checksum=chosen.checksum,
+            ranking_score=work_score or 0.0,
+        )
 
     @staticmethod
     def _fallback_work(request: ResolveRequest) -> WorkDescriptor:
