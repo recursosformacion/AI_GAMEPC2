@@ -74,6 +74,17 @@ export class ApiClient {
     this.auth = auth;
   }
 
+  /** Descarga el fichero de una representación para visualizarlo (devuelve la respuesta). */
+  async fetchRepresentationFile(representationId: string): Promise<Response> {
+    const doFetch = this.fetcher ?? globalThis.fetch.bind(globalThis);
+    const headers: Record<string, string> = {};
+    if (this.token) headers["Authorization"] = `Bearer ${this.token}`;
+    return doFetch(
+      `${this.baseUrl}/representations/${encodeURIComponent(representationId)}/download?view=1`,
+      { headers }
+    );
+  }
+
   async get<T>(path: string): Promise<T> {
     return this.request<T>("GET", path);
   }

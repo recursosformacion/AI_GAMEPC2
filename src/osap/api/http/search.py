@@ -21,6 +21,19 @@ from src.osap.api.contracts import (
 if TYPE_CHECKING:
     from src.osap.api.http.context import HttpContext
 
+_LOCAL_STORAGE_HOSTS = {"127.0.0.1", "localhost"}
+
+
+def _belongs_to_storage(url: str, storage_base: str) -> bool:
+    """True si la URL es de nuestro storage (CDN propio o proxy local de storage)."""
+    if storage_base and url.lower().startswith(storage_base.lower()):
+        return True
+    parsed = urllib.parse.urlparse(url)
+    if parsed.hostname in _LOCAL_STORAGE_HOSTS:
+        return True
+    path = parsed.path.lower()
+    return path.startswith("/api/download/") or path.startswith("/api/v1/files/")
+
 
 def build_search_router(ctx: HttpContext) -> APIRouter:
     from src.osap.api.http import shared as _shared
@@ -52,13 +65,13 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
 
         # OMR/OSAP storage: el fichero vive en nuestro storage bajo un nombre hash.
         # En lugar de redirigir (el navegador usaría el hash como nombre), lo servimos
-        # desde el servidor con un nombre legible (compositor - título).
+        # desde el servidor con un nombre legible (compositor - título). También tratamos
+        # como "nuestro" el storage local (127.0.0.1/localhost, /api/download/, /api/v1/files/)
+        # para que `?view=1` pueda servirse inline (PDF en el navegador).
         storage_base = (ctx.container.storage_web_base() or "").rstrip("/")
         url_normalized = url.rstrip("/")
-        storage_base_normalized = storage_base.rstrip("/")
 
-        # Comprobar si la URL pertenece a nuestro storage (comparación case-insensitive y normalizada)
-        if storage_base and url_normalized.lower().startswith(storage_base_normalized.lower()):
+        if _belongs_to_storage(url_normalized, storage_base):
             try:
                 upstream = requests.get(url, timeout=120)
             except requests.RequestException:

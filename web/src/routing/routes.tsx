@@ -21,6 +21,7 @@ import { ComposersPage } from "../pages/ComposersPage";
 import { DiscoverPage } from "../pages/DiscoverPage";
 import { ExplorePage } from "../pages/ExplorePage";
 import { HomePage } from "../pages/HomePage";
+import { ViewerPage } from "../pages/ViewerPage";
 import { JobsPage } from "../pages/JobsPage";
 import { FactsPage, ObservationsPage, SuggestionsPage } from "../pages/KnowledgePages";
 import { ProvidersPage } from "../pages/ProvidersPage";
@@ -48,6 +49,7 @@ export function AppRoutes() {
         <Route path="/composers/:composerId" element={<ComposerDetailPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/about/how-it-works" element={<HowItWorksPage />} />
+        <Route path="/viewer" element={<ViewerPage />} />
         <Route path="/collaborators" element={<CollaboratorsPage />} />
         <Route path="/candidates" element={<CandidatesPage />} />
         <Route path="/resolution" element={<WorkResolutionPage />} />

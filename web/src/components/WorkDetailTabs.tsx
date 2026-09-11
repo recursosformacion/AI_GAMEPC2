@@ -359,7 +359,7 @@ function RepresentationsTab({
               ) : (
                 <>
                   <a
-                    href={`/api/v1/representations/${rep.id}/download?view=1`}
+                    href={_viewHref(rep.id, rep.format, workTitle)}
                     target="_blank"
                     rel="noreferrer"
                     title={t("work.view")}
@@ -434,6 +434,14 @@ function ProvidersTab({ byProvider }: { byProvider: Map<string, RepresentationIn
       </ul>
     </div>
   );
+}
+
+function _viewHref(repId: string, format: string | null | undefined, workTitle?: string | null): string {
+  const fmt = (format ?? "").toLowerCase();
+  if (["musicxml", "mxl", "xml", "mei"].includes(fmt)) {
+    return `/viewer?rep=${encodeURIComponent(repId)}&title=${encodeURIComponent(workTitle ?? "")}`;
+  }
+  return `/api/v1/representations/${encodeURIComponent(repId)}/download?view=1`;
 }
 
 function downloadFileName(rep: RepresentationInfo, workTitle?: string | null): string {
