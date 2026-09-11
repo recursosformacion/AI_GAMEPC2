@@ -61,13 +61,18 @@ function buildFromSheet(osmd: OsmdLike, bpm: number): NoteSequenceLike | null {
   let totalTime = 0;
 
   for (const measure of measures) {
+    if (!measure) continue;
     const measureTime = measure.Timestamp?.RealValue ?? totalTime;
     const containers = measure.VerticalSourceStaffEntryContainers ?? [];
     for (const container of containers) {
+      if (!container) continue;
       const time = measureTime + (container.Timestamp?.RealValue ?? 0);
       for (const staffEntry of container.StaffEntries ?? []) {
+        if (!staffEntry) continue;
         for (const voiceEntry of staffEntry.VoiceEntries ?? []) {
+          if (!voiceEntry) continue;
           for (const note of (voiceEntry.Notes ?? []) as OsmdNoteLikeWithLength[]) {
+            if (!note) continue;
             const pitch = pitchOf(note);
             if (typeof pitch !== "number") continue;
             const duration = noteSeconds(note.Length?.RealValue ?? 0.25);
@@ -93,7 +98,12 @@ function buildFromSheet(osmd: OsmdLike, bpm: number): NoteSequenceLike | null {
 
 export function buildNoteSequence(osmd: OsmdLike, bpm: number): NoteSequenceLike | null {
   // 1) Modelo de la partitura (completo y determinista).
-  const fromSheet = buildFromSheet(osmd, bpm);
+  let fromSheet: NoteSequenceLike | null = null;
+  try {
+    fromSheet = buildFromSheet(osmd, bpm);
+  } catch {
+    fromSheet = null;
+  }
   if (fromSheet) return fromSheet;
 
   // 2) Fallback: recorrido por el cursor (con límites de seguridad).
