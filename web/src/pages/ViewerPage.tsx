@@ -30,6 +30,7 @@ export function ViewerPage() {
   const [message, setMessage] = useState<string>("");
   const [playing, setPlaying] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
+  const [audioError, setAudioError] = useState<string>("");
   const [tempo, setTempo] = useState(100);
 
   useEffect(() => {
@@ -80,8 +81,11 @@ export function ViewerPage() {
           playerRef.current = player;
           player.on?.("stateChange", (s: string) => setPlaying(s === "PLAYING"));
           setAudioReady(true);
-        } catch {
+        } catch (error) {
           setAudioReady(false); // render sin sonido: no es un error bloqueante
+          setAudioError(error instanceof Error ? error.message : String(error));
+          // eslint-disable-next-line no-console
+          console.error("osmd-audio-player:", error);
         }
       } catch (error) {
         if (!alive) return;
@@ -172,7 +176,10 @@ export function ViewerPage() {
         : null}
 
       {state === "ready" && !audioReady ? (
-        <p className="text-xs text-osap-muted">{t("viewer.audioUnavailable")}</p>
+        <p className="text-xs text-osap-muted">
+          {t("viewer.audioUnavailable")}
+          {audioError ? <span className="ml-1 text-red-600">({audioError})</span> : null}
+        </p>
       ) : null}
 
       {state === "loading" || state === "rendering" ? (
