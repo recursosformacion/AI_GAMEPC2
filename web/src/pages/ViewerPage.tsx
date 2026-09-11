@@ -32,6 +32,7 @@ export function ViewerPage() {
   const [playing, setPlaying] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
   const [audioError, setAudioError] = useState<string>("");
+  const [seqInfo, setSeqInfo] = useState<string>("");
   const [tempo, setTempo] = useState(100);
 
   useEffect(() => {
@@ -78,6 +79,7 @@ export function ViewerPage() {
           );
           if (!sequence) throw new Error("No se pudieron extraer notas de la partitura");
           sequenceRef.current = sequence;
+          setSeqInfo(`${sequence.notes.length} · ${Math.round(sequence.totalTime)}s`);
           const player = new SynthPlayer(sequence, tempo);
           player.onEnd = () => {
             setPlaying(false);
@@ -188,6 +190,10 @@ export function ViewerPage() {
           {t("viewer.audioUnavailable")}
           {audioError ? <span className="ml-1 text-red-600">({audioError})</span> : null}
         </p>
+      ) : null}
+
+      {state === "ready" && audioReady && seqInfo ? (
+        <p className="text-xs text-osap-muted">{seqInfo}</p>
       ) : null}
 
       {state === "loading" || state === "rendering" ? (

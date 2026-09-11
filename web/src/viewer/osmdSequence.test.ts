@@ -36,6 +36,37 @@ describe("viewer/osmdSequence", () => {
     expect(sequence?.tempos[0]).toEqual({ time: 0, qpm: 100 });
   });
 
+  it("construye la secuencia desde el modelo de la partitura (medidas/voces)", () => {
+    const osmd = {
+      Sheet: {
+        SourceMeasures: [
+          {
+            Timestamp: { RealValue: 0 },
+            Duration: { RealValue: 0.5 },
+            VerticalSourceStaffEntryContainers: [
+              {
+                Timestamp: { RealValue: 0 },
+                StaffEntries: [
+                  { VoiceEntries: [{ Notes: [{ Pitch: { getHalfTone: () => 60 }, Length: { RealValue: 0.25 } }] }] },
+                ],
+              },
+              {
+                Timestamp: { RealValue: 0.5 },
+                StaffEntries: [
+                  { VoiceEntries: [{ Notes: [{ Pitch: { getHalfTone: () => 67 }, Length: { RealValue: 0.25 } }] }] },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    };
+    const sequence = buildNoteSequence(osmd, 60);
+    expect(sequence?.notes).toHaveLength(2);
+    expect(sequence?.notes[0]).toMatchObject({ pitch: 60, startTime: 0, endTime: 1 });
+    expect(sequence?.notes[1]).toMatchObject({ pitch: 67, startTime: 0.5 });
+  });
+
   it("devuelve null si no hay cursor o notas", () => {
     expect(buildNoteSequence({}, 100)).toBeNull();
     expect(buildNoteSequence(fakeOsmd([[], []], [0, 1]), 100)).toBeNull();

@@ -19,7 +19,22 @@ interface OsmdCursorLike {
 
 interface OsmdLike {
   cursor?: OsmdCursorLike;
-  Sheet?: { SourceMeasures?: Array<{ Timestamp?: { RealValue?: number }; Duration?: { RealValue?: number } }> };
+  Sheet?: {
+    SourceMeasures?: Array<{
+      Timestamp?: { RealValue?: number };
+      Duration?: { RealValue?: number };
+      VerticalSourceStaffEntryContainers?: Array<{
+        Timestamp?: { RealValue?: number };
+        StaffEntries?: Array<{
+          VoiceEntries?: Array<{ Notes?: OsmdNoteLike[] }>;
+        }>;
+      }>;
+    }>;
+  };
+}
+
+interface OsmdNoteLikeWithLength extends OsmdNoteLike {
+  Length?: { RealValue?: number };
 }
 
 export interface NoteSequenceLike {
@@ -37,7 +52,51 @@ function pitchOf(note: OsmdNoteLike): number | null {
   return null;
 }
 
+function buildFromSheet(osmd: OsmdLike, bpm: number): NoteSequenceLike | null {
+  const measures = osmd.Sheet?.SourceMeasures;
+  if (!measures || measures.length === 0) return null;
+
+  const noteSeconds = (wholeFraction: number): number => wholeFraction * 4 * (60 / Math.max(bpm, 1));
+  const notes: NoteSequenceLike["notes"] = [];
+  let totalTime = 0;
+
+  for (const measure of measures) {
+    const measureTime = measure.Timestamp?.RealValue ?? totalTime;
+    const containers = measure.VerticalSourceStaffEntryContainers ?? [];
+    for (const container of containers) {
+      const time = measureTime + (container.Timestamp?.RealValue ?? 0);
+      for (const staffEntry of container.StaffEntries ?? []) {
+        for (const voiceEntry of staffEntry.VoiceEntries ?? []) {
+          for (const note of (voiceEntry.Notes ?? []) as OsmdNoteLikeWithLength[]) {
+            const pitch = pitchOf(note);
+            if (typeof pitch !== "number") continue;
+            const duration = noteSeconds(note.Length?.RealValue ?? 0.25);
+            notes.push({ pitch, startTime: time, endTime: time + duration, program: 0 });
+            totalTime = Math.max(totalTime, time + duration);
+          }
+        }
+      }
+    }
+    totalTime = Math.max(totalTime, measureTime + noteSeconds(measure.Duration?.RealValue ?? 0));
+  }
+
+  if (notes.length === 0) return null;
+  notes.sort((a, b) => a.startTime - b.startTime);
+  const MAX_NOTES = 20000;
+  return {
+    notes: notes.slice(0, MAX_NOTES),
+    totalTime: Math.max(totalTime, 1),
+    tempos: [{ time: 0, qpm: bpm }],
+    quantizationInfo: { stepsPerQuarter: 4 },
+  };
+}
+
 export function buildNoteSequence(osmd: OsmdLike, bpm: number): NoteSequenceLike | null {
+  // 1) Modelo de la partitura (completo y determinista).
+  const fromSheet = buildFromSheet(osmd, bpm);
+  if (fromSheet) return fromSheet;
+
+  // 2) Fallback: recorrido por el cursor (con límites de seguridad).
   const cursor = osmd.cursor;
   const iterator = cursor?.Iterator;
   if (!cursor || !iterator || typeof cursor.NotesUnderCursor !== "function") return null;
