@@ -45,12 +45,21 @@ export interface NoteSequenceLike {
   quantizationInfo: { stepsPerQuarter: number };
 }
 
+// OSMD 0.8.4 usa `halfTone = fundamental + 12*(octave + 3)`, que sitúa C4 en 48 en
+// lugar del MIDI estándar 60: hay que subir una octava para que suene a la altura real.
+const OSMD_MIDI_OCTAVE_FIX = 12;
+
 function pitchOf(note: OsmdNoteLike): number | null {
   const pitch = note.Pitch;
   if (!pitch) return null;
-  if (typeof pitch.getHalfTone === "function") return pitch.getHalfTone();
-  if (typeof pitch.halfTone === "number") return pitch.halfTone;
-  return null;
+  const raw =
+    typeof pitch.getHalfTone === "function"
+      ? pitch.getHalfTone()
+      : typeof pitch.halfTone === "number"
+        ? pitch.halfTone
+        : null;
+  if (typeof raw !== "number") return null;
+  return Math.min(Math.max(raw + OSMD_MIDI_OCTAVE_FIX, 0), 127);
 }
 
 function buildFromSheet(osmd: OsmdLike, bpm: number): NoteSequenceLike | null {

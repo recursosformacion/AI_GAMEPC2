@@ -31,8 +31,8 @@ describe("viewer/osmdSequence", () => {
     const sequence = buildNoteSequence(osmd, 100);
     expect(sequence).not.toBeNull();
     expect(sequence?.notes).toHaveLength(3);
-    expect(sequence?.notes[0]).toMatchObject({ pitch: 60, startTime: 0, endTime: 0.5 });
-    expect(sequence?.notes[2]).toMatchObject({ pitch: 67, startTime: 0.5 });
+    expect(sequence?.notes[0]).toMatchObject({ pitch: 72, startTime: 0, endTime: 0.5 });
+    expect(sequence?.notes[2]).toMatchObject({ pitch: 79, startTime: 0.5 });
     expect(sequence?.tempos[0]).toEqual({ time: 0, qpm: 100 });
   });
 
@@ -63,8 +63,8 @@ describe("viewer/osmdSequence", () => {
     };
     const sequence = buildNoteSequence(osmd, 60);
     expect(sequence?.notes).toHaveLength(2);
-    expect(sequence?.notes[0]).toMatchObject({ pitch: 60, startTime: 0, endTime: 1 });
-    expect(sequence?.notes[1]).toMatchObject({ pitch: 67, startTime: 0.5 });
+    expect(sequence?.notes[0]).toMatchObject({ pitch: 72, startTime: 0, endTime: 1 });
+    expect(sequence?.notes[1]).toMatchObject({ pitch: 79, startTime: 0.5 });
   });
 
   it("devuelve null si no hay cursor o notas", () => {
