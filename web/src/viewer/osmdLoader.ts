@@ -27,22 +27,27 @@ export interface JSZipLike {
 
 const OSMD_URL = "https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@0.8.4/build/opensheetmusicdisplay.min.js";
 const JSZIP_URL = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
-const AUDIO_PLAYER_URL = "https://cdn.jsdelivr.net/npm/osmd-audio-player@0.7.0/umd/OsmdAudioPlayer.min.js";
 // Bundle documentado de html-midi-player: Tone + Magenta core + focus-visible + player.
 const MIDI_PLAYER_URL =
   "https://cdn.jsdelivr.net/combine/npm/tone@14.7.58,npm/@magenta/music@1.23.1/es6/core.js,npm/focus-visible@5,npm/html-midi-player@1.4.0";
 
-export interface AudioPlayerLike {
-  load: () => Promise<void>;
-  play: () => void;
-  pause: () => void;
+export interface MagentaPlayerLike {
+  start: (sequence: unknown) => Promise<void>;
   stop: () => void;
-  setBpm?: (bpm: number) => void;
-  on?: (event: string, listener: (state: string) => void) => void;
-  state?: string;
+  pause: () => void;
+  resume: () => Promise<void>;
+  setTempo: (bpm: number) => void;
 }
 
-export type AudioPlayerCtor = new (osmd: unknown) => AudioPlayerLike;
+export interface MagentaLike {
+  Player: new () => MagentaPlayerLike;
+}
+
+declare global {
+  interface Window {
+    mm?: MagentaLike;
+  }
+}
 
 function loadScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -78,19 +83,13 @@ export async function loadJSZip(): Promise<JSZipLike> {
   return window.JSZip;
 }
 
-/** Carga el reproductor de OSMD (UMD) y devuelve su constructor. */
-export async function loadAudioPlayer(): Promise<AudioPlayerCtor> {
-  const raw = (window as unknown as { OsmdAudioPlayer?: unknown }).OsmdAudioPlayer;
-  if (!raw) {
-    await loadScript(AUDIO_PLAYER_URL);
+/** Carga el bundle de audio (Tone + Magenta + midi-player) y devuelve Magenta (`mm`). */
+export async function loadMagenta(): Promise<MagentaLike> {
+  if (!window.mm) {
+    await loadScript(MIDI_PLAYER_URL);
   }
-  const loaded = (window as unknown as { OsmdAudioPlayer?: unknown }).OsmdAudioPlayer;
-  const ctor =
-    typeof loaded === "function"
-      ? (loaded as AudioPlayerCtor)
-      : (loaded as { OsmdAudioPlayer?: AudioPlayerCtor } | undefined)?.OsmdAudioPlayer;
-  if (!ctor) throw new Error("Reproductor de audio no disponible");
-  return ctor;
+  if (!window.mm) throw new Error("Magenta (mm) no disponible");
+  return window.mm;
 }
 
 /** Carga el elemento <midi-player> (para representaciones MIDI). */

@@ -7,14 +7,15 @@ import { apiClient } from "../api/ApiClient";
 import { useI18n } from "../i18n/I18n";
 import {
   isMidiContentType,
-  loadAudioPlayer,
   loadJSZip,
+  loadMagenta,
   loadMidiPlayer,
   loadOsmd,
   looksLikeZip,
   musicXmlFromMxl,
-  type AudioPlayerLike,
+  type MagentaPlayerLike,
 } from "../viewer/osmdLoader";
+import { buildNoteSequence, type NoteSequenceLike } from "../viewer/osmdSequence";
 
 type State = "loading" | "rendering" | "ready" | "midi" | "pdf" | "error";
 
@@ -25,10 +26,12 @@ export function ViewerPage() {
   const format = params.get("format");
   const title = params.get("title") ?? "";
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const playerRef = useRef<AudioPlayerLike | null>(null);
+  const playerRef = useRef<MagentaPlayerLike | null>(null);
+  const sequenceRef = useRef<NoteSequenceLike | null>(null);
   const [state, setState] = useState<State>("loading");
   const [message, setMessage] = useState<string>("");
   const [playing, setPlaying] = useState(false);
+  const [paused, setPaused] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
   const [audioError, setAudioError] = useState<string>("");
   const [tempo, setTempo] = useState(100);
@@ -71,21 +74,20 @@ export function ViewerPage() {
         osmd.render();
         if (alive) setState("ready");
         try {
-          const AudioPlayer = await loadAudioPlayer();
-          const player = new AudioPlayer(osmd);
-          await player.load();
-          if (!alive) {
-            player.stop();
-            return;
-          }
-          playerRef.current = player;
-          player.on?.("stateChange", (s: string) => setPlaying(s === "PLAYING"));
+          const mm = await loadMagenta();
+          const sequence = buildNoteSequence(
+            osmd as unknown as Parameters<typeof buildNoteSequence>[0],
+            tempo
+          );
+          if (!sequence) throw new Error("No se pudieron extraer notas de la partitura");
+          sequenceRef.current = sequence;
+          playerRef.current = new mm.Player();
           setAudioReady(true);
         } catch (error) {
           setAudioReady(false); // render sin sonido: no es un error bloqueante
           setAudioError(error instanceof Error ? error.message : String(error));
           // eslint-disable-next-line no-console
-          console.error("osmd-audio-player:", error);
+          console.error("audio:", error);
         }
       } catch (error) {
         if (!alive) return;
@@ -104,14 +106,30 @@ export function ViewerPage() {
   const togglePlay = () => {
     const player = playerRef.current;
     if (!player) return;
-    if (playing) player.pause();
-    else player.play();
-    setPlaying(!playing);
+    if (playing) {
+      player.pause();
+      setPlaying(false);
+      setPaused(true);
+      return;
+    }
+    if (paused) {
+      void player.resume().then(() => {
+        setPlaying(true);
+        setPaused(false);
+      });
+      return;
+    }
+    const sequence = sequenceRef.current;
+    if (!sequence) return;
+    void player.start(sequence).then(() => {
+      setPlaying(true);
+      setPaused(false);
+    });
   };
 
   const changeTempo = (value: number) => {
     setTempo(value);
-    playerRef.current?.setBpm?.(value);
+    playerRef.current?.setTempo(value);
   };
 
   return (
@@ -133,6 +151,7 @@ export function ViewerPage() {
                 onClick={() => {
                   playerRef.current?.stop();
                   setPlaying(false);
+                  setPaused(false);
                 }}
                 className="rounded border border-osap-border px-3 py-1 text-sm"
               >
