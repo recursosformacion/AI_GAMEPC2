@@ -27,28 +27,13 @@ export interface JSZipLike {
 
 const OSMD_URL = "https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@0.8.4/build/opensheetmusicdisplay.min.js";
 const JSZIP_URL = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
-// Bundle de audio: TensorFlow.js + Tone + Magenta (global `mm`) + focus-visible + <midi-player>.
-// Magenta `dist/magentamusic.min.js` SÍ define window.mm (a diferencia de es6/core.js → `core`).
-const MIDI_PLAYER_URL =
-  "https://cdn.jsdelivr.net/combine/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js,npm/tone@14.7.58/build/Tone.js,npm/@magenta/music@1.23.1/dist/magentamusic.min.js,npm/focus-visible@5,npm/html-midi-player@1.4.0";
-
-export interface MagentaPlayerLike {
-  start: (sequence: unknown) => Promise<void>;
-  stop: () => void;
-  pause: () => void;
-  resume: () => Promise<void>;
-  setTempo: (bpm: number) => void;
-}
-
-export interface MagentaLike {
-  Player: new () => MagentaPlayerLike;
-}
-
-declare global {
-  interface Window {
-    mm?: MagentaLike;
-  }
-}
+// Dependencias del reproductor MIDI (carga secuencial; jsDelivr /combine falla con tfjs).
+const MIDI_SCRIPTS = [
+  "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js",
+  "https://cdn.jsdelivr.net/npm/tone@14.7.58/build/Tone.js",
+  "https://cdn.jsdelivr.net/npm/@magenta/music@1.23.1/dist/magentamusic.min.js",
+  "https://cdn.jsdelivr.net/npm/html-midi-player@1.4.0/dist/midi-player.min.js",
+];
 
 function loadScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -84,24 +69,12 @@ export async function loadJSZip(): Promise<JSZipLike> {
   return window.JSZip;
 }
 
-/** Carga el bundle de audio (Tone + Magenta + midi-player) y devuelve Magenta (`mm`). */
-export async function loadMagenta(): Promise<MagentaLike> {
-  if (!window.mm) {
-    await loadScript(MIDI_PLAYER_URL);
-  }
-  // Algunos builds de Magenta exponen el namespace como `core` en lugar de `mm`.
-  const globals = window as unknown as { mm?: MagentaLike; core?: MagentaLike };
-  if (!globals.mm && globals.core) {
-    globals.mm = globals.core;
-  }
-  if (!globals.mm) throw new Error("Magenta (mm) no disponible");
-  return globals.mm;
-}
-
 /** Carga el elemento <midi-player> (para representaciones MIDI). */
 export async function loadMidiPlayer(): Promise<void> {
   if (customElements.get("midi-player")) return;
-  await loadScript(MIDI_PLAYER_URL);
+  for (const src of MIDI_SCRIPTS) {
+    await loadScript(src);
+  }
 }
 
 export function isMidiContentType(contentType: string, format?: string | null): boolean {

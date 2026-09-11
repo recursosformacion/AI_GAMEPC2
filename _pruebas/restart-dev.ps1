@@ -98,4 +98,4 @@ Wait-Port 8300 '/health' 'osap-support'
 if (-not $NoAuth) { Wait-Port 8200 '/openapi.json' 'osap-auth' }
 
 Write-Host 'Listo: http://osap-app (Apache) | API 8001 | storage 8000 | auth 8200 | support 8300'
-Write-Host 'si da error, taskkill /IM "python3.exe" /F y volver a lanzar este script'
+Write-Host 'si da error, taskkill /IM "python.exe" /F y volver a lanzar este script'

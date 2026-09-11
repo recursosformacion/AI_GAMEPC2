@@ -18,7 +18,8 @@ const MAIN_NAV = [
   { to: "/composers", key: "nav.composers" },
   { to: "/collaborators", key: "nav.collaborators" },
   { to: "/about/how-it-works", key: "nav.howItWorks" },
-  { to: "/support", key: "nav.support" },
+    { to: "/support", key: "nav.support" },
+    { to: "/corrections?kind=contact", key: "nav.contact" },
 ] as const;
 
 // Semantic labels for the breadcrumb (never routes/URLs).

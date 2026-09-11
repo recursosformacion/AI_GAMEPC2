@@ -8,14 +8,13 @@ import { useI18n } from "../i18n/I18n";
 import {
   isMidiContentType,
   loadJSZip,
-  loadMagenta,
   loadMidiPlayer,
   loadOsmd,
   looksLikeZip,
   musicXmlFromMxl,
-  type MagentaPlayerLike,
 } from "../viewer/osmdLoader";
 import { buildNoteSequence, type NoteSequenceLike } from "../viewer/osmdSequence";
+import { SynthPlayer } from "../viewer/audioSynth";
 
 type State = "loading" | "rendering" | "ready" | "midi" | "pdf" | "error";
 
@@ -26,12 +25,11 @@ export function ViewerPage() {
   const format = params.get("format");
   const title = params.get("title") ?? "";
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const playerRef = useRef<MagentaPlayerLike | null>(null);
+  const playerRef = useRef<SynthPlayer | null>(null);
   const sequenceRef = useRef<NoteSequenceLike | null>(null);
   const [state, setState] = useState<State>("loading");
   const [message, setMessage] = useState<string>("");
   const [playing, setPlaying] = useState(false);
-  const [paused, setPaused] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
   const [audioError, setAudioError] = useState<string>("");
   const [tempo, setTempo] = useState(100);
@@ -74,14 +72,17 @@ export function ViewerPage() {
         osmd.render();
         if (alive) setState("ready");
         try {
-          const mm = await loadMagenta();
           const sequence = buildNoteSequence(
             osmd as unknown as Parameters<typeof buildNoteSequence>[0],
             tempo
           );
           if (!sequence) throw new Error("No se pudieron extraer notas de la partitura");
           sequenceRef.current = sequence;
-          playerRef.current = new mm.Player();
+          const player = new SynthPlayer(sequence, tempo);
+          player.onEnd = () => {
+            setPlaying(false);
+          };
+          playerRef.current = player;
           setAudioReady(true);
         } catch (error) {
           setAudioReady(false); // render sin sonido: no es un error bloqueante
@@ -109,21 +110,10 @@ export function ViewerPage() {
     if (playing) {
       player.pause();
       setPlaying(false);
-      setPaused(true);
       return;
     }
-    if (paused) {
-      void player.resume().then(() => {
-        setPlaying(true);
-        setPaused(false);
-      });
-      return;
-    }
-    const sequence = sequenceRef.current;
-    if (!sequence) return;
-    void player.start(sequence).then(() => {
+    void player.play().then(() => {
       setPlaying(true);
-      setPaused(false);
     });
   };
 
@@ -151,7 +141,6 @@ export function ViewerPage() {
                 onClick={() => {
                   playerRef.current?.stop();
                   setPlaying(false);
-                  setPaused(false);
                 }}
                 className="rounded border border-osap-border px-3 py-1 text-sm"
               >
