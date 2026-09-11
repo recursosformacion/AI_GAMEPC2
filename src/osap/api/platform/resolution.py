@@ -33,7 +33,6 @@ _FILE_PROVIDERS = {
     "local",
     "osap-storage",
     "openscore",
-    "cpdl",
     "mutopia",
     "hymnary",
     "openmusicrepository",
