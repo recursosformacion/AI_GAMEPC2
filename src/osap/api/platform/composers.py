@@ -43,7 +43,12 @@ class ComposersMixin(PlatformApiCore):
         return self.composers().composer_works(composer_id, limit, offset)
 
     def get_work(self, work_id: str) -> dict[str, object] | None:
-        return self.composers().get_work(work_id)
+        detail = self.composers().get_work(work_id)
+        if detail is not None:
+            return detail
+        # Obras vistas en búsqueda: el id sintético del agrupador no existe en el store
+        # de compositores, así que servimos el detalle cacheado de la propia búsqueda.
+        return self._work_detail_cache.get(work_id)
 
     def merge_composers(self, token: str | None, target_id: str, source_ids: list[str]) -> dict[str, object]:
         return self.composers().merge_composers(token, target_id, source_ids)

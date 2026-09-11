@@ -76,6 +76,9 @@ class PlatformApi(
         self._search_cache: dict[str, SearchResponse] = {}
         self._work_rep_cache: dict[str, list[RepresentationInfo]] = {}
         self._work_rep_order: list[str] = []
+        # Detalle de obras vistas en búsqueda (permite abrir la ficha aunque el id
+        # sintético del agrupador no exista en el store de compositores).
+        self._work_detail_cache: dict[str, dict[str, object]] = {}
         self._jobs: dict[str, JobResponse] = {}
         self._representations: dict[str, dict[str, object]] = {}
         self._job_counter = 0

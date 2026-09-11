@@ -139,6 +139,16 @@ function KnownSelectionBlock({
               </a>
             )
           ) : null}
+          {sel.source_id ? (
+            <a
+              href={_viewHref(sel.source_id, sel.format, workTitle)}
+              target="_blank"
+              rel="noreferrer"
+              className="mt-1 ml-2 inline-block rounded border border-osap-accent px-2 py-0.5 text-xs text-osap-accent"
+            >
+              {t("actions.viewScore")}
+            </a>
+          ) : null}
         </div>
       ) : status === "none_known" ? (
         <p className="mt-2 text-sm text-osap-muted">{t("work.noneKnown")}</p>
@@ -247,7 +257,7 @@ export function WorkDetailTabs({
               {t("corrections.propose")}
             </Link>
           ) : null}
-          </div>
+        </div>
         ) : null}
 
       {tab === "representations" ? (

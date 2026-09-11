@@ -408,22 +408,22 @@ class SearchMixin(PlatformApiCore):
                     unique_reps.append(rep)
                 reps = unique_reps
                 best = max(reps, key=lambda r: r.confidence)
-                results.append(
-                    SearchResultItem(
-                        work=WorkInfo(
-                            work_id=work.work_id.value,
-                            title=work.title,
-                            composer=work.composer,
-                            catalogue=work.catalogue_number,
-                            collection=_classify_collection(work.title),
-                        ),
-                        representation=best,
-                        representations=reps,
-                        score=round(score_by_key.get(group.key, 0.0), 3),
-                        evidence=[],
-                        relationships=self._work_relationships(work),
-                    )
+                item = SearchResultItem(
+                    work=WorkInfo(
+                        work_id=work.work_id.value,
+                        title=work.title,
+                        composer=work.composer,
+                        catalogue=work.catalogue_number,
+                        collection=_classify_collection(work.title),
+                    ),
+                    representation=best,
+                    representations=reps,
+                    score=round(score_by_key.get(group.key, 0.0), 3),
+                    evidence=[],
+                    relationships=self._work_relationships(work),
                 )
+                self._work_detail_cache[str(work.work_id.value)] = item.model_dump()
+                results.append(item)
             return results, total
 
         # Resultado parcial: publica lo que el índice ya encontró (a los ~1-3s),

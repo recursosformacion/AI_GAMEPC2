@@ -35,6 +35,7 @@ class PlatformApiCore:
     _search_cache: dict[str, SearchResponse]
     _work_rep_cache: dict[str, list[RepresentationInfo]]
     _work_rep_order: list[str]
+    _work_detail_cache: dict[str, dict[str, object]]
     _catalog: SourceCatalog
     _sessions: SessionSources
     _suggestion_counter: int
