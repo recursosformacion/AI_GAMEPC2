@@ -27,9 +27,10 @@ export interface JSZipLike {
 
 const OSMD_URL = "https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@0.8.4/build/opensheetmusicdisplay.min.js";
 const JSZIP_URL = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
-// Bundle documentado de html-midi-player: Tone + Magenta core + focus-visible + player.
+// Bundle de audio: TensorFlow.js + Tone + Magenta (global `mm`) + focus-visible + <midi-player>.
+// Magenta `dist/magentamusic.min.js` SÍ define window.mm (a diferencia de es6/core.js → `core`).
 const MIDI_PLAYER_URL =
-  "https://cdn.jsdelivr.net/combine/npm/tone@14.7.58,npm/@magenta/music@1.23.1/es6/core.js,npm/focus-visible@5,npm/html-midi-player@1.4.0";
+  "https://cdn.jsdelivr.net/combine/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js,npm/tone@14.7.58/build/Tone.js,npm/@magenta/music@1.23.1/dist/magentamusic.min.js,npm/focus-visible@5,npm/html-midi-player@1.4.0";
 
 export interface MagentaPlayerLike {
   start: (sequence: unknown) => Promise<void>;
@@ -88,8 +89,13 @@ export async function loadMagenta(): Promise<MagentaLike> {
   if (!window.mm) {
     await loadScript(MIDI_PLAYER_URL);
   }
-  if (!window.mm) throw new Error("Magenta (mm) no disponible");
-  return window.mm;
+  // Algunos builds de Magenta exponen el namespace como `core` en lugar de `mm`.
+  const globals = window as unknown as { mm?: MagentaLike; core?: MagentaLike };
+  if (!globals.mm && globals.core) {
+    globals.mm = globals.core;
+  }
+  if (!globals.mm) throw new Error("Magenta (mm) no disponible");
+  return globals.mm;
 }
 
 /** Carga el elemento <midi-player> (para representaciones MIDI). */
