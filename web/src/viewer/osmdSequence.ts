@@ -41,17 +41,32 @@ export function buildNoteSequence(osmd: OsmdLike, bpm: number): NoteSequenceLike
   const cursor = osmd.cursor;
   const iterator = cursor?.Iterator;
   if (!cursor || !iterator || typeof cursor.NotesUnderCursor !== "function") return null;
+  if (typeof cursor.next !== "function" || typeof cursor.reset !== "function") return null;
 
+  const MAX_STEPS = 8000;
   const steps: Array<{ time: number; pitches: number[] }> = [];
   try {
-    cursor.reset?.();
+    cursor.reset();
+    let guard = 0;
+    let prevTime = Number.NaN;
+    let sameTime = 0;
     while (!iterator.EndReached) {
+      guard += 1;
+      if (guard > MAX_STEPS) break; // seguridad: evita cuelgues si el cursor no avanza
       const time = iterator.CurrentEnrolledTimestamp?.RealValue ?? steps.length * 0.5;
+      // Si la marca no avanza varias iteraciones seguidas, cortamos (cursor bloqueado).
+      if (time === prevTime) {
+        sameTime += 1;
+        if (sameTime > 8) break;
+      } else {
+        sameTime = 0;
+        prevTime = time;
+      }
       const pitches = (cursor.NotesUnderCursor?.() ?? [])
         .map(pitchOf)
         .filter((p): p is number => typeof p === "number");
       if (pitches.length > 0) steps.push({ time, pitches });
-      cursor.next?.();
+      cursor.next();
     }
   } catch {
     return null;
@@ -71,8 +86,9 @@ export function buildNoteSequence(osmd: OsmdLike, bpm: number): NoteSequenceLike
   }
   const lastStep = steps[steps.length - 1];
   const totalTime = Math.max((lastStep?.time ?? 0) + 60 / Math.max(bpm, 1), 1);
+  const MAX_NOTES = 20000;
   return {
-    notes,
+    notes: notes.slice(0, MAX_NOTES),
     totalTime,
     tempos: [{ time: 0, qpm: bpm }],
     quantizationInfo: { stepsPerQuarter: 4 },
