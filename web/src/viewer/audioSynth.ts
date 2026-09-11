@@ -9,11 +9,14 @@ export function midiToFrequency(pitch: number): number {
 
 export class SynthPlayer {
   private ctx: AudioContext | null = null;
+  private master: GainNode | null = null;
   private nodes: OscillatorNode[] = [];
   private startedAt = 0; // ctx time corresponding to score time 0 (según bpm actual)
   private offset = 0; // posición en "segundos de partitura"
   private playing = false;
   private bpm: number;
+  private readonly baseQpm: number;
+  private volume = 0.8;
   private readonly notes: NoteSequenceLike["notes"];
 
   onEnd: (() => void) | null = null;
@@ -21,6 +24,8 @@ export class SynthPlayer {
   constructor(sequence: NoteSequenceLike, bpm: number) {
     this.notes = sequence.notes;
     this.bpm = Math.max(bpm, 20);
+    // Tempo de la partitura: los tiempos del NoteSequence están en segundos a ese tempo.
+    this.baseQpm = Math.max(sequence.tempos?.[0]?.qpm ?? bpm, 20);
   }
 
   private context(): AudioContext {
@@ -30,12 +35,29 @@ export class SynthPlayer {
     return this.ctx;
   }
 
+  private masterGain(): GainNode {
+    const ctx = this.context();
+    if (!this.master) {
+      this.master = ctx.createGain();
+      this.master.gain.value = this.volume;
+      this.master.connect(ctx.destination);
+    }
+    return this.master;
+  }
+
+  setVolume(value: number): void {
+    this.volume = Math.min(Math.max(value, 0), 1);
+    if (this.master) this.master.gain.value = this.volume;
+  }
+
   private get speed(): number {
-    return 60 / this.bpm;
+    // Tiempo real por segundo de partitura: 1 si se reproduce al tempo original.
+    return this.baseQpm / this.bpm;
   }
 
   private schedule(fromScore: number): void {
     const ctx = this.context();
+    const master = this.masterGain();
     const lastEnd = this.notes.reduce((max, n) => Math.max(max, n.endTime), 0);
     for (const note of this.notes) {
       if (note.endTime <= fromScore) continue;
@@ -50,7 +72,7 @@ export class SynthPlayer {
       gain.gain.linearRampToValueAtTime(0.18, when + 0.01);
       gain.gain.setValueAtTime(0.18, Math.max(when + 0.02, when + duration - 0.03));
       gain.gain.linearRampToValueAtTime(0.0001, when + duration);
-      osc.connect(gain).connect(ctx.destination);
+      osc.connect(gain).connect(master);
       osc.start(when);
       osc.stop(when + duration + 0.02);
       this.nodes.push(osc);

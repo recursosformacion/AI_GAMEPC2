@@ -34,6 +34,7 @@ export function ViewerPage() {
   const [audioError, setAudioError] = useState<string>("");
   const [seqInfo, setSeqInfo] = useState<string>("");
   const [tempo, setTempo] = useState(100);
+  const [volume, setVolume] = useState(80);
 
   useEffect(() => {
     let alive = true;
@@ -80,7 +81,10 @@ export function ViewerPage() {
           if (!sequence) throw new Error("No se pudieron extraer notas de la partitura");
           sequenceRef.current = sequence;
           setSeqInfo(`${sequence.notes.length} · ${Math.round(sequence.totalTime)}s`);
-          const player = new SynthPlayer(sequence, tempo);
+          const scoreTempo = sequence.tempos[0]?.qpm ?? tempo;
+          setTempo(scoreTempo);
+          const player = new SynthPlayer(sequence, scoreTempo);
+          player.setVolume(volume / 100);
           player.onEnd = () => {
             setPlaying(false);
           };
@@ -148,6 +152,21 @@ export function ViewerPage() {
               >
                 {t("viewer.stop")}
               </button>
+              <label className="flex items-center gap-1 text-xs text-osap-muted">
+                {t("viewer.volume")}
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={volume}
+                  onChange={(event) => {
+                    const value = Number(event.target.value);
+                    setVolume(value);
+                    playerRef.current?.setVolume(value / 100);
+                  }}
+                  className="w-20"
+                />
+              </label>
               <label className="flex items-center gap-1 text-xs text-osap-muted">
                 {t("viewer.tempo")}
                 <input

@@ -20,6 +20,7 @@ interface OsmdCursorLike {
 interface OsmdLike {
   cursor?: OsmdCursorLike;
   Sheet?: {
+    DefaultStartTempoInBpm?: number;
     SourceMeasures?: Array<{
       Timestamp?: { RealValue?: number };
       Duration?: { RealValue?: number };
@@ -56,7 +57,10 @@ function buildFromSheet(osmd: OsmdLike, bpm: number): NoteSequenceLike | null {
   const measures = osmd.Sheet?.SourceMeasures;
   if (!measures || measures.length === 0) return null;
 
-  const noteSeconds = (wholeFraction: number): number => wholeFraction * 4 * (60 / Math.max(bpm, 1));
+  // Los timestamps de OSMD ya vienen en segundos según el tempo de la partitura; las
+  // duraciones deben usar ese mismo tempo para no producir huecos ("a golpes").
+  const scoreBpm = Math.max(osmd.Sheet?.DefaultStartTempoInBpm ?? bpm, 20);
+  const noteSeconds = (wholeFraction: number): number => wholeFraction * 4 * (60 / scoreBpm);
   const notes: NoteSequenceLike["notes"] = [];
   let totalTime = 0;
 
@@ -91,7 +95,7 @@ function buildFromSheet(osmd: OsmdLike, bpm: number): NoteSequenceLike | null {
   return {
     notes: notes.slice(0, MAX_NOTES),
     totalTime: Math.max(totalTime, 1),
-    tempos: [{ time: 0, qpm: bpm }],
+    tempos: [{ time: 0, qpm: scoreBpm }],
     quantizationInfo: { stepsPerQuarter: 4 },
   };
 }
