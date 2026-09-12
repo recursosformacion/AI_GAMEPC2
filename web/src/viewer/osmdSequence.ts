@@ -49,6 +49,12 @@ export interface NoteSequenceLike {
 // lugar del MIDI estándar 60: hay que subir una octava para que suene a la altura real.
 const OSMD_MIDI_OCTAVE_FIX = 12;
 
+// OSMD expresa timestamps/duraciones en redondas (whole notes = RealValue), no en segundos.
+// Sin convertir, la reproducción sonaba a golpes y con silencios.
+function wholeToSeconds(whole: number, qpm: number): number {
+  return whole * 4 * (60 / Math.max(qpm, 20));
+}
+
 function pitchOf(note: OsmdNoteLike): number | null {
   const pitch = note.Pitch;
   if (!pitch) return null;
@@ -69,17 +75,25 @@ function buildFromSheet(osmd: OsmdLike, bpm: number): NoteSequenceLike | null {
   // Los timestamps de OSMD ya vienen en segundos según el tempo de la partitura; las
   // duraciones deben usar ese mismo tempo para no producir huecos ("a golpes").
   const scoreBpm = Math.max(osmd.Sheet?.DefaultStartTempoInBpm ?? bpm, 20);
-  const noteSeconds = (wholeFraction: number): number => wholeFraction * 4 * (60 / scoreBpm);
+  const noteSeconds = (wholeFraction: number): number => wholeToSeconds(wholeFraction, scoreBpm);
   const notes: NoteSequenceLike["notes"] = [];
   let totalTime = 0;
 
   for (const measure of measures) {
     if (!measure) continue;
-    const measureTime = measure.Timestamp?.RealValue ?? totalTime;
+    const measureTime = measure.Timestamp?.RealValue ?? 0;
     const containers = measure.VerticalSourceStaffEntryContainers ?? [];
     for (const container of containers) {
       if (!container) continue;
-      const time = measureTime + (container.Timestamp?.RealValue ?? 0);
+      // `container.Timestamp` es absoluto en OSMD; si viniera relativo al compás, se ancla.
+      const rawContainer = container.Timestamp?.RealValue;
+      const absoluteWhole =
+        rawContainer === undefined
+          ? measureTime
+          : rawContainer < measureTime - 1e-6
+            ? measureTime + rawContainer
+            : rawContainer;
+      const time = noteSeconds(absoluteWhole);
       for (const staffEntry of container.StaffEntries ?? []) {
         if (!staffEntry) continue;
         for (const voiceEntry of staffEntry.VoiceEntries ?? []) {
@@ -95,7 +109,7 @@ function buildFromSheet(osmd: OsmdLike, bpm: number): NoteSequenceLike | null {
         }
       }
     }
-    totalTime = Math.max(totalTime, measureTime + noteSeconds(measure.Duration?.RealValue ?? 0));
+    totalTime = Math.max(totalTime, noteSeconds(measureTime + (measure.Duration?.RealValue ?? 0)));
   }
 
   if (notes.length === 0) return null;
@@ -135,7 +149,8 @@ export function buildNoteSequence(osmd: OsmdLike, bpm: number): NoteSequenceLike
     while (!iterator.EndReached) {
       guard += 1;
       if (guard > MAX_STEPS) break; // seguridad: evita cuelgues si el cursor no avanza
-      const time = iterator.CurrentEnrolledTimestamp?.RealValue ?? steps.length * 0.5;
+      const timeWhole = iterator.CurrentEnrolledTimestamp?.RealValue ?? steps.length * 0.5;
+      const time = wholeToSeconds(timeWhole, bpm);
       // Si la marca no avanza varias iteraciones seguidas, cortamos (cursor bloqueado).
       if (time === prevTime) {
         sameTime += 1;

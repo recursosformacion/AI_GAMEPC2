@@ -125,11 +125,22 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
                 return ctx.fail(502, response, "UPSTREAM_ERROR", "No se pudo obtener el fichero del storage")
 
             filename = _shared._download_filename(info)
+            fmt = str(info.get("format") or "")
+            media_type = _shared._media_type_for_format(fmt)
+            # OMR/OSAP almacena MXL (MusicXML comprimido = ZIP). Si servimos esos bytes con
+            # extensión `.musicxml` y media type sin comprimir, MuseScore y otros editores dan
+            # error de formato. Se detecta por la firma ZIP y se etiqueta como .mxl.
+            if fmt.lower() == "musicxml" and upstream.content[:2] == b"PK":
+                base = filename
+                for ext in (".musicxml", ".xml"):
+                    if base.lower().endswith(ext):
+                        base = base[: -len(ext)]
+                        break
+                filename = f"{base}.mxl"
+                media_type = "application/vnd.recordare.musicxml"
             # Sanitizar el nombre para Content-Disposition (RFC 5987)
             safe_filename = filename.replace('"', '\\"').replace('\n', '').replace('\r', '')
             disposition = "inline" if view else "attachment"
-            fmt = str(info.get("format") or "")
-            media_type = _shared._media_type_for_format(fmt)
 
             encoded_filename = urllib.parse.quote(safe_filename)
             content_disposition = (

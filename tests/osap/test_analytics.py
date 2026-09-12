@@ -255,3 +255,17 @@ def test_download_failure_response_unaffected_when_analytics_explodes(
     monkeypatch.setattr(search_http.requests, "get", lambda *args, **kwargs: _BrokenUpstream())
     response = client.get("/api/v1/representations/idx-42-omr-musicxml/download")
     assert response.status_code == 502
+
+
+def test_download_labels_zip_musicxml_as_mxl(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _ZipUpstream:
+        status_code = 200
+        content = b"PK\x03\x04fake-mxl"
+        headers = {"content-type": "application/octet-stream"}
+
+    client = _download_client(monkeypatch)
+    monkeypatch.setattr(search_http.requests, "get", lambda *args, **kwargs: _ZipUpstream())
+    response = client.get("/api/v1/representations/idx-42-omr-musicxml/download")
+    assert response.status_code == 200
+    assert '.mxl"' in response.headers["content-disposition"]
+    assert response.headers["content-type"].startswith("application/vnd.recordare.musicxml")
