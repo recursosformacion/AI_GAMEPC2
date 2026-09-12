@@ -42,7 +42,7 @@ tar -czf (Join-Path $tmp "backend.tar.gz") `
     --exclude="__pycache__" --exclude="*.pyc" `
     src providers resources lexicon pyproject.toml
 if ($LASTEXITCODE -ne 0) { Fail "tar backend falló" }
-tar -czf (Join-Path $tmp "dist.tar.gz") -C (Join-Path $root "web\dist") .
+tar -czf (Join-Path $tmp "dist.tar.gz") --exclude=*maintenance.flag --exclude=*maintenance.token -C (Join-Path $root "web\dist") .
 if ($LASTEXITCODE -ne 0) { Fail "tar dist falló" }
 Pop-Location
 
@@ -53,12 +53,17 @@ if ($LASTEXITCODE -ne 0) { Fail "scp falló" }
 # Config de producción: imagen local osap.production.toml -> osap.toml en el servidor.
 scp -o BatchMode=yes (Join-Path $root "osap.production.toml") "$($HostAlias):~/deploy_tmp/osap.production.toml"
 if ($LASTEXITCODE -ne 0) { Fail "scp config falló" }
+# Vhost nginx versionado (incluye modo mantenimiento, ADR-0037).
+scp -o BatchMode=yes (Join-Path $root "deploy\app.openmusicrepository.com.conf") "$($HostAlias):~/deploy_tmp/app.conf"
+if ($LASTEXITCODE -ne 0) { Fail "scp vhost falló" }
 
 Write-Host "== [4/6] Extrayendo en el servidor y reiniciando ==" -ForegroundColor Cyan
 $remoteCmd = "set -e; cd $BackendDir && tar -xzf ~/deploy_tmp/backend.tar.gz && " +
     "cp -f ~/deploy_tmp/osap.production.toml $BackendDir/osap.toml && " +
     ".venv/bin/pip install --quiet PyMySQL requests && " +
     "cd $SpaDir && rm -rf assets index.html && tar -xzf ~/deploy_tmp/dist.tar.gz && " +
+    "sudo cp ~/deploy_tmp/app.conf /etc/nginx/sites-enabled/app.openmusicrepository.com.conf && " +
+    "sudo nginx -t && sudo nginx -s reload && " +
     "rm -rf ~/deploy_tmp && sudo systemctl restart osap-api.service && echo RESTART_DONE"
 $out = ssh -o BatchMode=yes $HostAlias $remoteCmd
 $out

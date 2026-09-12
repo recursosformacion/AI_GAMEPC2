@@ -33,6 +33,24 @@ de operación de la web (`osap-api/web`, servida por Apache desde `web/dist`).
 **Por qué en Apache:** el corte debe existir incluso si el JS no carga; y no debe requerir
 reconstruir el bundle para activar/desactivar.
 
+### D1b — Producción (nginx): mismo contrato
+
+Producción sirve la SPA con **nginx** (no honra `.htaccess`). El vhost se versiona en
+`deploy/app.openmusicrepository.com.conf` y lo instala `script/deploy.ps1` (scp + `nginx -t`
++ reload). Reglas:
+
+- `error_page 503 /maintenance.html` + `location = /maintenance.html` (sirve el fichero).
+- En `location /` y `location = /index.html`: si existe
+  `/home/ocw/openmusicrepository.com/app/maintenance.flag` y no hay cookie
+  `osap_preview=1` (ni ruta exenta: assets, favicon, robots, sitemap), responde **503**.
+- `/api/`, `/auth/`, `/support-api/`, `/docs` NO se cortan: permiten verificar los servicios
+  durante el mantenimiento, justo antes de liberar.
+- `deploy.ps1` excluye `maintenance.flag` y `maintenance.token` del `dist.tar.gz` para no
+  activar mantenimiento por accidente al desplegar.
+
+`web/scripts/maintenance.ps1` gestiona ambos entornos (`-On`/`-Off`/`-Status`, con
+`-LocalOnly`/`-RemoteOnly`): flag local (`web/dist`) y flag remoto por SSH (`RemoteIA`).
+
 ### D2 — Analítica: eventos `dataLayer` desde la SPA
 
 - `web/src/analytics/gtm.ts` expone `pushEvent(event, params)` y

@@ -297,10 +297,12 @@ PYTHONPATH=<osap-api> python reseed_providers.py
 - **Operaciones**: `deploy.ps1` (despliegue a producción, host `RemoteIA`),
   `pre_dbadmin_tunnel.ps1` (túnel SSH de phpMyAdmin del entorno PRE — script residual de
   otro proyecto, no parte de la operación de OSAP).
-- **Mantenimiento web**: `web/scripts/maintenance.ps1` (`-On`, `-Off`, `-Status`) activa el
-  modo mantenimiento creando `web/dist/maintenance.flag`; Apache responde 503 con
-  `maintenance.html` salvo assets y el bypass de revisión `http://osap-app/?preview=<TOKEN>`
-  (cookie `osap_preview`, 1 día), que permite al equipo revisar antes de liberar.
+- **Mantenimiento web**: `web/scripts/maintenance.ps1` (`-On`, `-Off`, `-Status`, y
+  `-LocalOnly`/`-RemoteOnly`) activa el modo mantenimiento en local (flag en `web/dist`,
+  Apache responde 503 con `maintenance.html`) y en producción (flag remoto en el root de la
+  SPA, nginx vía `RemoteIA`). El bypass de revisión es `?preview=<TOKEN>` (cookie
+  `osap_preview`, 1 día). El vhost nginx versionado es
+  `deploy/app.openmusicrepository.com.conf` y lo despliega `script/deploy.ps1`.
 
 ---
 
