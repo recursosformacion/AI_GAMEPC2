@@ -186,6 +186,20 @@ export function WorkDetailTabs({
 
   return (
     <div>
+      <div className="flex items-center justify-between gap-2 px-1 pb-1">
+        <span className="truncate text-xs text-osap-muted">
+          {work.composer ? `${work.composer} — ` : ""}
+          {work.title}
+        </span>
+        {allowWorkCorrections && work.work_id ? (
+          <Link
+            to={`/corrections?kind=work&entity_id=${encodeURIComponent(work.work_id)}`}
+            className="shrink-0 rounded border border-osap-accent/40 px-2 py-0.5 text-xs font-medium text-osap-accent transition-colors hover:border-osap-accent hover:bg-osap-accent-soft"
+          >
+            {t("corrections.propose")}
+          </Link>
+        ) : null}
+      </div>
       <div className="flex gap-1 border-b border-osap-border">
         {TABS.map((tb) => (
           <button
@@ -239,15 +253,6 @@ export function WorkDetailTabs({
                )}
              </div>
             ) : null}
-
-          {allowWorkCorrections && work.work_id ? (
-            <Link
-              to={`/corrections?kind=work&entity_id=${encodeURIComponent(work.work_id)}`}
-              className="mt-2 inline-block rounded border border-osap-accent/40 px-3 py-1 text-sm font-medium text-osap-accent transition-colors hover:border-osap-accent hover:bg-osap-accent-soft"
-            >
-              {t("corrections.propose")}
-            </Link>
-          ) : null}
         </div>
         ) : null}
 
