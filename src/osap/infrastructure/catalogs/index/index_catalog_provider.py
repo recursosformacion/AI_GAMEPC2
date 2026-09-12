@@ -224,6 +224,8 @@ class IndexCatalogProvider(ICatalogProvider):
             "title": row.get("title"),
             "catalogue": row.get("catalogue"),
             "format": str(row.get("format") or ""),
+            "provider": pid,
+            "work_id": work_id,
         }
 
     def search(self, request: SearchRequest) -> tuple[CandidateRepresentation, ...]:

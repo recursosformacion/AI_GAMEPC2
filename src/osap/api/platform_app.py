@@ -13,6 +13,7 @@ from fastapi import FastAPI
 
 from src.osap.api.http.admin import build_admin_router
 from src.osap.api.http.admin_ops import build_admin_ops_router
+from src.osap.api.http.analytics import build_analytics_router
 from src.osap.api.http.auth import build_auth_router
 from src.osap.api.http.composers import build_composers_router
 from src.osap.api.http.context import HttpContext
@@ -105,6 +106,7 @@ def create_platform_app(
     app.include_router(build_system_router(ctx))
 
     app.include_router(build_votes_router(ctx))
+    app.include_router(build_analytics_router(ctx))
 
     # --- mantenimiento de usuarios (façade → osap-auth; la BD es de Auth) -----
 

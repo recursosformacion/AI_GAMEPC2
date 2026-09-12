@@ -10,6 +10,7 @@ from src.osap.api.platform._support import (
     SessionSources,
     SourceCatalog,
 )
+from src.osap.api.platform.analytics import AnalyticsMixin
 from src.osap.api.platform.composers import ComposersMixin
 from src.osap.api.platform.core import PlatformApiCore
 from src.osap.api.platform.corrections import CorrectionsMixin
@@ -22,6 +23,7 @@ from src.osap.api.platform.sources import SourcesMixin
 from src.osap.api.platform.system import SystemMixin
 from src.osap.api.platform.votes_users import VotesUsersMixin
 from src.osap.bootstrap.container import Container
+from src.osap.infrastructure.state.analytics_store import AnalyticsRecorder, build_analytics_store
 from src.osap.infrastructure.state.op_store import build_op_store
 from src.osap.infrastructure.state.resolution_store import build_resolution_store
 
@@ -52,6 +54,7 @@ class PlatformApi(
     ResolutionMixin,
     ComposersMixin,
     VotesUsersMixin,
+    AnalyticsMixin,
     ProvidersMixin,
     SourcesMixin,
     CorrectionsMixin,
@@ -90,6 +93,8 @@ class PlatformApi(
         self._suggestion_counter = 0
         self._store = build_op_store(**(self._container.op_store_config() or {}))
         self._resolution_store = build_resolution_store(**(self._container.op_store_config() or {}))
+        self._analytics_store = build_analytics_store(**(self._container.op_store_config() or {}))
+        self._analytics = AnalyticsRecorder(self._analytics_store)
         self._acquisition = self._build_acquisition_service()
         highest = 0
         for item in self._store.list_suggestions():

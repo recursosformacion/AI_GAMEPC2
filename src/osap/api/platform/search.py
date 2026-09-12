@@ -94,6 +94,8 @@ class SearchMixin(PlatformApiCore):
                 providers=list(cached.providers),
             )
             self._searches[search_id] = paginated
+            # Una llamada = una búsqueda contada, también cuando se sirve de caché.
+            self.record_search_event(cached.total)
             return search_id, paginated
         # Búsqueda asíncrona: devuelve ya un recurso en "running"; el hilo lo completa.
         response = SearchResponse(search_id=search_id, status="running", progress=0)
@@ -152,6 +154,7 @@ class SearchMixin(PlatformApiCore):
                     providers=list(provider_msgs),
                 )
                 self._searches[search_id] = done
+                self.record_search_event(total)
                 # Cache del set COMPLETO (paginación instantánea y consistente).
                 self._search_cache[signature] = SearchResponse(
                     search_id=search_id,

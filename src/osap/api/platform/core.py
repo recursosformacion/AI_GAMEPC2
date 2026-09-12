@@ -22,6 +22,8 @@ if TYPE_CHECKING:
     from src.osap.application.composers_service import ComposersService
     from src.osap.bootstrap.container import Container
     from src.osap.infrastructure.resolution.acquisition_service import AcquisitionService
+    from src.osap.infrastructure.state.analytics.memory import MemoryStore as AnalyticsStore
+    from src.osap.infrastructure.state.analytics.recorder import AnalyticsRecorder
     from src.osap.infrastructure.state.op.memory import MemoryStore as OpStore
     from src.osap.infrastructure.state.resolution_store import _MemoryStore as ResolutionStore
 
@@ -48,6 +50,8 @@ class PlatformApiCore:
     _store: OpStore
     _resolution_store: ResolutionStore
     _acquisition: AcquisitionService
+    _analytics_store: AnalyticsStore
+    _analytics: AnalyticsRecorder
 
     # Helpers transversales usados por varios dominios (implementados en PlatformApi).
     def _paginate(
@@ -87,6 +91,11 @@ class PlatformApiCore:
             rep_id = f"idx-{work_part}-{provider_id}-{fmt_value}"
         else:
             rep_id = f"r-{stable_id(provider_id, download or view or candidate_id, fmt_value)}"
+        # work_id de la obra (para analítica y resolución de `view`/`download` sin caché).
+        descriptor_work_id = getattr(getattr(m, "work_descriptor", None), "work_id", None)
+        work_id_value = str(getattr(descriptor_work_id, "value", "") or "")
+        if candidate_id.startswith("index-") and len(candidate_id.split("-")) > 1:
+            work_id_value = candidate_id.split("-")[1] or work_id_value
         self._representations[rep_id] = {
             "download_url": download,
             "view_url": view,
@@ -94,6 +103,8 @@ class PlatformApiCore:
             "title": getattr(work, "title", None),
             "catalogue": getattr(work, "catalogue_number", None),
             "format": fmt.value if fmt is not None else None,
+            "provider": provider_id,
+            "work_id": work_id_value,
         }
         # Metadatos específicos de la fuente (p. ej. voicing CPDL): viajan con la
         # representación/origen, nunca se copian a `works`.
@@ -137,4 +148,26 @@ class PlatformApiCore:
 
     def _auth_result(self, code: int, doc: object) -> object:
         """Implementado por el mixin de votos/usuarios; consumido por admin (system)."""
+        raise NotImplementedError
+
+    # --- analítica de uso (implementado por AnalyticsMixin) -------------------
+
+    def record_search_event(self, result_total: int) -> None:
+        raise NotImplementedError
+
+    def record_download_event(
+        self,
+        *,
+        provider: str,
+        work_id: str,
+        fmt: str,
+        user_id: str | None = None,
+        bytes_transferred: int = 0,
+    ) -> None:
+        raise NotImplementedError
+
+    def record_download_failure_event(self, *, provider: str) -> None:
+        raise NotImplementedError
+
+    def analytics_overview(self, from_day: str, to_day: str) -> dict[str, int]:
         raise NotImplementedError

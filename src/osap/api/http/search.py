@@ -49,6 +49,29 @@ def _belongs_to_storage(url: str, storage_base: str) -> bool:
     return path.startswith("/api/download/") or path.startswith("/api/v1/files/")
 
 
+def _analytics_target(info: dict[str, object], representation_id: str) -> tuple[str, str, str]:
+    """(provider, work_id, format) de la representación, del dict o del id determinista."""
+    provider = str(info.get("provider") or "")
+    work_id = str(info.get("work_id") or "")
+    fmt = str(info.get("format") or "")
+    parts = representation_id.split("-")
+    if len(parts) >= 4 and parts[0] == "idx":
+        work_id = work_id or parts[1]
+        provider = provider or parts[2]
+        fmt = fmt or "-".join(parts[3:])
+    return provider, work_id, fmt
+
+
+def _current_user_id(ctx: HttpContext, authorization: str | None) -> str | None:
+    """user_id del llamante (o None si es anónimo); nunca rompe la descarga."""
+    try:
+        principal = ctx.api.current_user(authorization)
+    except Exception:  # noqa: BLE001 — la analítica no puede romper la descarga
+        return None
+    user_id = getattr(principal, "user_id", None)
+    return str(user_id) if user_id else None
+
+
 def build_search_router(ctx: HttpContext) -> APIRouter:
     from src.osap.api.http import shared as _shared
 
@@ -69,6 +92,7 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
         representation_id: str,
         response: Response,
         view: int = Query(default=0, ge=0, le=1),
+        authorization: str | None = Header(default=None),
     ) -> Response | ErrorEnvelope:
         info = ctx.api.get_representation_download(representation_id)
         if info is None:
@@ -76,6 +100,9 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
         url = str(info.get("download_url") or "")
         if not url:
             return ctx.fail(404, response, "NOT_FOUND", "No download available")
+        provider, work_id, fmt = _analytics_target(info, representation_id)
+        user_id = _current_user_id(ctx, authorization)
+        is_download = view == 0
 
         # OMR/OSAP storage: el fichero vive en nuestro storage bajo un nombre hash.
         # En lugar de redirigir (el navegador usaría el hash como nombre), lo servimos
@@ -89,8 +116,12 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
             try:
                 upstream = requests.get(url, timeout=120)
             except requests.RequestException:
+                if is_download and provider:
+                    ctx.api.record_download_failure_event(provider=provider)
                 return ctx.fail(502, response, "UPSTREAM_ERROR", "No se pudo obtener el fichero del storage")
             if upstream.status_code != 200:
+                if is_download and provider:
+                    ctx.api.record_download_failure_event(provider=provider)
                 return ctx.fail(502, response, "UPSTREAM_ERROR", "No se pudo obtener el fichero del storage")
 
             filename = _shared._download_filename(info)
@@ -106,6 +137,15 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
                 f"filename*=UTF-8''{encoded_filename}"
             )
 
+            if is_download:
+                ctx.api.record_download_event(
+                    provider=provider,
+                    work_id=work_id,
+                    fmt=fmt,
+                    user_id=user_id,
+                    bytes_transferred=len(upstream.content),
+                )
+
             return Response(
                 content=upstream.content,
                 media_type=media_type,
@@ -115,6 +155,10 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
         # Proveedores externos (IMSLP/MusicBrainz/Mutopia...): el servidor NO proxya
         # porque responden con challenge anti-bot a peticiones de servidor; el navegador
         # del usuario sí las resuelve. Se redirige (302) a la URL del proveedor.
+        if is_download:
+            ctx.api.record_download_event(
+                provider=provider, work_id=work_id, fmt=fmt, user_id=user_id
+            )
         return RedirectResponse(url, status_code=302)
 
     @router.get(
