@@ -54,7 +54,26 @@ VERSION = "3.1"
 
 class SearchMixin(PlatformApiCore):
     def get_representation_download(self, representation_id: str) -> dict[str, object] | None:
-        return self._representations.get(representation_id)
+        cached = self._representations.get(representation_id)
+        if cached is not None:
+            return cached
+        # Fallback del índice: los ids `idx-<work>-<provider>-<format>` son deterministas
+        # y permiten resolver view/download aunque el proceso se haya reiniciado.
+        try:
+            providers = self._container.catalog_manager().providers()
+        except Exception:  # noqa: BLE001
+            return None
+        for provider in providers:
+            pid = getattr(getattr(provider, "provider_id", None), "value", "")
+            resolver = getattr(provider, "get_representation", None)
+            if pid == "index" and callable(resolver):
+                resolved = resolver(representation_id)
+                if isinstance(resolved, dict):
+                    info: dict[str, object] = {str(k): v for k, v in resolved.items()}
+                    self._representations[representation_id] = info
+                    return info
+                return None
+        return None
 
     # --- jobs ---------------------------------------------------------------
 

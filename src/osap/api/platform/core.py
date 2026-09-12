@@ -8,11 +8,11 @@ refleja las dependencias reales, no el `__init__` completo). Las implementacione
 
 from __future__ import annotations
 
-import uuid
 from typing import TYPE_CHECKING
 
 from src.osap.api.contracts import RepresentationInfo
 from src.osap.api.platform._support import _NORMALIZER
+from src.osap.domain.normalization import stable_id
 
 if TYPE_CHECKING:
     from threading import Lock
@@ -58,7 +58,13 @@ class PlatformApiCore:
 
 
     def _to_rep(self, m: object, work: object) -> RepresentationInfo:
-        """Construye una RepresentationInfo a partir de un candidato (y la registra)."""
+        """Construye una RepresentationInfo a partir de un candidato (y la registra).
+
+        El id es **determinista** para las representaciones del índice
+        (`idx-<work_id>-<provider>-<format>`), de modo que `view`/`download` pueden
+        resolverse en el backend aunque se haya reiniciado el proceso (no dependen de
+        la caché en memoria).
+        """
         fmt = getattr(m, "format", None)
         provider = getattr(m, "provider_id", None)
         confidence = getattr(m, "confidence", None)
@@ -73,7 +79,14 @@ class PlatformApiCore:
         # registro (p. ej. opac.rism.info) para "abrir en el proveedor".
         available = bool(download) and not is_metadata_only
         url = download or view
-        rep_id = f"r-{uuid.uuid4().hex[:10]}"
+        fmt_value = fmt.value if fmt is not None else "score"
+        candidate_id = getattr(getattr(m, "candidate_id", None), "value", "") or ""
+        if candidate_id.startswith("index-"):
+            # candidate_id = "index-<work_id>-<provider>"
+            work_part = candidate_id.split("-")[1] if len(candidate_id.split("-")) > 1 else ""
+            rep_id = f"idx-{work_part}-{provider_id}-{fmt_value}"
+        else:
+            rep_id = f"r-{stable_id(provider_id, download or view or candidate_id, fmt_value)}"
         self._representations[rep_id] = {
             "download_url": download,
             "view_url": view,

@@ -176,6 +176,56 @@ class IndexCatalogProvider(ICatalogProvider):
             status=CatalogStatus.AVAILABLE,
         )
 
+    def get_representation(self, rep_id: str) -> dict[str, object] | None:
+        """Resuelve una representación del índice por su id determinista.
+
+        Formato: ``idx-<work_id>-<provider>-<format>`` (producido por el Platform API).
+        Permite servir `view`/`download` sin depender de la caché en memoria.
+        """
+        parts = rep_id.split("-")
+        if len(parts) < 4 or parts[0] != "idx":
+            return None
+        work_id, provider, fmt = parts[1], parts[2], "-".join(parts[3:])
+        if not work_id.isdigit():
+            return None
+        conn = None
+        try:
+            conn = pymysql.connect(
+                host=self._host,
+                user=self._user,
+                password=self._password,
+                database=self._database,
+                cursorclass=DictCursor,
+            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT i.title, i.composer_name, i.catalogue, r.provider, r.format, r.download_url "
+                    "FROM index_representations r JOIN index_works i ON i.id = r.work_id "
+                    "WHERE r.work_id = %s AND r.provider = %s "
+                    "ORDER BY (r.format = %s) DESC, r.id LIMIT 1",
+                    (work_id, provider, fmt),
+                )
+                row = cur.fetchone()
+        except Exception:  # noqa: BLE001 — nunca tumbar por el índice
+            logger.warning("No se pudo resolver la representación %s en el índice", rep_id, exc_info=True)
+            return None
+        finally:
+            if conn is not None:
+                conn.close()
+        if not row:
+            return None
+        url = str(row.get("download_url") or "")
+        pid = str(row.get("provider") or "")
+        download = url if (url and pid in ("omr", "mutopia")) else None
+        return {
+            "download_url": download,
+            "view_url": None if download else (url or None),
+            "composer": row.get("composer_name"),
+            "title": row.get("title"),
+            "catalogue": row.get("catalogue"),
+            "format": str(row.get("format") or ""),
+        }
+
     def search(self, request: SearchRequest) -> tuple[CandidateRepresentation, ...]:
         try:
             conn = pymysql.connect(
