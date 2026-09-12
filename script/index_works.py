@@ -105,6 +105,107 @@ def _reverse_last_first(name: str) -> str:
     return name.strip()
 
 
+_GENERIC_TITLE_WORDS = {
+    "major", "minor", "concerto", "suite", "sonata", "sinfonia", "symphony", "prelude",
+    "aria", "partita", "trio", "quartet", "quintet", "sextet", "etude", "etudes",
+    "nocturne", "variations", "variation", "mass", "missa", "requiem", "canon",
+    "fugue", "fantasia", "opus", "volume", "complete", "arrangement", "version",
+    "transcription", "vocal", "score", "piano", "violin", "viola", "cello", "flute",
+    "oboe", "trumpet", "recorder", "strings", "orchestra", "chamber", "organ",
+    "harpsichord", "gamba", "basso", "continuo", "con", "for", "and", "with", "from",
+}
+
+# Prefijos de catálogo donde UN número identifica la obra de forma única (K.618, BWV.232,
+# D.795…). En series (Op., TWV, Hob. con subnúmero) se exige además el subnúmero.
+_UNIQUE_CATALOGUE_PREFIXES = ("k", "kv", "bwv", "d", "wq", "s", "l", "hob")
+
+
+_CAT_PREFIX_SYNONYMS = {
+    "kv": "k", "kochel": "k", "koch": "k",
+    "opus": "op", "op.": "op",
+    "bwv.": "bwv", "hob.": "hob", "wq.": "wq",
+    "s.": "s", "l.": "l", "d.": "d",
+}
+
+
+def _canonical_catalogue_identity(catalogue: str | None) -> str:
+    """Catálogo completo normalizado con prefijos unificados (KV 618 == K 618 -> "k 618").
+
+    No usa `title_key` (pensado para títulos: descarta números de catálogo); conserva
+    prefijo y números, y separa el compacto ``k618`` en ``k 618``.
+    """
+    text = unicodedata.normalize("NFKD", str(catalogue or "")).encode("ascii", "ignore").decode().lower()
+    tokens = re.sub(r"[^a-z0-9]+", " ", text).split()
+    if not tokens:
+        return ""
+    if len(tokens) == 1:
+        m = re.match(r"^([a-z]+)(\d.*)$", tokens[0])
+        if m:
+            tokens = [m.group(1), m.group(2)]
+    tokens[0] = _CAT_PREFIX_SYNONYMS.get(tokens[0], tokens[0])
+    return " ".join(tokens)[:128]
+
+
+def _significant_tokens(title: str) -> set[str]:
+    """Palabras del título con valor identificativo (>=3 letras, sin términos genéricos)."""
+    return {
+        t
+        for t in title_key(title).split()
+        if len(t) >= 3 and not t.isdigit() and t not in _GENERIC_TITLE_WORDS
+    }
+
+
+def _is_unique_catalogue(catalogue_norm: str) -> bool:
+    """True si el catálogo normalizado identifica una única obra (no una serie).
+
+    Ejemplos: ``k618``, ``bwv232``, ``d795`` -> True; ``twv 55``, ``op 1`` -> False
+    (necesitan subnúmero: ``twv 55 d6``, ``op 1 no 8``).
+    """
+    text = catalogue_norm.strip()
+    if not text:
+        return False
+    parts = text.split()
+    numbers = [p for p in parts if p.isdigit()]
+    prefix = parts[0]
+    if prefix in _UNIQUE_CATALOGUE_PREFIXES and len(numbers) == 1:
+        return True
+    # Con subnúmero (dos números) cualquier prefijo sirve: "op 1 no 8", "twv 55 d6".
+    return len(numbers) >= 2
+
+
+def _shares_significant_token(a: str, b: str) -> bool:
+    return bool(_significant_tokens(a) & _significant_tokens(b))
+
+
+def _tokens_subset_sets(a: set[str], b: set[str]) -> bool:
+    """Versión sobre conjuntos ya normalizados (evita recalcular `title_key`)."""
+    if not a or not b:
+        return False
+    small, big = (a, b) if len(a) <= len(b) else (b, a)
+    return len(small) >= 2 and small <= big
+
+
+def _tokens_subset(a: str, b: str) -> bool:
+    """True si las palabras significativas de `a` están contenidas en las de `b` (o al revés).
+
+    Permite anclar títulos sin catálogo ("Ave Verum", "Ave Verum Corpus - TTBB") a la obra
+    ya identificada ("Mozart: Ave Verum Corpus K. 618") sin unir obras distintas: exige al
+    menos 2 palabras significativas en la parte corta.
+    """
+    ta, tb = _significant_tokens(a), _significant_tokens(b)
+    if not ta or not tb:
+        return False
+    small, big = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
+    return len(small) >= 2 and small <= big
+
+
+def _shares_title_token(a: str, b: str) -> bool:
+    """True si dos títulos comparten alguna palabra significativa (>=4 letras)."""
+    ta = {t for t in title_key(a).split() if len(t) >= 4}
+    tb = {t for t in title_key(b).split() if len(t) >= 4}
+    return bool(ta & tb)
+
+
 def _catalogue_key(catalogue: str | None) -> str | None:
     if not catalogue:
         return None
@@ -467,23 +568,77 @@ def _ingest(
     if not catalogue_raw:
         catalogue_raw = _extract_composer_catalogue(title)
     cat_key = _catalogue_key(catalogue_raw)
+    # Identidad fina: el catálogo COMPLETO normalizado (p. ej. "op 10 no 9" -> "op10no9"),
+    # no solo el prefijo+serie (que uniría obras distintas de una misma serie).
+    cat_identity = _canonical_catalogue_identity(catalogue_raw)
     year = work.get("year")
     year_int = int(year) if str(year or "").isdigit() else None
 
     provider = str(work.get("provider") or "omr")
     fmt = str(work.get("format") or "musicxml")
     with api.cursor() as cur:
-        if composer_id:
-            cur.execute(
-                "SELECT id FROM index_works WHERE title_key=%s AND composer_id=%s",
-                (tk, composer_id),
-            )
-        else:
-            cur.execute(
-                "SELECT id FROM index_works WHERE title_key=%s AND composer_id IS NULL",
-                (tk,),
-            )
-        row = cur.fetchone()
+        row = None
+        # Identidad por catálogo completo: solo si el catálogo identifica una ÚNICA obra
+        # (K.618 sí; "TWV 55" es serie y no basta) + compositor + palabra significativa.
+        if cat_identity and _is_unique_catalogue(cat_identity):
+            if composer_name:
+                cur.execute(
+                    "SELECT id, title, catalogue FROM index_works WHERE composer_name=%s "
+                    "AND catalogue IS NOT NULL ORDER BY id LIMIT 200",
+                    (composer_name,),
+                )
+            elif composer_id:
+                cur.execute(
+                    "SELECT id, title, catalogue FROM index_works WHERE composer_id=%s "
+                    "AND catalogue IS NOT NULL ORDER BY id LIMIT 200",
+                    (composer_id,),
+                )
+            else:
+                cur.execute("SELECT id, title, catalogue FROM index_works WHERE 1=0")
+            for candidate in cur.fetchall():
+                if (
+                    _canonical_catalogue_identity(str(candidate.get("catalogue") or "")) == cat_identity
+                    and _shares_significant_token(title, str(candidate.get("title") or ""))
+                ):
+                    row = candidate
+                    break
+        if row is None:
+            # Anclaje por título: obra sin catálogo que es la misma que una ya identificada
+            # (mismo compositor y palabras significativas contenidas).
+            if composer_id or composer_name:
+                if composer_name:
+                    cur.execute(
+                        "SELECT id, title FROM index_works WHERE composer_name=%s "
+                        "AND catalogue IS NOT NULL AND catalogue <> '' ORDER BY id LIMIT 500",
+                        (composer_name,),
+                    )
+                else:
+                    cur.execute(
+                        "SELECT id, title FROM index_works WHERE composer_id=%s "
+                        "AND catalogue IS NOT NULL AND catalogue <> '' ORDER BY id LIMIT 500",
+                        (composer_id,),
+                    )
+                for anchor in cur.fetchall():
+                    if _tokens_subset(title, str(anchor.get("title") or "")):
+                        row = anchor
+                        break
+        if row is None:
+            if composer_name:
+                cur.execute(
+                    "SELECT id, title FROM index_works WHERE title_key=%s AND composer_name=%s",
+                    (tk, composer_name),
+                )
+            elif composer_id:
+                cur.execute(
+                    "SELECT id, title FROM index_works WHERE title_key=%s AND composer_id=%s",
+                    (tk, composer_id),
+                )
+            else:
+                cur.execute(
+                    "SELECT id, title FROM index_works WHERE title_key=%s AND composer_id IS NULL",
+                    (tk,),
+                )
+            row = cur.fetchone()
         if row is None:
             cur.execute(
                 "INSERT INTO index_works (title, title_key, composer_name, composer_id, "

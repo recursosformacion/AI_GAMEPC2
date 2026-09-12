@@ -273,6 +273,10 @@ PYTHONPATH=<osap-api> python reseed_providers.py
 ```
 
 ### Otros scripts (resumen)
+- **Normalización de identidad del índice**: `normalize_index_identity.py`
+  (`--apply`; por defecto dry-run) consolida `index_works` duplicados con el criterio
+  catálogo completo + compositor + título (con marcadores de movimiento y anclaje de
+  obras sin catálogo/compositor). **No** toca el agrupador en runtime.
 - **Autoridad / datos**: `download_composers.py` (`--out`, `--limit`),
   `extract_composers_from_dump.py` (`--in <dump>` obligatorio, `--out`),
   `build_composer_index.py` (`--in artist.tar.xz`, `--out`),
@@ -293,6 +297,10 @@ PYTHONPATH=<osap-api> python reseed_providers.py
 - **Operaciones**: `deploy.ps1` (despliegue a producción, host `RemoteIA`),
   `pre_dbadmin_tunnel.ps1` (túnel SSH de phpMyAdmin del entorno PRE — script residual de
   otro proyecto, no parte de la operación de OSAP).
+- **Mantenimiento web**: `web/scripts/maintenance.ps1` (`-On`, `-Off`, `-Status`) activa el
+  modo mantenimiento creando `web/dist/maintenance.flag`; Apache responde 503 con
+  `maintenance.html` salvo assets y el bypass de revisión `http://osap-app/?preview=<TOKEN>`
+  (cookie `osap_preview`, 1 día), que permite al equipo revisar antes de liberar.
 
 ---
 
