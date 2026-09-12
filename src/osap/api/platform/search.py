@@ -116,6 +116,12 @@ class SearchMixin(PlatformApiCore):
                 )
 
             def _partial(results: list[SearchResultItem], total: int) -> None:
+                # No reducir lo ya mostrado: evita el efecto "23 → 8" cuando el resultado
+                # final (o intermedio) trae menos por diferencias de agrupación/ventana.
+                previous = self._searches.get(search_id)
+                if previous is not None and previous.total and previous.total > total:
+                    results = list(previous.results)
+                    total = previous.total
                 page_results = self._paginate(results, total, req.page, req.limit)
                 self._searches[search_id] = SearchResponse(
                     search_id=search_id,
@@ -130,6 +136,10 @@ class SearchMixin(PlatformApiCore):
 
             try:
                 results, total = self._run_search(req, _progress, _provider, _partial)
+                previous = self._searches.get(search_id)
+                if previous is not None and previous.total and previous.total > total:
+                    results = list(previous.results)
+                    total = previous.total
                 page_results = self._paginate(results, total, req.page, req.limit)
                 done = SearchResponse(
                     search_id=search_id,

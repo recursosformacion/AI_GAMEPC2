@@ -4,14 +4,13 @@ import { apiClient } from "../api/ApiClient";
 import type { CorrectionRequestRead } from "../api/types";
 import { Button } from "../components/Button";
 
-type Kind = "contact" | "source" | "composer" | "work" | "representation";
+type Kind = "contact" | "source" | "composer" | "work";
 
 const KIND_LABEL: Record<Kind, string> = {
   contact: "Contacto",
   source: "Fuente / proveedor",
   composer: "Compositor",
   work: "Obra",
-  representation: "Representación",
 };
 
 export function CorrectionsPage() {
@@ -23,7 +22,6 @@ export function CorrectionsPage() {
     arrivedKind === "source" ||
     arrivedKind === "composer" ||
     arrivedKind === "work" ||
-    arrivedKind === "representation" ||
     arrivedKind === "contact"
       ? arrivedKind
       : "contact";
@@ -54,7 +52,7 @@ export function CorrectionsPage() {
         kind === "contact"
           ? await apiClient.submitContact(message, contactEmail || undefined)
           : await apiClient.submitCorrection({
-              kind: kind as "source" | "composer" | "work" | "representation",
+              kind: kind as "source" | "composer" | "work",
               entity_id: entityId.trim(),
               message,
             });
@@ -81,20 +79,31 @@ export function CorrectionsPage() {
       </header>
 
       <section className="space-y-4 rounded-lg border border-osap-border bg-white p-5">
-        <div className="flex flex-wrap gap-2">
-          {(Object.keys(KIND_LABEL) as Kind[]).map((k) => (
-            <button
-              key={k}
-              type="button"
-              onClick={() => setKind(k)}
-              className={`rounded-full border px-3 py-1 text-sm ${
-                kind === k ? "border-osap-accent bg-osap-accent text-white" : "border-osap-border text-osap-muted"
-              }`}
-            >
-              {KIND_LABEL[k]}
-            </button>
-          ))}
-        </div>
+        {arrivedKind && arrivedEntity ? (
+          <div className="flex items-center gap-2">
+            <span className="rounded-full border border-osap-accent bg-osap-accent-soft px-3 py-1 text-sm font-medium text-osap-accent">
+              {KIND_LABEL[kind]}
+            </span>
+            <span className="text-xs text-osap-muted">
+              tipo fijado por la ficha de origen (no editable)
+            </span>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {(Object.keys(KIND_LABEL) as Kind[]).map((k) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setKind(k)}
+                className={`rounded-full border px-3 py-1 text-sm ${
+                  kind === k ? "border-osap-accent bg-osap-accent text-white" : "border-osap-border text-osap-muted"
+                }`}
+              >
+                {KIND_LABEL[k]}
+              </button>
+            ))}
+          </div>
+        )}
 
         {kind !== "contact" && !entityId ? (
           <p className="rounded border border-osap-border bg-osap-surface px-3 py-2 text-sm text-osap-muted">
