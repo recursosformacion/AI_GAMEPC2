@@ -114,7 +114,7 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
 
         if _belongs_to_storage(url_normalized, storage_base) or (view and _is_file_url(url_normalized)):
             try:
-                upstream = requests.get(url, timeout=120)
+                upstream = requests.get(url, timeout=120, headers=_shared._BROWSER_FETCH_HEADERS)
             except requests.RequestException:
                 if is_download and provider:
                     ctx.api.record_download_failure_event(provider=provider)

@@ -63,6 +63,17 @@ def _media_type_for_format(fmt: str) -> str:
     return _MEDIA_TYPES.get(fmt, "application/octet-stream")
 
 
+# Cabeceras para fetches server-side al storage/CDN propio. Cloudflare (R2 custom domain)
+# responde 403 a User-Agents de librería (python-requests/curl); con UA de navegador sirve
+# el fichero. El proxy de descarga de osap-api las usa.
+_BROWSER_FETCH_HEADERS = {
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+        "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"
+    ),
+    "Accept": "*/*",
+}
+
 _TAGS = [
     {"name": "Searches", "description": "Create and retrieve searches."},
     {"name": "Jobs", "description": "Orchestrate long-running tasks."},

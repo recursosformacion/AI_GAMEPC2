@@ -16,6 +16,8 @@ if TYPE_CHECKING:
 
 
 def build_omr_router(ctx: HttpContext) -> APIRouter:
+    from src.osap.api.http import shared as _shared
+
     router: APIRouter = APIRouter()
 
     @router.get(
@@ -47,7 +49,7 @@ def build_omr_router(ctx: HttpContext) -> APIRouter:
         if parsed.scheme not in ("http", "https") or parsed.hostname not in allowed:
             return ctx.fail(400, response, "INVALID_URL", "URL no permitida")
         try:
-            upstream = requests.get(url, timeout=120)
+            upstream = requests.get(url, timeout=120, headers=_shared._BROWSER_FETCH_HEADERS)
         except requests.RequestException:
             return ctx.fail(502, response, "UPSTREAM_ERROR", "No se pudo obtener el fichero")
         if upstream.status_code != 200:
