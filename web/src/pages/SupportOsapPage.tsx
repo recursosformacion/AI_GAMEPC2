@@ -316,7 +316,7 @@ export function SupportOsapPage() {
             {authMode === "login" ? (
               <LoginForm onDone={() => setAuthOpen(false)} />
             ) : (
-              <RegisterForm onDone={() => setAuthOpen(false)} />
+              <RegisterForm onDone={() => setAuthOpen(false)} onSwitchToLogin={() => setAuthMode("login")} />
             )}
           </div>
         </section>
