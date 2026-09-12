@@ -306,6 +306,13 @@ PYTHONPATH=<osap-api> python reseed_providers.py
 
 ## osap-support/scripts
 
+### release.ps1 (raíz del repo)
+Libera osap-support a producción (91.134.255.134). Corre tests/lint/mypy, sube el código por
+tar+ssh a `~/openmusicrepository.com/osap-support`, asegura el venv (`pip install -e .`),
+despliega `osap.production.toml` como `osap.toml`, aplica migraciones Alembic
+(`upgrade head`) y reinicia `osap-support.service` verificando `/health` en 8300.
+Uso: `pwsh osap-support/release.ps1 [-SkipTests] [-SkipMigrations]`
+
 ### backfill_founder.py
 Backfill de reconocimientos **FOUNDER** (históricos) desde `memberships.is_founder`
 (ADR-015, criterio congelado). Crea reconocimientos `historical/active` permanentes en el
