@@ -22,10 +22,11 @@ de operación de la web (`osap-api/web`, servida por Apache desde `web/dist`).
   - `ErrorDocument 503 /maintenance.html`.
   - Bypass permanente para assets (`/assets/`, favicon, robots, sitemap) y para
     `maintenance.html`.
-  - Bypass de revisión: llegar con `?preview=<TOKEN>` deja la cookie
-    `osap_preview=1` (1 día, `SameSite=Lax`). Con cookie, Apache no aplica el corte.
-  - Si existe `%{DOCUMENT_ROOT}/maintenance.flag`, el resto de rutas responde **503** con la
-    página de mantenimiento (correcto para SEO: no es un 200 con contenido de error).
+  - **Fallback SPA propio** (`!-f`/`!-d` → `/index.html`): al definir `RewriteRule` en
+    `.htaccess` se **reemplaza** el del vhost, así que el fallback debe estar aquí o las
+    rutas profundas (`/viewer`, `/explore`…) devolverían 404.
+  - Corte 503 solo si existe `maintenance.flag` **y** no hay cookie `osap_preview`; el bypass
+    de revisión no usa `[L]` (cortaría el fallback).
 - Flag y token viven en `web/dist` (no versionados): `maintenance.flag` / `maintenance.token`.
 - `web/scripts/maintenance.ps1` (`-On`, `-Off`, `-Status`) crea/borra el flag y imprime la
   URL de revisión con token estable.

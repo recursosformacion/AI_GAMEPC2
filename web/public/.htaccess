@@ -12,18 +12,24 @@
 # Activar/desactivar con: web/scripts/maintenance.ps1 -On | -Off
 # El equipo entra en revisión con: http://osap-app/?preview=<TOKEN>
 # (el token lo imprime el script; queda en cookie osap_preview durante 1 día).
+#
+# OJO: no usar [L] para "saltar" mantenimiento en rutas de la SPA: el fallback de la SPA
+# vive en el vhost, y un [L] aquí lo cortaría (404 en /viewer, etc.). El bypass se logra
+# haciendo que la regla de 503 NO aplique cuando hay cookie.
 ErrorDocument 503 /maintenance.html
 RewriteEngine On
-
-# Bypass de revisión: la cookie osap_preview la fija maintenance.html al llegar con
-# ?preview=<TOKEN>; con la cookie presente se sirve la app (revisión antes de liberar).
-RewriteCond %{HTTP_COOKIE} osap_preview=1 [NC]
-RewriteRule ^ - [L]
 
 # Siempre accesibles: assets estáticos y la propia página de mantenimiento
 RewriteCond %{REQUEST_URI} ^/(assets/|maintenance\.html$|favicon\.ico$|android-|apple-touch-|robots\.txt$|sitemap\.xml$) [NC]
 RewriteRule ^ - [L]
 
-# Con el flag activo, todo lo demás responde 503 con la página de mantenimiento
+# Con el flag activo y sin cookie de revisión, todo lo demás responde 503
+RewriteCond %{HTTP_COOKIE} !osap_preview=1 [NC]
 RewriteCond %{DOCUMENT_ROOT}/maintenance.flag -f
 RewriteRule ^ - [R=503,L]
+
+# Fallback SPA: al definir RewriteRule en .htaccess se reemplaza el del vhost, así que
+# el fallback debe vivir aquí (si no, /viewer, /explore, etc. darían 404).
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ /index.html [L]
