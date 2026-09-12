@@ -4,13 +4,14 @@ import { apiClient } from "../api/ApiClient";
 import type { CorrectionRequestRead } from "../api/types";
 import { Button } from "../components/Button";
 
-type Kind = "contact" | "source" | "composer" | "work";
+type Kind = "contact" | "source" | "composer" | "work" | "representation";
 
 const KIND_LABEL: Record<Kind, string> = {
   contact: "Contacto",
   source: "Fuente / proveedor",
   composer: "Compositor",
   work: "Obra",
+  representation: "Representación",
 };
 
 export function CorrectionsPage() {
@@ -22,6 +23,7 @@ export function CorrectionsPage() {
     arrivedKind === "source" ||
     arrivedKind === "composer" ||
     arrivedKind === "work" ||
+    arrivedKind === "representation" ||
     arrivedKind === "contact"
       ? arrivedKind
       : "contact";
@@ -52,7 +54,7 @@ export function CorrectionsPage() {
         kind === "contact"
           ? await apiClient.submitContact(message, contactEmail || undefined)
           : await apiClient.submitCorrection({
-              kind: kind as "source" | "composer" | "work",
+              kind: kind as "source" | "composer" | "work" | "representation",
               entity_id: entityId.trim(),
               message,
             });

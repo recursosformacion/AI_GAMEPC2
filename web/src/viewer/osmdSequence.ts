@@ -42,7 +42,7 @@ export interface NoteSequenceLike {
   notes: Array<{ pitch: number; startTime: number; endTime: number; program?: number }>;
   totalTime: number;
   tempos: Array<{ time: number; qpm: number }>;
-  quantizationInfo: { stepsPerQuarter: number };
+  quantizationInfo?: { stepsPerQuarter: number };
 }
 
 // OSMD 0.8.4 usa `halfTone = fundamental + 12*(octave + 3)`, que sitúa C4 en 48 en

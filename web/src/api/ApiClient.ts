@@ -224,7 +224,7 @@ export class ApiClient {
   }
 
   async submitCorrection(payload: {
-    kind: "source" | "composer" | "work";
+    kind: "source" | "composer" | "work" | "representation";
     entity_id: string;
     entity_provider?: string;
     field?: string;

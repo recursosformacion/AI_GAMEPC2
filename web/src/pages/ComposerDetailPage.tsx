@@ -87,11 +87,6 @@ export function ComposerDetailPage() {
                 {t("composers.reviewFilter")}: {reviewLabel}
               </span>
             ) : null}
-            {b?.cluster_id ? (
-              <span className="rounded bg-osap-surface px-2 py-0.5 font-mono text-osap-muted">
-                cluster {b.cluster_id}
-              </span>
-            ) : null}
             <span className="text-osap-muted">
               {b?.works_count ?? works?.total ?? 0} {t("composers.worksTitle")}
             </span>

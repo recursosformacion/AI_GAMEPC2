@@ -1,20 +1,20 @@
 // Página "Viewer": PDF inline, MusicXML con OSMD + reproducción (osmd-audio-player)
 // y MIDI con <midi-player>. Se abre en pestaña nueva desde la ficha de obra.
 
-import { createElement, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import { useI18n } from "../i18n/I18n";
 import {
   isMidiContentType,
   loadJSZip,
-  loadMidiPlayer,
   loadOsmd,
   looksLikeZip,
   musicXmlFromMxl,
 } from "../viewer/osmdLoader";
 import { buildNoteSequence, type NoteSequenceLike } from "../viewer/osmdSequence";
 import { SynthPlayer } from "../viewer/audioSynth";
+import { parseMidi } from "../viewer/midi";
 
 type State = "loading" | "rendering" | "ready" | "midi" | "pdf" | "error";
 
@@ -53,7 +53,18 @@ export function ViewerPage() {
           return;
         }
         if (isMidiContentType(contentType, format)) {
-          await loadMidiPlayer();
+          const buffer = await response.arrayBuffer();
+          const midi = parseMidi(buffer);
+          if (!midi) throw new Error("MIDI no reconocido");
+          sequenceRef.current = midi;
+          setSeqInfo(`${midi.notes.length} · ${Math.round(midi.totalTime)}s`);
+          const midiTempo = midi.tempos[0]?.qpm ?? tempo;
+          setTempo(Math.round(midiTempo));
+          const midiPlayer = new SynthPlayer(midi, midiTempo);
+          midiPlayer.setVolume(volume / 100);
+          midiPlayer.onEnd = () => setPlaying(false);
+          playerRef.current = midiPlayer;
+          setAudioReady(true);
           if (alive) setState("midi");
           return;
         }
@@ -133,7 +144,7 @@ export function ViewerPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{title || t("viewer.title")}</h1>
         <div className="flex items-center gap-3">
-          {state === "ready" && audioReady ? (
+          {(state === "ready" || state === "midi") && audioReady ? (
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -197,12 +208,9 @@ export function ViewerPage() {
         />
       ) : null}
 
-      {state === "midi" && rep
-        ? createElement("midi-player", {
-            src: `/api/v1/representations/${encodeURIComponent(rep)}/download?view=1`,
-            "sound-font": true,
-          })
-        : null}
+      {state === "midi" ? (
+        <p className="text-sm text-osap-muted">{t("work.download")} · MIDI</p>
+      ) : null}
 
       {state === "ready" && !audioReady ? (
         <p className="text-xs text-osap-muted">
@@ -211,7 +219,7 @@ export function ViewerPage() {
         </p>
       ) : null}
 
-      {state === "ready" && audioReady && seqInfo ? (
+      {(state === "ready" || state === "midi") && audioReady && seqInfo ? (
         <p className="text-xs text-osap-muted">{seqInfo}</p>
       ) : null}
 

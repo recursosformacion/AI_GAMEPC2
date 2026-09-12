@@ -210,20 +210,6 @@ export function WorkDetailTabs({
             <Meta label={t("work.composer")} value={work.composer ?? "—"} />
             <Meta label={t("work.catalogue")} value={work.catalogue ?? "—"} />
           </dl>
-          <Link
-            to={`/works/${work.work_id}`}
-            className="mt-3 inline-block rounded bg-osap-accent px-3 py-1 text-sm text-white"
-          >
-            {t("work.viewDetails")}
-          </Link>
-          {allowWorkCorrections && work.work_id ? (
-            <Link
-              to={`/corrections?kind=work&entity_id=${encodeURIComponent(work.work_id)}`}
-              className="mt-3 ml-2 inline-block rounded border border-osap-accent/40 px-3 py-1 text-sm font-medium text-osap-accent hover:bg-osap-accent-soft"
-            >
-              {t("corrections.propose")}
-            </Link>
-          ) : null}
           <p className="mt-2 text-sm text-osap-muted">
             {representations.length} {t("work.representations")} · {providers.size} {t("work.providers")}
           </p>
@@ -256,6 +242,7 @@ export function WorkDetailTabs({
           byProvider={byProvider}
           workTitle={work.title}
           workId={work.work_id}
+          allowWorkCorrections={allowWorkCorrections}
         />
       ) : null}
 
@@ -300,11 +287,13 @@ function RepresentationsTab({
   byProvider,
   workTitle,
   workId,
+  allowWorkCorrections = false,
 }: {
   representations: RepresentationInfo[];
   byProvider: Map<string, RepresentationInfo[]>;
   workTitle?: string | null;
   workId?: string | null;
+  allowWorkCorrections?: boolean;
 }) {
   const { t } = useI18n();
   const [selected, setSelected] = useState<string | null>(null);
@@ -379,6 +368,17 @@ function RepresentationsTab({
                   >
                     <_DownloadIcon /> {t("work.download")}
                   </a>
+                  {allowWorkCorrections ? (
+                    <Link
+                      to={`/corrections?kind=representation&entity_id=${encodeURIComponent(rep.id)}&provider=${encodeURIComponent(rep.provider)}`}
+                      title={t("corrections.propose")}
+                      aria-label={t("corrections.propose")}
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1 rounded border border-osap-accent/40 px-2 py-1 text-xs text-osap-accent hover:bg-osap-accent-soft"
+                    >
+                      {t("corrections.propose")}
+                    </Link>
+                  ) : null}
                 </>
               )}
             </span>

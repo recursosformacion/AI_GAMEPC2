@@ -27,13 +27,6 @@ export interface JSZipLike {
 
 const OSMD_URL = "https://cdn.jsdelivr.net/npm/opensheetmusicdisplay@0.8.4/build/opensheetmusicdisplay.min.js";
 const JSZIP_URL = "https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js";
-// Dependencias del reproductor MIDI (carga secuencial; jsDelivr /combine falla con tfjs).
-const MIDI_SCRIPTS = [
-  "https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@3.21.0/dist/tf.min.js",
-  "https://cdn.jsdelivr.net/npm/tone@14.7.58/build/Tone.js",
-  "https://cdn.jsdelivr.net/npm/@magenta/music@1.23.1/dist/magentamusic.min.js",
-  "https://cdn.jsdelivr.net/npm/html-midi-player@1.4.0/dist/midi-player.min.js",
-];
 
 function loadScript(src: string): Promise<void> {
   return new Promise((resolve, reject) => {
@@ -67,14 +60,6 @@ export async function loadJSZip(): Promise<JSZipLike> {
   }
   if (!window.JSZip) throw new Error("JSZip no disponible");
   return window.JSZip;
-}
-
-/** Carga el elemento <midi-player> (para representaciones MIDI). */
-export async function loadMidiPlayer(): Promise<void> {
-  if (customElements.get("midi-player")) return;
-  for (const src of MIDI_SCRIPTS) {
-    await loadScript(src);
-  }
 }
 
 export function isMidiContentType(contentType: string, format?: string | null): boolean {
