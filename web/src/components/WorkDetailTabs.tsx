@@ -186,20 +186,6 @@ export function WorkDetailTabs({
 
   return (
     <div>
-      <div className="flex items-center justify-between gap-2 px-1 pb-1">
-        <span className="truncate text-xs text-osap-muted">
-          {work.composer ? `${work.composer} — ` : ""}
-          {work.title}
-        </span>
-        {allowWorkCorrections && work.work_id ? (
-          <Link
-            to={`/corrections?kind=work&entity_id=${encodeURIComponent(work.work_id)}`}
-            className="shrink-0 rounded border border-osap-accent/40 px-2 py-0.5 text-xs font-medium text-osap-accent transition-colors hover:border-osap-accent hover:bg-osap-accent-soft"
-          >
-            {t("corrections.propose")}
-          </Link>
-        ) : null}
-      </div>
       <div className="flex gap-1 border-b border-osap-border">
         {TABS.map((tb) => (
           <button
@@ -262,6 +248,7 @@ export function WorkDetailTabs({
           byProvider={byProvider}
           workTitle={work.title}
           workId={work.work_id}
+          allowWorkCorrections={allowWorkCorrections}
         />
       ) : null}
 
@@ -306,11 +293,13 @@ function RepresentationsTab({
   byProvider,
   workTitle,
   workId,
+  allowWorkCorrections = false,
 }: {
   representations: RepresentationInfo[];
   byProvider: Map<string, RepresentationInfo[]>;
   workTitle?: string | null;
   workId?: string | null;
+  allowWorkCorrections?: boolean;
 }) {
   const { t } = useI18n();
   const [selected, setSelected] = useState<string | null>(null);
@@ -385,6 +374,17 @@ function RepresentationsTab({
                   >
                     <_DownloadIcon /> {t("work.download")}
                   </a>
+                  {allowWorkCorrections ? (
+                    <Link
+                      to={`/corrections?kind=representation&entity_id=${encodeURIComponent(rep.id)}&provider=${encodeURIComponent(rep.provider)}`}
+                      title={t("corrections.propose")}
+                      aria-label={t("corrections.propose")}
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1 rounded border border-osap-accent/40 px-2 py-1 text-xs text-osap-accent hover:bg-osap-accent-soft"
+                    >
+                      {t("corrections.propose")}
+                    </Link>
+                  ) : null}
                 </>
               )}
             </span>

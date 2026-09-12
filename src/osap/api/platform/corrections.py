@@ -78,6 +78,10 @@ class CorrectionsMixin(PlatformApiCore):
         return self._correction_read(row)
 
     def _correction_entity_exists(self, kind: str, entity_id: str) -> bool:
+        if kind == "representation":
+            # La representación es un registro de proveedor: se acepta siempre (no hay
+            # store consultable aquí) y el admin la revisa en la pantalla de correcciones.
+            return bool(entity_id)
         if kind == "source":
             ids = {str(p.provider_id.value) for p in self._container.catalog_manager().providers()}
             ids.update(str(pid) for pid, _n, _b, _w in self._container.defined_providers())
