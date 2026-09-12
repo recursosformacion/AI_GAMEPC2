@@ -164,9 +164,12 @@ function ComposerWorksInline({ composerName }: { composerName: string }) {
   const lastRequest = useSearches((s) => s.lastRequest);
 
   // Lanza la búsqueda por el MÉTODO NORMAL (POST /searches + polling): igual que el
-  // Estudio. Mientras corre, se muestra el progreso y los proveedores que responden.
+  // Estudio, pero restringida al ÍNDICE local (rápido, determinista y sin depender de
+  // proveedores en vivo): incluye OMR/IMSLP/Mutopia/MusicBrainz ya indexados.
   useEffect(() => {
-    void useSearches.getState().create({ query: "", composer: composerName, limit: 30 });
+    void useSearches
+      .getState()
+      .create({ query: "", composer: composerName, limit: 100, providers: ["index"] });
   }, [composerName]);
 
   // Solo se pintan resultados del pipeline si la última búsqueda es de ESTE compositor:

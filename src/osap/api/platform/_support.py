@@ -163,6 +163,7 @@ def _replace_provider_description(
 
 
 _PROVIDER_NAME_MAP = {
+    "index": "index",
     "imslp": "imslp",
     "openscore": "openscore",
     "local": "local",
