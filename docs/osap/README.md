@@ -22,7 +22,7 @@ osap/
 │           · presentation-v22.md     (presentación 20 diapositivas)
 ├── v3/     V3: plataforma
 │           · api-design.md           (API REST, contrato congelado V3.1.a)
-├── adr/    Architecture Decision Records (0001–0032)
+├── adr/    Architecture Decision Records (0001–0037)
 └── old/    Documentos obsoletos (histórico, no se editan)
 ```
 

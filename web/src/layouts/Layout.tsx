@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { trackPageView } from "../analytics/gtm";
 import { DarkModeToggle } from "../components/DarkModeToggle";
 import { GlobalSearch } from "../components/GlobalSearch";
 import { LanguageSelect } from "../components/LanguageSelect";
@@ -38,6 +39,10 @@ const SEGMENT_LABELS: Record<string, string> = {
 function Breadcrumb() {
   const { t } = useI18n();
   const location = useLocation();
+  // GTM en SPA: cada cambio de ruta debe enviar un page_view a dataLayer.
+  useEffect(() => {
+    trackPageView(location.pathname);
+  }, [location.pathname]);
   const parts = location.pathname.split("/").filter(Boolean);
   const crumbs = [{ label: t("nav.home"), to: "/" }];
   let acc = "";
