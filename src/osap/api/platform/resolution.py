@@ -195,6 +195,7 @@ class ResolutionMixin(PlatformApiCore):
                             format=str(resource.get("format") or "unknown"),
                             url=url,
                             source_id=f"{session_id}-{provider}-{len(out)}",
+                            title=str(work.get("title") or "") or None,
                         )
                     )
         return tuple(out)
@@ -239,6 +240,7 @@ class ResolutionMixin(PlatformApiCore):
                 format=r.format,
                 url=str(r.url),
                 source_id=r.id or f"{work_id}-{r.provider}-{r.format}",
+                title=r.title,
             )
             for r in usable
         )
@@ -265,6 +267,7 @@ class ResolutionMixin(PlatformApiCore):
             "format": selected.candidate.format,
             "url": selected.candidate.url,
             "source_id": selected.candidate.source_id,
+            "title": selected.candidate.title or "",
             "quality_level": selected.quality_level.value,
             "quality_score": quality_score,
             "reason": selected.reason or "",

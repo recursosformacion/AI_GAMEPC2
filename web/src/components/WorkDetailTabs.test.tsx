@@ -107,6 +107,7 @@ describe("WorkDetailTabs — select best known representation", () => {
         provider: "omr",
         format: "musicxml",
         url: "https://storage.example/download/1.mxl",
+        title: "Ave verum corpus",
         quality_level: 2,
         reason: "mayor calidad",
       },
@@ -117,8 +118,9 @@ describe("WorkDetailTabs — select best known representation", () => {
     fireEvent.click(screen.getByRole("button", { name: "Find better representations" }));
 
     await waitFor(() => {
-      expect(screen.getByText(/Selected representation: omr · musicxml/)).toBeInTheDocument();
+      expect(screen.getByText("Selected representation")).toBeInTheDocument();
     });
+    expect(screen.getByText("Ave verum corpus")).toBeInTheDocument();
     const calls = (globalThis.fetch as ReturnType<typeof vi.fn>).mock.calls.map((c) => String(c[0]));
     expect(calls.some((u) => u.includes("/representations/select-best"))).toBe(true);
     // No acquisition session is created.

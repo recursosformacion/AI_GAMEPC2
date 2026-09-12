@@ -24,6 +24,7 @@ from src.osap.application.representation_selector import (
 from src.osap.domain.knowledge import KnowledgeBase
 from src.osap.domain.output_format import OutputFormat
 from src.osap.domain.value_objects import ProviderId
+from src.osap.infrastructure.http.browser_headers import browser_headers
 
 VERSION = "3.1"
 
@@ -513,6 +514,7 @@ def _selection_payload(selected: SelectedRepresentation) -> dict[str, object]:
         "format": candidate.format,
         "source_id": candidate.source_id,
         "url": candidate.url,
+        "title": candidate.title or "",
         "quality_level": selected.quality_level.value,
         "quality_score": score_value,
         "reason": selected.reason,
@@ -532,7 +534,7 @@ def _fetch_url_bytes(url: str) -> bytes | None:
     import urllib.request
 
     try:
-        req = urllib.request.Request(url, headers={"User-Agent": "osap-api/1.0"})
+        req = urllib.request.Request(url, headers=browser_headers({"Accept": "*/*"}))
         with urllib.request.urlopen(req, timeout=60) as resp:
             raw: bytes = resp.read()
             return raw

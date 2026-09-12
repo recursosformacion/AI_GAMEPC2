@@ -34,6 +34,7 @@ class RepresentationCandidate:
     format: str
     url: str
     source_id: str
+    title: str | None = None
 
 
 @dataclass(frozen=True)

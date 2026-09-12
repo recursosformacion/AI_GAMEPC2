@@ -105,41 +105,51 @@ function KnownSelectionBlock({
         <p className="mt-2 text-sm text-osap-muted">{t("work.selectNone")}</p>
       ) : status === "selected" && sel ? (
         <div className="mt-2 rounded border border-osap-border bg-osap-surface p-2">
-          <p className="text-sm font-medium">
-            {t("work.selectHeading")}: {sel.provider ?? "—"} · {sel.format ?? "—"}
-          </p>
-          {sel.quality_level != null ? (
-            <p className="text-xs text-osap-muted">QualityLevel: {sel.quality_level}</p>
-          ) : null}
-          {sel.reason ? (
-            <p className="text-xs text-osap-muted">
-              {t("work.resolveReason")}: {sel.reason}
-            </p>
-          ) : null}
-          {sel.source_id || sel.url ? (
-            <a
-              href={
-                sel.source_id
-                  ? `/api/v1/representations/${encodeURIComponent(sel.source_id)}/download`
-                  : (sel.url as string)
-              }
-              target="_blank"
-              rel="noreferrer"
-              className="mt-1 inline-block rounded bg-osap-accent px-2 py-0.5 text-xs text-white"
-            >
-              {t("actions.download")}
-            </a>
-          ) : null}
-          {sel.source_id ? (
-            <a
-              href={_viewHref(sel.source_id, sel.format, workTitle)}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-1 ml-2 inline-block rounded border border-osap-accent px-2 py-0.5 text-xs text-osap-accent"
-            >
-              {t("actions.viewScore")}
-            </a>
-          ) : null}
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">{t("work.selectHeading")}</p>
+              <p className="truncate text-sm" title={sel.title ?? undefined}>
+                {sel.title || `${sel.provider ?? "—"} · ${sel.format ?? "—"}`}
+              </p>
+              <p className="text-xs text-osap-muted">
+                {sel.provider ?? "—"} · {sel.format ?? "—"}
+              </p>
+              {sel.quality_level != null ? (
+                <p className="text-xs text-osap-muted">QualityLevel: {sel.quality_level}</p>
+              ) : null}
+              {sel.reason ? (
+                <p className="text-xs text-osap-muted">
+                  {t("work.resolveReason")}: {sel.reason}
+                </p>
+              ) : null}
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
+              {sel.source_id ? (
+                <a
+                  href={_viewHref(sel.source_id, sel.format, workTitle)}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-block rounded border border-osap-accent px-2 py-0.5 text-xs text-osap-accent"
+                >
+                  {t("actions.viewScore")}
+                </a>
+              ) : null}
+              {sel.source_id || sel.url ? (
+                <a
+                  href={
+                    sel.source_id
+                      ? `/api/v1/representations/${encodeURIComponent(sel.source_id)}/download`
+                      : (sel.url as string)
+                  }
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-block rounded bg-osap-accent px-2 py-0.5 text-xs text-white"
+                >
+                  {t("actions.download")}
+                </a>
+              ) : null}
+            </div>
+          </div>
         </div>
       ) : status === "none_known" ? (
         <p className="mt-2 text-sm text-osap-muted">{t("work.noneKnown")}</p>

@@ -72,28 +72,27 @@ function buildFromSheet(osmd: OsmdLike, bpm: number): NoteSequenceLike | null {
   const measures = osmd.Sheet?.SourceMeasures;
   if (!measures || measures.length === 0) return null;
 
-  // Los timestamps de OSMD ya vienen en segundos según el tempo de la partitura; las
-  // duraciones deben usar ese mismo tempo para no producir huecos ("a golpes").
+  // OSMD 0.8.4 no expone `measure.Timestamp` de forma fiable y los timestamps de los
+  // contenedores son **relativos al compás**: hay que acumular el inicio de cada compás o
+  // todas las notas caen en el primer compás (se oía un instante y paraba).
   const scoreBpm = Math.max(osmd.Sheet?.DefaultStartTempoInBpm ?? bpm, 20);
   const noteSeconds = (wholeFraction: number): number => wholeToSeconds(wholeFraction, scoreBpm);
   const notes: NoteSequenceLike["notes"] = [];
   let totalTime = 0;
+  let measureStartWhole = 0;
 
   for (const measure of measures) {
     if (!measure) continue;
-    const measureTime = measure.Timestamp?.RealValue ?? 0;
+    const declared = measure.Timestamp?.RealValue;
+    const base = typeof declared === "number" ? declared : measureStartWhole;
+    const durationWhole = measure.Duration?.RealValue ?? 0;
     const containers = measure.VerticalSourceStaffEntryContainers ?? [];
+    let maxRelative = 0;
     for (const container of containers) {
       if (!container) continue;
-      // `container.Timestamp` es absoluto en OSMD; si viniera relativo al compás, se ancla.
-      const rawContainer = container.Timestamp?.RealValue;
-      const absoluteWhole =
-        rawContainer === undefined
-          ? measureTime
-          : rawContainer < measureTime - 1e-6
-            ? measureTime + rawContainer
-            : rawContainer;
-      const time = noteSeconds(absoluteWhole);
+      const relative = container.Timestamp?.RealValue ?? 0;
+      if (relative > maxRelative) maxRelative = relative;
+      const time = noteSeconds(base + relative);
       for (const staffEntry of container.StaffEntries ?? []) {
         if (!staffEntry) continue;
         for (const voiceEntry of staffEntry.VoiceEntries ?? []) {
@@ -109,7 +108,9 @@ function buildFromSheet(osmd: OsmdLike, bpm: number): NoteSequenceLike | null {
         }
       }
     }
-    totalTime = Math.max(totalTime, noteSeconds(measureTime + (measure.Duration?.RealValue ?? 0)));
+    // Longitud del compás: su duración declarada o, si falta, el último onset relativo.
+    measureStartWhole = base + (durationWhole > 0 ? durationWhole : maxRelative);
+    totalTime = Math.max(totalTime, noteSeconds(measureStartWhole));
   }
 
   if (notes.length === 0) return null;

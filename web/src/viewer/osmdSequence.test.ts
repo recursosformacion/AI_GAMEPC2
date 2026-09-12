@@ -24,7 +24,7 @@ function fakeOsmd() {
           Duration: { RealValue: 1 },
           VerticalSourceStaffEntryContainers: [
             {
-              Timestamp: { RealValue: 1 },
+              Timestamp: { RealValue: 0 },
               StaffEntries: [
                 { VoiceEntries: [{ Notes: [{ Pitch: { halfTone: 50 }, Length: { RealValue: 0.25 } }] }] },
               ],
@@ -51,5 +51,24 @@ describe("buildNoteSequence", () => {
   it("devuelve null sin notas", () => {
     const empty = { Sheet: { SourceMeasures: [{ VerticalSourceStaffEntryContainers: [] }] } };
     expect(buildNoteSequence(empty, 100)).toBeNull();
+  });
+
+  it("acumula el inicio de cada compas cuando OSMD no expone measure.Timestamp", () => {
+    const measure = (halfTone: number) => ({
+      Duration: { RealValue: 1 },
+      VerticalSourceStaffEntryContainers: [
+        {
+          Timestamp: { RealValue: 0 },
+          StaffEntries: [{ VoiceEntries: [{ Notes: [{ Pitch: { halfTone }, Length: { RealValue: 0.25 } }] }] }],
+        },
+      ],
+    });
+    const osmd = {
+      Sheet: { DefaultStartTempoInBpm: 120, SourceMeasures: [measure(48), measure(50), measure(52)] },
+    };
+    const sequence = buildNoteSequence(osmd, 120);
+    expect(sequence?.notes.map((n) => n.pitch)).toEqual([60, 62, 64]);
+    expect(sequence?.notes.map((n) => n.startTime)).toEqual([0, 2, 4]);
+    expect(sequence?.totalTime).toBeCloseTo(6, 6);
   });
 });

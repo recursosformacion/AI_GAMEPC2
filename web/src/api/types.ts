@@ -516,6 +516,7 @@ export interface RepresentationSelection {
     format?: string;
     url?: string;
     source_id?: string;
+    title?: string | null;
     quality_level?: number | null;
     quality_score?: number | null;
     reason?: string;
