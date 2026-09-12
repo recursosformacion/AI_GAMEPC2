@@ -35,6 +35,7 @@ from src.osap.domain.value_objects import (
     WorkId,
 )
 from src.osap.domain.work_descriptor import WorkDescriptor
+from src.osap.infrastructure.http.browser_headers import browser_headers
 from src.osap.ports.catalog_provider import ICatalogProvider
 
 if TYPE_CHECKING:
@@ -93,7 +94,7 @@ class CPDLCatalogProvider(ICatalogProvider):
         if q:
             params.append(("q", q))
         url = f"{self._base}/api/v1/cpdl/search"
-        headers = {"Accept": "application/json"}
+        headers = browser_headers({"Accept": "application/json"})
         token: str | None = None
         if self._token_provider is not None:
             try:
