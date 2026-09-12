@@ -387,11 +387,13 @@ function RepresentationsTab({
         ))}
       </ul>
       <p className="mt-2 text-xs text-osap-muted">{t("work.titlesFromSources")}</p>
-              <KnownSelectionBlock
-                workId={workId}
-                representations={representations}
-                workTitle={workTitle}
-              />
+      {representations.length > 0 ? (
+        <KnownSelectionBlock
+          workId={workId}
+          representations={representations}
+          workTitle={workTitle}
+        />
+      ) : null}
     </div>
   );
 }

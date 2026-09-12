@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiClient } from "../api/ApiClient";
-import { Link } from "react-router-dom";
 import type { RepresentationInfo, SearchResultItem, WorkDetail, WorkInfo } from "../api/types";
 import { Spinner } from "./Spinner";
 import { WorkDetailTabs } from "./WorkDetailTabs";
@@ -56,6 +55,14 @@ function toRepresentations(d: WorkDetail): RepresentationInfo[] {
       available: r.available ?? Boolean(r.url ?? r.file_id != null),
       title: d.work.title ?? undefined,
     }));
+}
+
+function mergeRepresentations(
+  base: RepresentationInfo[],
+  extra: RepresentationInfo[]
+): RepresentationInfo[] {
+  const seen = new Set(base.map((r) => r.id));
+  return [...base, ...extra.filter((r) => !seen.has(r.id))];
 }
 
 export function WorksListModule({
@@ -123,12 +130,6 @@ export function WorksListModule({
                   <span className="text-osap-muted">{isOpen ? "▲" : "▼"}</span>
                 </span>
               </button>
-              <Link
-                to={`/corrections?kind=work&entity_id=${encodeURIComponent(String(w.work.work_id))}`}
-                className="shrink-0 rounded border border-osap-accent/40 px-2 py-0.5 text-xs font-medium text-osap-accent transition-colors hover:border-osap-accent hover:bg-osap-accent-soft"
-              >
-                {t("corrections.propose")}
-              </Link>
             </div>
             {isOpen ? (
               <div className="mb-2 overflow-hidden rounded bg-osap-surface">
@@ -139,7 +140,7 @@ export function WorksListModule({
                 ) : openDetail ? (
                   <WorkDetailTabs
                     work={toWorkInfo(w, openDetail)}
-                    representations={toRepresentations(openDetail)}
+                    representations={mergeRepresentations(reps, toRepresentations(openDetail))}
                     score={w.score}
                     evidence={w.items[0]?.evidence}
                     allowWorkCorrections
