@@ -390,6 +390,8 @@ export interface FrontendUser {
   user_id: string;
   roles: string[];
   email_verified: boolean;
+  name?: string | null;
+  email?: string | null;
 }
 
 export interface AuthSession {

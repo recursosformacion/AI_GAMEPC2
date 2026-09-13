@@ -423,7 +423,14 @@ class SearchMixin(PlatformApiCore):
                         # Filtro del Estudio: qué tipo (formats) y dónde (providers).
                         if wanted_formats and rep.format not in wanted_formats:
                             continue
-                        if wanted_pids and rep.provider not in wanted_pids:
+                        if (
+                            wanted_pids
+                            and rep.provider not in wanted_pids
+                            # El índice devuelve candidatos con el provider REAL (omr/imslp),
+                            # pero su origen es "index": si se pidió "index", hay que
+                            # conservarlos (si no, index-only daba siempre 0).
+                            and not ("index" in wanted_pids and m.origin == "index")
+                        ):
                             continue
                         reps.append(rep)
                 if not reps:

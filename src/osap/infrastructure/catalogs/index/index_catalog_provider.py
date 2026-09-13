@@ -257,6 +257,40 @@ class IndexCatalogProvider(ICatalogProvider):
             conn.close()
         return tuple(_row_to_candidate(r) for r in rows)
 
+    def count_works_by_composer_ids(self, composer_ids: list[str]) -> dict[str, int]:
+        """Obras del índice por `composer_id` (una consulta GROUP BY). {} si falla."""
+        ids = [str(cid) for cid in composer_ids if cid]
+        if not ids:
+            return {}
+        try:
+            conn = pymysql.connect(
+                host=self._host,
+                user=self._user,
+                password=self._password,
+                database=self._database,
+                charset="utf8mb4",
+                cursorclass=DictCursor,
+                autocommit=True,
+            )
+        except pymysql.err.OperationalError as exc:
+            logger.warning("index provider: MySQL no disponible (%s)", exc)
+            return {}
+        try:
+            placeholders = ", ".join(["%s"] * len(ids))
+            sql = (
+                "SELECT composer_id, COUNT(*) AS total FROM index_works "
+                f"WHERE composer_id IN ({placeholders}) GROUP BY composer_id"
+            )
+            with conn.cursor() as cur:
+                cur.execute(sql, tuple(ids))
+                rows = cur.fetchall()
+        except pymysql.err.OperationalError as exc:
+            logger.warning("index provider: error contando obras (%s)", exc)
+            return {}
+        finally:
+            conn.close()
+        return {str(row["composer_id"]): int(row["total"]) for row in rows}
+
     def resolve(self, request: ResolveRequest) -> CandidateRepresentation | None:
         candidates = self.search(SearchRequest.from_resolve(request))
         return candidates[0] if candidates else None
@@ -291,8 +325,16 @@ def _build_sql(
         clauses.append("i.title LIKE %s")
         args.append(f"%{title}%")
     if composer:
-        clauses.append("i.composer_name LIKE %s")
-        args.append(f"%{composer}%")
+        # El pipeline canoniza el compositor ("Goldschmidt, Adalbert von"), que no casa
+        # literalmente con `composer_name` ("Adalbert von Goldschmidt"). Se exige que
+        # TODOS los tokens significativos (>=3) estén presentes, sin importar el orden.
+        tokens = [t for t in re.split(r"[\s,]+", composer) if len(t) >= 3]
+        if tokens:
+            clauses.append("(" + " AND ".join(["i.composer_name LIKE %s"] * len(tokens)) + ")")
+            args.extend(f"%{token}%" for token in tokens)
+        else:
+            clauses.append("i.composer_name LIKE %s")
+            args.append(f"%{composer}%")
     if catalogue:
         cat_key = _catalogue_normalized(catalogue)
         clauses.append(
@@ -353,9 +395,12 @@ def _build_sql(
     providers = tuple(_INDEXED_PROVIDERS)
     if request.allowed_providers:
         allowed = {p.value for p in request.allowed_providers}
-        providers = tuple(p for p in providers if p in allowed)
-        if not providers:
-            return None, ()
+        # "index" = buscar en TODO el índice local (cualquier proveedor indexado, ya que
+        # los candidatos llevan el provider real); cualquier otro nombre sí acota.
+        if "index" not in allowed:
+            providers = tuple(p for p in providers if p in allowed)
+            if not providers:
+                return None, ()
     sql = (
         "SELECT i.id, i.title, i.composer_name, i.catalogue, i.year, "
         "r.provider, r.format, r.download_url, r.available, r.quality "

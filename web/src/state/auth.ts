@@ -26,6 +26,7 @@ interface AuthState {
   devLogin: () => Promise<boolean>;
   logout: () => void;
   refreshSession: () => Promise<boolean>;
+  refreshProfile: () => Promise<void>;
   rehydrate: () => Promise<void>;
   isAuthenticated: () => boolean;
   isAdmin: () => boolean; // solo presentación
@@ -52,6 +53,20 @@ function decodeUser(accessToken: string): FrontendUser {
 
 let refreshInFlight: Promise<boolean> | null = null;
 
+// El JWT no lleva nombre/email (privacidad); el perfil se pide a /auth/me y se fusiona.
+async function loadProfile(accessToken: string): Promise<Partial<FrontendUser>> {
+  try {
+    const profile = await authClient.me(accessToken);
+    return {
+      name: profile.name ?? undefined,
+      email: profile.email ?? undefined,
+      roles: Array.isArray(profile.roles) && profile.roles.length > 0 ? profile.roles : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
 export const useAuth = create<AuthState>((set, get) => ({
   accessToken: null,
   refreshToken: null,
@@ -63,10 +78,11 @@ export const useAuth = create<AuthState>((set, get) => ({
     try {
       const session = await authClient.login(email, password);
       localStorage.setItem(REFRESH_KEY, session.refresh_token);
+      const profile = await loadProfile(session.access_token);
       set({
         accessToken: session.access_token,
         refreshToken: session.refresh_token,
-        user: decodeUser(session.access_token),
+        user: { ...decodeUser(session.access_token), ...profile },
         status: "authenticated",
       });
     } catch (error) {
@@ -106,6 +122,17 @@ export const useAuth = create<AuthState>((set, get) => ({
       user: decodeUser(accessToken),
       status: "authenticated",
     });
+    void get().refreshProfile();
+  },
+
+  refreshProfile: async () => {
+    const token = get().accessToken;
+    if (!token) return;
+    const profile = await loadProfile(token);
+    const current = get().user;
+    if (current && Object.keys(profile).length > 0) {
+      set({ user: { ...current, ...profile } });
+    }
   },
 
   refreshSession: async () => {
@@ -131,6 +158,7 @@ export const useAuth = create<AuthState>((set, get) => ({
           user: decodeUser(session.access_token),
           status: "authenticated",
         });
+        void get().refreshProfile();
         return true;
       } catch {
         get().logout();

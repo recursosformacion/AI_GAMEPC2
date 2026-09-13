@@ -298,9 +298,42 @@ function Block(props: {
     );
   }
   if (block.kind === "multi") {
+    const chosen = block.options.filter((o) => props.multi[o]).length;
+    const allActive = chosen === 0 || chosen === block.options.length;
     return (
       <Card title={title}>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {block.id === "genre" ? (
+            <button
+              type="button"
+              title={t("studio.all")}
+              aria-label={t("studio.all")}
+              aria-pressed={allActive}
+              onClick={() => {
+                const cleared: Record<string, boolean> = {};
+                for (const option of block.options) cleared[option] = false;
+                props.setMulti({ ...props.multi, ...cleared });
+              }}
+              className={`rounded p-1 transition-colors ${
+                allActive
+                  ? "bg-osap-accent-soft text-osap-accent"
+                  : "text-osap-muted hover:bg-osap-surface hover:text-osap-accent"
+              }`}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M12 2 2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
+              </svg>
+            </button>
+          ) : null}
           {block.options.map((o) => (
             <label key={o} className="flex items-center gap-1 text-sm">
               <input

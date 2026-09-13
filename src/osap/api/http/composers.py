@@ -51,9 +51,19 @@ def build_composers_router(ctx: HttpContext) -> APIRouter:
         ),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            return ctx.ok(_shared._composer_list_dto(ctx.api.list_composers(q, limit, offset, review)))
+            data = ctx.api.list_composers(q, limit, offset, review)
         except StorageComposerError:
             return ctx.fail(503, response, "SERVICE_UNAVAILABLE", "Composer service is not configured")
+        # Recuento de obras desde el ÍNDICE local (el catálogo realmente consultable);
+        # osap-storage puede tener 0 si la obra no está vinculada allí.
+        items = data.get("items") if isinstance(data, dict) else None
+        if isinstance(items, list):
+            ids = [str(i.get("id")) for i in items if isinstance(i, dict) and i.get("id")]
+            counts = ctx.api.index_works_counts(ids)
+            for item in items:
+                if isinstance(item, dict) and str(item.get("id") or "") in counts:
+                    item["works_count"] = counts[str(item["id"])]
+        return ctx.ok(_shared._composer_list_dto(data))
 
     @router.get(
         "/api/v1/composers/{composer_id}",
@@ -75,6 +85,9 @@ def build_composers_router(ctx: HttpContext) -> APIRouter:
         # La consulta pública solo expone compositores visibles del Maestro.
         if detail is None or not bool(detail.get("visible", True)):
             return ctx.fail(404, response, "NOT_FOUND", "Composer not found")
+        counts = ctx.api.index_works_counts([str(detail.get("id") or "")])
+        if str(detail.get("id") or "") in counts:
+            detail["works_count"] = counts[str(detail["id"])]
         return ctx.ok(_shared._composer_detail_dto(detail))
 
     @router.get(
@@ -98,6 +111,9 @@ def build_composers_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(503, response, "SERVICE_UNAVAILABLE", "Composer service is not configured")
         if detail is None or not bool(detail.get("visible", True)):
             return ctx.fail(404, response, "NOT_FOUND", "Composer not found")
+        counts = ctx.api.index_works_counts([str(detail.get("id") or "")])
+        if str(detail.get("id") or "") in counts:
+            detail["works_count"] = counts[str(detail["id"])]
         return ctx.ok(_shared._composer_detail_dto(detail))
 
     @router.get(

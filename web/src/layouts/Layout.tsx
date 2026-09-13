@@ -131,7 +131,12 @@ export function Header() {
             </div>
           ) : (
             <>
-              <span className="rounded-full border border-osap-border px-3 py-1 text-sm">👤</span>
+              <span
+          className="max-w-[12rem] truncate rounded-full border border-osap-border px-3 py-1 text-sm"
+          title={user.name ?? user.email ?? user.user_id}
+        >
+          {user.name || user.email || user.user_id}
+        </span>
               {isAdmin() && (
                 <Link
                   to="/admin"

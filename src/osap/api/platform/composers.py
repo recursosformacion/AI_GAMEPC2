@@ -33,6 +33,15 @@ class ComposersMixin(PlatformApiCore):
     ) -> dict[str, object]:
         return self.composers().list_composers(q, limit, offset, review)
 
+    def index_works_counts(self, composer_ids: list[str]) -> dict[str, int]:
+        """Recuento real de obras en el índice local (lo que el usuario puede consultar)."""
+        for provider in self._container.catalog_manager().providers():
+            if provider.provider_id.value == "index":
+                counter = getattr(provider, "count_works_by_composer_ids", None)
+                if callable(counter):
+                    return dict(counter(composer_ids))
+        return {}
+
     def get_composer(self, composer_id: str) -> dict[str, object] | None:
         return self.composers().get_composer(composer_id)
 

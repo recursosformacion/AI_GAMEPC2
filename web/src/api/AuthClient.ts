@@ -14,6 +14,15 @@ interface AuthErrorDetail {
   detail?: string | { msg?: string }[];
 }
 
+export interface UserProfile {
+  user_id: string;
+  email: string;
+  name: string | null;
+  roles: string[];
+  email_verified: boolean;
+  status: string;
+}
+
 export class AuthClient {
   private readonly baseUrl: string;
   private readonly fetcher: typeof fetch | undefined;
@@ -29,6 +38,24 @@ export class AuthClient {
 
   async refresh(refreshToken: string): Promise<AuthSession> {
     return this.post<AuthSession>("/auth/refresh", { refresh_token: refreshToken });
+  }
+
+  /** Perfil del usuario (nombre/email quedan fuera del JWT por privacidad). */
+  async me(accessToken: string): Promise<UserProfile> {
+    const fetchImpl = this.fetcher ?? globalThis.fetch;
+    let response: Response;
+    try {
+      response = await fetchImpl.call(globalThis, `${this.baseUrl}/auth/me`, {
+        method: "GET",
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+    } catch (cause) {
+      throw new ApiError("NETWORK", "Auth service unreachable", { cause: String(cause) });
+    }
+    if (!response.ok) {
+      throw new ApiError(response.status === 401 ? "UNAUTHORIZED" : "AUTH_ERROR", "Profile unavailable");
+    }
+    return (await response.json()) as UserProfile;
   }
 
   private async post<T>(path: string, body: unknown): Promise<T> {
