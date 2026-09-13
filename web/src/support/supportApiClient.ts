@@ -164,7 +164,9 @@ export class SupportApiClient {
     );
   }
 
-  // 401 → refresh (una vez) → reintento. Si vuelve a fallar, sesión expirada: logout.
+  // 401 → refresh (una vez) → reintento. Si sigue fallando, se devuelve el 401 para que la
+  // UI lo muestre; NO se hace logout global: un fallo de osap-support (audiencia, config,
+  // servicio) no debe tumbar la sesión de osap-api (eso hacía desaparecer "cerrar sesión").
   private async _authorizedFetch(
     input: string,
     init: RequestInit,
@@ -177,15 +179,12 @@ export class SupportApiClient {
     const { refreshSession } = useAuth.getState();
     const refreshed = await refreshSession();
     if (!refreshed) {
-      return res; // refreshSession ya hizo logout
+      return res; // sin sesión válida: refreshSession ya resolvió (y su logout es legítimo)
     }
     const newToken = useAuth.getState().accessToken ?? "";
     const headers = new Headers(init.headers);
     headers.set("Authorization", `Bearer ${newToken}`);
     res = await this.doFetch(input, { ...init, headers });
-    if (res.status === 401) {
-      useAuth.getState().logout();
-    }
     return res;
   }
 
