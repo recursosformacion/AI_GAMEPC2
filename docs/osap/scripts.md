@@ -297,6 +297,11 @@ PYTHONPATH=<osap-api> python reseed_providers.py
 - **Operaciones**: `deploy.ps1` (despliegue a producción, host `RemoteIA`),
   `pre_dbadmin_tunnel.ps1` (túnel SSH de phpMyAdmin del entorno PRE — script residual de
   otro proyecto, no parte de la operación de OSAP).
+- **Reinicio de dev**: `restart-dev.ps1` (y su lanzador `restart-dev.cmd`) mata todos los
+  procesos de los servicios locales (por puerto 8000/8001/8200/8300 y por command line) y
+  los vuelve a arrancar en segundo plano esperando su healthcheck; se autoeleva (UAC).
+  No toca Apache (osap-app). Logs en `%LOCALAPPDATA%\osap-dev\logs`. Lanzador de
+  escritorio: `OSAP-Dev-Restart.cmd`.
 - **Mantenimiento web**: `web/scripts/maintenance.ps1` (`-On`, `-Off`, `-Status`, y
   `-LocalOnly`/`-RemoteOnly`) activa el modo mantenimiento en local (flag en `web/dist`,
   Apache responde 503 con `maintenance.html`) y en producción (flag remoto en el root de la
