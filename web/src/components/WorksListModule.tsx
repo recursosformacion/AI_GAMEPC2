@@ -44,21 +44,21 @@ function toWorkInfo(w: WorksListWork, d: WorkDetail): WorkInfo {
   };
 }
 
-function toRepresentations(d: WorkDetail, workId?: string | null): RepresentationInfo[] {
-  const wid = String(workId ?? "");
-  // Solo los work_id numéricos permiten construir el id canónico `idx-<work>-omr-<fmt>`
-  // que resuelve el backend; los `file_id` del storage NO son ids de representación
-  // (generaban /viewer?rep=3412 → 404).
-  const navigable = /^\d+$/.test(wid);
+function toRepresentations(d: WorkDetail): RepresentationInfo[] {
+  // IMPORTANTE: el `id` de estas reps es el `file_id` del storage (numérico). NO se puede
+  // fabricar un `idx-<work>-…`: los ids de osap-storage y los del índice son SECUENCIAS
+  // DISTINTAS, y el mismo número apunta a obras diferentes (p. ej. storage 134764 = Myers
+  // vs índice 134764 = "Space Between" → servía el fichero equivocado). El backend resuelve
+  // los ids numéricos contra el storage.
   return (d.resources ?? []).map((r, i): RepresentationInfo => {
     const format = r.format ?? "unknown";
     return {
-      id: navigable ? `idx-${wid}-omr-${format}` : String(r.file_id ?? i),
+      id: String(r.file_id ?? i),
       provider: "omr",
       format,
       confidence: 1,
       url: r.url ?? undefined,
-      available: navigable ? (r.available ?? Boolean(r.url ?? r.file_id != null)) : false,
+      available: r.available ?? Boolean(r.url ?? r.file_id != null),
       title: d.work.title ?? undefined,
     };
   });
@@ -68,11 +68,12 @@ function mergeRepresentations(
   base: RepresentationInfo[],
   extra: RepresentationInfo[]
 ): RepresentationInfo[] {
-  // Si ya hay reps del pipeline (ids canónicos), no se añaden las del storage (duplicadas
-  // y con id de fichero, que no es navegable).
-  const candidates = base.length > 0 ? extra.filter((r) => !/^\d+$/.test(r.id)) : extra;
   const seen = new Set(base.map((r) => r.id));
-  return [...base, ...candidates.filter((r) => !seen.has(r.id))];
+  const seenUrls = new Set(base.map((r) => r.url).filter(Boolean) as string[]);
+  return [
+    ...base,
+    ...extra.filter((r) => !seen.has(r.id) && !(r.url && seenUrls.has(r.url))),
+  ];
 }
 
 export function WorksListModule({
@@ -150,7 +151,7 @@ export function WorksListModule({
                 ) : openDetail ? (
                   <WorkDetailTabs
                     work={toWorkInfo(w, openDetail)}
-                    representations={mergeRepresentations(reps, toRepresentations(openDetail, String(w.work.work_id)))}
+                    representations={mergeRepresentations(reps, toRepresentations(openDetail))}
                     score={w.score}
                     evidence={w.items[0]?.evidence}
                     allowWorkCorrections
@@ -192,7 +193,7 @@ export function WorksListModule({
                       { work: { work_id: String(w.work_id), title: w.title ?? "" } as WorksListWork["work"], score: 1, items: [] },
                       openDetail,
                     )}
-                    representations={toRepresentations(openDetail, String(w.work_id))}
+                    representations={toRepresentations(openDetail)}
                     score={1}
                     allowWorkCorrections
                   />
