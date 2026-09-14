@@ -36,6 +36,28 @@ export class AuthClient {
     return this.post<AuthSession>("/auth/login", { email, password });
   }
 
+  /** Actualiza el nombre local del usuario (el de OIDC es solo el valor inicial). */
+  async updateMe(accessToken: string, name: string): Promise<UserProfile> {
+    const fetchImpl = this.fetcher ?? globalThis.fetch;
+    let response: Response;
+    try {
+      response = await fetchImpl.call(globalThis, `${this.baseUrl}/auth/me`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ name }),
+      });
+    } catch (cause) {
+      throw new ApiError("NETWORK", "Auth service unreachable", { cause: String(cause) });
+    }
+    if (!response.ok) {
+      throw new ApiError(response.status === 401 ? "UNAUTHORIZED" : "AUTH_ERROR", "Profile unavailable");
+    }
+    return (await response.json()) as UserProfile;
+  }
+
   async refresh(refreshToken: string): Promise<AuthSession> {
     return this.post<AuthSession>("/auth/refresh", { refresh_token: refreshToken });
   }

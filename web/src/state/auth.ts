@@ -27,6 +27,7 @@ interface AuthState {
   logout: () => void;
   refreshSession: () => Promise<boolean>;
   refreshProfile: () => Promise<void>;
+  updateName: (name: string) => Promise<void>;
   rehydrate: () => Promise<void>;
   isAuthenticated: () => boolean;
   isAdmin: () => boolean; // solo presentación
@@ -132,6 +133,16 @@ export const useAuth = create<AuthState>((set, get) => ({
     const current = get().user;
     if (current && Object.keys(profile).length > 0) {
       set({ user: { ...current, ...profile } });
+    }
+  },
+
+  updateName: async (name: string) => {
+    const token = get().accessToken;
+    if (!token) return;
+    const profile = await authClient.updateMe(token, name);
+    const current = get().user;
+    if (current) {
+      set({ user: { ...current, name: profile.name ?? name } });
     }
   },
 

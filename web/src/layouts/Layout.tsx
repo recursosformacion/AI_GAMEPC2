@@ -64,7 +64,7 @@ function Breadcrumb() {
 
 export function Header() {
   const { t } = useI18n();
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, updateName } = useAuth();
   const [loginOpen, setLoginOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const { start: startOidc, error: oidcError } = useOidcLogin();
@@ -131,12 +131,17 @@ export function Header() {
             </div>
           ) : (
             <>
-              <span
-          className="max-w-[12rem] truncate rounded-full border border-osap-border px-3 py-1 text-sm"
-          title={user.name ?? user.email ?? user.user_id}
+              <button
+          type="button"
+          className="max-w-[12rem] truncate rounded-full border border-osap-border px-3 py-1 text-sm hover:border-osap-accent hover:text-osap-accent"
+          title={t("account.editName")}
+          onClick={() => {
+            const next = window.prompt(t("account.namePrompt"), user.name ?? "");
+            if (next && next.trim()) void updateName(next.trim());
+          }}
         >
-          {user.name || user.email || user.user_id}
-        </span>
+          {user.name || user.email || "…"}
+        </button>
               {isAdmin() && (
                 <Link
                   to="/admin"
