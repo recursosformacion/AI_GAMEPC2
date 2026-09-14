@@ -42,6 +42,15 @@ class ComposersMixin(PlatformApiCore):
                     return dict(counter(composer_ids))
         return {}
 
+    def index_representations_for(self, title: str, composer: str | None) -> list[dict[str, object]]:
+        """Representaciones del índice para un título(+compositor) de storage."""
+        for provider in self._container.catalog_manager().providers():
+            if provider.provider_id.value == "index":
+                finder = getattr(provider, "representations_for_title", None)
+                if callable(finder):
+                    return list(finder(title, composer))
+        return []
+
     def get_composer(self, composer_id: str) -> dict[str, object] | None:
         return self.composers().get_composer(composer_id)
 

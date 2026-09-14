@@ -123,8 +123,10 @@ class _MysqlStore(_MemoryStore):
                 title_provider VARCHAR(1024),
                 available TINYINT NOT NULL DEFAULT 0,
                 quality TINYINT NOT NULL DEFAULT 0,
+                content_hash CHAR(64) NULL,
                 PRIMARY KEY (id),
                 KEY idx_idxrep_work (work_id),
+                KEY idx_rep_content_hash (content_hash),
                 UNIQUE KEY uq_idxrep (work_id, provider, format, title_provider(255))
             ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
             """
@@ -207,6 +209,23 @@ class _MysqlStore(_MemoryStore):
         ):
             if col not in corr_existing:
                 self._run(ddl)
+
+        # SHA-256 del contenido de la representación (dedupe por fichero idéntico; lo rellena
+        # script/hash_index_representations.py). Mismo esquema en local y producción.
+        rep_cols = self._run(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_schema = DATABASE() AND table_name = 'index_representations'"
+        )
+        rep_existing = {str(r["column_name"]) for r in rep_cols} if rep_cols else set()
+        if "content_hash" not in rep_existing:
+            self._run("ALTER TABLE index_representations ADD COLUMN content_hash CHAR(64) NULL")
+        rep_index = self._run(
+            "SELECT index_name FROM information_schema.statistics "
+            "WHERE table_schema = DATABASE() AND table_name = 'index_representations' "
+            "AND index_name = 'idx_rep_content_hash'"
+        )
+        if not rep_index:
+            self._run("CREATE INDEX idx_rep_content_hash ON index_representations (content_hash)")
 
         # Índice FULLTEXT para la búsqueda de texto libre del índice de obras.
         # `LIKE '%término%'` hace full scan de index_works (355k filas); MATCH usa este

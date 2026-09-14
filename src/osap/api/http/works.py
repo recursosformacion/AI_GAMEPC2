@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import threading
 from typing import TYPE_CHECKING, cast
 
@@ -17,6 +18,49 @@ from src.osap.infrastructure.persistence.storage_vote_store import StorageUnavai
 
 if TYPE_CHECKING:
     from src.osap.api.http.context import HttpContext
+
+_FILE_ID_RE = re.compile(r"(\d+)/?$")
+
+
+def _merge_index_resources(ctx: HttpContext, doc: dict[str, object]) -> None:
+    """Añade a `doc['resources']` las reps del ÍNDICE del mismo título.
+
+    Storage guarda un recurso por obra; el índice puede tener varias representaciones de la
+    misma pieza (varios ficheros). Así el detalle muestra todas (no solo la de storage).
+    Los recursos se expresan con `file_id` numérico, que el backend resuelve al descargar.
+    """
+    resources = doc.get("resources")
+    work = doc.get("work")
+    if not isinstance(resources, list) or not isinstance(work, dict):
+        return
+    title = str(work.get("title") or "")
+    composer = str(work.get("composer") or "") or None
+    if not title:
+        return
+    existing = {
+        r.get("file_id") for r in resources if isinstance(r, dict) and r.get("file_id") is not None
+    }
+    try:
+        extra = ctx.api.index_representations_for(title, composer)
+    except Exception:  # noqa: BLE001 — el detalle nunca debe fallar por el índice
+        return
+    for rep in extra:
+        match = _FILE_ID_RE.search(str(rep.get("download_url") or ""))
+        if match is None:
+            continue
+        file_id = int(match.group(1))
+        if file_id in existing:
+            continue
+        existing.add(file_id)
+        resources.append(
+            {
+                "relative_path": None,
+                "format": str(rep.get("format") or "MusicXML"),
+                "file_id": file_id,
+                "available": True,
+                "url": str(rep.get("download_url") or ""),
+            }
+        )
 
 
 def build_works_router(ctx: HttpContext) -> APIRouter:
@@ -44,6 +88,7 @@ def build_works_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(503, response, "SERVICE_UNAVAILABLE", "Works service is not configured")
         if doc is None:
             return ctx.fail(404, response, "NOT_FOUND", "Work not found")
+        _merge_index_resources(ctx, doc)
         return ctx.ok(doc)
 
     @router.post(

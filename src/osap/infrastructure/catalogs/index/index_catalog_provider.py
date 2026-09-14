@@ -291,6 +291,57 @@ class IndexCatalogProvider(ICatalogProvider):
             conn.close()
         return {str(row["composer_id"]): int(row["total"]) for row in rows}
 
+    def representations_for_title(
+        self, title: str, composer: str | None = None
+    ) -> list[dict[str, object]]:
+        """Reps del índice para un título (+compositor) de osap-storage (enlace por título).
+
+        Permite que una obra de storage muestre TODAS sus representaciones indexadas, no
+        solo el recurso único que guarda storage.
+        """
+        title_tokens = [t for t in re.split(r"[\s,]+", title or "") if len(t) >= 3][:6]
+        if not title_tokens:
+            return []
+        clauses = ["(" + " AND ".join(["i.title LIKE %s"] * len(title_tokens)) + ")"]
+        args: list[object] = [f"%{token}%" for token in title_tokens]
+        for token in [t for t in re.split(r"[\s,]+", composer or "") if len(t) >= 3][:4]:
+            clauses.append("i.composer_name LIKE %s")
+            args.append(f"%{token}%")
+        sql = (
+            "SELECT r.provider, r.format, r.download_url FROM index_representations r "
+            "JOIN index_works i ON i.id = r.work_id "
+            f"WHERE {' AND '.join(clauses)} AND r.download_url IS NOT NULL "
+            "ORDER BY r.provider, r.format"
+        )
+        try:
+            conn = pymysql.connect(
+                host=self._host,
+                user=self._user,
+                password=self._password,
+                database=self._database,
+                charset="utf8mb4",
+                cursorclass=DictCursor,
+                autocommit=True,
+            )
+        except pymysql.err.OperationalError:
+            return []
+        try:
+            with conn.cursor() as cur:
+                cur.execute(sql, tuple(args))
+                rows = cur.fetchall()
+        except pymysql.err.OperationalError:
+            return []
+        finally:
+            conn.close()
+        return [
+            {
+                "provider": str(row["provider"]),
+                "format": str(row["format"]),
+                "download_url": str(row["download_url"]),
+            }
+            for row in rows
+        ]
+
     def resolve(self, request: ResolveRequest) -> CandidateRepresentation | None:
         candidates = self.search(SearchRequest.from_resolve(request))
         return candidates[0] if candidates else None
