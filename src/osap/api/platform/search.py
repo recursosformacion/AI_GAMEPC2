@@ -72,8 +72,35 @@ class SearchMixin(PlatformApiCore):
                     info: dict[str, object] = {str(k): v for k, v in resolved.items()}
                     self._representations[representation_id] = info
                     return info
+                # Tolerancia: enlaces antiguos/directos al storage usan el file_id numérico
+                # (…/api/download/<id>). Se resuelven como representación OMR.
+                stripped = representation_id.strip()
+                if stripped.isdigit():
+                    fallback = self._storage_file_info(stripped)
+                    if fallback is not None:
+                        self._representations[representation_id] = fallback
+                        return fallback
                 return None
         return None
+
+    def _storage_file_info(self, file_id: str) -> dict[str, object] | None:
+        """Representación OMR a partir del id de fichero del storage (id numérico)."""
+        try:
+            base = str(self._container.storage_web_base()).rstrip("/")
+        except Exception:  # noqa: BLE001
+            return None
+        if not base:
+            return None
+        return {
+            "download_url": f"{base}/api/download/{file_id}",
+            "view_url": None,
+            "composer": None,
+            "title": None,
+            "catalogue": None,
+            "format": "musicxml",
+            "provider": "omr",
+            "work_id": "",
+        }
 
     # --- jobs ---------------------------------------------------------------
 

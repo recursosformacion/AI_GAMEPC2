@@ -396,7 +396,7 @@ function RepresentationsTab({
         ))}
       </ul>
       <p className="mt-2 text-xs text-osap-muted">{t("work.titlesFromSources")}</p>
-      {representations.length > 0 ? (
+      {representations.length > 1 ? (
         <KnownSelectionBlock
           workId={workId}
           representations={representations}

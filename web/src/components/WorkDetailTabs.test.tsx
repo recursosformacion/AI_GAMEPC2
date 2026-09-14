@@ -125,23 +125,14 @@ describe("WorkDetailTabs — select best known representation", () => {
     expect(calls.some((u) => u.includes("/representations/select-best"))).toBe(true);
     // No acquisition session is created.
     expect(calls.some((u) => u.includes("/works/resolve"))).toBe(false);
+    // El botón sigue disponible para repetir la búsqueda (hay >1 representación).
+    expect(screen.getByRole("button", { name: "Find better representations" })).toBeInTheDocument();
   });
 
-  it("keeps the button available to repeat after a selection", async () => {
-    const payload: RepresentationSelection = {
-      work_id: "w1",
-      representations_known: 1,
-      candidates_usable: 1,
-      status: "selected",
-      message: "Representación seleccionada.",
-      selected: { provider: "omr", format: "musicxml", url: "https://x/1.mxl", quality_level: 2 },
-    };
-    mockFetch(payload);
+  it("oculta 'Buscar mejores representaciones' cuando solo hay una representación", () => {
+    mockFetch({} as RepresentationSelection);
     renderTabs(baseWork, reps([true]));
     fireEvent.click(screen.getByRole("button", { name: "Representations" }));
-    const action = screen.getByRole("button", { name: "Find better representations" });
-    fireEvent.click(action);
-    await waitFor(() => expect(screen.getByText(/Selected representation/)).toBeInTheDocument());
-    expect(screen.getByRole("button", { name: "Find better representations" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Find better representations" })).toBeNull();
   });
 });

@@ -44,25 +44,35 @@ function toWorkInfo(w: WorksListWork, d: WorkDetail): WorkInfo {
   };
 }
 
-function toRepresentations(d: WorkDetail): RepresentationInfo[] {
-  return (d.resources ?? [])
-    .map((r, i): RepresentationInfo => ({
-      id: String(r.file_id ?? i),
+function toRepresentations(d: WorkDetail, workId?: string | null): RepresentationInfo[] {
+  const wid = String(workId ?? "");
+  // Solo los work_id numéricos permiten construir el id canónico `idx-<work>-omr-<fmt>`
+  // que resuelve el backend; los `file_id` del storage NO son ids de representación
+  // (generaban /viewer?rep=3412 → 404).
+  const navigable = /^\d+$/.test(wid);
+  return (d.resources ?? []).map((r, i): RepresentationInfo => {
+    const format = r.format ?? "unknown";
+    return {
+      id: navigable ? `idx-${wid}-omr-${format}` : String(r.file_id ?? i),
       provider: "omr",
-      format: r.format ?? "unknown",
+      format,
       confidence: 1,
       url: r.url ?? undefined,
-      available: r.available ?? Boolean(r.url ?? r.file_id != null),
+      available: navigable ? (r.available ?? Boolean(r.url ?? r.file_id != null)) : false,
       title: d.work.title ?? undefined,
-    }));
+    };
+  });
 }
 
 function mergeRepresentations(
   base: RepresentationInfo[],
   extra: RepresentationInfo[]
 ): RepresentationInfo[] {
+  // Si ya hay reps del pipeline (ids canónicos), no se añaden las del storage (duplicadas
+  // y con id de fichero, que no es navegable).
+  const candidates = base.length > 0 ? extra.filter((r) => !/^\d+$/.test(r.id)) : extra;
   const seen = new Set(base.map((r) => r.id));
-  return [...base, ...extra.filter((r) => !seen.has(r.id))];
+  return [...base, ...candidates.filter((r) => !seen.has(r.id))];
 }
 
 export function WorksListModule({
@@ -140,7 +150,7 @@ export function WorksListModule({
                 ) : openDetail ? (
                   <WorkDetailTabs
                     work={toWorkInfo(w, openDetail)}
-                    representations={mergeRepresentations(reps, toRepresentations(openDetail))}
+                    representations={mergeRepresentations(reps, toRepresentations(openDetail, String(w.work.work_id)))}
                     score={w.score}
                     evidence={w.items[0]?.evidence}
                     allowWorkCorrections
@@ -182,7 +192,7 @@ export function WorksListModule({
                       { work: { work_id: String(w.work_id), title: w.title ?? "" } as WorksListWork["work"], score: 1, items: [] },
                       openDetail,
                     )}
-                    representations={toRepresentations(openDetail)}
+                    representations={toRepresentations(openDetail, String(w.work_id))}
                     score={1}
                     allowWorkCorrections
                   />
