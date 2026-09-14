@@ -273,6 +273,11 @@ PYTHONPATH=<osap-api> python reseed_providers.py
 ```
 
 ### Otros scripts (resumen)
+- **Integridad del índice**: `hash_index_representations.py` (`--limit`, `--sleep`,
+  `--composer-like`/`--title-like`, `--dedupe [--apply]`) descarga cada representación una
+  vez (lectura de R2/CDN con coste), guarda su **SHA-256** en
+  `index_representations.content_hash` y detecta ficheros **byte-idénticos** que hoy
+  aparecen como obras duplicadas; con `--apply` consolida. Reanudable (`content_hash IS NULL`).
 - **Normalización de identidad del índice**: `normalize_index_identity.py`
   (`--apply`; por defecto dry-run) consolida `index_works` duplicados con el criterio
   catálogo completo + compositor + título (con marcadores de movimiento y anclaje de
