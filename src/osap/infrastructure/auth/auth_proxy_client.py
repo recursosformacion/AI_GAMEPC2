@@ -9,6 +9,8 @@ import json
 import urllib.error
 import urllib.request
 
+from src.osap.infrastructure.http.browser_headers import browser_headers
+
 
 class AuthProxyError(Exception):
     """osap-auth no respondió correctamente a una operación de identidad."""
@@ -67,11 +69,13 @@ class AuthProxyClient:
             url,
             data=data,
             method=method,
-            headers={
-                "Authorization": f"Bearer {token}",
-                "Content-Type": "application/json",
-                "Accept": "application/json",
-            },
+            headers=browser_headers(
+                {
+                    "Authorization": f"Bearer {token}",
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                }
+            ),
         )
         try:
             with urllib.request.urlopen(request, timeout=self._timeout) as response:  # noqa: S310
@@ -95,7 +99,7 @@ class AuthProxyClient:
             url,
             data=data,
             method=method,
-            headers={"Content-Type": "application/json", "Accept": "application/json"},
+            headers=browser_headers({"Content-Type": "application/json", "Accept": "application/json"}),
         )
         try:
             with urllib.request.urlopen(request, timeout=self._timeout) as response:  # noqa: S310 (auth identity endpoint)
