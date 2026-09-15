@@ -1,5 +1,6 @@
 """PlatformApi: mixin de votos y usuarios (F5.4)."""
 
+import logging
 
 from src.osap.api.platform import _support as _support
 from src.osap.api.platform.core import PlatformApiCore
@@ -16,6 +17,8 @@ from src.osap.domain.votes import (
 from src.osap.infrastructure.auth.auth_proxy_client import AuthProxyError
 
 VERSION = "3.1"
+
+_LOGGER = logging.getLogger("osap.auth")
 
 
 
@@ -86,8 +89,29 @@ class VotesUsersMixin(PlatformApiCore):
         principal = self._container.authenticator().resolve(token)
         if principal is None:
             raise UnauthenticatedError("Login required")
-        if not getattr(principal, "has_role", lambda r: False)("admin"):
-            raise ForbiddenError("Admin role required")
+        if getattr(principal, "has_role", lambda r: False)("admin"):
+            return
+        # El claim `roles` es una foto del momento de emisión del token: si la cuenta se
+        # promovió a admin después, el token sigue siendo válido pero sin el rol, y el
+        # usuario veía "Admin role required" aunque /auth/me y la web sí lo tratasen como
+        # admin. osap-auth (BD) es la autoridad: se consulta y se acepta si allí es admin.
+        bearer = token or ""
+        try:
+            code, doc = self._container.auth_proxy().me(bearer)
+        except Exception as exc:  # noqa: BLE001 — si osap-auth no responde, se deniega
+            _LOGGER.warning("admin check: osap-auth inaccesible (%s)", exc)
+            raise ForbiddenError("Admin role required") from None
+        roles = doc.get("roles") if isinstance(doc, dict) else None
+        if code == 200 and isinstance(roles, list) and "admin" in roles:
+            _LOGGER.info("admin check: aceptado por roles de osap-auth (token obsoleto)")
+            return
+        _LOGGER.warning(
+            "admin check: denegado (token_roles=%s osap_auth=%s/%s)",
+            getattr(principal, "roles", None),
+            code,
+            roles,
+        )
+        raise ForbiddenError("Admin role required")
 
     # --- discovery ----------------------------------------------------------
 

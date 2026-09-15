@@ -32,6 +32,10 @@ class AuthProxyClient:
 
     # -- administración de usuarios (role=admin en osap-auth) -----------------
 
+    def me(self, access_token: str) -> tuple[int, object]:
+        """Perfil autoritativo del usuario (roles actuales en la BD de osap-auth)."""
+        return self._call_bearer("GET", "/auth/me", access_token)
+
     def admin_users(self, access_token: str) -> tuple[int, object]:
         return self._call_bearer("GET", "/auth/admin/users", access_token)
 
