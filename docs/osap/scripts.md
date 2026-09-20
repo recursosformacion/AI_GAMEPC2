@@ -308,6 +308,9 @@ PYTHONPATH=<osap-api> python reseed_providers.py
   Con `-NoWait` arranca y **devuelve el control** sin esperar healthchecks (los lanzadores
   lo usan para no colgarse). No toca Apache (osap-app). Logs en
   `%LOCALAPPDATA%\osap-dev\logs`. Lanzador de escritorio: `OSAP-Dev-Restart.cmd`.
+- **Comprobar dev sin reiniciar**: `check-dev.ps1` (no bloquea) muestra, en segundos, puerto/PID y
+  healthcheck de 8000/8001/8200/8300, la SPA `osap-app`, las últimas líneas de `restart.last.log`
+  (con hora por fase) y los errores de cada servicio. Úsalo para saber si algo está caído/colgado.
 - **Mantenimiento web**: `web/scripts/maintenance.ps1` (`-On`, `-Off`, `-Status`, y
   `-LocalOnly`/`-RemoteOnly`) activa el modo mantenimiento en local (flag en `web/dist`,
   Apache responde 503 con `maintenance.html`) y en producción (flag remoto en el root de la

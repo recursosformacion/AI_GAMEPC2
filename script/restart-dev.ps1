@@ -101,11 +101,11 @@ function Wait-Health([string]$Url, [int]$Timeout) {
     return $null
 }
 
-Write-Host "=== OSAP dev restart ===" -ForegroundColor Cyan
+Write-Status "=== OSAP dev restart ==="
 
 $busyNames = @()
 if (-not $SkipKill) {
-    Write-Host "[1/3] Matando servicios OSAP..." -ForegroundColor Cyan
+    Write-Status "[1/3] Matando servicios OSAP..."
     Stop-OsapProcesses
     foreach ($service in $services) {
         for ($i = 0; $i -lt 30; $i++) {
@@ -125,8 +125,18 @@ if (-not $SkipKill) {
 
 $logDir = Join-Path $env:LOCALAPPDATA "osap-dev\logs"
 New-Item -ItemType Directory -Force -Path $logDir | Out-Null
+$statusLog = Join-Path $logDir "restart.last.log"
+Remove-Item $statusLog -ErrorAction SilentlyContinue
 
-Write-Host "[2/3] Arrancando servicios..." -ForegroundColor Cyan
+# Deja traza con hora de cada fase: si algo se cuelga, se ve dónde se quedó (y check-dev.ps1 la
+# muestra). El fichero es la referencia para saber si el reinicio avanzó o está atascado.
+function Write-Status([string]$Message) {
+    $line = "{0:HH:mm:ss}  {1}" -f (Get-Date), $Message
+    Write-Host $line
+    Add-Content -Path $script:statusLog -Value $line -ErrorAction SilentlyContinue
+}
+
+Write-Status "[2/3] Arrancando servicios..."
 $started = @()
 foreach ($service in $services) {
     if ($busyNames -contains $service.Name) {
@@ -145,13 +155,13 @@ foreach ($service in $services) {
             -RedirectStandardOutput (Join-Path $logDir "$($service.Name).out.log") `
             -RedirectStandardError (Join-Path $logDir "$($service.Name).err.log")
         $started += $service
-        Write-Host "  $($service.Name) -> puerto $($service.Port) ($([IO.Path]::GetFileName($python)))" -ForegroundColor DarkGray
+        Write-Status "  $($service.Name) -> puerto $($service.Port) ($([IO.Path]::GetFileName($python)))"
     } finally {
         foreach ($key in $service.Env.Keys) { Remove-Item -Path "Env:$key" -ErrorAction SilentlyContinue }
     }
 }
 
-Write-Host "[3/3] Esperando healthchecks..." -ForegroundColor Cyan
+Write-Status "[3/3] Esperando healthchecks..."
 $failed = @($busyNames)
 if ($NoWait) {
     Write-Host "  (-NoWait: no se espera; comprueba los logs)" -ForegroundColor DarkGray
@@ -163,9 +173,10 @@ if ($NoWait) {
     exit 0
 }
 foreach ($service in $started) {
+    Write-Status "  esperando $($service.Name)..."
     $code = Wait-Health $service.Health $TimeoutSeconds
-    if ($code) { Write-Host "  OK  $($service.Name) ($code)  $($service.Health)" -ForegroundColor Green }
-    else { Write-Host "  FALLO $($service.Name)  $($service.Health)  (ver $logDir\$($service.Name).err.log)" -ForegroundColor Red; $failed += $service.Name }
+    if ($code) { Write-Status "  OK  $($service.Name) ($code)" }
+    else { Write-Status "  FALLO $($service.Name)  (ver $logDir\$($service.Name).err.log)"; $failed += $service.Name }
 }
 
 $appCode = Wait-Health "http://osap-app/api/v1/system/health" 20
