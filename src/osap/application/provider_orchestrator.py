@@ -209,7 +209,7 @@ class ProviderOrchestrator:
                 for future in not_done:
                     step = futures[future]
                     logger.info(
-                        "provider %s: timeout (>{:.0f}s), skipped",
+                        "provider %s: timeout (>%.0fs), skipped",
                         step.provider_id.value,
                         SEARCH_TIMEOUT_SECONDS,
                     )

@@ -50,6 +50,11 @@ from .core import PlatformApiCore
 
 VERSION = "3.1"
 
+# Proveedores que se consultan por defecto en una búsqueda (orden de la cadena). Solo la
+# pantalla "Estudio" puede cambiarlo enviando `providers` en la petición; el índice local
+# ("index") se consulta siempre aparte (búsqueda híbrida).
+DEFAULT_SEARCH_PROVIDERS: tuple[str, ...] = ("imslp", "cpdl", "rism", "omr")
+
 
 
 class SearchMixin(PlatformApiCore):
@@ -359,23 +364,26 @@ class SearchMixin(PlatformApiCore):
             genre_id = _genre_id_for_name(genre_name)
             if genre_id is not None:
                 builder = builder.genre_ids(genre_id)
-        # Filtros del Estudio: dónde (providers) y qué tipo (formats).
-        if req.providers:
-            for name in req.providers:
-                pid = _provider_id_for_name(name)
-                if pid:
-                    builder = builder.allow_provider(ProviderId(pid))
+        # Filtros del Estudio: dónde (providers) y qué tipo (formats). Si la petición no
+        # indica proveedores (p. ej. búsqueda general), se usa la cadena por defecto:
+        # imslp, cpdl, rism, omr. El índice local se consulta siempre (aparte).
+        effective_providers = tuple(req.providers) if req.providers else DEFAULT_SEARCH_PROVIDERS
+        for name in effective_providers:
+            pid = _provider_id_for_name(name)
+            if pid:
+                builder = builder.allow_provider(ProviderId(pid))
         if req.formats:
             fmt = _format_for_name(req.formats[0])
             if fmt:
                 builder = builder.format(OutputFormat(fmt))
         request = builder.build()
         logger.info(
-            "search start query=%r composer=%r title=%r catalogue=%r",
+            "search start query=%r composer=%r title=%r catalogue=%r providers=%s",
             req.query,
             req.composer,
             req.title,
             req.catalogue,
+            list(effective_providers),
         )
         engine = self._container.work_resolution_engine()
 
@@ -387,12 +395,29 @@ class SearchMixin(PlatformApiCore):
                 catalogue_number=req.catalogue,
             )
 
+        _last_chain_key: tuple[tuple[str, int], ...] = ()
+
         def build_results(
             candidates: tuple[CandidateRepresentation, ...],
         ) -> tuple[list[SearchResultItem], int]:
             # F4.C: las representaciones son evidencia -> se agrupan en obras (WorkGrouper)
             # -> la obra se puntúa (DefaultWorkRanker V2.1) -> se presentan ordenadas por
             # su score. El orden ya no es el orden accidental del rank V1.
+            # Traza de la cadena: qué proveedores se consultaron y cuántos candidatos aportó
+            # cada uno (se registra solo cuando cambia, para no repetir en cada parcial).
+            nonlocal _last_chain_key
+            counts: dict[str, int] = {}
+            for candidate in candidates:
+                chain_provider = candidate.provider_id.value
+                counts[chain_provider] = counts.get(chain_provider, 0) + 1
+            chain_key = tuple(sorted(counts.items()))
+            if chain_key != _last_chain_key:
+                _last_chain_key = chain_key
+                logger.info(
+                    "search chain providers=%s candidates_by_provider=%s",
+                    list(effective_providers),
+                    counts,
+                )
             groups_raw = tuple(self._container.work_merge_service().group(candidates))
             ranking = self._container.work_ranker().rank(
                 groups_raw,
@@ -439,11 +464,9 @@ class SearchMixin(PlatformApiCore):
                     if req.formats
                     else None
                 )
-                wanted_pids = (
-                    {p for p in (_provider_id_for_name(x) for x in req.providers) if p}
-                    if req.providers
-                    else None
-                )
+                wanted_pids = {
+                    p for p in (_provider_id_for_name(x) for x in effective_providers) if p
+                } or None
                 for m in group.representations:
                     if m is not None:
                         rep = self._to_rep(m, work)

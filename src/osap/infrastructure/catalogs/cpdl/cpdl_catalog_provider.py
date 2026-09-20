@@ -16,6 +16,7 @@ descargables artificiales: cada resultado es la página CPDL (enlace wiki).
 
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 from urllib.parse import quote
 
@@ -45,6 +46,8 @@ if TYPE_CHECKING:
     from src.osap.domain.resolve_request import ResolveRequest
     from src.osap.domain.search_request import SearchRequest
 
+logger = logging.getLogger("osap.cpdl")
+
 
 class CPDLCatalogProvider(ICatalogProvider):
     """Provider CPDL basado en el corpus de páginas de osap-storage."""
@@ -66,7 +69,9 @@ class CPDLCatalogProvider(ICatalogProvider):
     def capabilities(self) -> CatalogCapabilities:
         return CatalogCapabilities(
             provider_id=self.provider_id,
-            offline=True,
+            # CPDL se sirve desde osap-storage (red): NO es offline; así el enriquecimiento
+            # por obra no lo vuelve a consultar y solo entra una vez en la búsqueda principal.
+            offline=False,
             formats=(OutputFormat.MUSICXML, OutputFormat.PDF),
             public_domain_only=False,
         )
@@ -104,8 +109,18 @@ class CPDLCatalogProvider(ICatalogProvider):
         if token:
             headers["Authorization"] = f"Bearer {token}"
 
-        resp = requests.get(url, params=params, headers=headers, timeout=self._timeout)
-        resp.raise_for_status()
+        try:
+            resp = requests.get(url, params=params, headers=headers, timeout=self._timeout)
+        except Exception as exc:  # noqa: BLE001 — CPDL nunca debe tumbar la búsqueda
+            logger.warning("CPDL (storage) inaccesible: %s", exc)
+            return ()
+        if resp.status_code != 200:
+            logger.warning(
+                "CPDL (storage) devolvió %s para q=%r; sin resultados",
+                resp.status_code,
+                q,
+            )
+            return ()
         rows = resp.json() if isinstance(resp.json(), list) else []
 
         out: list[CandidateRepresentation] = []

@@ -16,6 +16,10 @@ Notas:
 
 ## osap-storage
 
-Sin cambios aplicados desde osap-api. Si en el futuro hay que tocar alguna tabla de
-`osap-storage` (prod) durante una tarea de osap-api, se registra aquí **y** se reproduce en
-dev con la migración equivalente de osap-storage.
+| Fecha | Tabla | Cambio | Reproducible en | Estado |
+|---|---|---|---|---|
+| 2026-09-20 | `rism_sources` | Índice `FULLTEXT ft_rism_search (rism_uniform_title, rism_title, rism_composer_name)`; la búsqueda RISM pasa de `LIKE '%q%'` (full scan ~17 s) a `MATCH … AGAINST` (~0,07 s) | `osap-storage/scripts/migrate_rism_fulltext.sql` + `infrastructure/repositories/sql_rism_source_repository.py` | aplicado en dev; **pendiente de aplicar en prod** al subir storage |
+
+Sin otros cambios aplicados desde osap-api. Si hay que tocar alguna tabla de `osap-storage`
+(prod) durante una tarea de osap-api, se registra aquí **y** se reproduce en dev con la
+migración equivalente de osap-storage.

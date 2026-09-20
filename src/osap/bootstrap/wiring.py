@@ -21,6 +21,9 @@ from src.osap.infrastructure.cache import InMemoryCache
 from src.osap.infrastructure.catalogs import IndexCatalogProvider, LocalCatalogProvider
 from src.osap.infrastructure.catalogs.cpdl import CPDLCatalogProvider
 from src.osap.infrastructure.catalogs.remote.remote_catalog_provider import RemoteCatalogProvider
+from src.osap.infrastructure.catalogs.rism.rism_storage_catalog_provider import (
+    RismStorageCatalogProvider,
+)
 from src.osap.infrastructure.dedup import DuplicateResolver
 from src.osap.infrastructure.events import InMemoryEventBus
 from src.osap.infrastructure.github import GitHubClient
@@ -40,7 +43,6 @@ from src.osap.infrastructure.providers.fetchers import (
     MusicBrainzFetcher,
     MutopiaFetcher,
     OmrStorageFetcher,
-    RismFetcher,
 )
 from src.osap.infrastructure.rankings import DefaultRankingEngine
 from src.osap.infrastructure.resolvers.canonical_resolver import CanonicalComposerResolver
@@ -277,10 +279,16 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
         )
     rism_def, rism_wired = _provider_definition(op_store, "rism", providers_root / "rism")
     if rism_wired:
+        # RISM se lee del **corpus local de osap-storage** (`/api/search?corpus=rism`):
+        # la búsqueda la hace storage en su índice; osap-api no consulta opac.rism.info.
         container.register_catalog_provider(
-            RemoteCatalogProvider(
-                definition=rism_def,
-                fetcher=RismFetcher(),
+            RismStorageCatalogProvider(
+                base_url=storage_base,
+                token_provider=(
+                    None
+                    if container.dev_auth_bypass()
+                    else lambda: service_token_provider.token(("storage:read",))
+                ),
             )
         )
     # --- New providers (Hymnary, IIIF, Zenodo) ---
