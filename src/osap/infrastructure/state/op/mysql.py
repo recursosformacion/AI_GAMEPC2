@@ -107,6 +107,7 @@ class _MysqlStore(_MemoryStore):
                 PRIMARY KEY (id),
                 UNIQUE KEY uq_idx_title_composer (title_key(191), composer_id),
                 KEY idx_idx_composer (composer_id),
+                KEY idx_idx_composer_name (composer_name),
                 KEY idx_idx_catalogue (catalogue_key),
                 KEY idx_idx_title (title_key)
             ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
@@ -238,6 +239,15 @@ class _MysqlStore(_MemoryStore):
             self._run("ALTER TABLE index_works CHANGE person_id composer_id VARCHAR(36) NULL")
         elif "composer_id" not in work_existing:
             self._run("ALTER TABLE index_works ADD COLUMN composer_id VARCHAR(36) NULL")
+        # El anclaje por título busca por `composer_name` (LIMIT 500): sin índice era un full
+        # scan de index_works por compositor (el rebuild pasaba de minutos a horas).
+        composer_name_index = self._run(
+            "SELECT index_name FROM information_schema.statistics "
+            "WHERE table_schema = DATABASE() AND table_name = 'index_works' "
+            "AND index_name = 'idx_idx_composer_name'"
+        )
+        if not composer_name_index:
+            self._run("CREATE INDEX idx_idx_composer_name ON index_works (composer_name)")
         rep_index = self._run(
             "SELECT index_name FROM information_schema.statistics "
             "WHERE table_schema = DATABASE() AND table_name = 'index_representations' "

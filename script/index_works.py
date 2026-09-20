@@ -251,17 +251,27 @@ def _resolve_composer_id(
     cid: str | None = None
     try:
         with conn.cursor() as cur:
+            # Dos consultas (nombre → alias) para que MySQL use los índices: el `OR` con
+            # JOIN forzaba un escaneo de `persons`/`persons_aliases` por cada nombre.
             cur.execute(
-                "SELECT p.persons_id AS id FROM persons p "
-                "LEFT JOIN persons_aliases a ON a.person_id = p.persons_id "
-                "WHERE p.persons_status = 'active' "
-                "AND (p.persons_name = %s OR a.person_aliases_normalized_alias = %s) "
-                "LIMIT 1",
-                (composer_name, key),
+                "SELECT persons_id AS id FROM persons "
+                "WHERE persons_status = 'active' AND persons_name = %s LIMIT 1",
+                (composer_name,),
             )
             row = cur.fetchone()
             if row:
                 cid = row["id"]
+            if cid is None:
+                cur.execute(
+                    "SELECT p.persons_id AS id FROM persons_aliases a "
+                    "JOIN persons p ON p.persons_id = a.person_id "
+                    "WHERE a.person_aliases_normalized_alias = %s "
+                    "AND p.persons_status = 'active' LIMIT 1",
+                    (key,),
+                )
+                row = cur.fetchone()
+                if row:
+                    cid = row["id"]
     except pymysql.err.ProgrammingError:
         cid = None
     cache[key] = cid or ""
@@ -609,6 +619,255 @@ def _iter_musicbrainz(dump_dir: str, art_only: bool, limit: int):
 # ---------------------------------------------------------------- ingest
 
 
+def _ingest_page(
+    api: pymysql.Connection,
+    maestro: pymysql.Connection | None,
+    work_list: list[dict],
+    resolver_cache: dict[str, str],
+    anchors_cache: dict[str, list[dict]],
+    catalogue_cache: dict[str, list[dict]],
+) -> tuple[int, int, int]:
+    """Ingest por LOTES de una página de obras (un solo escritor).
+
+    Misma semántica que `_ingest` (identidad por catálogo → anclaje → (title_key, composer)),
+    pero sin consultas por obra: los candidatos de catálogo/anclaje se cachean por compositor
+    y el look-up/inserción/actualización se hacen por lotes. Devuelve (nuevas, actualizadas,
+    omitidas).
+    """
+    prepared: list[dict] = []
+    for work in work_list:
+        title = str(work.get("title") or "").strip()
+        if not title:
+            continue
+        record = dict(work)
+        record["title"] = title
+        record["tk"] = title_key(title)[:255]
+        # Tokens significativos del título: se calculan UNA vez por obra (comparar contra
+        # hasta 500 anclas normalizando texto cada vez era el cuello del rebuild).
+        record["tokens"] = _significant_tokens(title)
+        composer_raw = work.get("composer")
+        composer_name = _NORMALIZER.canonical_composer(composer_raw) if composer_raw else None
+        record["composer_name"] = composer_name[:255] if composer_name else None
+        composer_id = work.get("composer_id")
+        if not composer_id and record["composer_name"] and maestro is not None:
+            composer_id = _resolve_composer_id(maestro, record["composer_name"], resolver_cache)
+        record["composer_id"] = composer_id
+        catalogue_raw = work.get("catalogue") or _extract_composer_catalogue(title)
+        record["catalogue_raw"] = catalogue_raw
+        record["cat_key"] = _catalogue_key(catalogue_raw)
+        record["cat_identity"] = _canonical_catalogue_identity(catalogue_raw)
+        year = work.get("year")
+        record["year_int"] = int(year) if str(year or "").isdigit() else None
+        prepared.append(record)
+    if not prepared:
+        return 0, 0, 0
+
+    def composer_key(record: dict) -> str | None:
+        if record.get("composer_name"):
+            return f"c:{record['composer_name']}"
+        if record.get("composer_id"):
+            return f"i:{record['composer_id']}"
+        return None
+
+    inserted = updated = skipped = 0
+    with api.cursor() as cur:
+        # 1) Prefetch de las filas existentes de la página por title_key (1 consulta por lote).
+        tks = sorted({r["tk"] for r in prepared})
+        existing: dict[tuple[str, str], dict] = {}
+        for start in range(0, len(tks), 500):
+            chunk = tks[start : start + 500]
+            placeholders = ",".join(["%s"] * len(chunk))
+            cur.execute(
+                "SELECT id, title_key, composer_id, composer_name FROM index_works "
+                f"WHERE title_key IN ({placeholders})",
+                chunk,
+            )
+            for row in cur.fetchall():
+                existing[
+                    (str(row["title_key"]), str(row["composer_id"] or ""))
+                ] = row
+                if row["composer_name"]:
+                    existing[
+                        (str(row["title_key"]), f"name:{row['composer_name']}")
+                    ] = row
+
+        # 2) Resolución de identidad (catálogo único → anclaje) con caché por compositor.
+        resolved: list[tuple[dict, dict | None]] = []
+        for record in prepared:
+            key = composer_key(record)
+            row: dict | None = None
+            if (
+                record["cat_identity"]
+                and _is_unique_catalogue(record["cat_identity"])
+                and key is not None
+            ):
+                if key not in catalogue_cache:
+                    if record.get("composer_name"):
+                        cur.execute(
+                            "SELECT id, title, catalogue FROM index_works WHERE composer_name=%s "
+                            "AND catalogue IS NOT NULL ORDER BY id LIMIT 200",
+                            (record["composer_name"],),
+                        )
+                    else:
+                        cur.execute(
+                            "SELECT id, title, catalogue FROM index_works WHERE composer_id=%s "
+                            "AND catalogue IS NOT NULL ORDER BY id LIMIT 200",
+                            (record["composer_id"],),
+                        )
+                    catalogue_cache[key] = [
+                        (
+                            int(candidate["id"]),
+                            _canonical_catalogue_identity(str(candidate.get("catalogue") or "")),
+                            _significant_tokens(str(candidate.get("title") or "")),
+                        )
+                        for candidate in cur.fetchall()
+                    ]
+                for cand_id, cand_identity, cand_tokens in catalogue_cache[key]:
+                    if cand_identity == record["cat_identity"] and (record["tokens"] & cand_tokens):
+                        row = {"id": cand_id}
+                        break
+            if row is None and key is not None:
+                if key not in anchors_cache:
+                    if record.get("composer_name"):
+                        cur.execute(
+                            "SELECT id, title FROM index_works WHERE composer_name=%s "
+                            "AND catalogue IS NOT NULL AND catalogue <> '' ORDER BY id LIMIT 500",
+                            (record["composer_name"],),
+                        )
+                    else:
+                        cur.execute(
+                            "SELECT id, title FROM index_works WHERE composer_id=%s "
+                            "AND catalogue IS NOT NULL AND catalogue <> '' ORDER BY id LIMIT 500",
+                            (record["composer_id"],),
+                        )
+                    anchors_cache[key] = [
+                        (
+                            int(anchor["id"]),
+                            _significant_tokens(str(anchor.get("title") or "")),
+                        )
+                        for anchor in cur.fetchall()
+                    ]
+                for anchor_id, anchor_tokens in anchors_cache[key]:
+                    if _tokens_subset_sets(record["tokens"], anchor_tokens):
+                        row = {"id": anchor_id}
+                        break
+            resolved.append((record, row))
+
+        # 3) Look-up por (title_key, composer_id/composer_name) usando el prefetch.
+        pending: list[tuple[dict, dict | None]] = []
+        for record, row in resolved:
+            if row is None:
+                cid = str(record.get("composer_id") or "")
+                row = existing.get((record["tk"], cid))
+                if row is None and record.get("composer_name"):
+                    row = existing.get((record["tk"], f"name:{record['composer_name']}"))
+            pending.append((record, row))
+
+        # 4) Insert/UPDATE por lotes (deduplicando en página por la clave única).
+        seen_page: set[tuple[str, str]] = set()
+        inserts: list[tuple] = []
+        updates: list[tuple] = []
+        ids_by_record: dict[int, int] = {}
+        for index, (record, row) in enumerate(pending):
+            if row is not None:
+                updates.append(
+                    (
+                        record["title"][:1024],
+                        record["composer_name"],
+                        record["catalogue_raw"],
+                        record["cat_key"],
+                        record["year_int"],
+                        record.get("instrumentation") or None,
+                        int(record["genre_id"]) if record.get("genre_id") is not None else None,
+                        int(row["id"]),
+                    )
+                )
+                ids_by_record[index] = int(row["id"])
+                updated += 1
+                continue
+            dedupe_key = (record["tk"], str(record.get("composer_id") or ""))
+            if dedupe_key in seen_page:
+                skipped += 1
+                continue
+            seen_page.add(dedupe_key)
+            inserts.append(
+                (
+                    record["title"][:1024],
+                    record["tk"],
+                    record["composer_name"],
+                    record.get("composer_id"),
+                    record["catalogue_raw"],
+                    record["cat_key"],
+                    record["year_int"],
+                    record.get("instrumentation") or None,
+                    int(record["genre_id"]) if record.get("genre_id") is not None else None,
+                )
+            )
+            ids_by_record[index] = -len(inserts)  # provisional (negativo = índice de insert)
+            inserted += 1
+        if updates:
+            cur.executemany(
+                "UPDATE index_works SET title=%s, composer_name=%s, catalogue=%s, "
+                "catalogue_key=%s, year=%s, instrumentation=%s, genre_id=%s, updated_at=NOW() "
+                "WHERE id=%s",
+                updates,
+            )
+        if inserts:
+            cur.executemany(
+                "INSERT INTO index_works (title, title_key, composer_name, composer_id, "
+                "catalogue, catalogue_key, year, instrumentation, genre_id, source_count, updated_at) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,1,NOW())",
+                inserts,
+            )
+            # Ids de lo insertado: 1 consulta por lote usando los title_key de la página.
+            insert_tks = sorted({record["tk"] for index, (record, row) in enumerate(pending)
+                                 if ids_by_record.get(index, 0) < 0})
+            fresh: dict[tuple[str, str], int] = {}
+            for start in range(0, len(insert_tks), 500):
+                chunk = insert_tks[start : start + 500]
+                placeholders = ",".join(["%s"] * len(chunk))
+                cur.execute(
+                    "SELECT id, title_key, composer_id FROM index_works "
+                    f"WHERE title_key IN ({placeholders})",
+                    chunk,
+                )
+                for row in cur.fetchall():
+                    fresh[(str(row["title_key"]), str(row["composer_id"] or ""))] = int(row["id"])
+            for index, (record, _row) in enumerate(pending):
+                provisional = ids_by_record.get(index)
+                if provisional is not None and provisional < 0:
+                    ids_by_record[index] = fresh.get(
+                        (record["tk"], str(record.get("composer_id") or "")), 0
+                    )
+
+        # 5) Representaciones por lotes.
+        rep_rows: list[tuple] = []
+        for index, (record, _row) in enumerate(pending):
+            work_id = ids_by_record.get(index)
+            if not work_id or work_id <= 0:
+                continue
+            rep_rows.append(
+                (
+                    work_id,
+                    str(record.get("provider") or "omr"),
+                    str(record.get("format") or "musicxml"),
+                    record.get("download_url"),
+                    record["title"][:1024],
+                    int(record.get("available", 0)),
+                    int(record.get("quality", 0)),
+                )
+            )
+        if rep_rows:
+            cur.executemany(
+                "INSERT INTO index_representations (work_id, provider, format, download_url, "
+                "title_provider, available, quality) VALUES (%s,%s,%s,%s,%s,%s,%s) "
+                "ON DUPLICATE KEY UPDATE download_url=VALUES(download_url), "
+                "available=VALUES(available), quality=VALUES(quality)",
+                rep_rows,
+            )
+    return inserted, updated, skipped
+
+
 def _ingest(
     api: pymysql.Connection,
     maestro: pymysql.Connection | None,
@@ -802,6 +1061,7 @@ def main() -> int:
     maestro = omr
     resolver_cache: dict[str, str] = {}
     anchors_cache: dict[str, list[dict]] = {}
+    catalogue_cache: dict[str, list[dict]] = {}
     try:
         for provider in [p.strip() for p in args.providers.split(",") if p.strip()]:
             t0 = time.time()
@@ -823,23 +1083,53 @@ def main() -> int:
                 print(f"  proveedor desconocido: {provider}", flush=True)
                 continue
 
+            # OMR: ingest por LOTES (mismo resultado, sin consultas por obra). El resto de
+            # proveedores siguen con el ingest por obra.
+            page: list[dict] = []
             for w in rows:
-                status, detail = _ingest(api, maestro, w, resolver_cache, anchors_cache)
-                if status == "ok":
-                    inserted += 1
-                elif status == "skip":
-                    skipped += 1
-                else:
-                    updated += 1
-                total_done = inserted + skipped + updated
-                if total_done % 1000 == 0:
+                page.append(w)
+                if len(page) >= 1000:
+                    if provider == "omr":
+                        ins, upd, skp = _ingest_page(
+                            api, maestro, page, resolver_cache, anchors_cache, catalogue_cache
+                        )
+                        inserted += ins
+                        updated += upd
+                        skipped += skp
+                    else:
+                        for item in page:
+                            status, _detail = _ingest(api, maestro, item, resolver_cache, anchors_cache)
+                            if status == "ok":
+                                inserted += 1
+                            elif status == "skip":
+                                skipped += 1
+                            else:
+                                updated += 1
+                    page = []
                     api.commit()
-                if total_done % 5000 == 0:
-                    print(
-                        f"  ... {total_done} obras "
-                        f"(nuevas={inserted} actualizadas={updated} omitidas={skipped})",
-                        flush=True,
+                    if (inserted + skipped + updated) % 5000 < 1000:
+                        print(
+                            f"  ... {inserted + skipped + updated} obras "
+                            f"(nuevas={inserted} actualizadas={updated} omitidas={skipped})",
+                            flush=True,
+                        )
+            if page:
+                if provider == "omr":
+                    ins, upd, skp = _ingest_page(
+                        api, maestro, page, resolver_cache, anchors_cache, catalogue_cache
                     )
+                    inserted += ins
+                    updated += upd
+                    skipped += skp
+                else:
+                    for item in page:
+                        status, _detail = _ingest(api, maestro, item, resolver_cache, anchors_cache)
+                        if status == "ok":
+                            inserted += 1
+                        elif status == "skip":
+                            skipped += 1
+                        else:
+                            updated += 1
             api.commit()
             elapsed = time.time() - t0
             print(f"  obras: insertadas={inserted} errores={updated} omitidas={skipped} "
