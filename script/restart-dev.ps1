@@ -23,6 +23,18 @@ param(
 
 $ErrorActionPreference = "Stop"
 $Root = "D:\Proyectos\AI_OSAP"
+$LogDir = Join-Path $env:LOCALAPPDATA "osap-dev\logs"
+$StatusLog = Join-Path $LogDir "restart.last.log"
+New-Item -ItemType Directory -Force -Path $LogDir | Out-Null
+Remove-Item $StatusLog -ErrorAction SilentlyContinue
+
+# Traza con hora de cada fase: si algo se cuelga, se ve dónde se quedó (check-dev.ps1 la
+# muestra). Se define ANTES de usarse (si no, PowerShell aborta al primer Write-Status).
+function Write-Status([string]$Message) {
+    $line = "{0:HH:mm:ss}  {1}" -f (Get-Date), $Message
+    Write-Host $line
+    if ($script:StatusLog) { Add-Content -Path $script:StatusLog -Value $line -ErrorAction SilentlyContinue }
+}
 
 $services = @(
     [pscustomobject]@{ Name = "osap-storage"; Repo = "osap-storage"; Port = 8000; App = "api.main:app"; Factory = $false; Health = "http://127.0.0.1:8000/api/v1/health"; Env = @{ OSAP_CONFIG = "config.yaml" } },
@@ -123,18 +135,7 @@ if (-not $SkipKill) {
     Write-Host "[1/3] Kill omitido (-SkipKill)" -ForegroundColor DarkGray
 }
 
-$logDir = Join-Path $env:LOCALAPPDATA "osap-dev\logs"
-New-Item -ItemType Directory -Force -Path $logDir | Out-Null
-$statusLog = Join-Path $logDir "restart.last.log"
-Remove-Item $statusLog -ErrorAction SilentlyContinue
-
-# Deja traza con hora de cada fase: si algo se cuelga, se ve dónde se quedó (y check-dev.ps1 la
-# muestra). El fichero es la referencia para saber si el reinicio avanzó o está atascado.
-function Write-Status([string]$Message) {
-    $line = "{0:HH:mm:ss}  {1}" -f (Get-Date), $Message
-    Write-Host $line
-    Add-Content -Path $script:statusLog -Value $line -ErrorAction SilentlyContinue
-}
+$logDir = $LogDir
 
 Write-Status "[2/3] Arrancando servicios..."
 $started = @()
