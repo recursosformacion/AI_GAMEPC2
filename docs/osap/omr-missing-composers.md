@@ -1,64 +1,56 @@
 # Compositores que faltan en OMR — cómo conseguirlos
 
-Medido el 2026-09-20 sobre la BD nueva (`osap-storage`) y el índice (`osap-api`).
+Medido el 2026-09-20. **Auditoría autoritativa**: `osap-storage/scripts/analyze_missing_composers.py`
+(read-only) sobre la BD nueva (`osap-storage`).
 
-## Situación
+## Situación (dato corregido)
 | Dato | Valor |
 |---|---|
 | Obras en `works` | 310.455 |
-| Obras **con** compositor (`works_person_roles` rol 1) | 135.315 (43,6%) |
-| Obras **sin** compositor | **175.140** (56,4%) |
-| Obras de índice con rep OMR | 150.679 |
-| … sin `composer_id` en el índice | 147.648 |
-| Obras con `works_attribution_note` | 10.484 |
-| Títulos con `" - "` (posible compositor embebido) | 68.047 |
-| Personas activas (`persons`) | 45.207 |
-| **`works_person_import`** | **386.004 filas** (staging de atribución) |
+| **Sin compositor** (sin rol 1 en `works_person_roles`) | **175.140** (56%) |
+| … con patrón de anonimato/tradicional | 5.980 |
 
-## La fuente principal ya existe: `works_person_import`
-Ese staging trae atribuciones importadas por obra, con rol y estado:
-
-| `resolved` | `role` | filas |
+### Desglose por evidencia interna (auditor de storage)
+| Categoría | Obras | ¿Recuperable? |
 |---|---|---|
-| 2 | artist | 160.319 |
-| 1 | composer | 145.387 |
-| 1 | artist | 77.766 |
-| 2 | composer | 1.985 |
-| 0 | artist | 547 |
+| `ninguna_evidencia` | **135.762** | No por metadatos: corpus folk PDMX sin atribución en ninguna parte |
+| `titulo_contexto` | 19.608 | **Sí**: el título trae contexto/compositor |
+| `catalogo_titulo_hermana` | 9.026 | **Sí, seguro**: obra hermana con el mismo catálogo tiene compositor |
+| `anonimo_esperado` | 5.980 | Correcto como anónimo/tradicional |
+| `varias_posibilidades` | 4.675 | Requiere desambiguación |
+| `metadatos` / `otra_relacion` / `catalogo_hermano` | 65 / 22 / 2 | Marginal |
 
-**Cobertura:** de las 175.140 obras sin compositor, **170.911 (97,6 %) tienen filas en
-`works_person_import`**. Es decir, el trabajo ya está hecho: falta **promover** esas
-atribuciones a `works_person_roles` (rol 1) resolviéndolas contra `persons`
-(`persons_name` / `persons_aliases.person_aliases_normalized_alias`) y marcando
-`works_person_import_resolved`.
+## La tubería de staging YA se ejecutó
+`works_person_import` (386.004 filas) ya está procesado:
+- `link_works_person_import.py` y `populate_persons_from_import.py` seleccionan
+  `works_person_import_resolved = 0` y **no queda ninguna fila de rol `composer`** en ese estado.
+- De las filas `resolved=1` cuyo trabajo sigue sin rol 1 (10.252), los nombres son
+  **ruido o anónimos** ("anon.", "Traditional", mojibake de PDMX) → no aportan.
 
-> Ojo: `persons` está en `utf8mb4_general_ci` y `works` en `utf8mb4_unicode_ci`; los JOIN
-> por nombre necesitan `COLLATE` explícito (MySQL da error 1267 si no).
+**Conclusión:** lo recuperable por el staging ya está materializado. El hueco restante es
+mayoritariamente folk sin atribución, y hay **~28.600 obras** con evidencia aprovechable
+(9.026 por catálogo hermano + 19.608 por contexto de título).
 
-## Plan propuesto (en capas, todo dentro de osap-storage salvo el índice)
-1. **Promoción del staging (mayor impacto, ~170k obras).**
-   - Para cada `works_person_import` con `role='composer'` y `resolved` en (0,1):
-     resolver `works_person_import_name` → `persons_id` (nombre exacto, alias normalizado,
-     o `persons_identity`), insertar en `works_person_roles` (rol 1, `order` por antigüedad)
-     y marcar `works_person_import_resolved = 1`.
-   - Idempotente: no duplicar si ya existe (work, person, role).
-   - Los que no resuelvan persona se quedan como `candidates` para revisión (no inventar).
-2. **Fallback por título (`" - Composer"`, 68.047 obras).** Extraer el sufijo y casarlo
-   contra `persons` + `persons_aliases` (mismo `COLLATE`). Añade donde el staging no llegue.
-3. **Fallback por el propio fichero (MusicXML).** El auditor (`script/audit_omr_titles.py`)
-   ya guarda `xml_composer` del `<creator>`; para los MXL con metadato sirve como tercera
-   fuente y como verificación cruzada.
-4. **Autoridades externas.** El corpus **RISM local** (1,5 M de fuentes con compositor y
-   signatura) permite confirmar/atribuir obras del mismo título; CPDL e IMSLP como contraste.
-5. **Índice (`osap-api`).** Ya reconstruye OMR desde `works + works_person_roles +
-   works_resources + work_genres`, así que **cada promoción en storage se refleja al
-   reconstruir**; no hay que mantener un mapeo paralelo.
+## Plan por orden de seguridad y valor
+1. **Hermana por catálogo (9.028).** Copiar rol 1 desde otra obra con el mismo
+   `works_catalogue` (mismo título normalizado o catálogo idéntico). Regla determinista, sin
+   inventar: si el catálogo coincide y hay **un único** compositor entre las hermanas, se asigna.
+2. **Contexto de título (19.608).** Extraer el nombre embebido (`"Título - Compositor"`,
+   68.047 títulos con `" - "`) y casarlo contra `persons` + `persons_aliases`
+   (`COLLATE utf8mb4_unicode_ci`, hay colación distinta). Solo con match único.
+3. **`<creator>` del MusicXML.** El auditor de osap-api
+   (`script/audit_omr_titles.py`) ya guarda `xml_composer` al abrir cada MXL: tercera fuente
+   y verificación cruzada para las que tengan metadato interno.
+4. **RISM local (1,5 M fuentes).** `scripts/propose_rism_composers.py` /
+   `apply_rism_attributions.py` (ya existen) para confirmar/atribuir por título y signatura.
+5. **`varias_posibilidades` (4.675).** Dejar propuestas para revisión; no auto-asignar.
+
+## Índice (osap-api)
+Ya reconstruye OMR desde `works` + `works_person_roles` + `works_resources` + `work_genres`,
+así que cada promoción en storage se refleja al reconstruir; no hay mapeo paralelo. Los
+anónimos se quedan sin `composer_name` (no se fuerza `Anonymous`).
 
 ## Qué NO hacer
-- No atribuir por similitud de título sin anclaje (evita fusiones falsas: el matcher ya veta
-  título genérico sin número/catálogo).
-- No rellenar `Anonymous`/`NA` como si fuera compositor: se tratan como "sin atribución".
+- No atribuir por similitud de título sin anclaje (riesgo de fusiones falsas).
+- No rellenar `Anonymous`/`NA` como compositor; se tratan como "sin atribución".
 
-## Medición de éxito
-- % de obras OMR con rol 1 (objetivo: +55 pts, hasta ~99 % con staging + título + XML).
-- % de fichas del índice OMR con `composer_name` no vacío/no anónimo.
