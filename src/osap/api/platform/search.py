@@ -369,9 +369,23 @@ class SearchMixin(PlatformApiCore):
                 builder = builder.genre_ids(genre_id)
         # Filtros del Estudio: dónde (providers) y qué tipo (formats). Si la petición no
         # indica proveedores (p. ej. búsqueda general), se usa la cadena por defecto:
-        # imslp, cpdl, rism, omr. El índice local se consulta siempre (aparte).
-        effective_providers = tuple(req.providers) if req.providers else DEFAULT_SEARCH_PROVIDERS
-        for name in effective_providers:
+        # imslp, cpdl, rism, omr — pero solo los que estén realmente registrados en este
+        # despliegue (si no hay ninguno, se consultan todos, como antes).
+        try:
+            registered = {
+                p.provider_id.value for p in self._container.catalog_manager().providers()
+            }
+        except Exception:  # noqa: BLE001 — sin catálogo, no se restringe
+            registered = set()
+        if req.providers:
+            effective_providers = tuple(req.providers)
+            allow = [
+                name for name in effective_providers if _provider_id_for_name(name) is not None
+            ]
+        else:
+            allow = [name for name in DEFAULT_SEARCH_PROVIDERS if name in registered]
+            effective_providers = tuple(allow)
+        for name in allow:
             pid = _provider_id_for_name(name)
             if pid:
                 builder = builder.allow_provider(ProviderId(pid))
