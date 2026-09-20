@@ -271,7 +271,18 @@ def _resolve_composer_id(
 # ---------------------------------------------------------------- providers
 
 
-def _iter_omr(omr: pymysql.Connection, from_id: int, limit: int, storage_base: str, batch: int = 2000):
+# Etiquetas para obras cuyo tipo de atribución está marcado en `works` (no hay persona).
+_ATTR_LABELS = {
+    "ANONIMA": "Anónimo",
+    "TRADICIONAL": "Tradicional",
+    "POPULAR": "Popular",
+    "DESCONOCIDO": "Desconocido",
+}
+
+
+def _iter_omr(
+    omr: pymysql.Connection, from_id: int, limit: int, storage_base: str, batch: int = 2000
+):
     """Obras del corpus OMR (tabla works de osap-storage).
 
     Construye `download_url` como ``{storage_base}/api/download/{file_id}`` (el endpoint
@@ -287,7 +298,8 @@ def _iter_omr(omr: pymysql.Connection, from_id: int, limit: int, storage_base: s
         with omr.cursor() as cur:
             cur.execute(
                 "SELECT id, works_title AS title, works_catalogue AS catalogue, "
-                "works_year AS year, works_instrumentation AS instrumentation "
+                "works_year AS year, works_instrumentation AS instrumentation, "
+                "works_attr_type AS attr_type "
                 "FROM works WHERE id > %s ORDER BY id LIMIT %s",
                 (last_id, take),
             )
@@ -355,6 +367,10 @@ def _iter_omr(omr: pymysql.Connection, from_id: int, limit: int, storage_base: s
             if not title:
                 continue
             composer, composer_id = composers.get(int(w["id"]), ("", ""))
+            if not composer:
+                # Obras marcadas en `works` como anónimas/tradicionales: se anuncian así
+                # (no son hueco de compositor y no se crea ninguna persona).
+                composer = _ATTR_LABELS.get(str(w.get("attr_type") or "").upper(), "")
             file_entry = files.get(int(w["id"]))
             file_id = file_entry[1] if file_entry else None
             genre_names, genre_id = genres.get(int(w["id"]), ("", 0))
