@@ -96,7 +96,7 @@ class _MysqlStore(_MemoryStore):
                 title VARCHAR(1024) NOT NULL,
                 title_key VARCHAR(255) NOT NULL,
                 composer_name VARCHAR(255),
-                person_id VARCHAR(36),
+                composer_id VARCHAR(36),
                 catalogue VARCHAR(255),
                 catalogue_key VARCHAR(128),
                 year SMALLINT,
@@ -105,8 +105,8 @@ class _MysqlStore(_MemoryStore):
                 source_count TINYINT NOT NULL DEFAULT 0,
                 updated_at VARCHAR(64) NOT NULL,
                 PRIMARY KEY (id),
-                UNIQUE KEY uq_idx_title_composer (title_key(191), person_id),
-                KEY idx_idx_composer (person_id),
+                UNIQUE KEY uq_idx_title_composer (title_key(191), composer_id),
+                KEY idx_idx_composer (composer_id),
                 KEY idx_idx_catalogue (catalogue_key),
                 KEY idx_idx_title (title_key)
             ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
@@ -227,6 +227,17 @@ class _MysqlStore(_MemoryStore):
             self._run("ALTER TABLE index_representations ADD COLUMN xml_title VARCHAR(512) NULL")
         if "xml_composer" not in rep_existing:
             self._run("ALTER TABLE index_representations ADD COLUMN xml_composer VARCHAR(255) NULL")
+
+        # El índice nombra la referencia del compositor `composer_id` (antes `person_id`).
+        work_cols = self._run(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_schema = DATABASE() AND table_name = 'index_works'"
+        )
+        work_existing = {str(r["column_name"]) for r in work_cols} if work_cols else set()
+        if "person_id" in work_existing and "composer_id" not in work_existing:
+            self._run("ALTER TABLE index_works CHANGE person_id composer_id VARCHAR(36) NULL")
+        elif "composer_id" not in work_existing:
+            self._run("ALTER TABLE index_works ADD COLUMN composer_id VARCHAR(36) NULL")
         rep_index = self._run(
             "SELECT index_name FROM information_schema.statistics "
             "WHERE table_schema = DATABASE() AND table_name = 'index_representations' "
