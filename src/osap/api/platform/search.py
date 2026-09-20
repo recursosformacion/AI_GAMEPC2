@@ -2,8 +2,10 @@
 
 import re
 import threading
+import time
 import uuid
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import TYPE_CHECKING
 
 from src.osap.api.contracts import (
@@ -338,6 +340,7 @@ class SearchMixin(PlatformApiCore):
         on_provider: Callable[[str], None] | None = None,
         on_partial: Callable[[list[SearchResultItem], int], None] | None = None,
     ) -> tuple[list[SearchResultItem], int]:
+        _t_start = time.perf_counter()
         if progress is not None:
             progress(10)
         builder = ResolveRequestBuilder()
@@ -520,8 +523,17 @@ class SearchMixin(PlatformApiCore):
         # al instante y se refina cuando termina la búsqueda completa.
         index_partial: Callable[[tuple[CandidateRepresentation, ...]], None] | None = None
         if on_partial is not None:
+            # Agrupar+rankear ~500 candidatos cuesta decenas de segundos: NO se puede repetir
+            # en cada parcial del índice (era el mayor coste de la búsqueda). Se publica un
+            # parcial como mucho cada 2 s y solo si creció de verdad.
+            _partial_state: dict[str, float] = {"ts": 0.0, "n": 0}
 
             def index_partial(found: tuple[CandidateRepresentation, ...]) -> None:
+                now_ts = time.perf_counter()
+                if len(found) < int(_partial_state["n"]) + 20 and now_ts - _partial_state["ts"] < 2.0:
+                    return
+                _partial_state["ts"] = now_ts
+                _partial_state["n"] = float(len(found))
                 try:
                     partial, ptotal = build_results(found)
                     if partial:
@@ -530,6 +542,7 @@ class SearchMixin(PlatformApiCore):
                     pass
 
         gathered = engine.gather(request, on_progress=on_provider, on_index_partial=index_partial)
+        t_gather = time.perf_counter()
         if progress is not None:
             progress(60)
         candidates = gathered.candidates
@@ -541,6 +554,7 @@ class SearchMixin(PlatformApiCore):
             "openmusicrepository" in ranked_providers,
         )
         results, total = build_results(candidates)
+        t_build = time.perf_counter()
         if progress is not None:
             progress(85)
         logger.info("search groups=%d", len(results))
@@ -549,6 +563,14 @@ class SearchMixin(PlatformApiCore):
         enriched = self._enrich_search_results(results, req.formats, req.providers)
         # total = obras que quedan tras el filtro de formatos/proveedores.
         filtered_total = len([r for r in enriched if r.representations])
+        # Traza de tiempos: permite ver dónde se va el tiempo (gather vs agrupar vs enriquecer).
+        logger.info(
+            "search timing gather=%.1fs build=%.1fs enrich=%.1fs total=%.1fs",
+            t_gather - _t_start,
+            t_build - t_gather,
+            time.perf_counter() - t_build,
+            time.perf_counter() - _t_start,
+        )
         return enriched, filtered_total
 
     def _merge_same_work(self, results: list[SearchResultItem]) -> list[SearchResultItem]:
@@ -564,31 +586,40 @@ class SearchMixin(PlatformApiCore):
 
         merged_out: list[SearchResultItem] = []
         for _comp, items in by_composer.items():
-            items = list(items)
+            # Tokens normalizados UNA vez por obra (antes se recalculaban en el bucle interno:
+            # con grupos de cientos de obras el O(n²) dominaba la búsqueda).
+            prepared: list[tuple[SearchResultItem, frozenset[str]]] = [
+                (
+                    item,
+                    frozenset(
+                        _NORMALIZER.comparison_title(
+                            item.work.title or "", item.work.composer
+                        ).split()
+                    ),
+                )
+                for item in items
+            ]
             consumed: set[int] = set()
-            for i, a in enumerate(items):
-                if i in consumed:
+            for i, (a, a_tok) in enumerate(prepared):
+                if i in consumed or not a_tok:
                     continue
-                a_tok = set(_NORMALIZER.comparison_title(a.work.title or "", a.work.composer).split())
                 union_reps = {r.id: r for r in a.representations}
                 canonical = a
-                for j in range(i + 1, len(items)):
+                for j in range(i + 1, len(prepared)):
                     if j in consumed:
                         continue
-                    b = items[j]
-                    b_tok = set(_NORMALIZER.comparison_title(b.work.title or "", b.work.composer).split())
-                    if not a_tok or not b_tok:
+                    b, b_tok = prepared[j]
+                    if not b_tok or len(a_tok) == len(b_tok):
+                        # Solo puede haber subconjunto si difieren en tamaño.
                         continue
-                    if a_tok <= b_tok and _is_arrangement_extra(b_tok - a_tok):
-                        consumed.add(j)
-                        for r in b.representations:
-                            union_reps[r.id] = r
-                    elif b_tok <= a_tok and _is_arrangement_extra(a_tok - b_tok):
-                        consumed.add(j)
-                        for r in b.representations:
-                            union_reps[r.id] = r
-                        if len(b_tok) < len(a_tok):
-                            canonical = b
+                    smaller, larger = (a_tok, b_tok) if len(a_tok) < len(b_tok) else (b_tok, a_tok)
+                    if not smaller <= larger or not _is_arrangement_extra(set(larger - smaller)):
+                        continue
+                    consumed.add(j)
+                    for r in b.representations:
+                        union_reps[r.id] = r
+                    if len(b_tok) < len(a_tok):
+                        canonical = b
                 reps = list(union_reps.values())
                 best = max(reps, key=lambda r: r.confidence) if reps else canonical.representation
                 merged_out.append(
@@ -664,11 +695,28 @@ class SearchMixin(PlatformApiCore):
                 )
             )
         candidates_to_enrich.sort(key=lambda x: (-len(x[1].representations), x[0]))
-        for _nprov, item in candidates_to_enrich[:12]:
+        pending: list[SearchResultItem] = []
+        for _nprov, item in candidates_to_enrich[:6]:
             key = self._work_key(item.work.title, item.work.composer)
-            if key in self._work_rep_cache:
-                continue
-            focused = self._focused_representations(item.work)
+            if key not in self._work_rep_cache:
+                pending.append(item)
+        # El enriquecimiento por obra consulta el índice (~1 s cada una): se hace en paralelo
+        # para no sumar 12 s a la búsqueda (era ~2/3 del tiempo total).
+        focused_by_work: dict[str, list[RepresentationInfo]] = {}
+        if pending:
+            with ThreadPoolExecutor(max_workers=6) as pool:
+                futures = {
+                    pool.submit(self._focused_representations, item.work): item for item in pending
+                }
+                for future in as_completed(futures):
+                    item = futures[future]
+                    try:
+                        focused_by_work[item.work.work_id] = future.result()
+                    except Exception:  # noqa: BLE001 — el enrich nunca debe tumbar la búsqueda
+                        focused_by_work[item.work.work_id] = []
+        for item in pending:
+            key = self._work_key(item.work.title, item.work.composer)
+            focused = focused_by_work.get(item.work.work_id, [])
             if not focused:
                 continue
             merged = {r.id: r for r in item.representations}
