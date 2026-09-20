@@ -598,6 +598,7 @@ def _ingest(
     maestro: pymysql.Connection | None,
     work: dict,
     resolver_cache: dict[str, str],
+    anchors_cache: dict[str, list[dict]] | None = None,
 ) -> tuple[str, str]:
     """Upsert de una obra en index_works + index_representations. Devuelve (estado, detalle)."""
     title = str(work.get("title") or "").strip()
@@ -652,10 +653,12 @@ def _ingest(
                 ):
                     row = candidate
                     break
-        if row is None:
-            # Anclaje por título: obra sin catálogo que es la misma que una ya identificada
-            # (mismo compositor y palabras significativas contenidas).
-            if composer_id or composer_name:
+        if row is None and (composer_id or composer_name):
+            # El anclaje por título consulta hasta 500 obras del compositor: se cachea por
+            # compositor (si no, era una consulta de 500 filas POR OBRA → horas de rebuild).
+            cache_key = f"c:{composer_name}" if composer_name else f"i:{composer_id}"
+            anchors = anchors_cache.get(cache_key) if anchors_cache is not None else None
+            if anchors is None:
                 if composer_name:
                     cur.execute(
                         "SELECT id, title FROM index_works WHERE composer_name=%s "
@@ -668,10 +671,13 @@ def _ingest(
                         "AND catalogue IS NOT NULL AND catalogue <> '' ORDER BY id LIMIT 500",
                         (composer_id,),
                     )
-                for anchor in cur.fetchall():
-                    if _tokens_subset(title, str(anchor.get("title") or "")):
-                        row = anchor
-                        break
+                anchors = list(cur.fetchall())
+                if anchors_cache is not None:
+                    anchors_cache[cache_key] = anchors
+            for anchor in anchors:
+                if _tokens_subset(title, str(anchor.get("title") or "")):
+                    row = anchor
+                    break
         if row is None:
             # El look-up debe coincidir con la clave única (title_key, composer_id): si se
             # busca por composer_name, dos grafías del mismo compositor insertarían duplicado.
@@ -779,6 +785,7 @@ def main() -> int:
     omr = pymysql.connect(**omr_db)
     maestro = omr
     resolver_cache: dict[str, str] = {}
+    anchors_cache: dict[str, list[dict]] = {}
     try:
         for provider in [p.strip() for p in args.providers.split(",") if p.strip()]:
             t0 = time.time()
@@ -801,15 +808,22 @@ def main() -> int:
                 continue
 
             for w in rows:
-                status, detail = _ingest(api, maestro, w, resolver_cache)
+                status, detail = _ingest(api, maestro, w, resolver_cache, anchors_cache)
                 if status == "ok":
                     inserted += 1
                 elif status == "skip":
                     skipped += 1
                 else:
                     updated += 1
-                if (inserted + skipped + updated) % 1000 == 0:
+                total_done = inserted + skipped + updated
+                if total_done % 1000 == 0:
                     api.commit()
+                if total_done % 5000 == 0:
+                    print(
+                        f"  ... {total_done} obras "
+                        f"(nuevas={inserted} actualizadas={updated} omitidas={skipped})",
+                        flush=True,
+                    )
             api.commit()
             elapsed = time.time() - t0
             print(f"  obras: insertadas={inserted} errores={updated} omitidas={skipped} "
