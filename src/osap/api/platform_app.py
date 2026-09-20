@@ -20,6 +20,7 @@ from src.osap.api.http.context import HttpContext
 from src.osap.api.http.jobs import build_jobs_router
 from src.osap.api.http.knowledge import build_knowledge_router
 from src.osap.api.http.omr import build_omr_router
+from src.osap.api.http.persons import build_persons_router
 from src.osap.api.http.providers import build_providers_router
 from src.osap.api.http.search import build_search_router
 from src.osap.api.http.sessions import build_sessions_router
@@ -143,6 +144,7 @@ def create_platform_app(
 
     app.include_router(build_search_router(ctx))
     app.include_router(build_composers_router(ctx))
+    app.include_router(build_persons_router(ctx))
     app.include_router(build_works_router(ctx))
     app.include_router(build_sessions_router(ctx))
     app.include_router(build_admin_ops_router(ctx))

@@ -392,6 +392,7 @@ def _composer_summary_dto(d: dict[str, object]) -> ComposerSummaryResponse:
         visible=cast("bool", d.get("visible", True)),
         birth_year=cast("str | None", d.get("birth_year")),
         death_year=cast("str | None", d.get("death_year")),
+        roles=_str_list(d.get("roles")) or [],
     )
 
 
@@ -453,6 +454,7 @@ def _composer_detail_dto(d: dict[str, object]) -> ComposerDetailResponse:
         status=cast("str", d.get("status") or "active"),
         aliases=[str(a) for a in raw_aliases if isinstance(a, str)],
         works_count=cast("int", d.get("works_count") or 0),
+        roles=_str_list(d.get("roles")) or [],
         merged_into=cast("str | None", d.get("merged_into")),
         merged_at=_iso_or_none(d.get("merged_at")),
         creation_evidence=[_composer_evidence_dto(dict(e)) for e in raw_evidence if isinstance(e, dict)],

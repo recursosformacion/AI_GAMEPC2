@@ -33,6 +33,17 @@ class ComposersMixin(PlatformApiCore):
     ) -> dict[str, object]:
         return self.composers().list_composers(q, limit, offset, review)
 
+    def list_persons(
+        self,
+        roles: tuple[str, ...],
+        q: str | None,
+        limit: int,
+        offset: int,
+        review: str | None = None,
+    ) -> dict[str, object]:
+        """Personas por rol (contrato nuevo: `GET /api/v1/persons?role=…`)."""
+        return self.composers().list_persons(roles, q, limit, offset, review)
+
     def index_works_counts(self, person_ids: list[str]) -> dict[str, int]:
         """Recuento real de obras en el índice local (lo que el usuario puede consultar)."""
         for provider in self._container.catalog_manager().providers():

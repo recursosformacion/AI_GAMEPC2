@@ -80,6 +80,10 @@ clave en verde) pero la adaptación funcional completa depende de que storage ex
 
 ## 5. Decisiones abiertas (necesarias antes de la puesta en marcha)
 
+> **Nota (arquitectura de fuentes):** para **CPDL y RISM la búsqueda la hace osap-storage en sus
+> índices independientes** (`cpdl_editions*`, `rism_persons`, `rism_sources`…). osap-api no debe
+> indexarlos ni replicarlos: consume los endpoints de storage. Esto afecta al punto 6.
+
 1. **`works_count`**: ¿obras distintas con `role_id=1`, o total de filas de `works_person_roles`?
    (una obra puede tener varios compositores).
 2. **Ficha de persona**: ¿un único payload (`persons` + biografía + alias + roles) o endpoints
@@ -95,6 +99,20 @@ clave en verde) pero la adaptación funcional completa depende de que storage ex
 7. **Compatibilidad**: ¿se elimina `/api/v1/composers` (404) o se mantiene como alias temporal?
 
 ## 6. Puesta en marcha (cuando storage cierre `person`)
+
+### 6.0 Ya implementado en osap-api (`fork-new-db`)
+- **Endpoints nuevos** (`api/http/persons.py`):
+  - `GET /api/v1/persons?role=composer[,arranger…]` (rol desconocido → 400)
+  - `GET /api/v1/persons/{person_id}`
+  - `GET /api/v1/persons/{person_id}/works`
+- **Mapeo de roles** en `domain/person_roles.py` (tabla `roles` 1..15; parseo y validación).
+- **Cliente de storage** con **puente**: intenta `/persons` y cae a `/composers` si aún no existe
+  (`_call` / `_call_persons_first`), y anota `roles` a partir de `role_ids` cuando storage los envíe.
+- `roles` añadido a `ComposerSummaryResponse`/`ComposerDetailResponse` (aditivo, default `[]`).
+- Tests: `tests/osap/test_person_roles.py`, `tests/osap/test_persons_client.py` (8 en verde).
+
+Verificado en instancia local: `?role=composer` → 200; `?role=pianist` → 400;
+`?role=composer,arranger` → 200; detalle y obras → 200 (con fallback a la v1).
 
 1. Confirmar BD destino en pre y que la migración está cerrada.
 2. Adaptar osap-api en `fork-new-db` con las rutas/roles definitivos.

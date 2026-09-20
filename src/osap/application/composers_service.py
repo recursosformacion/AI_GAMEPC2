@@ -32,6 +32,17 @@ class ComposersService:
     ) -> dict[str, object]:
         return self._client.list_composers(q, limit, offset, review)
 
+    def list_persons(
+        self,
+        roles: tuple[str, ...],
+        q: str | None,
+        limit: int,
+        offset: int,
+        review: str | None = None,
+    ) -> dict[str, object]:
+        """Personas por rol (modelo nuevo `persons`); `/composers` es `role=composer`."""
+        return self._client.list_persons(roles, q, limit, offset, review)
+
     def get_composer(self, person_id: str) -> dict[str, object] | None:
         return self._client.get_composer(person_id)
 

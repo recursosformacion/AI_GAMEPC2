@@ -15,6 +15,8 @@ class ComposerSummaryResponse(_Frozen):
     visible: bool = True
     birth_year: str | None = None
     death_year: str | None = None
+    # Modelo nuevo (`persons` + `works_person_roles`): roles de la persona.
+    roles: list[str] = []
 
 
 class ComposerListResponse(_Frozen):
@@ -60,6 +62,7 @@ class ComposerDetailResponse(_Frozen):
     status: str
     aliases: list[str] = []
     works_count: int = 0
+    roles: list[str] = []
     merged_into: str | None = None
     merged_at: str | None = None
     creation_evidence: list[ComposerCreationEvidenceResponse] = []

@@ -11,7 +11,9 @@ import logging
 import urllib.error
 import urllib.parse
 import urllib.request
+from collections.abc import Iterable
 
+from src.osap.domain.person_roles import role_names
 from src.osap.ports.service_token import IServiceTokenProvider
 
 _LOGGER = logging.getLogger("osap.storage")
@@ -49,23 +51,52 @@ class StorageComposerClient:
     def list_composers(
         self, q: str | None, limit: int, offset: int, review: str | None = None
     ) -> dict[str, object]:
-        query = {"limit": str(limit), "offset": str(offset)}
+        return self.list_persons(("composer",), q, limit, offset, review)
+
+    def list_persons(
+        self,
+        roles: Iterable[str],
+        q: str | None,
+        limit: int,
+        offset: int,
+        review: str | None = None,
+    ) -> dict[str, object]:
+        """Personas por rol (`role=composer,arranger`) con la forma v1 (`items`/`total`).
+
+        En el modelo nuevo la consulta lleva `role`; mientras osap-storage no publique
+        `/api/admin/persons`, se cae a `/api/admin/composers` (que solo conoce compositores).
+        """
+        role_value = ",".join(roles)
+        query = {"role": role_value, "limit": str(limit), "offset": str(offset)}
         if q:
             query["q"] = q
         if review:
             query["review"] = review
-        path = f"/api/admin/composers?{urllib.parse.urlencode(query)}"
-        status, doc = self._call(
-            "GET", path, scope="storage:admin", provider=self._admin_token_provider
+        legacy_query = {k: v for k, v in query.items() if k != "role"}
+        status, doc = self._call_persons_first(
+            "GET",
+            f"/api/admin/persons?{urllib.parse.urlencode(query)}",
+            scope="storage:admin",
+            provider=self._admin_token_provider,
         )
         if 200 <= status < 300 and isinstance(doc, dict):
-            return doc
+            return _with_role_names(doc)
+        # La variante antigua no entiende `role`: se reintenta sin él (solo compositores).
+        status, doc = self._perform(
+            "GET",
+            f"/api/admin/composers?{urllib.parse.urlencode(legacy_query)}",
+            None,
+            "storage:admin",
+            self._admin_token_provider,
+        )
+        if 200 <= status < 300 and isinstance(doc, dict):
+            return _with_role_names(doc)
         return {"items": [], "total": 0}
 
     def get_composer(self, person_id: str) -> dict[str, object] | None:
-        status, doc = self._call(
+        status, doc = self._call_persons_first(
             "GET",
-            f"/api/admin/composers/{_q(person_id)}",
+            f"/api/admin/persons/{_q(person_id)}",
             scope="storage:admin",
             provider=self._admin_token_provider,
         )
@@ -74,10 +105,10 @@ class StorageComposerClient:
         return None
 
     def get_composer_biography(self, person_id: str) -> dict[str, object] | None:
-        """Detalle público de un compositor con su biografía (endpoint público de storage)."""
-        status, doc = self._call(
+        """Detalle público de una persona con su biografía (endpoint público de storage)."""
+        status, doc = self._call_persons_first(
             "GET",
-            f"/api/v1/composers/{_q(person_id)}",
+            f"/api/v1/persons/{_q(person_id)}",
             scope="storage:read",
             provider=self._token_provider,
         )
@@ -86,8 +117,8 @@ class StorageComposerClient:
         return None
 
     def composer_works(self, person_id: str, limit: int, offset: int) -> dict[str, object]:
-        path = f"/api/admin/composers/{_q(person_id)}/works?limit={limit}&offset={offset}"
-        status, doc = self._call(
+        path = f"/api/admin/persons/{_q(person_id)}/works?limit={limit}&offset={offset}"
+        status, doc = self._call_persons_first(
             "GET", path, scope="storage:admin", provider=self._admin_token_provider
         )
         if not 200 <= status < 300 or not isinstance(doc, dict):
@@ -278,6 +309,43 @@ class StorageComposerClient:
         scope: str = "storage:read",
         provider: IServiceTokenProvider | None = None,
     ) -> tuple[int, object]:
+        """Llamada al contrato de storage, con puente al modelo nuevo `persons`.
+
+        Mientras osap-storage no exponga `/persons`, las rutas `/composers` funcionan; cuando
+        las retire, las mismas rutas con `/persons` responden. Se intenta la ruta actual y, si
+        no existe (400/404/405), se reintenta la variante `persons`.
+        """
+        status, doc = self._perform(method, path, payload, scope, provider)
+        if status in (400, 404, 405) and "/composers" in path:
+            alternative = path.replace("/composers", "/persons")
+            if alternative != path:
+                return self._perform(method, alternative, payload, scope, provider)
+        return status, doc
+
+    def _call_persons_first(
+        self,
+        method: str,
+        path: str,
+        payload: dict[str, object] | None = None,
+        scope: str = "storage:read",
+        provider: IServiceTokenProvider | None = None,
+    ) -> tuple[int, object]:
+        """Intenta primero la ruta nueva (`persons`) y cae a la antigua (`composers`)."""
+        status, doc = self._perform(method, path, payload, scope, provider)
+        if status in (400, 404, 405) and "/persons" in path:
+            alternative = path.replace("/persons", "/composers")
+            if alternative != path:
+                return self._perform(method, alternative, payload, scope, provider)
+        return status, doc
+
+    def _perform(
+        self,
+        method: str,
+        path: str,
+        payload: dict[str, object] | None,
+        scope: str,
+        provider: IServiceTokenProvider | None,
+    ) -> tuple[int, object]:
         url = self._base_url + path
         data = json.dumps(payload).encode("utf-8") if payload is not None else None
         headers: dict[str, str] = {
@@ -311,6 +379,30 @@ class StorageComposerClient:
 
 def _q(value: str) -> str:
     return urllib.parse.quote(value)
+
+
+def _with_role_names(doc: dict[str, object]) -> dict[str, object]:
+    """Añade `roles` (nombres) a cada item a partir de `role_ids`/`roles` que dé storage."""
+    result = dict(doc)
+    items = doc.get("items")
+    if not isinstance(items, list):
+        return result
+    annotated: list[object] = []
+    for item in items:
+        if not isinstance(item, dict):
+            annotated.append(item)
+            continue
+        entry = dict(item)
+        existing = entry.get("roles")
+        if isinstance(existing, list) and existing:
+            entry["roles"] = [str(r) for r in existing]
+        else:
+            ids = entry.get("role_ids")
+            entry["roles"] = role_names(ids if isinstance(ids, list) else [])
+        annotated.append(entry)
+    result["items"] = annotated
+    return result
+
 
 
 def _as_int(value: object) -> int:
