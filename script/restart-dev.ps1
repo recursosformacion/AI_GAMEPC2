@@ -17,6 +17,7 @@
 param(
     [switch]$NoElevate,
     [switch]$SkipKill,
+    [switch]$NoWait,
     [int]$TimeoutSeconds = 120
 )
 
@@ -41,6 +42,7 @@ if (-not (Test-Admin) -and -not $NoElevate) {
     Write-Host "Pidiendo permisos de administrador (necesario para matar todos los procesos)..." -ForegroundColor Yellow
     $relaunch = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-NoExit", "-File", "`"$PSCommandPath`"", "-NoElevate")
     if ($SkipKill) { $relaunch += "-SkipKill" }
+    if ($NoWait) { $relaunch += "-NoWait" }
     Start-Process -FilePath "pwsh" -Verb RunAs -ArgumentList $relaunch
     exit 0
 }
@@ -151,6 +153,15 @@ foreach ($service in $services) {
 
 Write-Host "[3/3] Esperando healthchecks..." -ForegroundColor Cyan
 $failed = @($busyNames)
+if ($NoWait) {
+    Write-Host "  (-NoWait: no se espera; comprueba los logs)" -ForegroundColor DarkGray
+    $startedNames = @($started | ForEach-Object { $_.Name })
+    Write-Host ""
+    Write-Host "Arrancados en segundo plano: $($startedNames -join ', ')" -ForegroundColor Cyan
+    Write-Host "Web dev:  http://osap-app" -ForegroundColor Cyan
+    Write-Host "Logs:     $logDir" -ForegroundColor Cyan
+    exit 0
+}
 foreach ($service in $started) {
     $code = Wait-Health $service.Health $TimeoutSeconds
     if ($code) { Write-Host "  OK  $($service.Name) ($code)  $($service.Health)" -ForegroundColor Green }
