@@ -40,7 +40,7 @@ if TYPE_CHECKING:
 
 @dataclass(frozen=True)
 class CanonicalComposer:
-    composer_id: str
+    person_id: str
     display_name: str
     aliases: tuple[str, ...] = field(default_factory=tuple)
 
@@ -127,8 +127,8 @@ class MetadataEnricher:
 
 def _canonical_composer(raw: str) -> CanonicalComposer:
     display = MetadataNormalizer.canonical_composer(raw)
-    composer_id = "c" + re.sub(r"[^a-z0-9]", "", MetadataNormalizer.canonical_composer(raw).lower())
-    return CanonicalComposer(composer_id=composer_id, display_name=display, aliases=(raw,))
+    person_id = "c" + re.sub(r"[^a-z0-9]", "", MetadataNormalizer.canonical_composer(raw).lower())
+    return CanonicalComposer(person_id=person_id, display_name=display, aliases=(raw,))
 
 
 def _genres(candidate: CandidateRepresentation) -> list[str]:

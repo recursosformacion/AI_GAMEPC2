@@ -27,11 +27,11 @@ interface ComposersState {
   fetchWorks: (id: string, limit: number, offset: number) => Promise<void>;
   merge: (targetId: string, sourceIds: string[]) => Promise<void>;
   createComposer: (name: string) => Promise<ComposerSummary>;
-  reviewComposer: (composerId: string, reviewStatus: string) => Promise<void>;
-  addAlias: (composerId: string, alias: string) => Promise<void>;
-  moveAlias: (composerId: string, aliasId: number, targetComposerId: string) => Promise<void>;
-  promoteAlias: (composerId: string, aliasId: number) => Promise<void>;
-  setAttribution: (composerIds: string[], attributionType: string) => Promise<number>;
+  reviewComposer: (personId: string, reviewStatus: string) => Promise<void>;
+  addAlias: (personId: string, alias: string) => Promise<void>;
+  moveAlias: (personId: string, aliasId: number, targetComposerId: string) => Promise<void>;
+  promoteAlias: (personId: string, aliasId: number) => Promise<void>;
+  setAttribution: (personIds: string[], attributionType: string) => Promise<number>;
 }
 
 export const useComposers = create<ComposersState>((set, get) => ({
@@ -99,10 +99,10 @@ export const useComposers = create<ComposersState>((set, get) => ({
   createComposer: async (name) => {
     return apiClient.createComposer(name);
   },
-  reviewComposer: async (composerId, reviewStatus) => {
+  reviewComposer: async (personId, reviewStatus) => {
     set({ loading: true, error: null });
     try {
-      await apiClient.reviewComposer(composerId, reviewStatus);
+      await apiClient.reviewComposer(personId, reviewStatus);
       const { q, limit, offset, review, visible } = get();
       await get().fetchList(q, limit, offset, review, visible);
       set({ loading: false, error: null });
@@ -110,40 +110,40 @@ export const useComposers = create<ComposersState>((set, get) => ({
       set({ loading: false, error: e instanceof ApiError ? e : new ApiError("UNKNOWN", String(e)) });
     }
   },
-  addAlias: async (composerId, alias) => {
+  addAlias: async (personId, alias) => {
     set({ loading: true, error: null });
     try {
-      await apiClient.addAlias(composerId, alias);
-      await get().fetchDetail(composerId);
+      await apiClient.addAlias(personId, alias);
+      await get().fetchDetail(personId);
       set({ loading: false, error: null });
     } catch (e) {
       set({ loading: false, error: e instanceof ApiError ? e : new ApiError("UNKNOWN", String(e)) });
     }
   },
-  moveAlias: async (composerId, aliasId, targetComposerId) => {
+  moveAlias: async (personId, aliasId, targetComposerId) => {
     set({ loading: true, error: null });
     try {
-      await apiClient.moveAlias(composerId, aliasId, targetComposerId);
-      await get().fetchDetail(composerId);
+      await apiClient.moveAlias(personId, aliasId, targetComposerId);
+      await get().fetchDetail(personId);
       set({ loading: false, error: null });
     } catch (e) {
       set({ loading: false, error: e instanceof ApiError ? e : new ApiError("UNKNOWN", String(e)) });
     }
   },
-  promoteAlias: async (composerId, aliasId) => {
+  promoteAlias: async (personId, aliasId) => {
     set({ loading: true, error: null });
     try {
-      await apiClient.promoteAlias(composerId, aliasId);
-      await get().fetchDetail(composerId);
+      await apiClient.promoteAlias(personId, aliasId);
+      await get().fetchDetail(personId);
       set({ loading: false, error: null });
     } catch (e) {
       set({ loading: false, error: e instanceof ApiError ? e : new ApiError("UNKNOWN", String(e)) });
     }
   },
-  setAttribution: async (composerIds, attributionType) => {
+  setAttribution: async (personIds, attributionType) => {
     set({ loading: true, error: null });
     try {
-      const result = await apiClient.setAttribution(composerIds, attributionType);
+      const result = await apiClient.setAttribution(personIds, attributionType);
       const { q, limit, offset, review, visible } = get();
       await get().fetchList(q, limit, offset, review, visible);
       set({ loading: false, error: null });

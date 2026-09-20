@@ -1,7 +1,7 @@
 """Composer identity resolution port (v1).
 
 A `IComposerResolver` turns a `ResolverQuery` (context about a composer/work, never a
-storage `composer_id`) into a list of `ResolverCandidate` with each provider's own
+storage `person_id`) into a list of `ResolverCandidate` with each provider's own
 confidence and evidence. Resolvers never decide: the `ComposerResolutionEngine`
 normalizes centrally, merges candidates by canonical identity and emits the final
 verdict (`resolved | ambiguous | not_found`).
@@ -30,7 +30,7 @@ class ResolverRepresentation:
 
 @dataclass(frozen=True)
 class ResolverQuery:
-    """Context handed to a resolver. Never carries a storage `composer_id`.
+    """Context handed to a resolver. Never carries a storage `person_id`.
 
     `composer` is optional: the primary signal is the work. When present, the caller's
     composer name is only secondary evidence (it may be corrupt/mojibake), never a

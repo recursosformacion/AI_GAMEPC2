@@ -76,8 +76,8 @@ export function AdminComposersPage() {
     });
   };
 
-  const onReviewStatus = (composerId: string, status: string) => {
-    void reviewComposer(composerId, status);
+  const onReviewStatus = (personId: string, status: string) => {
+    void reviewComposer(personId, status);
   };
 
   const onMergeSelected = () => {

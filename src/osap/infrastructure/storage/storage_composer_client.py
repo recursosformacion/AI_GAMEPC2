@@ -62,10 +62,10 @@ class StorageComposerClient:
             return doc
         return {"items": [], "total": 0}
 
-    def get_composer(self, composer_id: str) -> dict[str, object] | None:
+    def get_composer(self, person_id: str) -> dict[str, object] | None:
         status, doc = self._call(
             "GET",
-            f"/api/admin/composers/{_q(composer_id)}",
+            f"/api/admin/composers/{_q(person_id)}",
             scope="storage:admin",
             provider=self._admin_token_provider,
         )
@@ -73,11 +73,11 @@ class StorageComposerClient:
             return doc
         return None
 
-    def get_composer_biography(self, composer_id: str) -> dict[str, object] | None:
+    def get_composer_biography(self, person_id: str) -> dict[str, object] | None:
         """Detalle público de un compositor con su biografía (endpoint público de storage)."""
         status, doc = self._call(
             "GET",
-            f"/api/v1/composers/{_q(composer_id)}",
+            f"/api/v1/composers/{_q(person_id)}",
             scope="storage:read",
             provider=self._token_provider,
         )
@@ -85,8 +85,8 @@ class StorageComposerClient:
             return doc
         return None
 
-    def composer_works(self, composer_id: str, limit: int, offset: int) -> dict[str, object]:
-        path = f"/api/admin/composers/{_q(composer_id)}/works?limit={limit}&offset={offset}"
+    def composer_works(self, person_id: str, limit: int, offset: int) -> dict[str, object]:
+        path = f"/api/admin/composers/{_q(person_id)}/works?limit={limit}&offset={offset}"
         status, doc = self._call(
             "GET", path, scope="storage:admin", provider=self._admin_token_provider
         )
@@ -144,11 +144,11 @@ class StorageComposerClient:
             return doc
         return None
 
-    def review_composer(self, composer_id: str, review_status: str) -> tuple[int, dict[str, object]]:
+    def review_composer(self, person_id: str, review_status: str) -> tuple[int, dict[str, object]]:
         payload: dict[str, object] = {"review_status": review_status}
         status, doc = self._call(
             "POST",
-            f"/api/admin/composers/{_q(composer_id)}/review",
+            f"/api/admin/composers/{_q(person_id)}/review",
             payload=payload,
             scope="storage:admin",
             provider=self._admin_token_provider,
@@ -180,20 +180,20 @@ class StorageComposerClient:
             return {str(k): _as_int(v) for k, v in doc.items()}
         return {"archives": 0, "entries": 0, "files": 0, "bytes": 0}
 
-    def add_alias(self, composer_id: str, alias: str) -> dict[str, object] | None:
+    def add_alias(self, person_id: str, alias: str) -> dict[str, object] | None:
         status, doc = self._call(
             "POST",
-            f"/api/admin/composers/{_q(composer_id)}/aliases",
+            f"/api/admin/composers/{_q(person_id)}/aliases",
             payload={"alias": alias},
             scope="storage:admin",
             provider=self._admin_token_provider,
         )
         return doc if 200 <= status < 300 and isinstance(doc, dict) else None
 
-    def list_aliases(self, composer_id: str) -> list[dict[str, object]]:
+    def list_aliases(self, person_id: str) -> list[dict[str, object]]:
         status, doc = self._call(
             "GET",
-            f"/api/admin/composers/{_q(composer_id)}/aliases",
+            f"/api/admin/composers/{_q(person_id)}/aliases",
             scope="storage:admin",
             provider=self._admin_token_provider,
         )
@@ -202,32 +202,32 @@ class StorageComposerClient:
         return []
 
     def move_alias(
-        self, alias_id: int, from_composer_id: str, target_composer_id: str
+        self, alias_id: int, from_person_id: str, target_person_id: str
     ) -> dict[str, object] | None:
         status, doc = self._call(
             "POST",
-            f"/api/admin/composers/{_q(from_composer_id)}/aliases/{alias_id}/move",
-            payload={"from_composer_id": from_composer_id, "target_composer_id": target_composer_id},
+            f"/api/admin/composers/{_q(from_person_id)}/aliases/{alias_id}/move",
+            payload={"from_person_id": from_person_id, "target_person_id": target_person_id},
             scope="storage:admin",
             provider=self._admin_token_provider,
         )
         return doc if 200 <= status < 300 and isinstance(doc, dict) else None
 
-    def promote_alias(self, composer_id: str, alias_id: int) -> dict[str, object] | None:
+    def promote_alias(self, person_id: str, alias_id: int) -> dict[str, object] | None:
         status, doc = self._call(
             "POST",
-            f"/api/admin/composers/{_q(composer_id)}/aliases/{alias_id}/promote",
+            f"/api/admin/composers/{_q(person_id)}/aliases/{alias_id}/promote",
             payload={},
             scope="storage:admin",
             provider=self._admin_token_provider,
         )
         return doc if 200 <= status < 300 and isinstance(doc, dict) else None
 
-    def set_attribution(self, composer_ids: list[str], attribution_type: str) -> dict[str, object] | None:
+    def set_attribution(self, person_ids: list[str], attribution_type: str) -> dict[str, object] | None:
         status, doc = self._call(
             "POST",
             "/api/admin/composers/set-attribution",
-            payload={"composer_ids": composer_ids, "attribution_type": attribution_type},
+            payload={"person_ids": person_ids, "attribution_type": attribution_type},
             scope="storage:admin",
             provider=self._admin_token_provider,
         )

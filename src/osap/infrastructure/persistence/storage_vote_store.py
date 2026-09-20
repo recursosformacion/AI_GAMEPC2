@@ -67,20 +67,20 @@ class StorageVoteStore(IVoteStore):
             raise StorageUnavailableError(f"Storage statistics unavailable (HTTP {status})")
         return _work_stats(work_id, doc)
 
-    def composer_statistics(self, composer_id: str) -> ComposerStats | None:
-        status, doc = self._call("GET", f"/api/v1/composers/{_q(composer_id)}/statistics", scope="storage:read")
+    def composer_statistics(self, person_id: str) -> ComposerStats | None:
+        status, doc = self._call("GET", f"/api/v1/composers/{_q(person_id)}/statistics", scope="storage:read")
         if status == 404:
             raise WorkNotFoundError("Composer not found")
         if not 200 <= status < 300 or not isinstance(doc, dict):
             raise StorageUnavailableError(f"Storage statistics unavailable (HTTP {status})")
-        return _composer_stats(composer_id, doc)
+        return _composer_stats(person_id, doc)
 
     def anonymize_user(self, user_id: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
         status, doc = self._call("POST", "/api/v1/votes/anonymize", {"user_id": user_id}, scope="storage:write")
         if not 200 <= status < 300 or not isinstance(doc, dict):
             return (), ()
         works = doc.get("work_ids") or []
-        composers = doc.get("composer_ids") or []
+        composers = doc.get("person_ids") or []
         return tuple(str(w) for w in works), tuple(str(c) for c in composers)
 
     def total_votes(self) -> int:
@@ -102,7 +102,7 @@ class StorageVoteStore(IVoteStore):
         out: list[ComposerStats] = []
         for item in doc if isinstance(doc, list) else []:
             if isinstance(item, dict):
-                out.append(_composer_stats(_as_str(item.get("composer_id")), item))
+                out.append(_composer_stats(_as_str(item.get("person_id")), item))
         return out
 
     def last_execution(self) -> dict[str, object] | None:
@@ -199,9 +199,9 @@ def _work_stats(work_id: str, doc: dict[str, object]) -> WorkStats:
     )
 
 
-def _composer_stats(composer_id: str, doc: dict[str, object]) -> ComposerStats:
+def _composer_stats(person_id: str, doc: dict[str, object]) -> ComposerStats:
     return ComposerStats(
-        composer_id=composer_id,
+        person_id=person_id,
         vote_count=_as_int(doc.get("vote_count")),
         rating=_as_float(doc.get("rating")),
         adjusted_rating=_as_float(doc.get("adjusted_rating")),

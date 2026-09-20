@@ -17,7 +17,7 @@ describe("admin overview", () => {
     const payload = {
       total_votes: 1523,
       top_works: [{ work_id: "2", vote_count: 37, rating: 4.32, work_count: 1 }],
-      top_composers: [{ composer_id: "comp", vote_count: 1523, rating: 4.41, work_count: 264 }],
+      top_composers: [{ person_id: "comp", vote_count: 1523, rating: 4.41, work_count: 264 }],
       last_execution: { kind: "recompute", status: "ok", started_at: "x", finished_at: "y" },
     };
     globalThis.fetch = vi.fn(async () => ok(payload)) as unknown as typeof fetch;

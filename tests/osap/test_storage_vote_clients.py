@@ -33,18 +33,18 @@ def test_storage_work_store_parses_nested_composer_id() -> None:
 
     def fake_urlopen(request: urllib.request.Request, timeout: int = 15) -> _FakeResponse:  # noqa: ARG001
         captured.append(request)
-        return _FakeResponse(json.dumps({"work": {"id": 2, "composer_id": "a1e069ce-abc"}, "resources": []}).encode())
+        return _FakeResponse(json.dumps({"work": {"id": 2, "person_id": "a1e069ce-abc"}, "resources": []}).encode())
 
     original = urllib.request.urlopen
     urllib.request.urlopen = fake_urlopen  # type: ignore[assignment]
     try:
         store = StorageWorkStore(base_url="http://127.0.0.1:1")
-        composer_id = store.composer_id_for("2")
+        person_id = store.composer_id_for("2")
     finally:
         urllib.request.urlopen = original  # type: ignore[assignment]
 
     assert captured[0].full_url.endswith("/api/v1/works/2")
-    assert composer_id == "a1e069ce-abc"
+    assert person_id == "a1e069ce-abc"
 
 
 def test_storage_vote_store_posts_to_works_votes_url() -> None:

@@ -66,7 +66,7 @@ def build_composers_router(ctx: HttpContext) -> APIRouter:
         return ctx.ok(_shared._composer_list_dto(data))
 
     @router.get(
-        "/api/v1/composers/{composer_id}",
+        "/api/v1/composers/{person_id}",
         tags=["Composers"],
         summary="Composer detail",
         description="Detalle de un compositor. Backend: osap-storage con storage:read.",
@@ -77,9 +77,9 @@ def build_composers_router(ctx: HttpContext) -> APIRouter:
             **_shared._standard_errors(),
         },
     )
-    def get_composer(composer_id: str, response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
+    def get_composer(person_id: str, response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            detail = ctx.api.get_composer(composer_id)
+            detail = ctx.api.get_composer(person_id)
         except StorageComposerError:
             return ctx.fail(503, response, "SERVICE_UNAVAILABLE", "Composer service is not configured")
         # La consulta pública solo expone compositores visibles del Maestro.
@@ -91,7 +91,7 @@ def build_composers_router(ctx: HttpContext) -> APIRouter:
         return ctx.ok(_shared._composer_detail_dto(detail))
 
     @router.get(
-        "/api/v1/composers/{composer_id}/biography",
+        "/api/v1/composers/{person_id}/biography",
         tags=["Composers"],
         summary="Composer biography",
         description="Detalle de un compositor con su biografía (resumen, época, nacionalidad, "
@@ -104,9 +104,9 @@ def build_composers_router(ctx: HttpContext) -> APIRouter:
             **_shared._standard_errors(),
         },
     )
-    def get_composer_biography(composer_id: str, response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
+    def get_composer_biography(person_id: str, response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            detail = ctx.api.get_composer_biography(composer_id)
+            detail = ctx.api.get_composer_biography(person_id)
         except StorageComposerError:
             return ctx.fail(503, response, "SERVICE_UNAVAILABLE", "Composer service is not configured")
         if detail is None or not bool(detail.get("visible", True)):
@@ -139,7 +139,7 @@ def build_composers_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(503, response, "SERVICE_UNAVAILABLE", "Storage service is not configured")
 
     @router.get(
-        "/api/v1/composers/{composer_id}/works",
+        "/api/v1/composers/{person_id}/works",
         tags=["Composers"],
         summary="Composer works",
         description="Obras de un compositor. Backend: osap-storage con storage:read.",
@@ -152,15 +152,15 @@ def build_composers_router(ctx: HttpContext) -> APIRouter:
     )
     def composer_works(
         response: Response,
-        composer_id: str,
+        person_id: str,
         limit: int = Query(50, ge=1, le=500),
         offset: int = Query(0, ge=0),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            detail = ctx.api.get_composer(composer_id)
+            detail = ctx.api.get_composer(person_id)
             if detail is None or not bool(detail.get("visible", True)):
                 return ctx.fail(404, response, "NOT_FOUND", "Composer not found")
-            return ctx.ok(_shared._composer_works_dto(ctx.api.composer_works(composer_id, limit, offset)))
+            return ctx.ok(_shared._composer_works_dto(ctx.api.composer_works(person_id, limit, offset)))
         except StorageComposerError:
             return ctx.fail(503, response, "SERVICE_UNAVAILABLE", "Composer service is not configured")
 
@@ -172,7 +172,7 @@ def build_composers_router(ctx: HttpContext) -> APIRouter:
         description="Resuelve la identidad de un compositor a partir del contexto (nombre + obra "
         "opcional + fuente + representaciones). No modifica nada en storage: devuelve un veredicto "
         "`resolved | ambiguous | not_found` con confianza, evidencia y candidatos. Nunca inventa "
-        "un compositor. No se envía ni devuelve `composer_id`.",
+        "un compositor. No se envía ni devuelve `person_id`.",
         response_model=SuccessEnvelope[ComposerResolveResponse] | ErrorEnvelope,
         responses={
             200: _shared._resp(

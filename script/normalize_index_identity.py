@@ -86,14 +86,14 @@ def main() -> int:
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, title, composer_name, composer_id, catalogue FROM index_works"
+                "SELECT id, title, composer_name, person_id, catalogue FROM index_works"
             )
             raw = list(cur.fetchall())
 
         rows: list[dict[str, object]] = []
         for row in raw:
             composer = iw.composer_key(str(row["composer_name"] or "")) or str(
-                row["composer_id"] or ""
+                row["person_id"] or ""
             ).strip()
             rows.append(
                 {

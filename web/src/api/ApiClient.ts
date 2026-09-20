@@ -121,21 +121,21 @@ export class ApiClient {
     return this.get<ComposerList>(`/composers?${params.toString()}`);
   }
 
-  async getComposer(composerId: string): Promise<ComposerDetail> {
-    return this.get<ComposerDetail>(`/composers/${encodeURIComponent(composerId)}`);
+  async getComposer(personId: string): Promise<ComposerDetail> {
+    return this.get<ComposerDetail>(`/composers/${encodeURIComponent(personId)}`);
   }
 
-  async getComposerBiography(composerId: string): Promise<ComposerDetail> {
-    return this.get<ComposerDetail>(`/composers/${encodeURIComponent(composerId)}/biography`);
+  async getComposerBiography(personId: string): Promise<ComposerDetail> {
+    return this.get<ComposerDetail>(`/composers/${encodeURIComponent(personId)}/biography`);
   }
 
   async getWork(workId: string): Promise<WorkDetail> {
     return this.get<WorkDetail>(`/works/${encodeURIComponent(workId)}`);
   }
 
-  async getComposerWorks(composerId: string, limit: number, offset: number): Promise<ComposerWorks> {
+  async getComposerWorks(personId: string, limit: number, offset: number): Promise<ComposerWorks> {
     const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
-    return this.get<ComposerWorks>(`/composers/${encodeURIComponent(composerId)}/works?${params.toString()}`);
+    return this.get<ComposerWorks>(`/composers/${encodeURIComponent(personId)}/works?${params.toString()}`);
   }
 
   async createResolutionSession(req: ResolutionSessionCreateRequest): Promise<ResolutionSession> {
@@ -167,37 +167,37 @@ export class ApiClient {
     return this.post<ComposerSummary>("/admin/composers", { name });
   }
 
-  async reviewComposer(composerId: string, reviewStatus: string): Promise<ComposerDetail> {
-    return this.post<ComposerDetail>(`/admin/composers/${encodeURIComponent(composerId)}/review`, {
+  async reviewComposer(personId: string, reviewStatus: string): Promise<ComposerDetail> {
+    return this.post<ComposerDetail>(`/admin/composers/${encodeURIComponent(personId)}/review`, {
       review_status: reviewStatus,
     });
   }
 
-  async addAlias(composerId: string, alias: string): Promise<Alias> {
-    return this.post<Alias>(`/admin/composers/${encodeURIComponent(composerId)}/aliases`, { alias });
+  async addAlias(personId: string, alias: string): Promise<Alias> {
+    return this.post<Alias>(`/admin/composers/${encodeURIComponent(personId)}/aliases`, { alias });
   }
 
-  async listAliases(composerId: string): Promise<Alias[]> {
-    return this.get<Alias[]>(`/admin/composers/${encodeURIComponent(composerId)}/aliases`);
+  async listAliases(personId: string): Promise<Alias[]> {
+    return this.get<Alias[]>(`/admin/composers/${encodeURIComponent(personId)}/aliases`);
   }
 
-  async moveAlias(composerId: string, aliasId: number, targetComposerId: string): Promise<MoveAliasResult> {
+  async moveAlias(personId: string, aliasId: number, targetComposerId: string): Promise<MoveAliasResult> {
     return this.post<MoveAliasResult>(
-      `/admin/composers/${encodeURIComponent(composerId)}/aliases/${aliasId}/move`,
-      { from_composer_id: composerId, target_composer_id: targetComposerId },
+      `/admin/composers/${encodeURIComponent(personId)}/aliases/${aliasId}/move`,
+      { from_person_id: personId, target_person_id: targetComposerId },
     );
   }
 
-  async promoteAlias(composerId: string, aliasId: number): Promise<PromoteAliasResult> {
+  async promoteAlias(personId: string, aliasId: number): Promise<PromoteAliasResult> {
     return this.post<PromoteAliasResult>(
-      `/admin/composers/${encodeURIComponent(composerId)}/aliases/${aliasId}/promote`,
+      `/admin/composers/${encodeURIComponent(personId)}/aliases/${aliasId}/promote`,
       {},
     );
   }
 
-  async setAttribution(composerIds: string[], attributionType: string): Promise<SetAttributionResult> {
+  async setAttribution(personIds: string[], attributionType: string): Promise<SetAttributionResult> {
     return this.post<SetAttributionResult>("/admin/composers/set-attribution", {
-      composer_ids: composerIds,
+      person_ids: personIds,
       attribution_type: attributionType,
     });
   }
@@ -303,8 +303,8 @@ export class ApiClient {
     return this.get<WorkStatistics>(`/works/${encodeURIComponent(workId)}/statistics`);
   }
 
-  async getComposerStatistics(composerId: string): Promise<ComposerStatistics> {
-    return this.get<ComposerStatistics>(`/composers/${encodeURIComponent(composerId)}/statistics`);
+  async getComposerStatistics(personId: string): Promise<ComposerStatistics> {
+    return this.get<ComposerStatistics>(`/composers/${encodeURIComponent(personId)}/statistics`);
   }
 
   async getVotesOverview(): Promise<VotesOverview> {

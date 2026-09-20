@@ -32,14 +32,14 @@ class ComposersService:
     ) -> dict[str, object]:
         return self._client.list_composers(q, limit, offset, review)
 
-    def get_composer(self, composer_id: str) -> dict[str, object] | None:
-        return self._client.get_composer(composer_id)
+    def get_composer(self, person_id: str) -> dict[str, object] | None:
+        return self._client.get_composer(person_id)
 
-    def get_composer_biography(self, composer_id: str) -> dict[str, object] | None:
-        return self._client.get_composer_biography(composer_id)
+    def get_composer_biography(self, person_id: str) -> dict[str, object] | None:
+        return self._client.get_composer_biography(person_id)
 
-    def composer_works(self, composer_id: str, limit: int, offset: int) -> dict[str, object]:
-        return self._client.composer_works(composer_id, limit, offset)
+    def composer_works(self, person_id: str, limit: int, offset: int) -> dict[str, object]:
+        return self._client.composer_works(person_id, limit, offset)
 
     def get_work(self, work_id: str) -> dict[str, object] | None:
         return self._client.get_work(work_id)
@@ -64,50 +64,50 @@ class ComposersService:
             raise ForbiddenError("Storage rejected composer creation")
         return doc
 
-    def review_composer(self, token: str | None, composer_id: str, review_status: str) -> dict[str, object]:
+    def review_composer(self, token: str | None, person_id: str, review_status: str) -> dict[str, object]:
         self.require_admin(token)
         self._ensure_writable()
-        status, doc = self._client.review_composer(composer_id, review_status)
+        status, doc = self._client.review_composer(person_id, review_status)
         if not 200 <= status < 300:
             if status == 404:
                 raise WorkNotFoundError("Composer not found")
             raise ForbiddenError(f"Storage rejected review (HTTP {status})")
         return doc
 
-    def add_alias(self, token: str | None, composer_id: str, alias: str) -> dict[str, object]:
+    def add_alias(self, token: str | None, person_id: str, alias: str) -> dict[str, object]:
         self.require_admin(token)
         self._ensure_writable()
-        doc = self._client.add_alias(composer_id, alias)
+        doc = self._client.add_alias(person_id, alias)
         if doc is None:
             raise ForbiddenError("Storage rejected alias creation")
         return doc
 
-    def list_aliases(self, token: str | None, composer_id: str) -> list[dict[str, object]]:
+    def list_aliases(self, token: str | None, person_id: str) -> list[dict[str, object]]:
         self.require_admin(token)
-        return self._client.list_aliases(composer_id)
+        return self._client.list_aliases(person_id)
 
     def move_alias(
-        self, token: str | None, alias_id: int, from_composer_id: str, target_composer_id: str
+        self, token: str | None, alias_id: int, from_person_id: str, target_person_id: str
     ) -> dict[str, object]:
         self.require_admin(token)
         self._ensure_writable()
-        doc = self._client.move_alias(alias_id, from_composer_id, target_composer_id)
+        doc = self._client.move_alias(alias_id, from_person_id, target_person_id)
         if doc is None:
             raise ForbiddenError("Storage rejected alias move")
         return doc
 
-    def promote_alias(self, token: str | None, composer_id: str, alias_id: int) -> dict[str, object]:
+    def promote_alias(self, token: str | None, person_id: str, alias_id: int) -> dict[str, object]:
         self.require_admin(token)
         self._ensure_writable()
-        doc = self._client.promote_alias(composer_id, alias_id)
+        doc = self._client.promote_alias(person_id, alias_id)
         if doc is None:
             raise ForbiddenError("Storage rejected alias promote")
         return doc
 
-    def set_attribution(self, token: str | None, composer_ids: list[str], attribution_type: str) -> dict[str, object]:
+    def set_attribution(self, token: str | None, person_ids: list[str], attribution_type: str) -> dict[str, object]:
         self.require_admin(token)
         self._ensure_writable()
-        doc = self._client.set_attribution(composer_ids, attribution_type)
+        doc = self._client.set_attribution(person_ids, attribution_type)
         if doc is None:
             raise ForbiddenError("Storage rejected set-attribution")
         return doc

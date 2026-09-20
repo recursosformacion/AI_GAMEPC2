@@ -3,8 +3,8 @@
 
 Lee obras de varios proveedores y puebla el índice local
 (`index_works` + `index_representations` en la BD de osap-api), normalizando títulos
-(`title_key`) y compositores (canonical + `composer_id` del Maestro) y deduplicando por
-(`title_key`, `composer_id`). La normalización es determinista: el índice GUARDA el
+(`title_key`) y compositores (canonical + `person_id` del Maestro) y deduplicando por
+(`title_key`, `person_id`). La normalización es determinista: el índice GUARDA el
 resultado, no lo recalcula por búsqueda.
 
 Proveedores (selección con `--providers`):
@@ -253,7 +253,7 @@ def _resolve_composer_id(
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT c.id FROM composers c "
-                "LEFT JOIN composer_aliases a ON a.composer_id=c.id "
+                "LEFT JOIN composer_aliases a ON a.person_id=c.id "
                 "WHERE c.status != 'merged' AND (c.name=%s OR a.normalized_alias=%s) "
                 "LIMIT 1",
                 (composer_name, key),
@@ -285,7 +285,7 @@ def _iter_omr(omr: pymysql.Connection, from_id: int, limit: int, storage_base: s
         take = batch if limit <= 0 else min(batch, limit - emitted)
         with omr.cursor() as cur:
             cur.execute(
-                "SELECT id, title, composer, composer_id, catalogue, year, "
+                "SELECT id, title, composer, person_id, catalogue, year, "
                 "instrumentation, relative_path, genre, genre_id "
                 "FROM works WHERE id > %s ORDER BY id LIMIT %s",
                 (last_id, take),
@@ -313,7 +313,7 @@ def _iter_omr(omr: pymysql.Connection, from_id: int, limit: int, storage_base: s
             yield {
                 "title": title,
                 "composer": w.get("composer"),
-                "composer_id": w.get("composer_id"),
+                "person_id": w.get("person_id"),
                 "catalogue": w.get("catalogue"),
                 "year": w.get("year"),
                 "instrumentation": w.get("instrumentation"),
@@ -363,7 +363,7 @@ def _iter_imslp(start: int, limit: int, verify_ssl: bool = True):
             yield {
                 "title": title,
                 "composer": composer,
-                "composer_id": None,
+                "person_id": None,
                 "catalogue": iv.get("icatno") or None,
                 "year": None,
                 "instrumentation": None,
@@ -418,7 +418,7 @@ def _iter_mutopia(start_at: int, limit: int):
                 yield {
                     "title": str(w.get("title") or ""),
                     "composer": w.get("composer"),
-                    "composer_id": None,
+                    "person_id": None,
                     "catalogue": None,
                     "year": None,
                     "instrumentation": None,
@@ -525,7 +525,7 @@ def _iter_musicbrainz(dump_dir: str, art_only: bool, limit: int):
         yield {
             "title": name,
             "composer": composers,
-            "composer_id": None,
+            "person_id": None,
             "catalogue": None,
             "year": None,
             "instrumentation": None,
@@ -559,9 +559,9 @@ def _ingest(
     )
     if composer_name:
         composer_name = composer_name[:255]
-    composer_id = work.get("composer_id")
-    if not composer_id and composer_name and maestro is not None:
-        composer_id = _resolve_composer_id(maestro, composer_name, resolver_cache)
+    person_id = work.get("person_id")
+    if not person_id and composer_name and maestro is not None:
+        person_id = _resolve_composer_id(maestro, composer_name, resolver_cache)
 
     tk = title_key(title)[:255]
     catalogue_raw = work.get("catalogue")
@@ -587,11 +587,11 @@ def _ingest(
                     "AND catalogue IS NOT NULL ORDER BY id LIMIT 200",
                     (composer_name,),
                 )
-            elif composer_id:
+            elif person_id:
                 cur.execute(
-                    "SELECT id, title, catalogue FROM index_works WHERE composer_id=%s "
+                    "SELECT id, title, catalogue FROM index_works WHERE person_id=%s "
                     "AND catalogue IS NOT NULL ORDER BY id LIMIT 200",
-                    (composer_id,),
+                    (person_id,),
                 )
             else:
                 cur.execute("SELECT id, title, catalogue FROM index_works WHERE 1=0")
@@ -605,7 +605,7 @@ def _ingest(
         if row is None:
             # Anclaje por título: obra sin catálogo que es la misma que una ya identificada
             # (mismo compositor y palabras significativas contenidas).
-            if composer_id or composer_name:
+            if person_id or composer_name:
                 if composer_name:
                     cur.execute(
                         "SELECT id, title FROM index_works WHERE composer_name=%s "
@@ -614,9 +614,9 @@ def _ingest(
                     )
                 else:
                     cur.execute(
-                        "SELECT id, title FROM index_works WHERE composer_id=%s "
+                        "SELECT id, title FROM index_works WHERE person_id=%s "
                         "AND catalogue IS NOT NULL AND catalogue <> '' ORDER BY id LIMIT 500",
-                        (composer_id,),
+                        (person_id,),
                     )
                 for anchor in cur.fetchall():
                     if _tokens_subset(title, str(anchor.get("title") or "")):
@@ -628,23 +628,23 @@ def _ingest(
                     "SELECT id, title FROM index_works WHERE title_key=%s AND composer_name=%s",
                     (tk, composer_name),
                 )
-            elif composer_id:
+            elif person_id:
                 cur.execute(
-                    "SELECT id, title FROM index_works WHERE title_key=%s AND composer_id=%s",
-                    (tk, composer_id),
+                    "SELECT id, title FROM index_works WHERE title_key=%s AND person_id=%s",
+                    (tk, person_id),
                 )
             else:
                 cur.execute(
-                    "SELECT id, title FROM index_works WHERE title_key=%s AND composer_id IS NULL",
+                    "SELECT id, title FROM index_works WHERE title_key=%s AND person_id IS NULL",
                     (tk,),
                 )
             row = cur.fetchone()
         if row is None:
             cur.execute(
-                "INSERT INTO index_works (title, title_key, composer_name, composer_id, "
+                "INSERT INTO index_works (title, title_key, composer_name, person_id, "
                 "catalogue, catalogue_key, year, instrumentation, genre_id, source_count, updated_at) "
                 "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,1,NOW())",
-                (title[:1024], tk, composer_name, composer_id,
+                (title[:1024], tk, composer_name, person_id,
                  catalogue_raw, cat_key, year_int,
                  (work.get("instrumentation") or None),
                  (int(work["genre_id"]) if work.get("genre_id") is not None else None)),

@@ -359,7 +359,7 @@ _WORK_STATS_200 = _resp(
 
 _COMPOSER_STATS_200 = _resp(
     "Composer statistics",
-    _example({"composer_id": "mozart", "vote_count": 1523, "vote_average": 4.41}),
+    _example({"person_id": "mozart", "vote_count": 1523, "vote_average": 4.41}),
 )
 
 
@@ -374,7 +374,7 @@ def _work_stats_dto(d: dict[str, object]) -> WorkStatisticsResponse:
 
 def _composer_stats_dto(d: dict[str, object]) -> ComposerStatisticsResponse:
     return ComposerStatisticsResponse(
-        composer_id=cast("str", d["composer_id"]),
+        person_id=cast("str", d["person_id"]),
         rating=cast("float | None", d.get("rating")),
         vote_count=cast("int", d["vote_count"]),
         work_count=cast("int", d.get("work_count") or 0),
@@ -409,7 +409,7 @@ def _composer_list_dto(d: dict[str, object]) -> ComposerListResponse:
 
 def _composer_identifier_dto(d: dict[str, object]) -> ComposerIdentifierResponse:
     return ComposerIdentifierResponse(
-        composer_id=cast("str", d.get("composer_id") or ""),
+        person_id=cast("str", d.get("person_id") or ""),
         id_type=cast("str", d.get("id_type") or ""),
         id_value=cast("str", d.get("id_value") or ""),
         is_identity_anchor=cast("bool", d.get("is_identity_anchor", False)),
@@ -421,7 +421,7 @@ def _composer_identifier_dto(d: dict[str, object]) -> ComposerIdentifierResponse
 
 def _composer_build_evidence_dto(d: dict[str, object]) -> ComposerEvidenceResponse:
     return ComposerEvidenceResponse(
-        composer_id=cast("str", d.get("composer_id") or ""),
+        person_id=cast("str", d.get("person_id") or ""),
         rule=cast("str", d.get("rule") or ""),
         decision=cast("str", d.get("decision") or ""),
         reason=cast("str", d.get("reason") or ""),
@@ -480,7 +480,7 @@ def _composer_detail_dto(d: dict[str, object]) -> ComposerDetailResponse:
 
 def _composer_evidence_dto(d: dict[str, object]) -> ComposerCreationEvidenceResponse:
     return ComposerCreationEvidenceResponse(
-        composer_id=cast("str", d.get("composer_id") or ""),
+        person_id=cast("str", d.get("person_id") or ""),
         extracted_author=cast("str | None", d.get("extracted_author")),
         work_id=cast("int | None", d.get("work_id")),
         work_title=cast("str | None", d.get("work_title")),
@@ -502,7 +502,7 @@ def _composer_work_ref(d: dict[str, object]) -> ComposerWorkRefResponse:
     return ComposerWorkRefResponse(
         work_id=cast("int", d.get("work_id") or 0),
         title=cast("str | None", d.get("title")),
-        composer_id=cast("str | None", d.get("composer_id")),
+        person_id=cast("str | None", d.get("person_id")),
         tags=cast("str | None", d.get("tags")),
     )
 

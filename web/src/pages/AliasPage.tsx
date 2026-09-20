@@ -16,7 +16,7 @@ export function AliasPage() {
   const [aliasesByComposer, setAliasesByComposer] = useState<Record<string, Alias[]>>({});
   const [newAlias, setNewAlias] = useState<Record<string, string>>({});
   const [moveTarget, setMoveTarget] = useState<ComposerSummary | null>(null);
-  const [moveFor, setMoveFor] = useState<{ composerId: string; aliasId: number } | null>(null);
+  const [moveFor, setMoveFor] = useState<{ personId: string; aliasId: number } | null>(null);
 
   useEffect(() => {
     void fetchList(q, 30, 0, null, "all");
@@ -41,20 +41,20 @@ export function AliasPage() {
     setQuery(input);
   };
 
-  const onAdd = (composerId: string) => {
-    const alias = (newAlias[composerId] ?? "").trim();
+  const onAdd = (personId: string) => {
+    const alias = (newAlias[personId] ?? "").trim();
     if (!alias) return;
-    void addAlias(composerId, alias).then(() => {
-      setNewAlias((prev) => ({ ...prev, [composerId]: "" }));
-      apiClient.listAliases(composerId).then((a) => setAliasesByComposer((p) => ({ ...p, [composerId]: a })));
+    void addAlias(personId, alias).then(() => {
+      setNewAlias((prev) => ({ ...prev, [personId]: "" }));
+      apiClient.listAliases(personId).then((a) => setAliasesByComposer((p) => ({ ...p, [personId]: a })));
     });
   };
 
   const onMoveConfirm = () => {
     if (!moveFor || !moveTarget) return;
-    void moveAlias(moveFor.composerId, moveFor.aliasId, moveTarget.id).then(() => {
-      apiClient.listAliases(moveFor.composerId).then((a) =>
-        setAliasesByComposer((p) => ({ ...p, [moveFor.composerId]: a })),
+    void moveAlias(moveFor.personId, moveFor.aliasId, moveTarget.id).then(() => {
+      apiClient.listAliases(moveFor.personId).then((a) =>
+        setAliasesByComposer((p) => ({ ...p, [moveFor.personId]: a })),
       );
       setMoveFor(null);
       setMoveTarget(null);
@@ -93,7 +93,7 @@ export function AliasPage() {
                         <button
                           title={t("aliases.move")}
                           onClick={() => {
-                            setMoveFor({ composerId: c.id, aliasId: a.id });
+                            setMoveFor({ personId: c.id, aliasId: a.id });
                             setMoveTarget(null);
                           }}
                           className="text-osap-muted hover:text-osap-accent"
@@ -121,7 +121,7 @@ export function AliasPage() {
                       </button>
                     </span>
                   </div>
-                  {moveFor && moveFor.composerId === c.id && (
+                  {moveFor && moveFor.personId === c.id && (
                     <div className="mt-2 flex flex-wrap items-end gap-2 rounded border border-osap-accent bg-osap-accent-soft p-2">
                       <div className="flex-1">
                         <p className="mb-1 text-xs text-osap-muted">{t("aliases.moveTarget")}</p>

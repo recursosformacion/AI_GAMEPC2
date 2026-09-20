@@ -313,7 +313,7 @@ export interface ComposerList {
 }
 
 export interface ComposerCreationEvidence {
-  composer_id: string;
+  person_id: string;
   extracted_author: string | null;
   work_id: number | null;
   work_title: string | null;
@@ -350,7 +350,7 @@ export interface ComposerDetail {
 export interface ComposerWorkRef {
   work_id: number;
   title: string | null;
-  composer_id: string | null;
+  person_id: string | null;
   tags: string | null;
 }export interface ComposerWorks {
   items: ComposerWorkRef[];
@@ -376,7 +376,7 @@ export interface MoveAliasResult {
 }
 
 export interface PromoteAliasResult {
-  composer_id: string;
+  person_id: string;
   name: string;
 }
 
@@ -423,13 +423,13 @@ export interface WorkStatistics extends Statistics {
 }
 
 export interface ComposerStatistics extends Statistics {
-  composer_id: string;
+  person_id: string;
 }
 
 export interface VotesOverview {
   total_votes: number;
   top_works: Array<{ work_id: string; vote_count: number; rating: number | null; work_count: number }>;
-  top_composers: Array<{ composer_id: string; vote_count: number; rating: number | null; work_count: number }>;
+  top_composers: Array<{ person_id: string; vote_count: number; rating: number | null; work_count: number }>;
   last_execution: { kind: string; status: string; started_at: string; finished_at: string } | null;
 }
 
@@ -445,7 +445,7 @@ export interface WorkDetailWork {
   id?: number | null;
   title?: string | null;
   composer?: string | null;
-  composer_id?: string | null;
+  person_id?: string | null;
   artist?: string | null;
   tags?: string | null;
   catalogue?: string | null;

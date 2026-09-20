@@ -257,9 +257,9 @@ class IndexCatalogProvider(ICatalogProvider):
             conn.close()
         return tuple(_row_to_candidate(r) for r in rows)
 
-    def count_works_by_composer_ids(self, composer_ids: list[str]) -> dict[str, int]:
-        """Obras del índice por `composer_id` (una consulta GROUP BY). {} si falla."""
-        ids = [str(cid) for cid in composer_ids if cid]
+    def count_works_by_composer_ids(self, person_ids: list[str]) -> dict[str, int]:
+        """Obras del índice por `person_id` (una consulta GROUP BY). {} si falla."""
+        ids = [str(cid) for cid in person_ids if cid]
         if not ids:
             return {}
         try:
@@ -278,8 +278,8 @@ class IndexCatalogProvider(ICatalogProvider):
         try:
             placeholders = ", ".join(["%s"] * len(ids))
             sql = (
-                "SELECT composer_id, COUNT(*) AS total FROM index_works "
-                f"WHERE composer_id IN ({placeholders}) GROUP BY composer_id"
+                "SELECT person_id, COUNT(*) AS total FROM index_works "
+                f"WHERE person_id IN ({placeholders}) GROUP BY person_id"
             )
             with conn.cursor() as cur:
                 cur.execute(sql, tuple(ids))
@@ -289,7 +289,7 @@ class IndexCatalogProvider(ICatalogProvider):
             return {}
         finally:
             conn.close()
-        return {str(row["composer_id"]): int(row["total"]) for row in rows}
+        return {str(row["person_id"]): int(row["total"]) for row in rows}
 
     def representations_for_title(
         self, title: str, composer: str | None = None

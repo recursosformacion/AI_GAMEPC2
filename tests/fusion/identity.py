@@ -2,12 +2,12 @@
 
 La unidad de comparación ya no es el título, sino una IDENTIDAD estructurada:
 
-    WorkIdentity(composer_id, work_type, liturgical_form, catalog,
+    WorkIdentity(person_id, work_type, liturgical_form, catalog,
                  work_number, key, movement, canonical_title)
 
 El título pasa a ser el ÚLTIMO dato (ayuda de visualización), no la base de la
 identidad. La ``signature()`` es una CONSECUENCIA de la identidad (nunca al
-revés): composer_id | work_type | catalog (el catálogo es el dato más fuerte).
+revés): person_id | work_type | catalog (el catálogo es el dato más fuerte).
 
 Se distinguen tres conceptos separados:
   - work_type        : Symphony, Sonata, Concerto, Mass, Motet, Opera...
@@ -59,7 +59,7 @@ _TOKEN = re.compile(r"[a-zà-ÿ']+")
 class WorkIdentity:
     """Identidad musical estructurada (prototipo)."""
 
-    composer_id: str | None
+    person_id: str | None
     work_type: str | None
     liturgical_form: str | None
     catalog: str | None
@@ -72,7 +72,7 @@ class WorkIdentity:
 
     def signature(self) -> str:
         """Consecuencia de la identidad. El catálogo es el dato más fuerte."""
-        parts = [self.composer_id or "?", self.work_type or "?"]
+        parts = [self.person_id or "?", self.work_type or "?"]
         if self.catalog:
             parts.append(self.catalog)
         elif self.work_number:
@@ -106,7 +106,7 @@ def parse_identity(title: str, composer: str | None) -> WorkIdentity:
         "movement": 1.0 if movement else 0.0,
     }
     return WorkIdentity(
-        composer_id=comp_id,
+        person_id=comp_id,
         work_type=work_type,
         liturgical_form=liturgical,
         catalog=catalog_compact,

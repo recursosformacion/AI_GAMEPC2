@@ -43,25 +43,25 @@ works_cols = cursor.fetchall()
 
 # Posibles redundancias en works
 print("\n🔍 Posibles redundancias detectadas:")
-print("  • composer (varchar) + composer_id (char(36)) → composer_id debería ser la FK, 'composer' podría ser redundante")
+print("  • composer (varchar) + person_id (char(36)) → person_id debería ser la FK, 'composer' podría ser redundante")
 print("  • artist + song_name → podrían ser parte de 'title' o metadatos separados")
 print("  • title + subtitle → podrían unificarse o normalizarse")
 
-# Contar obras con composer pero sin composer_id
+# Contar obras con composer pero sin person_id
 cursor.execute("""
     SELECT COUNT(*) FROM works 
-    WHERE composer IS NOT NULL AND composer_id IS NULL
+    WHERE composer IS NOT NULL AND person_id IS NULL
 """)
 works_no_composer_id = cursor.fetchone()[0]
-print(f"\n  ⚠️  Obras con 'composer' pero SIN 'composer_id': {works_no_composer_id:,}")
+print(f"\n  ⚠️  Obras con 'composer' pero SIN 'person_id': {works_no_composer_id:,}")
 
-# Contar obras con composer_id pero sin composer
+# Contar obras con person_id pero sin composer
 cursor.execute("""
     SELECT COUNT(*) FROM works 
-    WHERE composer_id IS NOT NULL AND composer IS NULL
+    WHERE person_id IS NOT NULL AND composer IS NULL
 """)
 works_no_composer = cursor.fetchone()[0]
-print(f"  ℹ️  Obras con 'composer_id' pero SIN 'composer': {works_no_composer:,}")
+print(f"  ℹ️  Obras con 'person_id' pero SIN 'composer': {works_no_composer:,}")
 
 # Contar obras con artist pero sin song_name
 cursor.execute("""
@@ -123,15 +123,15 @@ print(f"\n📌 Restricciones de clave foránea definidas: {len(fks)}")
 for fk in fks:
     print(f"  • {fk[0]}.{fk[1]} → {fk[2]}.{fk[3]}")
 
-# Verificar integridad composer_id
+# Verificar integridad person_id
 print("\n🔍 Integridad de referencias:")
 cursor.execute("""
     SELECT COUNT(*) FROM works w
-    LEFT JOIN composers c ON w.composer_id = c.id
-    WHERE w.composer_id IS NOT NULL AND c.id IS NULL
+    LEFT JOIN composers c ON w.person_id = c.id
+    WHERE w.person_id IS NOT NULL AND c.id IS NULL
 """)
 orphan_works = cursor.fetchone()[0]
-print(f"  ⚠️  Obras con composer_id que NO existe en composers: {orphan_works:,}")
+print(f"  ⚠️  Obras con person_id que NO existe en composers: {orphan_works:,}")
 
 # Verificar integridad archive_entries
 cursor.execute("""
@@ -155,7 +155,7 @@ cursor.execute("""
         COUNT(*) as total,
         ROUND(SUM(CASE WHEN id IS NULL THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as id_null,
         ROUND(SUM(CASE WHEN title IS NULL THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as title_null,
-        ROUND(SUM(CASE WHEN composer_id IS NULL THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as composer_id_null,
+        ROUND(SUM(CASE WHEN person_id IS NULL THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as composer_id_null,
         ROUND(SUM(CASE WHEN genre IS NULL THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as genre_null,
         ROUND(SUM(CASE WHEN opus IS NULL THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as opus_null,
         ROUND(SUM(CASE WHEN year IS NULL THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 2) as year_null,
@@ -167,7 +167,7 @@ cursor.execute("""
 null_stats = cursor.fetchone()
 print(f"  Total: {int(null_stats[0]):,}")
 print(f"  title NULL: {null_stats[1]}%")
-print(f"  composer_id NULL: {null_stats[2]}%")
+print(f"  person_id NULL: {null_stats[2]}%")
 print(f"  genre NULL: {null_stats[3]}%")
 print(f"  opus NULL: {null_stats[4]}%")
 print(f"  year NULL: {null_stats[5]}%")
@@ -250,15 +250,15 @@ print("\n--- Relación works ↔ composers ---")
 cursor.execute("""
     SELECT 
         COUNT(DISTINCT w.id) as total_works,
-        COUNT(DISTINCT w.composer_id) as works_with_composer_id,
+        COUNT(DISTINCT w.person_id) as works_with_composer_id,
         COUNT(DISTINCT c.id) as total_composers,
-        ROUND(COUNT(DISTINCT w.composer_id) * 100.0 / COUNT(DISTINCT w.id), 2) as pct_works_with_composer
+        ROUND(COUNT(DISTINCT w.person_id) * 100.0 / COUNT(DISTINCT w.id), 2) as pct_works_with_composer
     FROM works w
-    LEFT JOIN composers c ON w.composer_id = c.id
+    LEFT JOIN composers c ON w.person_id = c.id
 """)
 rel_stats = cursor.fetchone()
 print(f"  Total obras: {rel_stats[0]:,}")
-print(f"  Obras con composer_id: {rel_stats[1]:,} ({rel_stats[3]}%)")
+print(f"  Obras con person_id: {rel_stats[1]:,} ({rel_stats[3]}%)")
 print(f"  Total compositores: {rel_stats[2]:,}")
 
 print("\n--- Relación works ↔ files ---")
@@ -285,9 +285,9 @@ print("=" * 80)
 
 print("""
 🎯 PRIORIDAD ALTA:
-  1. Normalizar columna 'composer' en works → eliminar y usar solo composer_id
-  2. Definir claves foráneas explícitas (works.composer_id → composers.id)
-  3. Resolver obras sin composer_id ({})
+  1. Normalizar columna 'composer' en works → eliminar y usar solo person_id
+  2. Definir claves foráneas explícitas (works.person_id → composers.id)
+  3. Resolver obras sin person_id ({})
   4. Eliminar columnas redundantes: artist, song_name (si no son necesarias)
 
 🎯 PRIORIDAD MEDIA:
@@ -319,7 +319,7 @@ print("""
   • Migraciones controladas (20 migraciones aplicadas)
 
 ⚠️  PUNTOS DÉBILES:
-  • Redundancia composer/composer_id en works
+  • Redundancia composer/person_id en works
   • 10 tablas vacías (funcionalidad no implementada)
   • Posibles problemas de integridad referencial
   • Columnas TEXT sin normalizar (tags, instrumentation)
@@ -328,7 +328,7 @@ print("""
   1. Ejecutar script de limpieza de redundancias
   2. Añadir FK constraints
   3. Implementar tablas vacías (empezar por work_tags)
-  4. Revisar obras sin composer_id
+  4. Revisar obras sin person_id
 """)
 
 conn.close()

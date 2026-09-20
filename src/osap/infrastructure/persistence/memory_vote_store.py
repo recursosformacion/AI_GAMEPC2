@@ -28,51 +28,51 @@ class MemoryVoteStore(IVoteStore):
             ):
                 raise DuplicateVoteError("Already voted for this work today")
         self._votes.append(vote)
-        self._refresh(vote.work_id, vote.composer_id)
+        self._refresh(vote.work_id, vote.person_id)
         return vote
 
-    def _refresh(self, work_id: str, composer_id: str | None) -> None:
+    def _refresh(self, work_id: str, person_id: str | None) -> None:
         work_votes = [v for v in self._votes if v.work_id == work_id]
         count = len(work_votes)
         avg = round(sum(v.vote for v in work_votes) / count, 2) if count else None
         self._work_stats[work_id] = WorkStats(work_id=work_id, vote_count=count, rating=avg, work_count=1)
-        if composer_id:
-            composer_votes = [v for v in self._votes if v.composer_id == composer_id]
+        if person_id:
+            composer_votes = [v for v in self._votes if v.person_id == person_id]
             ccount = len(composer_votes)
             cavg = round(sum(v.vote for v in composer_votes) / ccount, 2) if ccount else None
             works = {v.work_id for v in composer_votes}
-            self._composer_stats[composer_id] = ComposerStats(
-                composer_id=composer_id, vote_count=ccount, rating=cavg, work_count=len(works)
+            self._composer_stats[person_id] = ComposerStats(
+                person_id=person_id, vote_count=ccount, rating=cavg, work_count=len(works)
             )
 
     def work_statistics(self, work_id: str) -> WorkStats | None:
         return self._work_stats.get(work_id)
 
-    def composer_statistics(self, composer_id: str) -> ComposerStats | None:
-        return self._composer_stats.get(composer_id)
+    def composer_statistics(self, person_id: str) -> ComposerStats | None:
+        return self._composer_stats.get(person_id)
 
     def anonymize_user(self, user_id: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
         work_ids: set[str] = set()
-        composer_ids: set[str] = set()
+        person_ids: set[str] = set()
         for vote in self._votes:
             if vote.user_id == user_id:
                 work_ids.add(vote.work_id)
-                if vote.composer_id:
-                    composer_ids.add(vote.composer_id)
+                if vote.person_id:
+                    person_ids.add(vote.person_id)
                 self._votes[self._votes.index(vote)] = WorkVote(
                     vote=vote.vote,
                     work_id=vote.work_id,
                     user_id=None,
-                    composer_id=vote.composer_id,
+                    person_id=vote.person_id,
                     id=vote.id,
                     voted_at=vote.voted_at,
                     vote_day=vote.vote_day,
                     anonymized=True,
                 )
         for work_id in work_ids:
-            composer = next((v.composer_id for v in self._votes if v.work_id == work_id), None)
+            composer = next((v.person_id for v in self._votes if v.work_id == work_id), None)
             self._refresh(work_id, composer)
-        return tuple(work_ids), tuple(composer_ids)
+        return tuple(work_ids), tuple(person_ids)
 
     def total_votes(self) -> int:
         return len(self._votes)

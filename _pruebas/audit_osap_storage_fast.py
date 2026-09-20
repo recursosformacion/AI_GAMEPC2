@@ -43,8 +43,8 @@ print("\n" + "=" * 80)
 print(" 2. ANÁLISIS DE REDUNDANCIAS")
 print("=" * 80)
 
-cursor.execute("SELECT COUNT(*) FROM works WHERE composer IS NOT NULL AND composer_id IS NULL")
-print(f"\n  ⚠️  Obras con 'composer' pero SIN 'composer_id': {cursor.fetchone()[0]:,}")
+cursor.execute("SELECT COUNT(*) FROM works WHERE composer IS NOT NULL AND person_id IS NULL")
+print(f"\n  ⚠️  Obras con 'composer' pero SIN 'person_id': {cursor.fetchone()[0]:,}")
 
 cursor.execute("SELECT COUNT(*) FROM works WHERE artist IS NOT NULL AND song_name IS NULL")
 print(f"  ⚠️  Obras con 'artist' pero SIN 'song_name': {cursor.fetchone()[0]:,}")
@@ -67,10 +67,10 @@ print(f"\n  📌 FK definidas: {cursor.fetchone()[0]}")
 
 cursor.execute("""
     SELECT COUNT(*) FROM works w
-    LEFT JOIN composers c ON w.composer_id = c.id
-    WHERE w.composer_id IS NOT NULL AND c.id IS NULL
+    LEFT JOIN composers c ON w.person_id = c.id
+    WHERE w.person_id IS NOT NULL AND c.id IS NULL
 """)
-print(f"  ⚠️  Obras con composer_id huérfano: {cursor.fetchone()[0]:,}")
+print(f"  ⚠️  Obras con person_id huérfano: {cursor.fetchone()[0]:,}")
 
 cursor.execute("""
     SELECT COUNT(*) FROM archive_entries ae
@@ -90,17 +90,17 @@ cursor.execute("""
     SELECT 
         COUNT(*) as total,
         ROUND(SUM(CASE WHEN title IS NULL OR title = '' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) as title_null_pct,
-        ROUND(SUM(CASE WHEN composer_id IS NULL THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) as composer_id_null_pct,
+        ROUND(SUM(CASE WHEN person_id IS NULL THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) as composer_id_null_pct,
         ROUND(SUM(CASE WHEN genre IS NULL OR genre = '' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) as genre_null_pct,
         ROUND(SUM(CASE WHEN year IS NULL THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) as year_null_pct,
         ROUND(SUM(CASE WHEN duration IS NULL OR duration = '' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) as duration_null_pct,
         ROUND(SUM(CASE WHEN description IS NULL OR description = '' THEN 1 ELSE 0 END) * 100.0 / COUNT(*), 1) as desc_null_pct
-    FROM (SELECT title, composer_id, genre, year, duration, description FROM works ORDER BY id LIMIT 1000) as sample
+    FROM (SELECT title, person_id, genre, year, duration, description FROM works ORDER BY id LIMIT 1000) as sample
 """)
 s = cursor.fetchone()
 print(f"\n  Muestra: {s[0]} obras")
 print(f"  title nulo/vacío: {s[1]}%")
-print(f"  composer_id nulo: {s[2]}%")
+print(f"  person_id nulo: {s[2]}%")
 print(f"  genre nulo/vacío: {s[3]}%")
 print(f"  year nulo: {s[4]}%")
 print(f"  duration nulo/vacío: {s[5]}%")
@@ -148,11 +148,11 @@ print("=" * 80)
 
 print("""
 🔴 PRIORIDAD CRÍTICA:
-  1. 254K obras tienen 'composer' (texto) pero NO 'composer_id' (FK)
+  1. 254K obras tienen 'composer' (texto) pero NO 'person_id' (FK)
      → Esto impide relaciones adecuadas y búsquedas eficientes
      → Se necesita proceso de resolución de compositores
 
-  2. No hay FK definida entre works.composer_id → composers.id
+  2. No hay FK definida entre works.person_id → composers.id
      → Riesgo de integridad referencial
 
 🟡 PRIORIDAD MEDIA:

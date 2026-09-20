@@ -65,8 +65,8 @@ class VotesService:
         if not isinstance(vote, int) or isinstance(vote, bool) or not (MIN_VOTE <= vote <= MAX_VOTE):
             raise InvalidVoteError(f"Vote must be between {MIN_VOTE} and {MAX_VOTE}")
 
-        composer_id = self._works.composer_id_for(work_id)
-        if composer_id is None:
+        person_id = self._works.composer_id_for(work_id)
+        if person_id is None:
             raise WorkNotFoundError("Work not found")
 
         voted_at = utc_now()
@@ -74,7 +74,7 @@ class VotesService:
             vote=vote,
             work_id=work_id,
             user_id=user.user_id,
-            composer_id=composer_id,
+            person_id=person_id,
             voted_at=voted_at,
         )
         try:
@@ -90,18 +90,18 @@ class VotesService:
             return stats
         return WorkStats(work_id=work_id, vote_count=0, rating=None)
 
-    def composer_statistics(self, composer_id: str) -> ComposerStats:
-        stats = self._votes.composer_statistics(composer_id)
+    def composer_statistics(self, person_id: str) -> ComposerStats:
+        stats = self._votes.composer_statistics(person_id)
         if stats is not None:
             return stats
-        return ComposerStats(composer_id=composer_id, vote_count=0, rating=None)
+        return ComposerStats(person_id=person_id, vote_count=0, rating=None)
 
     # -- user.deleted --------------------------------------------------------
 
     def handle_user_deleted(self, user_id: str) -> dict[str, object]:
         """Pide a Storage que anonimice los votos del usuario (conserva el agregado)."""
-        work_ids, composer_ids = self._votes.anonymize_user(user_id)
-        return {"anonymized_works": len(work_ids), "anonymized_composers": len(composer_ids)}
+        work_ids, person_ids = self._votes.anonymize_user(user_id)
+        return {"anonymized_works": len(work_ids), "anonymized_composers": len(person_ids)}
 
     # -- admin ---------------------------------------------------------------
 
@@ -125,7 +125,7 @@ def _work_stats_to_dict(stats: WorkStats) -> dict[str, object]:
 
 def _composer_stats_to_dict(stats: ComposerStats) -> dict[str, object]:
     return {
-        "composer_id": stats.composer_id,
+        "person_id": stats.person_id,
         "vote_count": stats.vote_count,
         "rating": stats.rating,
         "work_count": stats.work_count,

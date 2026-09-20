@@ -11,7 +11,7 @@ import { useSearches } from "../state/searches";
 // disponible del compositor + todas sus obras con el MISMO módulo de fusión/resultados
 // que la búsqueda.
 export function ComposerDetailPage() {
-  const { composerId = "" } = useParams<{ composerId: string }>();
+  const { personId = "" } = useParams<{ personId: string }>();
   const { t } = useI18n();
   const biography = useComposers((s) => s.biography);
   const works = useComposers((s) => s.works);
@@ -23,9 +23,9 @@ export function ComposerDetailPage() {
   const loading = useComposers((s) => s.loading);
 
   useEffect(() => {
-    void fetchBiography(composerId);
-    void fetchWorks(composerId, 200, 0);
-  }, [fetchBiography, fetchWorks, composerId]);
+    void fetchBiography(personId);
+    void fetchWorks(personId, 200, 0);
+  }, [fetchBiography, fetchWorks, personId]);
 
   // Igual que una búsqueda con ese compositor (sistema de fusión compartido).
   useEffect(() => {
@@ -91,7 +91,7 @@ export function ComposerDetailPage() {
               {b?.works_count ?? works?.total ?? 0} {t("composers.worksTitle")}
             </span>
             <Link
-              to={`/corrections?kind=composer&entity_id=${encodeURIComponent(composerId)}`}
+              to={`/corrections?kind=composer&entity_id=${encodeURIComponent(personId)}`}
               className="inline-block rounded border border-osap-accent/40 px-2 py-0.5 text-xs font-medium text-osap-accent transition-colors hover:border-osap-accent hover:bg-osap-accent-soft"
             >
               {t("corrections.propose")}

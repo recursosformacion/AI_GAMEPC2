@@ -413,7 +413,7 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         status_code=200,
         tags=["Composers"],
         summary="Merge composers (admin)",
-        description="Fusiona `sources` dentro de `target_id` (ambos composer_id existentes). "
+        description="Fusiona `sources` dentro de `target_id` (ambos person_id existentes). "
         "Exige role=admin; backend: osap-storage con storage:admin.",
         response_model=SuccessEnvelope[MergeComposersResultResponse] | ErrorEnvelope,
         responses={
@@ -476,7 +476,7 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         return ctx.ok(_shared._composer_summary_dto(composer))
 
     @router.post(
-        "/api/v1/admin/composers/{composer_id}/review",
+        "/api/v1/admin/composers/{person_id}/review",
         status_code=200,
         tags=["Composers"],
         summary="Set composer review status (admin)",
@@ -492,13 +492,13 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         },
     )
     def review_composer(
-        composer_id: str,
+        person_id: str,
         payload: ReviewComposerRequest,
         response: Response,
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            composer = ctx.api.review_composer(authorization, composer_id, payload.review_status)
+            composer = ctx.api.review_composer(authorization, person_id, payload.review_status)
         except UnauthenticatedError:
             return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
         except ForbiddenError:
@@ -512,7 +512,7 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         return ctx.ok(_shared._composer_detail_dto(composer))
 
     @router.post(
-        "/api/v1/admin/composers/{composer_id}/aliases",
+        "/api/v1/admin/composers/{person_id}/aliases",
         status_code=200,
         tags=["Composers"],
         summary="Add alias to a composer (admin)",
@@ -528,13 +528,13 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         },
     )
     def add_alias(
-        composer_id: str,
+        person_id: str,
         payload: AddAliasRequest,
         response: Response,
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            alias = ctx.api.add_alias(authorization, composer_id, payload.alias)
+            alias = ctx.api.add_alias(authorization, person_id, payload.alias)
         except UnauthenticatedError:
             return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
         except ForbiddenError:
@@ -546,7 +546,7 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         return ctx.ok(AliasResponse.model_validate(alias))
 
     @router.get(
-        "/api/v1/admin/composers/{composer_id}/aliases",
+        "/api/v1/admin/composers/{person_id}/aliases",
         status_code=200,
         tags=["Composers"],
         summary="List composer aliases (admin)",
@@ -562,12 +562,12 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         },
     )
     def list_aliases(
-        composer_id: str,
+        person_id: str,
         response: Response,
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            aliases = ctx.api.list_aliases(authorization, composer_id)
+            aliases = ctx.api.list_aliases(authorization, person_id)
         except UnauthenticatedError:
             return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
         except ForbiddenError:
@@ -579,7 +579,7 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         return ctx.ok([AliasResponse.model_validate(a) for a in aliases])
 
     @router.post(
-        "/api/v1/admin/composers/{composer_id}/aliases/{alias_id}/move",
+        "/api/v1/admin/composers/{person_id}/aliases/{alias_id}/move",
         status_code=200,
         tags=["Composers"],
         summary="Move an alias to another composer (admin)",
@@ -595,14 +595,14 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         },
     )
     def move_alias(
-        composer_id: str,
+        person_id: str,
         alias_id: int,
         payload: MoveAliasRequest,
         response: Response,
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            alias = ctx.api.move_alias(authorization, alias_id, payload.from_composer_id, payload.target_composer_id)
+            alias = ctx.api.move_alias(authorization, alias_id, payload.from_person_id, payload.target_person_id)
         except UnauthenticatedError:
             return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
         except ForbiddenError:
@@ -614,7 +614,7 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         return ctx.ok(MoveAliasResultResponse.model_validate(alias))
 
     @router.post(
-        "/api/v1/admin/composers/{composer_id}/aliases/{alias_id}/promote",
+        "/api/v1/admin/composers/{person_id}/aliases/{alias_id}/promote",
         status_code=200,
         tags=["Composers"],
         summary="Promote an alias to its own composer (admin)",
@@ -630,13 +630,13 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         },
     )
     def promote_alias(
-        composer_id: str,
+        person_id: str,
         alias_id: int,
         response: Response,
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            composer = ctx.api.promote_alias(authorization, composer_id, alias_id)
+            composer = ctx.api.promote_alias(authorization, person_id, alias_id)
         except UnauthenticatedError:
             return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
         except ForbiddenError:
@@ -653,7 +653,7 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         tags=["Composers"],
         summary="Convert composers to attribution (admin)",
         description="Las obras de los compositores guardan attribution_type + attribution_note y se "
-        "les borra composer_id; los compositores se retiran. Exige role=admin; "
+        "les borra person_id; los compositores se retiran. Exige role=admin; "
         "backend: osap-storage con storage:admin.",
         response_model=SuccessEnvelope[SetAttributionResultResponse] | ErrorEnvelope,
         responses={
@@ -669,7 +669,7 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            result = ctx.api.set_attribution(authorization, payload.composer_ids, payload.attribution_type)
+            result = ctx.api.set_attribution(authorization, payload.person_ids, payload.attribution_type)
         except UnauthenticatedError:
             return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
         except ForbiddenError:

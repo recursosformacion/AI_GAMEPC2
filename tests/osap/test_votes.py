@@ -178,7 +178,7 @@ def test_composer_statistics() -> None:
     client.post("/api/v1/works/work-b/vote", json={"vote": 5}, headers=_auth())
     resp = client.get("/api/v1/composers/comp-mozart/statistics")
     data = resp.json()["data"]
-    assert data["composer_id"] == "comp-mozart"
+    assert data["person_id"] == "comp-mozart"
     assert data["vote_count"] == 2
     assert data["rating"] == 4.5  # (4+5)/2, no media de medias
 
@@ -186,10 +186,10 @@ def test_composer_statistics() -> None:
 def test_weighted_aggregation_not_average_of_averages() -> None:
     _, service, store, _ = _build()
     # Misma obra: 1 voto 5 y 1 voto 1 -> media 3. Otra obra del mismo compositor: 2 votos 5 -> media 5.
-    store.insert_vote(WorkVote(vote=5, work_id="work-a", user_id="u1", composer_id="comp-mozart"))
-    store.insert_vote(WorkVote(vote=1, work_id="work-a", user_id="u2", composer_id="comp-mozart"))
-    store.insert_vote(WorkVote(vote=5, work_id="work-b", user_id="u1", composer_id="comp-mozart"))
-    store.insert_vote(WorkVote(vote=5, work_id="work-b", user_id="u2", composer_id="comp-mozart"))
+    store.insert_vote(WorkVote(vote=5, work_id="work-a", user_id="u1", person_id="comp-mozart"))
+    store.insert_vote(WorkVote(vote=1, work_id="work-a", user_id="u2", person_id="comp-mozart"))
+    store.insert_vote(WorkVote(vote=5, work_id="work-b", user_id="u1", person_id="comp-mozart"))
+    store.insert_vote(WorkVote(vote=5, work_id="work-b", user_id="u2", person_id="comp-mozart"))
     stats = service.composer_statistics("comp-mozart")
     # Peso real: sum(5,1,5,5)=16 / 4 = 4.0 (no media de medias).
     assert stats.vote_count == 4
@@ -210,10 +210,10 @@ def test_composer_without_votes() -> None:
 def test_storage_aggregation_idempotent_and_weighted() -> None:
     _, service, store, _ = _build()
     # Misma obra: 1 voto 5 y 1 voto 1. Otra obra del mismo compositor: 2 votos 5.
-    store.insert_vote(WorkVote(vote=5, work_id="work-a", user_id="u1", composer_id="comp-mozart"))
-    store.insert_vote(WorkVote(vote=1, work_id="work-a", user_id="u2", composer_id="comp-mozart"))
-    store.insert_vote(WorkVote(vote=5, work_id="work-b", user_id="u1", composer_id="comp-mozart"))
-    store.insert_vote(WorkVote(vote=5, work_id="work-b", user_id="u2", composer_id="comp-mozart"))
+    store.insert_vote(WorkVote(vote=5, work_id="work-a", user_id="u1", person_id="comp-mozart"))
+    store.insert_vote(WorkVote(vote=1, work_id="work-a", user_id="u2", person_id="comp-mozart"))
+    store.insert_vote(WorkVote(vote=5, work_id="work-b", user_id="u1", person_id="comp-mozart"))
+    store.insert_vote(WorkVote(vote=5, work_id="work-b", user_id="u2", person_id="comp-mozart"))
     work = store.work_statistics("work-a")
     assert work is not None and work.vote_count == 2 and work.rating == 3.0
     composer = service.composer_statistics("comp-mozart")

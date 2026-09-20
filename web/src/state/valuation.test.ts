@@ -37,7 +37,7 @@ describe("valuation", () => {
 
   it("composer statistics return the storage proxy shape", async () => {
     mockFetch({
-      composer_id: "comp",
+      person_id: "comp",
       rating: 4.41,
       adjusted_rating: 4.3,
       vote_count: 1523,
@@ -46,7 +46,7 @@ describe("valuation", () => {
       calculated_at: null,
     });
     const s = await apiClient.getComposerStatistics("comp");
-    expect(s.composer_id).toBe("comp");
+    expect(s.person_id).toBe("comp");
     expect(s.rating).toBe(4.41);
     expect(s.vote_count).toBe(1523);
   });

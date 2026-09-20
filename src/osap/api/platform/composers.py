@@ -33,13 +33,13 @@ class ComposersMixin(PlatformApiCore):
     ) -> dict[str, object]:
         return self.composers().list_composers(q, limit, offset, review)
 
-    def index_works_counts(self, composer_ids: list[str]) -> dict[str, int]:
+    def index_works_counts(self, person_ids: list[str]) -> dict[str, int]:
         """Recuento real de obras en el índice local (lo que el usuario puede consultar)."""
         for provider in self._container.catalog_manager().providers():
             if provider.provider_id.value == "index":
                 counter = getattr(provider, "count_works_by_composer_ids", None)
                 if callable(counter):
-                    return dict(counter(composer_ids))
+                    return dict(counter(person_ids))
         return {}
 
     def index_representations_for(self, title: str, composer: str | None) -> list[dict[str, object]]:
@@ -51,14 +51,14 @@ class ComposersMixin(PlatformApiCore):
                     return list(finder(title, composer))
         return []
 
-    def get_composer(self, composer_id: str) -> dict[str, object] | None:
-        return self.composers().get_composer(composer_id)
+    def get_composer(self, person_id: str) -> dict[str, object] | None:
+        return self.composers().get_composer(person_id)
 
-    def get_composer_biography(self, composer_id: str) -> dict[str, object] | None:
-        return self.composers().get_composer_biography(composer_id)
+    def get_composer_biography(self, person_id: str) -> dict[str, object] | None:
+        return self.composers().get_composer_biography(person_id)
 
-    def composer_works(self, composer_id: str, limit: int, offset: int) -> dict[str, object]:
-        return self.composers().composer_works(composer_id, limit, offset)
+    def composer_works(self, person_id: str, limit: int, offset: int) -> dict[str, object]:
+        return self.composers().composer_works(person_id, limit, offset)
 
     def get_work(self, work_id: str) -> dict[str, object] | None:
         detail = self.composers().get_work(work_id)
@@ -74,25 +74,25 @@ class ComposersMixin(PlatformApiCore):
     def create_composer(self, token: str | None, name: str) -> dict[str, object]:
         return self.composers().create_composer(token, name)
 
-    def review_composer(self, token: str | None, composer_id: str, review_status: str) -> dict[str, object]:
-        return self.composers().review_composer(token, composer_id, review_status)
+    def review_composer(self, token: str | None, person_id: str, review_status: str) -> dict[str, object]:
+        return self.composers().review_composer(token, person_id, review_status)
 
-    def add_alias(self, token: str | None, composer_id: str, alias: str) -> dict[str, object]:
-        return self.composers().add_alias(token, composer_id, alias)
+    def add_alias(self, token: str | None, person_id: str, alias: str) -> dict[str, object]:
+        return self.composers().add_alias(token, person_id, alias)
 
-    def list_aliases(self, token: str | None, composer_id: str) -> list[dict[str, object]]:
-        return self.composers().list_aliases(token, composer_id)
+    def list_aliases(self, token: str | None, person_id: str) -> list[dict[str, object]]:
+        return self.composers().list_aliases(token, person_id)
 
     def move_alias(
-        self, token: str | None, alias_id: int, from_composer_id: str, target_composer_id: str
+        self, token: str | None, alias_id: int, from_person_id: str, target_person_id: str
     ) -> dict[str, object]:
-        return self.composers().move_alias(token, alias_id, from_composer_id, target_composer_id)
+        return self.composers().move_alias(token, alias_id, from_person_id, target_person_id)
 
-    def promote_alias(self, token: str | None, composer_id: str, alias_id: int) -> dict[str, object]:
-        return self.composers().promote_alias(token, composer_id, alias_id)
+    def promote_alias(self, token: str | None, person_id: str, alias_id: int) -> dict[str, object]:
+        return self.composers().promote_alias(token, person_id, alias_id)
 
-    def set_attribution(self, token: str | None, composer_ids: list[str], attribution_type: str) -> dict[str, object]:
-        return self.composers().set_attribution(token, composer_ids, attribution_type)
+    def set_attribution(self, token: str | None, person_ids: list[str], attribution_type: str) -> dict[str, object]:
+        return self.composers().set_attribution(token, person_ids, attribution_type)
 
     async def resolve_composer(
         self,

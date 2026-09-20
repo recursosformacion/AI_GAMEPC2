@@ -126,7 +126,7 @@ class IdentityResolver:
             key = composer_key(name)
             cur.execute(
                 "SELECT c.id, c.name, c.status FROM composers c "
-                "LEFT JOIN composer_aliases a ON a.composer_id=c.id "
+                "LEFT JOIN composer_aliases a ON a.person_id=c.id "
                 "WHERE c.name=%s OR a.normalized_alias=%s LIMIT 1", (name, key))
             row = cur.fetchone()
             if not row:
@@ -140,7 +140,7 @@ class IdentityResolver:
                 ids = {r["scheme"]: r["value"] for r in cur.fetchall()}
             except pymysql.err.ProgrammingError:
                 ids = {}
-            return {"composer_id": cid, "name": row["name"], "status": row["status"], "ids": ids}
+            return {"person_id": cid, "name": row["name"], "status": row["status"], "ids": ids}
 
     def _authority(self, name: str) -> list[dict]:
         conn = self._conn()
@@ -266,7 +266,7 @@ class IdentityResolver:
 
         maestro = self._maestro(name)
         if maestro:
-            return "matched_existing", f"maestro composer {maestro['composer_id']}", {"maestro": maestro}, "maestro"
+            return "matched_existing", f"maestro composer {maestro['person_id']}", {"maestro": maestro}, "maestro"
 
         authority = self._authority(name)
         if len(authority) == 1 and (authority[0].get("viaf") or authority[0].get("qid")):

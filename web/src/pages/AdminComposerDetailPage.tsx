@@ -11,20 +11,20 @@ import { useComposers } from "../state/composers";
 // Detalle de compositor en el área de admin: herramienta de inspección/revisión.
 // Muestra identidad, evidencia de creación, obras relacionadas y la fusión.
 export function AdminComposerDetailPage() {
-  const { composerId = "" } = useParams<{ composerId: string }>();
+  const { personId = "" } = useParams<{ personId: string }>();
   const { t } = useI18n();
   const { detail, works, loading, error, fetchDetail, fetchWorks } = useComposers();
   const [rating, setRating] = useState<ComposerStatistics | null>(null);
   const [originWork, setOriginWork] = useState<WorkDetail | null>(null);
 
   useEffect(() => {
-    void fetchDetail(composerId);
-    void fetchWorks(composerId, 100, 0);
+    void fetchDetail(personId);
+    void fetchWorks(personId, 100, 0);
     apiClient
-      .getComposerStatistics(composerId)
+      .getComposerStatistics(personId)
       .then((s) => setRating(s))
       .catch(() => setRating(null));
-  }, [fetchDetail, fetchWorks, composerId]);
+  }, [fetchDetail, fetchWorks, personId]);
 
   // Carga la obra que originó el compositor (inspección profunda).
   useEffect(() => {

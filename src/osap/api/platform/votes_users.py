@@ -54,8 +54,8 @@ class VotesUsersMixin(PlatformApiCore):
     def work_statistics(self, work_id: str) -> WorkStats:
         return self.votes().work_statistics(work_id)
 
-    def composer_statistics(self, composer_id: str) -> ComposerStats:
-        return self.votes().composer_statistics(composer_id)
+    def composer_statistics(self, person_id: str) -> ComposerStats:
+        return self.votes().composer_statistics(person_id)
 
     def votes_overview(self) -> dict[str, object]:
         return self.votes().overview()

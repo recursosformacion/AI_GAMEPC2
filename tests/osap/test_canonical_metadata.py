@@ -34,7 +34,7 @@ class TestCanonicalComposer:
 
         comp = _canonical_composer("W.A. Mozart")
         assert comp.display_name == "Wolfgang Amadeus Mozart"
-        assert comp.composer_id.startswith("c")
+        assert comp.person_id.startswith("c")
         assert "Wolfgang" in comp.display_name
 
 

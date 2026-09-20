@@ -559,7 +559,7 @@ def cmd_identity(reps: list[CandidateRepresentation]) -> None:
         by_sig[wid.signature()].append(f"{rep.provider_id.value.upper()} · {rep.work_descriptor.title}")
         print(f"\n{_BAR}\nRAW\n{rep.work_descriptor.title}  ({rep.provider_id.value})")
         print("\nIDENTITY")
-        print(f"  composer      {wid.composer_id or '-'}")
+        print(f"  composer      {wid.person_id or '-'}")
         print(f"  catalog       {wid.catalog or '-'}")
         print(f"  type          {wid.work_type or '-'}")
         print(f"  liturgical    {wid.liturgical_form or '-'}")
@@ -594,7 +594,7 @@ def cmd_statistics(path: Path) -> None:
 
     def present(identity: object, field: str) -> bool:
         if field == "composer":
-            return bool(identity.composer_id)
+            return bool(identity.person_id)
         if field == "catalog":
             return bool(identity.catalog)
         if field == "number":
@@ -696,7 +696,7 @@ def cmd_explain(reps: list[CandidateRepresentation]) -> None:
             nm_m = MetadataNormalizer.normalize(member.work_descriptor.title, member.work_descriptor.composer)
             sim = _jaccard(nm_m.normalized_title, nm_p.normalized_title)
             print(f"\n  {member.provider_id.value.upper()} · {member.work_descriptor.title}")
-            print(f"    composer  {'exact' if wid.composer_id else 'missing'}")
+            print(f"    composer  {'exact' if wid.person_id else 'missing'}")
             print(f"    catalog   {wid.catalog or 'missing'}")
             print(f"    title     {sim * 100:.0f} %")
             print(f"    number    {wid.work_number or 'missing'}")

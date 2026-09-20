@@ -1,9 +1,8 @@
 """Level-2 protocol adapter for the OpenMusicRepository storage operator (OMR).
 
-The storage Provider API (`/api/v1/search`) returns a flat JSON *array* of file
-records — not the `{"works": [...]}` contract shape — and filters on a single `q`
-parameter. This fetcher calls that endpoint and normalizes each record into a Work
-(with one MusicXML resource) that flows through the standard mapping pipeline, the
+The storage Provider API (`/api/search`) returns the `{"works": [...]}` contract
+shape, filtered by a single `q` parameter. This fetcher calls that endpoint and
+normalizes each Work (with its resources) into the standard mapping pipeline, the
 same way `MediaWikiFetcher` / `GitHubFetcher` do.
 """
 
@@ -67,6 +66,8 @@ class OmrStorageFetcher(ProviderFetcher):
             data = works if isinstance(works, list) else []
         if not isinstance(data, list):
             return {"works": []}
+        # Se conservan TODAS las obras: las de CPDL están identificadas en `works` aunque
+        # todavía no tengan un recurso descargable (materialización pendiente).
         return {"works": [_to_work(record, self._base_url) for record in data]}
 
     def fetch_resource(
@@ -95,17 +96,9 @@ def _to_work(record: dict[str, object], base_url: str) -> dict[str, object]:
     links = links_raw if isinstance(links_raw, dict) else {}
     download = _absolute(base_url, str(links.get("download") or ""))
     available = bool(first.get("available", True)) if isinstance(first, dict) else True
-    return {
-        "id": remote_id,
-        "title": str(record.get("title") or "Unknown"),
-        "composer": record.get("composer"),
-        "catalogue": None,
-        "metadata": {
-            "license": None,
-            "public_domain": None,
-        },
-        "statistics": {},
-        "resources": [
+    resources_out: list[dict[str, object]] = []
+    if first:
+        resources_out.append(
             {
                 "id": remote_id,
                 "format": "musicxml",
@@ -118,11 +111,26 @@ def _to_work(record: dict[str, object], base_url: str) -> dict[str, object]:
                     "thumbnail": None,
                 },
             }
-        ],
+        )
+    return {
+        "id": remote_id,
+        "title": str(record.get("title") or "Unknown"),
+        "composer": record.get("composer"),
+        "catalogue": None,
+        "metadata": {
+            "license": None,
+            "public_domain": None,
+        },
+        "statistics": {},
+        # Obra identificada sin recurso descargable (p. ej. CPDL en inventario): sin recursos.
+        "resources": resources_out,
     }
 
 
 def _remote_id(record: dict[str, object]) -> str:
+    remote_id = record.get("id")
+    if remote_id is not None and str(remote_id).strip():
+        return str(remote_id)
     file_id = record.get("file_id")
     if file_id is not None:
         return str(file_id)

@@ -26,18 +26,18 @@ class _FakeComposerClient(StorageComposerClient):
             "total": 1,
         }
 
-    def get_composer(self, composer_id: str) -> dict[str, object] | None:
-        if composer_id == "missing":
+    def get_composer(self, person_id: str) -> dict[str, object] | None:
+        if person_id == "missing":
             return None
         return {
-            "id": composer_id,
+            "id": person_id,
             "name": "Mozart",
             "status": "active",
             "aliases": ["W. A. Mozart"],
             "works_count": 264,
             "creation_evidence": [
                 {
-                    "composer_id": composer_id,
+                    "person_id": person_id,
                     "extracted_author": "W. A. Mozart",
                     "work_id": 2,
                     "work_title": "Ocean Man",
@@ -47,8 +47,8 @@ class _FakeComposerClient(StorageComposerClient):
             ],
         }
 
-    def composer_works(self, composer_id: str, limit: int, offset: int) -> dict[str, object]:
-        return {"items": [{"work_id": 264, "title": "Ave verum", "composer_id": "comp-a"}], "total": 1}
+    def composer_works(self, person_id: str, limit: int, offset: int) -> dict[str, object]:
+        return {"items": [{"work_id": 264, "title": "Ave verum", "person_id": "comp-a"}], "total": 1}
 
     def merge_composers(self, target_id: str, source_ids: list[str]) -> tuple[int, dict[str, object]]:
         return 200, {
@@ -62,9 +62,9 @@ class _FakeComposerClient(StorageComposerClient):
     def create_composer(self, name: str) -> dict[str, object] | None:
         return {"id": "comp-new", "name": name, "status": "active", "aliases_count": 0, "works_count": 0}
 
-    def review_composer(self, composer_id: str, review_status: str) -> tuple[int, dict[str, object]]:
+    def review_composer(self, person_id: str, review_status: str) -> tuple[int, dict[str, object]]:
         return 200, {
-            "id": composer_id,
+            "id": person_id,
             "name": "Mozart",
             "status": "active",
             "aliases": [],

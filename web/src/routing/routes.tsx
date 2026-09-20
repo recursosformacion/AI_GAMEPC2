@@ -46,7 +46,7 @@ export function AppRoutes() {
         <Route path="/studio" element={<SearchStudioPage />} />
         <Route path="/composer" element={<ComposerPage />} />
         <Route path="/composers" element={<ComposersPage />} />
-        <Route path="/composers/:composerId" element={<ComposerDetailPage />} />
+        <Route path="/composers/:personId" element={<ComposerDetailPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/about/how-it-works" element={<HowItWorksPage />} />
         <Route path="/viewer" element={<ViewerPage />} />
@@ -67,7 +67,7 @@ export function AppRoutes() {
         <Route path="/admin/payments" element={<AdminPaymentsPage />} />
         <Route path="/admin/users/:userId" element={<AdminUserDetailPage />} />
         <Route path="/admin/composers" element={<AdminComposersPage />} />
-        <Route path="/admin/composers/:composerId" element={<AdminComposerDetailPage />} />
+        <Route path="/admin/composers/:personId" element={<AdminComposerDetailPage />} />
         <Route path="/admin/aliases" element={<AliasPage />} />
         <Route path="/admin/source-suggestions" element={<AdminSourceSuggestionsPage />} />
         <Route path="/admin/providers" element={<AdminProvidersPage />} />

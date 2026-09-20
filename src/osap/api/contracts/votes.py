@@ -38,7 +38,7 @@ class WorkStatisticsResponse(_Frozen):
 
 
 class ComposerStatisticsResponse(_Frozen):
-    composer_id: str
+    person_id: str
     rating: float | None
     adjusted_rating: float | None = None
     vote_count: int = 0

@@ -10,7 +10,7 @@ interface Props {
 }
 
 // Selector de compositores existentes: búsqueda sensible por nombre (y alias si storage la
-// soporta), limitada/paginada. Envía composer_id, nunca texto libre.
+// soporta), limitada/paginada. Envía person_id, nunca texto libre.
 export function ComposerSearchSelect({ placeholder, onSelect, excludeId }: Props) {
   const { t } = useI18n();
   const [q, setQ] = useState("");

@@ -1,6 +1,6 @@
 """V1 — Resolución de identidad de Work vía el contrato de Storage.
 
-osap-api nunca accede a la BD de Storage. Solo pregunta por el ``composer_id`` de una
+osap-api nunca accede a la BD de Storage. Solo pregunta por el ``person_id`` de una
 Work a través del contrato HTTP de Storage; si la Work no existe, devuelve ``None``
 (HTTP 404).
 
@@ -22,7 +22,7 @@ _USER_AGENT = (
 
 
 class StorageWorkStore(IWorkStore):
-    """Resuelve ``composer_id`` vía el contrato HTTP de Storage."""
+    """Resuelve ``person_id`` vía el contrato HTTP de Storage."""
 
     def __init__(
         self,
@@ -49,23 +49,23 @@ class StorageWorkStore(IWorkStore):
             return None
         work = doc.get("work")
         if isinstance(work, dict):
-            composer_id = work.get("composer_id")
-            if isinstance(composer_id, str) and composer_id:
-                return composer_id
+            person_id = work.get("person_id")
+            if isinstance(person_id, str) and person_id:
+                return person_id
         return None
 
 
 class MemoryWorkStore(IWorkStore):
-    """Mapa en memoria work_id -> composer_id (tests / sin Storage)."""
+    """Mapa en memoria work_id -> person_id (tests / sin Storage)."""
 
     def __init__(self, seed: dict[str, str] | None = None) -> None:
         self._map: dict[str, str] = dict(seed or {})
 
-    def set(self, work_id: str, composer_id: str | None) -> None:
-        if composer_id is None:
+    def set(self, work_id: str, person_id: str | None) -> None:
+        if person_id is None:
             self._map.pop(work_id, None)
         else:
-            self._map[work_id] = composer_id
+            self._map[work_id] = person_id
 
     def composer_id_for(self, work_id: str) -> str | None:
         return self._map.get(work_id)

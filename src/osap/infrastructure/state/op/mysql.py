@@ -96,7 +96,7 @@ class _MysqlStore(_MemoryStore):
                 title VARCHAR(1024) NOT NULL,
                 title_key VARCHAR(255) NOT NULL,
                 composer_name VARCHAR(255),
-                composer_id VARCHAR(36),
+                person_id VARCHAR(36),
                 catalogue VARCHAR(255),
                 catalogue_key VARCHAR(128),
                 year SMALLINT,
@@ -105,8 +105,8 @@ class _MysqlStore(_MemoryStore):
                 source_count TINYINT NOT NULL DEFAULT 0,
                 updated_at VARCHAR(64) NOT NULL,
                 PRIMARY KEY (id),
-                UNIQUE KEY uq_idx_title_composer (title_key(191), composer_id),
-                KEY idx_idx_composer (composer_id),
+                UNIQUE KEY uq_idx_title_composer (title_key(191), person_id),
+                KEY idx_idx_composer (person_id),
                 KEY idx_idx_catalogue (catalogue_key),
                 KEY idx_idx_title (title_key)
             ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci

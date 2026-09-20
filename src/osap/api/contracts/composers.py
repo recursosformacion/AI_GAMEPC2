@@ -23,7 +23,7 @@ class ComposerListResponse(_Frozen):
 
 
 class ComposerIdentifierResponse(_Frozen):
-    composer_id: str = ""
+    person_id: str = ""
     id_type: str = ""
     id_value: str = ""
     is_identity_anchor: bool = False
@@ -33,7 +33,7 @@ class ComposerIdentifierResponse(_Frozen):
 
 
 class ComposerEvidenceResponse(_Frozen):
-    composer_id: str = ""
+    person_id: str = ""
     rule: str = ""
     decision: str = ""
     reason: str = ""
@@ -46,7 +46,7 @@ class ComposerEvidenceResponse(_Frozen):
 
 
 class ComposerCreationEvidenceResponse(_Frozen):
-    composer_id: str = ""
+    person_id: str = ""
     extracted_author: str | None = None
     work_id: int | None = None
     work_title: str | None = None
@@ -83,7 +83,7 @@ class ComposerDetailResponse(_Frozen):
 class ComposerWorkRefResponse(_Frozen):
     work_id: int
     title: str | None = None
-    composer_id: str | None = None
+    person_id: str | None = None
     tags: str | None = None
 
 
@@ -119,12 +119,12 @@ class AddAliasRequest(_Frozen):
 
 
 class MoveAliasRequest(_Frozen):
-    target_composer_id: str
-    from_composer_id: str
+    target_person_id: str
+    from_person_id: str
 
 
 class SetAttributionRequest(_Frozen):
-    composer_ids: list[str]
+    person_ids: list[str]
     attribution_type: str
 
 
@@ -139,7 +139,7 @@ class MoveAliasResultResponse(_Frozen):
 
 
 class PromoteAliasResultResponse(_Frozen):
-    composer_id: str
+    person_id: str
     name: str
 
 

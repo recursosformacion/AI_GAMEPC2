@@ -10,7 +10,7 @@ para que cada pasada reanude donde terminó la anterior:
   * musicbrainz -> dump local (manual, requiere `--mb-dump` y suele ser una carga completa).
 
 Cada proveedor es idempotente: reindexar una obra ya presente actualiza sus metadatos en
-vez de duplicarla (dedupe por `title_key`+`composer_id`).
+vez de duplicarla (dedupe por `title_key`+`person_id`).
 
 Uso (en osap-api, con PYTHONPATH=osap-api):
     python script/sync_index.py --providers imslp,omr,mutopia \

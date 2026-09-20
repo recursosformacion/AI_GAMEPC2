@@ -44,14 +44,14 @@ class WorkVote:
     """Un voto de un usuario a una obra.
 
     ``user_id`` es opaco (UUID) y puede ser ``None`` cuando el voto ha sido anonimizado
-    tras el evento ``user.deleted``. Nunca guarda PII. ``composer_id`` se denormaliza aquí
+    tras el evento ``user.deleted``. Nunca guarda PII. ``person_id`` se denormaliza aquí
     (obtenido del contrato de Storage) para poder agregar estadísticas de compositor.
     """
 
     vote: int
     work_id: str
     user_id: str | None
-    composer_id: str | None = None
+    person_id: str | None = None
     id: str = ""
     voted_at: datetime | None = None
     vote_day: str | None = None
@@ -108,7 +108,7 @@ class WorkStats:
 class ComposerStats:
     """Estadísticas agregadas de un compositor (proxy de osap-storage)."""
 
-    composer_id: str
+    person_id: str
     vote_count: int
     rating: float | None
     adjusted_rating: float | None = None

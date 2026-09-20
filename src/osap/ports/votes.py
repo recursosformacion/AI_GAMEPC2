@@ -27,7 +27,7 @@ class IAuthenticator(ABC):
 class IWorkStore(ABC):
     """Identidad de Work vía el contrato de Storage (nunca su BD).
 
-    Devuelve el ``composer_id`` de una Work, o ``None`` si la Work no existe.
+    Devuelve el ``person_id`` de una Work, o ``None`` si la Work no existe.
     """
 
     @abstractmethod
@@ -51,12 +51,12 @@ class IVoteStore(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def composer_statistics(self, composer_id: str) -> ComposerStats | None:
+    def composer_statistics(self, person_id: str) -> ComposerStats | None:
         raise NotImplementedError
 
     @abstractmethod
     def anonymize_user(self, user_id: str) -> tuple[tuple[str, ...], tuple[str, ...]]:
-        """Anonimiza los votos de un usuario. Devuelve (work_ids, composer_ids) afectados."""
+        """Anonimiza los votos de un usuario. Devuelve (work_ids, person_ids) afectados."""
         raise NotImplementedError
 
     @abstractmethod

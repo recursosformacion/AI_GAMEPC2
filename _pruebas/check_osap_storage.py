@@ -48,9 +48,9 @@ for table in ['works', 'composers', 'files', 'catalogues']:
     print()
 
 print("\n=== ÚLTIMOS REGISTROS EN WORKS ===\n")
-cursor.execute('SELECT id, title, composer_id, created_at FROM works ORDER BY id DESC LIMIT 5')
+cursor.execute('SELECT id, title, person_id, created_at FROM works ORDER BY id DESC LIMIT 5')
 for row in cursor.fetchall():
-    print(f"  id={row[0]}, title='{row[1][:50]}', composer_id={row[2]}, created_at={row[3]}")
+    print(f"  id={row[0]}, title='{row[1][:50]}', person_id={row[2]}, created_at={row[3]}")
 
 print("\n=== ÚLTIMOS REGISTROS EN COMPOSERS ===\n")
 cursor.execute('SELECT id, name, birth_year, death_year FROM composers ORDER BY id DESC LIMIT 5')

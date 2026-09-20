@@ -112,7 +112,7 @@ def build_votes_router(ctx: HttpContext) -> APIRouter:
         )
 
     @router.get(
-        "/api/v1/composers/{composer_id}/statistics",
+        "/api/v1/composers/{person_id}/statistics",
         tags=["Votes"],
         summary="Composer statistics",
         description="Valoración agregada de un compositor (proxy de osap-storage).",
@@ -124,16 +124,16 @@ def build_votes_router(ctx: HttpContext) -> APIRouter:
             **_shared._standard_errors(),
         },
     )
-    def composer_statistics(composer_id: str, response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
+    def composer_statistics(person_id: str, response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            stats = ctx.api.composer_statistics(composer_id)
+            stats = ctx.api.composer_statistics(person_id)
         except WorkNotFoundError:
             return ctx.fail(404, response, "NOT_FOUND", "Composer not found")
         except StorageUnavailableError:
             return ctx.fail(503, response, "SERVICE_UNAVAILABLE", "Statistics service is not configured")
         return ctx.ok(
             ComposerStatisticsResponse(
-                composer_id=stats.composer_id,
+                person_id=stats.person_id,
                 rating=stats.rating,
                 adjusted_rating=stats.adjusted_rating,
                 vote_count=stats.vote_count,

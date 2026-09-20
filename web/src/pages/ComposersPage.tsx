@@ -37,9 +37,9 @@ export function ComposersPage() {
     setReview(value || null);
   };
 
-  const toggleWorks = (composerId: string) => {
+  const toggleWorks = (personId: string) => {
     // Cierra si ya está abierto; si no, abre (la búsqueda la lanza ComposerWorksInline).
-    setOpenWorks((current) => (current === composerId ? null : composerId));
+    setOpenWorks((current) => (current === personId ? null : personId));
   };
 
   return (

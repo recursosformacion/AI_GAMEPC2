@@ -159,8 +159,8 @@ export function AdminPage() {
               <h2 className="mb-2 text-sm font-semibold">{t("admin.topComposers")}</h2>
               <ul className="space-y-1 text-sm">
                 {overview.top_composers.map((c) => (
-                  <li key={c.composer_id} className="flex justify-between">
-                    <span className="truncate">{rankLabel(c.composer_id)}</span>
+                  <li key={c.person_id} className="flex justify-between">
+                    <span className="truncate">{rankLabel(c.person_id)}</span>
                     <span className="text-osap-muted">
                       {c.rating !== null ? `★ ${c.rating.toFixed(2)}` : "—"} · {c.vote_count}
                     </span>
