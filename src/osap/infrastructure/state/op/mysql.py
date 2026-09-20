@@ -124,6 +124,8 @@ class _MysqlStore(_MemoryStore):
                 available TINYINT NOT NULL DEFAULT 0,
                 quality TINYINT NOT NULL DEFAULT 0,
                 content_hash CHAR(64) NULL,
+                xml_title VARCHAR(512) NULL,
+                xml_composer VARCHAR(255) NULL,
                 PRIMARY KEY (id),
                 KEY idx_idxrep_work (work_id),
                 KEY idx_rep_content_hash (content_hash),
@@ -219,6 +221,12 @@ class _MysqlStore(_MemoryStore):
         rep_existing = {str(r["column_name"]) for r in rep_cols} if rep_cols else set()
         if "content_hash" not in rep_existing:
             self._run("ALTER TABLE index_representations ADD COLUMN content_hash CHAR(64) NULL")
+        # Metadatos internos del MusicXML (auditoría de títulos/compositor OMR; los rellena
+        # script/audit_omr_titles.py al abrir cada fichero).
+        if "xml_title" not in rep_existing:
+            self._run("ALTER TABLE index_representations ADD COLUMN xml_title VARCHAR(512) NULL")
+        if "xml_composer" not in rep_existing:
+            self._run("ALTER TABLE index_representations ADD COLUMN xml_composer VARCHAR(255) NULL")
         rep_index = self._run(
             "SELECT index_name FROM information_schema.statistics "
             "WHERE table_schema = DATABASE() AND table_name = 'index_representations' "
