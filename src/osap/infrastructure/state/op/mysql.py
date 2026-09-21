@@ -248,6 +248,19 @@ class _MysqlStore(_MemoryStore):
         )
         if not composer_name_index:
             self._run("CREATE INDEX idx_idx_composer_name ON index_works (composer_name)")
+
+        # Colaciones: unificar la BD a `utf8mb4_unicode_ci`. Con `utf8mb4_general_ci` en una
+        # tabla, cualquier JOIN/compare con otra tabla de colación distinta falla (error 1267);
+        # era el caso de `works ⨝ persons` en osap-storage.
+        mixed = self._run(
+            "SELECT table_name FROM information_schema.tables "
+            "WHERE table_schema = DATABASE() AND table_collation = 'utf8mb4_general_ci'"
+        )
+        for row in mixed or []:
+            table = str(row["table_name"])
+            self._run(
+                f"ALTER TABLE `{table}` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+            )
         rep_index = self._run(
             "SELECT index_name FROM information_schema.statistics "
             "WHERE table_schema = DATABASE() AND table_name = 'index_representations' "

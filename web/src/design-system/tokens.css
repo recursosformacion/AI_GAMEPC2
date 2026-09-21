@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+/* Tipografía: pila con fallbacks para CUALQUIER alfabeto (cirílico, griego, CJK, emoji).
+   Sin esto, un nombre chino o ruso cae a una fuente por defecto impredecible. */
+html {
+  font-family: "Inter", system-ui, "Segoe UI", Roboto, "Noto Sans", "Microsoft YaHei",
+    "PingFang SC", "Hiragino Sans", "Yu Gothic", "Malgun Gothic", "Noto Sans CJK SC",
+    "Apple Color Emoji", "Segoe UI Emoji", sans-serif;
+}
+
+
 @theme {
   --color-osap-bg: #faf9f7;
   --color-osap-surface: #ffffff;
