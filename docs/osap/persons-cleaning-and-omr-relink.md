@@ -2,31 +2,35 @@
 
 Fecha: 2026-09-21. Dos trabajos independientes, en este orden.
 
-## A) Re-enlace OMR↔obra (prioridad 1: es la base de todo)
+## A) OMR: RETRACTADO — producción está BIEN; el fallo era del entorno local
 
-### Medido
-- Auditoría de 300 obras OMR abriendo su MusicXML: **241 desajustes (80 %)**.
-- El emparejamiento obra↔fichero viene mal **desde el origen**: `osap-storage_v1` y
-  `osap-storage` coinciden (f_v2 == f_v1), así que **no es una regresión de la v2**.
-- **No hay desplazamiento constante** (probado offsets 0, ±1, ±2, ±5, ±20, ±100 → sin patrón).
-- El MusicXML **no contiene el id OMR** (solo música y, a veces, `<work-title>`); ejemplo:
-  obra "Ffidl Ffadl" (id 9) → fichero 632 → contenido real "Diferion Arian".
+### Corrección (2026-09-21, verificado)
+Mi auditoría daba 80 % de desajustes **midiendo el entorno local**, y concluí mal que el
+enlace obra↔fichero venía roto del origen. **Es falso**: en producción el emparejamiento es
+correcto (el `<work-title>` del fichero coincide con el título anunciado; probado con
+"Ffidl Ffadl", "Ave Verum", "Sussex Carol").
 
-### Plan (estructural)
-1. **Auditar todo el corpus OMR** con `script/audit_omr_titles.py` (una lectura de R2/CDN por
-   representación) y guardar `index_representations.xml_title` / `xml_composer`.
-   Ya implementado y reanudable (`xml_title IS NULL`).
-2. **Re-emparejar** (storage): construir el índice inverso `xml_title → file_id` y, para cada
-   obra cuyo `xml_title` no coincida, apuntar `works_resources` al fichero cuyo contenido sí
-   coincide (mismo título normalizado). Determinista y reversible (guardar el mapping previo).
-   - Las obras cuyo fichero **no trae metadatos** quedan marcadas como "no verificable".
-3. **Reconstruir el índice** (20 min) y volver a auditar: el desajuste debe caer a ~0 en las
-   verificables.
-4. Solo entonces tiene sentido atribuir compositores/títulos: hoy parte de las conclusiones
-   se apoyan en fichas cuyo fichero no corresponde.
+### Causa real (dev): `/api/download/{id}` resuelve ids **ambiguos**
+En el modelo nuevo, el handler de storage
+(`api/routes/provider.py` → `/api/download/{resource_id}`) resuelve el id contra
+**representaciones**, **archive entries** y **ficheros**. Con ids numéricos colisionan:
 
-Alternativa (cosmética, no recomendada como primera): renombrar cada obra con el título
-interno de su fichero (auto-consistencia sin re-enlazar). Útil solo si el punto 2 no es viable.
+```
+GET /api/download/632      → 302 /api/v1/files/1255/content   (entry 632 → file 1255)
+GET /api/v1/files/242077/content → "FfidFfadl" (correcto)
+GET /api/v1/files/242700/content → "Garech's Wedding"
+GET /api/v1/files/1255/content   → "Diferion Arian"
+```
+Es decir: el índice guarda `download_url = {storage}/api/download/{file_id}`, pero en local
+ese id también existe como *archive entry* (u otra entidad) y storage sirve **otro fichero**.
+En producción el endpoint mantiene la semántica antigua (id = fichero) y por eso funciona.
+
+### Acción
+1. **storage (su repo)**: desambiguar `/api/download/{id}` — p. ej., resolver primero
+   `files` (con `available`) y/o exigir el prefijo `res-` que ya usa `_resource_id()`, o
+   devolver 409 si el id existe en varias entidades.
+2. **Local**: no volver a auditar títulos hasta arreglarlo (los resultados no son válidos).
+3. La auditoría completa de OMR queda **cancelada** (no hay nada que re-enlazar en el catálogo).
 
 ## B) Limpieza genérica de `persons` (reglas, no casos)
 
