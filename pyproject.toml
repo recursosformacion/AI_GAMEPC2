@@ -17,6 +17,9 @@ osap = "src.osap.cli.main:entrypoint"
 
 [project.optional-dependencies]
 api = ["fastapi>=0.115", "uvicorn[standard]>=0.30", "PyMySQL>=1.1", "requests>=2.31"]
+# Stubs de PyMySQL: el mypy del proyecto es `strict` (sin `ignore_missing_imports`),
+# así que sin `types-PyMySQL` la comprobación de tipos del entorno falla.
+dev = ["types-PyMySQL>=1.1"]
 
 [tool.setuptools.packages.find]
 where = ["."]

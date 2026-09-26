@@ -27,3 +27,6 @@ htmlcov/
 osap.production.toml
 osap.toml
 data/authority/
+
+# Logs de servicios en runtime
+logs/

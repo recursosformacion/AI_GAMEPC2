@@ -34,6 +34,8 @@ from src.osap.api.platform import VERSION
 from src.osap.infrastructure.http.browser_headers import browser_headers
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
     from src.osap.application.composer_resolution_engine import ResolutionDecision, ResolvedComposer
 
 _EXTENSION = {"musicxml": ".musicxml", "pdf": ".pdf", "midi": ".mid"}
@@ -381,6 +383,58 @@ def _composer_stats_dto(d: dict[str, object]) -> ComposerStatisticsResponse:
     )
 
 
+_REVIEW_PAGE = 500
+_MAX_REVIEW_PAGES = 8
+
+
+def _review_matches(item: object, review: str) -> bool:
+    """`True` si la ficha entra en el filtro de estado de revisión (con niveles de dificultad)."""
+    status = str(item.get("review_status") or "") if isinstance(item, dict) else ""
+    if review == "not_reviewed":
+        return status.startswith("not_reviewed")
+    return status == review
+
+
+def _review_page(
+    fetch: Callable[[int, int], dict[str, object]], review: str, limit: int, offset: int
+) -> dict[str, object]:
+    """Pagina contra osap-storage aplicando el filtro por estado **en memoria**.
+
+    osap-storage ignora `review`, así que se recorren páginas de `_REVIEW_PAGE` filas hasta
+    reunir `offset + limit` coincidencias (tope `_MAX_REVIEW_PAGES`). **`total` va a `None`**:
+    el número real de coincidencias no se conoce (solo se han visto las primeras
+    `_MAX_REVIEW_PAGES` páginas del origen), y publicarlo induciría a error de paginación.
+    """
+    collected: list[object] = []
+    source_offset = 0
+    for _ in range(_MAX_REVIEW_PAGES):
+        data = fetch(_REVIEW_PAGE, source_offset)
+        items = data.get("items")
+        rows = items if isinstance(items, list) else []
+        collected.extend(item for item in rows if _review_matches(item, review))
+        if len(rows) < _REVIEW_PAGE or len(collected) >= offset + limit:
+            break
+        source_offset += _REVIEW_PAGE
+    return {"items": collected[offset : offset + limit], "total": None}
+
+
+def _list_public_or_maintenance(
+    fetch_public: Callable[[int, int], dict[str, object]],
+    fetch_review: Callable[[int, int], dict[str, object]],
+    review: str | None,
+    limit: int,
+    offset: int,
+) -> tuple[dict[str, object], bool]:
+    """Devuelve `(data, public)`.
+
+    Sin `review` → catálogo público (`public=True`, respeta `visible`). Con `review` →
+    mantenimiento: se pagina en memoria (`total=None`) y `public=False`.
+    """
+    if review:
+        return _review_page(fetch_review, review, limit, offset), False
+    return fetch_public(limit, offset), True
+
+
 def _composer_summary_dto(d: dict[str, object]) -> ComposerSummaryResponse:
     return ComposerSummaryResponse(
         id=cast("str", d.get("id") or ""),
@@ -396,15 +450,19 @@ def _composer_summary_dto(d: dict[str, object]) -> ComposerSummaryResponse:
     )
 
 
-def _composer_list_dto(d: dict[str, object]) -> ComposerListResponse:
+def _composer_list_dto(d: dict[str, object], public: bool = True) -> ComposerListResponse:
     items = d.get("items")
     raw_items = items if isinstance(items, list) else []
-    # La consulta pública solo expone compositores visibles del Maestro.
-    visible_items = [dict(i) for i in raw_items if isinstance(i, dict)
-                     and bool(i.get("visible", True))]
+    # La consulta pública solo expone compositores visibles del Maestro; el mantenimiento
+    # (con `review`) necesita ver también los ocultos/pendientes.
+    if public:
+        raw_items = [i for i in raw_items if isinstance(i, dict) and bool(i.get("visible", True))]
+    visible_items = [dict(i) for i in raw_items if isinstance(i, dict)]
+    total = d.get("total")
     return ComposerListResponse(
         items=[_composer_summary_dto(i) for i in visible_items],
-        total=cast("int", d.get("total") or 0),
+        # `None` cuando el total es desconocido (filtro `review` aplicado en memoria).
+        total=cast("int | None", total),
     )
 
 

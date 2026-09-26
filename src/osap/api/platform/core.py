@@ -65,9 +65,9 @@ class PlatformApiCore:
         """Construye una RepresentationInfo a partir de un candidato (y la registra).
 
         El id es **determinista** para las representaciones del índice
-        (`idx-<work_id>-<provider>-<format>`), de modo que `view`/`download` pueden
-        resolverse en el backend aunque se haya reiniciado el proceso (no dependen de
-        la caché en memoria).
+        (`idx-<work_id>-<provider>-<resource_id>-<format>`), de modo que `view`/`download`
+        pueden resolverse en el backend aunque se haya reiniciado el proceso (no dependen
+        de la caché en memoria).
         """
         fmt = getattr(m, "format", None)
         provider = getattr(m, "provider_id", None)
@@ -84,11 +84,19 @@ class PlatformApiCore:
         available = bool(download) and not is_metadata_only
         url = download or view
         fmt_value = fmt.value if fmt is not None else "score"
+        # Identidad de origen (CPDL): edición (`source_rep_id`, p. ej. cpdlno) + resource
+        # (`resource_id`). Viaja en `metadata` (el contrato no tiene columnas propias) y se
+        # usa para el id determinista: dos ediciones del mismo formato no pueden colisionar.
+        raw_metadata = getattr(m, "metadata", None)
+        metadata = dict(raw_metadata) if isinstance(raw_metadata, dict) and raw_metadata else None
+        resource_id = int(metadata.get("resource_id") or 0) if metadata else 0
+        source_rep_id = str(metadata.get("source_rep_id") or "") if metadata else ""
         candidate_id = getattr(getattr(m, "candidate_id", None), "value", "") or ""
         if candidate_id.startswith("index-"):
             # candidate_id = "index-<work_id>-<provider>"
             work_part = candidate_id.split("-")[1] if len(candidate_id.split("-")) > 1 else ""
-            rep_id = f"idx-{work_part}-{provider_id}-{fmt_value}"
+            # El resource identifica la fila; 0 en proveedores legacy (OMR/IMSLP/MusicBrainz).
+            rep_id = f"idx-{work_part}-{provider_id}-{resource_id}-{fmt_value}"
         else:
             rep_id = f"r-{stable_id(provider_id, download or view or candidate_id, fmt_value)}"
         # work_id de la obra (para analítica y resolución de `view`/`download` sin caché).
@@ -105,11 +113,9 @@ class PlatformApiCore:
             "format": fmt.value if fmt is not None else None,
             "provider": provider_id,
             "work_id": work_id_value,
+            "source_rep_id": source_rep_id,
+            "resource_id": resource_id,
         }
-        # Metadatos específicos de la fuente (p. ej. voicing CPDL): viajan con la
-        # representación/origen, nunca se copian a `works`.
-        raw_metadata = getattr(m, "metadata", None)
-        metadata = dict(raw_metadata) if isinstance(raw_metadata, dict) and raw_metadata else None
         return RepresentationInfo(
             id=rep_id,
             provider=provider_id,

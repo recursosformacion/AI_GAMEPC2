@@ -17,7 +17,7 @@
       "command": ".venv\\Scripts\\python.exe -m uvicorn api.main:app --host 127.0.0.1 --port 8000 --reload",
       "options": {
         "cwd": "${workspaceFolder}/../osap-storage",
-        "env": { "OSAP_CONFIG": "config.test.yaml" }
+        "env": { "OSAP_CONFIG": "config.yaml" }
       },
       "isBackground": true,
       "presentation": { "reveal": "silent", "panel": "dedicated", "group": "servers", "clear": false },

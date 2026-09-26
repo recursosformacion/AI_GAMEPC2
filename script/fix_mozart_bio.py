@@ -6,7 +6,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.stdout.reconfigure(encoding="utf-8")
 
-import composer_review_ai as bio
+import composer_review_ai as bio  # noqa: E402  (requiere el sys.path.insert previo)
 
 MOZART_ID = "add4410c-f0ff-46c7-a73e-84ab24518c28"
 

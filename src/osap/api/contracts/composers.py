@@ -21,7 +21,8 @@ class ComposerSummaryResponse(_Frozen):
 
 class ComposerListResponse(_Frozen):
     items: list[ComposerSummaryResponse] = []
-    total: int = 0
+    # `None` = total desconocido (filtro `review` aplicado en memoria, ver `_review_page`).
+    total: int | None = 0
 
 
 class ComposerIdentifierResponse(_Frozen):

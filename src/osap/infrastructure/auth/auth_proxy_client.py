@@ -85,7 +85,7 @@ class AuthProxyClient:
         except urllib.error.HTTPError as exc:
             raw = exc.read()
             try:
-                doc = json.loads(raw or b"{}") if raw else {}
+                doc = json.loads(raw) if raw else {}
             except Exception:
                 doc = {}
             return exc.code, doc

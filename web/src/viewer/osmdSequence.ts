@@ -80,11 +80,13 @@ function buildFromSheet(osmd: OsmdLike, bpm: number): NoteSequenceLike | null {
   const notes: NoteSequenceLike["notes"] = [];
   let totalTime = 0;
   let measureStartWhole = 0;
+  let lastAdvance = 1; // duración del compás anterior (fallback si falta la actual)
 
   for (const measure of measures) {
     if (!measure) continue;
-    const declared = measure.Timestamp?.RealValue;
-    const base = typeof declared === "number" ? declared : measureStartWhole;
+    // `measure.Timestamp` NO es fiable en OSMD 0.8.4 (da un valor relativo por compás):
+    // si se usa, todas las notas caen en el primer compás y el audio dura ~1 s. Se
+    // ACUMULA siempre el inicio de cada compás.
     const durationWhole = measure.Duration?.RealValue ?? 0;
     const containers = measure.VerticalSourceStaffEntryContainers ?? [];
     let maxRelative = 0;
@@ -92,7 +94,7 @@ function buildFromSheet(osmd: OsmdLike, bpm: number): NoteSequenceLike | null {
       if (!container) continue;
       const relative = container.Timestamp?.RealValue ?? 0;
       if (relative > maxRelative) maxRelative = relative;
-      const time = noteSeconds(base + relative);
+      const time = noteSeconds(measureStartWhole + relative);
       for (const staffEntry of container.StaffEntries ?? []) {
         if (!staffEntry) continue;
         for (const voiceEntry of staffEntry.VoiceEntries ?? []) {
@@ -108,8 +110,11 @@ function buildFromSheet(osmd: OsmdLike, bpm: number): NoteSequenceLike | null {
         }
       }
     }
-    // Longitud del compás: su duración declarada o, si falta, el último onset relativo.
-    measureStartWhole = base + (durationWhole > 0 ? durationWhole : maxRelative);
+    // Longitud del compás: duración declarada; si falta, el último onset; si tampoco,
+    // se repite la del compás anterior (evita inflar con un valor fijo artificial).
+    const advance = durationWhole > 0 ? durationWhole : (maxRelative > 0 ? maxRelative : lastAdvance);
+    if (advance > 0) lastAdvance = advance;
+    measureStartWhole += advance;
     totalTime = Math.max(totalTime, noteSeconds(measureStartWhole));
   }
 

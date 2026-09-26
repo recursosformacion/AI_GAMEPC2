@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from fastapi import APIRouter, Query, Response
+from fastapi import APIRouter, Header, Query, Response
 
 from src.osap.api.contracts import (
     CatalogueRead,
@@ -16,6 +16,7 @@ from src.osap.api.contracts import (
     ErrorEnvelope,
     SuccessEnvelope,
 )
+from src.osap.domain.votes import ForbiddenError, UnauthenticatedError
 from src.osap.infrastructure.storage.storage_composer_client import StorageComposerError
 
 if TYPE_CHECKING:
@@ -46,12 +47,32 @@ def build_composers_router(ctx: HttpContext) -> APIRouter:
         offset: int = Query(0, ge=0),
         review: str | None = Query(
             default=None,
-            pattern=r"^(correct|incorrect|reviewed|not_reviewed)$",
-            description="Filtro por estado de revisión.",
+            pattern=r"^(correct|incorrect|reviewed|not_reviewed|not_reviewed_[123])$",
+            description="Filtro por estado de revisión (**solo mantenimiento/admin**; "
+            "incluye niveles de dificultad).",
         ),
+        authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            data = ctx.api.list_composers(q, limit, offset, review)
+            # `review` es mantenimiento: exige admin. Sin `review` el catálogo es público
+            # (osap-storage filtra no visibles y pagina sobre el resultado).
+            if review:
+                ctx.api._require_admin(authorization)
+            data, public = _shared._list_public_or_maintenance(
+                lambda page_limit, page_offset: ctx.api.list_composers(
+                    q, page_limit, page_offset, None, public=True
+                ),
+                lambda page_limit, page_offset: ctx.api.list_composers(
+                    q, page_limit, page_offset, review
+                ),
+                review,
+                limit,
+                offset,
+            )
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Login required")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
         except StorageComposerError:
             return ctx.fail(503, response, "SERVICE_UNAVAILABLE", "Composer service is not configured")
         # Recuento de obras desde el ÍNDICE local (el catálogo realmente consultable);
@@ -63,7 +84,7 @@ def build_composers_router(ctx: HttpContext) -> APIRouter:
             for item in items:
                 if isinstance(item, dict) and str(item.get("id") or "") in counts:
                     item["works_count"] = counts[str(item["id"])]
-        return ctx.ok(_shared._composer_list_dto(data))
+        return ctx.ok(_shared._composer_list_dto(data, public=public))
 
     @router.get(
         "/api/v1/composers/{person_id}",

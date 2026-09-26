@@ -3,21 +3,24 @@
 
 Lee obras de varios proveedores y puebla el índice local
 (`index_works` + `index_representations` en la BD de osap-api), normalizando títulos
-(`title_key`) y compositores (canonical + `composer_id` del Maestro) y deduplicando por
-(`title_key`, `composer_id`). La normalización es determinista: el índice GUARDA el
+(`title_key`) y compositores (canonical + `person_id` del Maestro) y deduplicando por
+(`title_key`, `person_id`). La normalización es determinista: el índice GUARDA el
 resultado, no lo recalcula por búsqueda.
 
 Proveedores (selección con `--providers`):
   omr          -> corpus OMR
                                         (osap-storage.works)
                                                [musicxml]
+  cpdl         -> corpus CPDL            (osap-storage.works, works_origin='CPDL')
+                                               [pdf/musicxml]
   imslp        -> Worklist API de IMSLP (paginada por start)               [pdf/página]
   mutopia      -> make-table.cgi (listing completo, paginado por startat)  [pdf+midi]
   musicbrainz  -> dump local mbdump (work + l_artist_work + artist)        [metadata]
 
-CPDL NO se indexa aquí: desde su integración como proveedor vivo (corpus
-`cpdl_pages` + `cpdl_voicings` en osap-storage) es la ÚNICA fuente de sus resultados,
-y dejar copias en el índice local duplicaría las páginas.
+CPDL SÍ se indexa aquí: su corpus ya está materializado en `osap-storage.works`
+(`works_origin='CPDL'`, con personas y recursos propios), igual que OMR. Así la búsqueda
+por canción y la ficha de compositor devuelven el mismo conjunto y `works_count` cuadra.
+El voicing son las formaciones de `ensembles` vía `work_ensembles` (fuente única: storage).
 
 OMR construye `download_url` como `{storage}/api/download/{file_id}` (el endpoint de
 osap-storage redirige 302 al CDN/R2) y marca `available=1`. MusicBrainz por defecto solo
@@ -146,12 +149,20 @@ def _canonical_catalogue_identity(catalogue: str | None) -> str:
     return " ".join(tokens)[:128]
 
 
-def _significant_tokens(title: str) -> set[str]:
-    """Palabras del título con valor identificativo (>=3 letras, sin términos genéricos)."""
+def _significant_tokens(title: str, composer: str | None = None) -> set[str]:
+    """Palabras del título con valor identificativo (>=3 letras, sin genéricos NI
+    tokens del compositor).
+
+    En PDMX el compositor viene DENTRO del título ("Frédéric Chopin: Prelude…"); si no
+    se excluye, cualquier obra del mismo autor reduce a {ric, chopin} y todas colapsan
+    en una sola obra (bug de agrupación de OMR).
+    """
+    composer_tokens = set(title_key(composer).split()) if composer else set()
     return {
         t
         for t in title_key(title).split()
         if len(t) >= 3 and not t.isdigit() and t not in _GENERIC_TITLE_WORDS
+        and t not in composer_tokens
     }
 
 
@@ -173,8 +184,8 @@ def _is_unique_catalogue(catalogue_norm: str) -> bool:
     return len(numbers) >= 2
 
 
-def _shares_significant_token(a: str, b: str) -> bool:
-    return bool(_significant_tokens(a) & _significant_tokens(b))
+def _shares_significant_token(a: str, b: str, composer: str | None = None) -> bool:
+    return bool(_significant_tokens(a, composer) & _significant_tokens(b, composer))
 
 
 def _tokens_subset_sets(a: set[str], b: set[str]) -> bool:
@@ -185,14 +196,14 @@ def _tokens_subset_sets(a: set[str], b: set[str]) -> bool:
     return len(small) >= 2 and small <= big
 
 
-def _tokens_subset(a: str, b: str) -> bool:
+def _tokens_subset(a: str, b: str, composer: str | None = None) -> bool:
     """True si las palabras significativas de `a` están contenidas en las de `b` (o al revés).
 
     Permite anclar títulos sin catálogo ("Ave Verum", "Ave Verum Corpus - TTBB") a la obra
     ya identificada ("Mozart: Ave Verum Corpus K. 618") sin unir obras distintas: exige al
-    menos 2 palabras significativas en la parte corta.
+    menos 2 palabras significativas PROPIAS del título (excluido el compositor).
     """
-    ta, tb = _significant_tokens(a), _significant_tokens(b)
+    ta, tb = _significant_tokens(a, composer), _significant_tokens(b, composer)
     if not ta or not tb:
         return False
     small, big = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
@@ -239,31 +250,39 @@ def _is_anon(name: str | None) -> bool:
     return low in _ANON or low.startswith("urheber unbekannt")
 
 
-def _resolve_composer_id(
-    conn: pymysql.Connection, composer_name: str | None, cache: dict[str, str]
-) -> str | None:
-    """Resuelve un nombre de compositor contra el Maestro (osap-storage) por name_key."""
-    if not composer_name or _is_anon(composer_name):
-        return None
-    key = composer_key(composer_name)
+def _resolve_person(
+    conn: pymysql.Connection,
+    raw_name: str | None,
+    cache: dict[str, tuple[str | None, str | None]],
+) -> tuple[str | None, str | None]:
+    """Resuelve un nombre a (persons_id, persons_name) del Maestro.
+
+    El índice **no normaliza**: si resuelve, copia el nombre canónico de `persons`; si no
+    resuelve, devuelve (None, None) y se conserva el texto del proveedor tal cual (nunca
+    `canonical_composer`, que producía inventos como "afwa mozart").
+    """
+    if not raw_name or _is_anon(raw_name):
+        return None, None
+    key = composer_key(raw_name)
     if key in cache:
-        return cache[key] or None
+        return cache[key]
     cid: str | None = None
+    cname: str | None = None
     try:
         with conn.cursor() as cur:
             # Dos consultas (nombre → alias) para que MySQL use los índices: el `OR` con
             # JOIN forzaba un escaneo de `persons`/`persons_aliases` por cada nombre.
             cur.execute(
-                "SELECT persons_id AS id FROM persons "
+                "SELECT persons_id AS id, persons_name AS name FROM persons "
                 "WHERE persons_status = 'active' AND persons_name = %s LIMIT 1",
-                (composer_name,),
+                (raw_name,),
             )
             row = cur.fetchone()
             if row:
-                cid = row["id"]
+                cid, cname = row["id"], row["name"]
             if cid is None:
                 cur.execute(
-                    "SELECT p.persons_id AS id FROM persons_aliases a "
+                    "SELECT p.persons_id AS id, p.persons_name AS name FROM persons_aliases a "
                     "JOIN persons p ON p.persons_id = a.person_id "
                     "WHERE a.person_aliases_normalized_alias = %s "
                     "AND p.persons_status = 'active' LIMIT 1",
@@ -271,11 +290,72 @@ def _resolve_composer_id(
                 )
                 row = cur.fetchone()
                 if row:
-                    cid = row["id"]
+                    cid, cname = row["id"], row["name"]
     except pymysql.err.ProgrammingError:
-        cid = None
-    cache[key] = cid or ""
-    return cid
+        cid = cname = None
+    if cid and cid in _PERSON_ID_CANON:
+        cid, cname = _PERSON_ID_CANON[cid]
+    if cid is None:
+        canon = _PERSON_BEST.get(_person_name_key(raw_name))
+        if canon:
+            cid, cname = canon
+    cache[key] = (cid, cname)
+    return cid, cname
+
+
+_PERSON_BEST: dict[frozenset, tuple[str | None, str | None]] = {}
+_PERSON_ID_CANON: dict[str, tuple[str | None, str | None]] = {}
+
+
+def _person_name_key(name: str | None) -> frozenset:
+    cleaned = _NORMALIZER.comparison_composer(str(name or "").replace(",", " "))
+    return frozenset(t for t in cleaned.split() if t)
+
+
+def _load_person_canon(conn: pymysql.Connection) -> None:
+    """Mapa persona→canónico (clase dominante por obras de rol 1, orden-insensible).
+
+    Hace **converger** el build con la consolidación: todo compositor se resuelve a la
+    MISMA persona dominante, así reindexar no crea filas nuevas ni nombres variantes.
+    """
+    _PERSON_BEST.clear()
+    _PERSON_ID_CANON.clear()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT persons_id, persons_name FROM persons WHERE persons_status='active'"
+            )
+            persons = cur.fetchall()
+            cur.execute(
+                "SELECT works_person_roles_person_id AS pid, COUNT(*) AS n "
+                "FROM works_person_roles WHERE works_person_roles_role_id = 1 GROUP BY pid"
+            )
+            counts = {str(r["pid"]): int(r["n"]) for r in cur.fetchall()}
+            cur.execute(
+                "SELECT person_id, person_aliases_normalized_alias AS a FROM persons_aliases"
+            )
+            aliases = cur.fetchall()
+    except pymysql.err.ProgrammingError:
+        return
+    by_id = {str(p["persons_id"]): str(p["persons_name"]) for p in persons}
+    keys = {pid: _person_name_key(name) for pid, name in by_id.items()}
+    dominant: dict[frozenset, str] = {}
+    for pid, key in keys.items():
+        if not key:
+            continue
+        cur_best = dominant.get(key)
+        if cur_best is None or counts.get(pid, 0) > counts.get(cur_best, 0):
+            dominant[key] = pid
+    for pid, key in keys.items():
+        dom = dominant.get(key, pid)
+        canon = (dom, by_id.get(dom, by_id[pid]))
+        _PERSON_ID_CANON[pid] = canon
+        if key:
+            _PERSON_BEST[key] = canon
+    for a in aliases:
+        canon = _PERSON_ID_CANON.get(str(a["person_id"]))
+        if canon:
+            _PERSON_BEST.setdefault(_person_name_key(a["a"]), canon)
 
 
 # ---------------------------------------------------------------- providers
@@ -293,12 +373,12 @@ _ATTR_LABELS = {
 def _iter_omr(
     omr: pymysql.Connection, from_id: int, limit: int, storage_base: str, batch: int = 2000
 ):
-    """Obras del corpus OMR (tabla works de osap-storage).
+    """Obras del corpus OMR/PDMX (`works` de osap-storage con `works_origin='PDMX'`).
 
-    Construye `download_url` como ``{storage_base}/api/download/{file_id}`` (el endpoint
-    de storage redirige 302 al CDN/R2) y marca `available=1` cuando hay fichero.
-    Pagina por PK y consulta `archive_entries.file_id` por lote (el JOIN completo hace
-    filesort de 254k filas).
+    CPDL tiene su propio proveedor (`_iter_cpdl`): NO se indexa aquí para no duplicar
+    la obra bajo dos proveedores. Construye `download_url` como
+    ``{storage_base}/api/download/{file_id}`` (el endpoint de storage redirige 302 al
+    CDN/R2) y marca `available=1` cuando hay fichero. Pagina por PK.
     """
     base = storage_base.rstrip("/")
     last_id = from_id
@@ -310,7 +390,7 @@ def _iter_omr(
                 "SELECT id, works_title AS title, works_catalogue AS catalogue, "
                 "works_year AS year, works_instrumentation AS instrumentation, "
                 "works_attr_type AS attr_type "
-                "FROM works WHERE id > %s ORDER BY id LIMIT %s",
+                "FROM works WHERE works_origin='PDMX' AND id > %s ORDER BY id LIMIT %s",
                 (last_id, take),
             )
             works = cur.fetchall()
@@ -319,13 +399,13 @@ def _iter_omr(
         ids = [w["id"] for w in works]
         placeholders = ",".join(["%s"] * len(ids))
         composers: dict[int, tuple[str, str]] = {}
-        files: dict[int, tuple[int, int]] = {}
+        files: dict[int, tuple[int, int, int]] = {}
         genres: dict[int, tuple[str, int]] = {}
         with omr.cursor() as cur:
             # Composer/atribución: rol 1 (compositor) en `works_person_roles` + `persons`.
             cur.execute(
                 "SELECT r.works_person_roles_work_id AS work_id, p.persons_name AS composer, "
-                "r.works_person_roles_person_id AS composer_id "
+                "r.works_person_roles_person_id AS person_id "
                 "FROM works_person_roles r "
                 "JOIN persons p ON p.persons_id = r.works_person_roles_person_id "
                 f"WHERE r.works_person_roles_work_id IN ({placeholders}) "
@@ -337,11 +417,11 @@ def _iter_omr(
             for row in cur.fetchall():
                 composers.setdefault(
                     int(row["work_id"]),
-                    (str(row["composer"] or ""), str(row["composer_id"] or "")),
+                    (str(row["composer"] or ""), str(row["person_id"] or "")),
                 )
             # Fichero: `works_resources`, prefiriendo partitura (MXL/MusicXML).
             cur.execute(
-                "SELECT wr.works_resources_work_id AS work_id, "
+                "SELECT wr.id AS res_id, wr.works_resources_work_id AS work_id, "
                 "wr.works_resources_file_id AS file_id, wr.works_resources_type AS rtype "
                 "FROM works_resources wr "
                 f"WHERE wr.works_resources_work_id IN ({placeholders}) "
@@ -355,9 +435,12 @@ def _iter_omr(
                     continue
                 work_id = int(row["work_id"])
                 file_id = int(row["file_id"])
+                res_id = int(row["res_id"])
                 current = files.get(work_id)
                 if current is None or rank < current[0]:
-                    files[work_id] = (rank, file_id)
+                    # (rank, file_id, works_resources.id): la identidad de recurso evita
+                    # que dos PDMX con el MISMO título colapsen en una sola reps.
+                    files[work_id] = (rank, file_id, res_id)
             # Género(s): `work_genres` + `genres`.
             cur.execute(
                 "SELECT wg.works_id AS work_id, g.name AS name, g.id AS genre_id "
@@ -376,19 +459,20 @@ def _iter_omr(
             title = str(w.get("title") or "").strip()
             if not title:
                 continue
-            composer, composer_id = composers.get(int(w["id"]), ("", ""))
+            composer, person_id = composers.get(int(w["id"]), ("", ""))
             if not composer:
                 # Obras marcadas en `works` como anónimas/tradicionales: se anuncian así
                 # (no son hueco de compositor y no se crea ninguna persona).
                 composer = _ATTR_LABELS.get(str(w.get("attr_type") or "").upper(), "")
             file_entry = files.get(int(w["id"]))
             file_id = file_entry[1] if file_entry else None
+            res_id = file_entry[2] if file_entry else 0
             genre_names, genre_id = genres.get(int(w["id"]), ("", 0))
             download_url = f"{base}/api/download/{file_id}" if file_id is not None else None
             yield {
                 "title": title,
                 "composer": composer or None,
-                "composer_id": composer_id or None,
+                "person_id": person_id or None,
                 "catalogue": w.get("catalogue"),
                 "year": w.get("year"),
                 "instrumentation": w.get("instrumentation"),
@@ -399,8 +483,155 @@ def _iter_omr(
                 "download_url": download_url,
                 "available": 1 if file_id is not None else 0,
                 "quality": 0,
+                # Identidad de recurso (como CPDL): la obra de storage + el resource.
+                "source_rep_id": str(int(w["id"])),
+                "resource_id": res_id,
             }
             emitted += 1
+        last_id = max(ids)
+        if limit <= 0 or emitted >= limit:
+            return
+
+
+# --- Voicing CPDL -------------------------------------------------------------------------
+# El voicing ES la formación vocal: `ensembles_code` relacionado con la obra en
+# `work_ensembles` (osap-storage). El índice lo publica como faceta (`kind='ensemble'`).
+
+
+def _cpdl_format(rtype: object) -> str | None:
+    """Formato de un `works_resources_type` CPDL.
+
+    NO disfraza MUS/SIB/MSCZ de MusicXML: se aceptan como formatos propios, y para
+    tipos no servibles devuelve None (se descartan explícitamente).
+    """
+    return {
+        "mxl": "musicxml",
+        "musicxml": "musicxml",
+        "xml": "musicxml",
+        "mid": "midi",
+        "midi": "midi",
+        "pdf": "pdf",
+        "mp3": "audio",
+        "audio": "audio",
+        "mus": "mus",
+        "sib": "sib",
+        "mscz": "mscz",
+        "capx": "capx",
+    }.get(str(rtype or "").strip().lower())
+
+
+def _iter_cpdl(maestro: pymysql.Connection, from_id: int, limit: int, batch: int = 2000):
+    """Obras CPDL del maestro (`works_origin='CPDL'`), sin re-resolver nada.
+
+    - Compositor: rol 1 de `works_person_roles` → `persons` (persona **propia de CPDL**,
+      ya resuelta en el maestro).
+    - Representación/recurso: `representations` (edición CPDL = `cpdlno`) ⨝
+      `works_resources` (por `works_resources_representation_id`). **Una fila de índice
+      por resource descargable**, conservando `source_rep_id` (edición) y `resource_id`.
+      Una edición sin resources no genera una representación ficticia.
+    - Voicing: `ensembles_code` de `work_ensembles` (`kind='ensemble'`).
+    """
+    last_id = from_id
+    emitted = 0
+    while limit <= 0 or emitted < limit:
+        take = batch if limit <= 0 else min(batch, limit - emitted)
+        with maestro.cursor() as cur:
+            cur.execute(
+                "SELECT id, works_title AS title, works_catalogue AS catalogue, "
+                "works_year AS year "
+                "FROM works WHERE works_origin='CPDL' AND id > %s ORDER BY id LIMIT %s",
+                (last_id, take),
+            )
+            works = cur.fetchall()
+        if not works:
+            return
+        ids = [w["id"] for w in works]
+        ph = ",".join(["%s"] * len(ids))
+        composers: dict[int, tuple[str, str]] = {}
+        # work_id -> [(format, url, available, source_rep_id, resource_id), ...]
+        resources: dict[int, list[tuple[str, str, int, str, int]]] = {}
+        canonical: dict[int, list[str]] = {}
+        with maestro.cursor() as cur:
+            cur.execute(
+                "SELECT r.works_person_roles_work_id AS work_id, p.persons_name AS composer, "
+                "r.works_person_roles_person_id AS person_id "
+                "FROM works_person_roles r JOIN persons p "
+                "ON p.persons_id = r.works_person_roles_person_id "
+                f"WHERE r.works_person_roles_work_id IN ({ph}) "
+                "AND r.works_person_roles_role_id = 1 "
+                "ORDER BY r.works_person_roles_work_id, r.works_person_roles_order, "
+                "r.works_person_roles_id",
+                ids,
+            )
+            for row in cur.fetchall():
+                composers.setdefault(
+                    int(row["work_id"]),
+                    (str(row["composer"] or ""), str(row["person_id"] or "")),
+                )
+            cur.execute(
+                "SELECT r.representations_works_id AS work_id, "
+                "r.id AS rep_id, r.representations_origin_cpdlno AS cpdlno, "
+                "wr.id AS res_id, wr.works_resources_type AS rtype, "
+                "wr.works_resources_url AS url, wr.works_resources_file_id AS file_id "
+                "FROM representations r JOIN works_resources wr "
+                "ON wr.works_resources_representation_id = r.id "
+                f"WHERE r.representations_works_id IN ({ph})",
+                ids,
+            )
+            for row in cur.fetchall():
+                url = str(row["url"] or "")
+                fmt = _cpdl_format(row["rtype"])
+                if not url or fmt is None:
+                    continue  # sin URL o formato no servible: no se inventa una fila
+                source_rep_id = str(row["cpdlno"] or row["rep_id"] or "")
+                resources.setdefault(int(row["work_id"]), []).append(
+                    (
+                        fmt,
+                        url,
+                        1 if row["file_id"] else 0,
+                        source_rep_id,
+                        int(row["res_id"] or 0),
+                    )
+                )
+            cur.execute(
+                "SELECT we.works_id AS work_id, e.ensembles_code AS code "
+                "FROM work_ensembles we JOIN ensembles e ON e.id = we.ensembles_id "
+                f"WHERE we.works_id IN ({ph})",
+                ids,
+            )
+            for row in cur.fetchall():
+                code = str(row["code"] or "").strip()
+                if code:
+                    canonical.setdefault(int(row["work_id"]), []).append(code.upper())
+        for w in works:
+            wid = int(w["id"])
+            title = str(w.get("title") or "").strip()
+            if not title:
+                continue
+            composer, person_id = composers.get(wid, ("", ""))
+            terms: list[tuple[str, str]] = [
+                ("ensemble", c) for c in dict.fromkeys(canonical.get(wid, []))
+            ]
+            for fmt, url, available, source_rep_id, resource_id in resources.get(wid, []):
+                yield {
+                    "title": title,
+                    "composer": composer or None,
+                    "person_id": person_id or None,
+                    "catalogue": w.get("catalogue"),
+                    "year": w.get("year"),
+                    "instrumentation": None,
+                    "genre": None,
+                    "genre_id": 0,
+                    "provider": "cpdl",
+                    "format": fmt,
+                    "download_url": url,
+                    "available": available,
+                    "quality": 0,
+                    "source_rep_id": source_rep_id,
+                    "resource_id": resource_id,
+                    "voicing_terms": terms,
+                }
+                emitted += 1
         last_id = max(ids)
         if limit <= 0 or emitted >= limit:
             return
@@ -439,7 +670,7 @@ def _iter_imslp(start: int, limit: int, verify_ssl: bool = True):
             yield {
                 "title": title,
                 "composer": composer,
-                "composer_id": None,
+                "person_id": None,
                 "catalogue": iv.get("icatno") or None,
                 "year": None,
                 "instrumentation": None,
@@ -494,7 +725,7 @@ def _iter_mutopia(start_at: int, limit: int):
                 yield {
                     "title": str(w.get("title") or ""),
                     "composer": w.get("composer"),
-                    "composer_id": None,
+                    "person_id": None,
                     "catalogue": None,
                     "year": None,
                     "instrumentation": None,
@@ -601,7 +832,7 @@ def _iter_musicbrainz(dump_dir: str, art_only: bool, limit: int):
         yield {
             "title": name,
             "composer": composers,
-            "composer_id": None,
+            "person_id": None,
             "catalogue": None,
             "year": None,
             "instrumentation": None,
@@ -623,7 +854,7 @@ def _ingest_page(
     api: pymysql.Connection,
     maestro: pymysql.Connection | None,
     work_list: list[dict],
-    resolver_cache: dict[str, str],
+    resolver_cache: dict[str, tuple[str | None, str | None]],
     anchors_cache: dict[str, list[dict]],
     catalogue_cache: dict[str, list[dict]],
 ) -> tuple[int, int, int]:
@@ -642,16 +873,23 @@ def _ingest_page(
         record = dict(work)
         record["title"] = title
         record["tk"] = title_key(title)[:255]
-        # Tokens significativos del título: se calculan UNA vez por obra (comparar contra
-        # hasta 500 anclas normalizando texto cada vez era el cuello del rebuild).
-        record["tokens"] = _significant_tokens(title)
-        composer_raw = work.get("composer")
-        composer_name = _NORMALIZER.canonical_composer(composer_raw) if composer_raw else None
+        composer_raw = str(work.get("composer") or "").strip()
+        person_id = work.get("person_id")
+        composer_name = composer_raw or None
+        if person_id and person_id in _PERSON_ID_CANON:
+            person_id, canon_name = _PERSON_ID_CANON[person_id]
+            if canon_name:
+                composer_name = canon_name
+        if not person_id and composer_name and maestro is not None:
+            person_id, canonical = _resolve_person(maestro, composer_name, resolver_cache)
+            if canonical:
+                composer_name = canonical
         record["composer_name"] = composer_name[:255] if composer_name else None
-        composer_id = work.get("composer_id")
-        if not composer_id and record["composer_name"] and maestro is not None:
-            composer_id = _resolve_composer_id(maestro, record["composer_name"], resolver_cache)
-        record["composer_id"] = composer_id
+        record["person_id"] = person_id
+        # Tokens significativos del título (excluido el compositor, que en PDMX va dentro
+        # del título). Se calculan UNA vez por obra: comparar contra hasta 500 anclas
+        # normalizando texto cada vez era el cuello del rebuild.
+        record["tokens"] = _significant_tokens(title, record["composer_name"])
         catalogue_raw = work.get("catalogue") or _extract_composer_catalogue(title)
         record["catalogue_raw"] = catalogue_raw
         record["cat_key"] = _catalogue_key(catalogue_raw)
@@ -665,8 +903,8 @@ def _ingest_page(
     def composer_key(record: dict) -> str | None:
         if record.get("composer_name"):
             return f"c:{record['composer_name']}"
-        if record.get("composer_id"):
-            return f"i:{record['composer_id']}"
+        if record.get("person_id"):
+            return f"i:{record['person_id']}"
         return None
 
     inserted = updated = skipped = 0
@@ -678,13 +916,13 @@ def _ingest_page(
             chunk = tks[start : start + 500]
             placeholders = ",".join(["%s"] * len(chunk))
             cur.execute(
-                "SELECT id, title_key, composer_id, composer_name FROM index_works "
+                "SELECT id, title_key, person_id, composer_name FROM index_works "
                 f"WHERE title_key IN ({placeholders})",
                 chunk,
             )
             for row in cur.fetchall():
                 existing[
-                    (str(row["title_key"]), str(row["composer_id"] or ""))
+                    (str(row["title_key"]), str(row["person_id"] or ""))
                 ] = row
                 if row["composer_name"]:
                     existing[
@@ -710,15 +948,17 @@ def _ingest_page(
                         )
                     else:
                         cur.execute(
-                            "SELECT id, title, catalogue FROM index_works WHERE composer_id=%s "
+                            "SELECT id, title, catalogue FROM index_works WHERE person_id=%s "
                             "AND catalogue IS NOT NULL ORDER BY id LIMIT 200",
-                            (record["composer_id"],),
+                            (record["person_id"],),
                         )
                     catalogue_cache[key] = [
                         (
                             int(candidate["id"]),
                             _canonical_catalogue_identity(str(candidate.get("catalogue") or "")),
-                            _significant_tokens(str(candidate.get("title") or "")),
+                            _significant_tokens(
+                                str(candidate.get("title") or ""), record["composer_name"]
+                            ),
                         )
                         for candidate in cur.fetchall()
                     ]
@@ -736,14 +976,16 @@ def _ingest_page(
                         )
                     else:
                         cur.execute(
-                            "SELECT id, title FROM index_works WHERE composer_id=%s "
+                            "SELECT id, title FROM index_works WHERE person_id=%s "
                             "AND catalogue IS NOT NULL AND catalogue <> '' ORDER BY id LIMIT 500",
-                            (record["composer_id"],),
+                            (record["person_id"],),
                         )
                     anchors_cache[key] = [
                         (
                             int(anchor["id"]),
-                            _significant_tokens(str(anchor.get("title") or "")),
+                            _significant_tokens(
+                                str(anchor.get("title") or ""), record["composer_name"]
+                            ),
                         )
                         for anchor in cur.fetchall()
                     ]
@@ -753,39 +995,46 @@ def _ingest_page(
                         break
             resolved.append((record, row))
 
-        # 3) Look-up por (title_key, composer_id/composer_name) usando el prefetch.
-        pending: list[tuple[dict, dict | None]] = []
+        # 3) Look-up FUERTE por (title_key, person_id/composer_name) usando el prefetch.
+        #    `strong` distingue identidad fuerte (title_key + persona) de match difuso
+        #    (catálogo/anclaje): en difuso NO se muta title/title_key/catalogue.
+        pending: list[tuple[dict, dict | None, bool]] = []
         for record, row in resolved:
+            strong = False
             if row is None:
-                cid = str(record.get("composer_id") or "")
+                cid = str(record.get("person_id") or "")
                 row = existing.get((record["tk"], cid))
                 if row is None and record.get("composer_name"):
                     row = existing.get((record["tk"], f"name:{record['composer_name']}"))
-            pending.append((record, row))
+                strong = row is not None
+            pending.append((record, row, strong))
 
         # 4) Insert/UPDATE por lotes (deduplicando en página por la clave única).
         seen_page: set[tuple[str, str]] = set()
         inserts: list[tuple] = []
         updates: list[tuple] = []
         ids_by_record: dict[int, int] = {}
-        for index, (record, row) in enumerate(pending):
+        for index, (record, row, strong) in enumerate(pending):
             if row is not None:
-                updates.append(
-                    (
-                        record["title"][:1024],
-                        record["composer_name"],
-                        record["catalogue_raw"],
-                        record["cat_key"],
-                        record["year_int"],
-                        record.get("instrumentation") or None,
-                        int(record["genre_id"]) if record.get("genre_id") is not None else None,
-                        int(row["id"]),
+                if strong:
+                    updates.append(
+                        (
+                            record["title"][:1024],
+                            record["composer_name"],
+                            record["catalogue_raw"],
+                            record["cat_key"],
+                            record["year_int"],
+                            record.get("instrumentation") or None,
+                            int(record["genre_id"]) if record.get("genre_id") is not None else None,
+                            int(row["id"]),
+                        )
                     )
-                )
+                # Match difuso: se CONSERVA la identidad de la obra (title/title_key/
+                # catalogue intactos); solo se le adjunta la representación.
                 ids_by_record[index] = int(row["id"])
                 updated += 1
                 continue
-            dedupe_key = (record["tk"], str(record.get("composer_id") or ""))
+            dedupe_key = (record["tk"], str(record.get("person_id") or ""))
             if dedupe_key in seen_page:
                 skipped += 1
                 continue
@@ -795,7 +1044,7 @@ def _ingest_page(
                     record["title"][:1024],
                     record["tk"],
                     record["composer_name"],
-                    record.get("composer_id"),
+                    record.get("person_id"),
                     record["catalogue_raw"],
                     record["cat_key"],
                     record["year_int"],
@@ -814,35 +1063,35 @@ def _ingest_page(
             )
         if inserts:
             cur.executemany(
-                "INSERT INTO index_works (title, title_key, composer_name, composer_id, "
+                "INSERT INTO index_works (title, title_key, composer_name, person_id, "
                 "catalogue, catalogue_key, year, instrumentation, genre_id, source_count, updated_at) "
                 "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,1,NOW())",
                 inserts,
             )
             # Ids de lo insertado: 1 consulta por lote usando los title_key de la página.
-            insert_tks = sorted({record["tk"] for index, (record, row) in enumerate(pending)
+            insert_tks = sorted({record["tk"] for index, (record, _row, _strong) in enumerate(pending)
                                  if ids_by_record.get(index, 0) < 0})
             fresh: dict[tuple[str, str], int] = {}
             for start in range(0, len(insert_tks), 500):
                 chunk = insert_tks[start : start + 500]
                 placeholders = ",".join(["%s"] * len(chunk))
                 cur.execute(
-                    "SELECT id, title_key, composer_id FROM index_works "
+                    "SELECT id, title_key, person_id FROM index_works "
                     f"WHERE title_key IN ({placeholders})",
                     chunk,
                 )
                 for row in cur.fetchall():
-                    fresh[(str(row["title_key"]), str(row["composer_id"] or ""))] = int(row["id"])
-            for index, (record, _row) in enumerate(pending):
+                    fresh[(str(row["title_key"]), str(row["person_id"] or ""))] = int(row["id"])
+            for index, (record, _row, _strong) in enumerate(pending):
                 provisional = ids_by_record.get(index)
                 if provisional is not None and provisional < 0:
                     ids_by_record[index] = fresh.get(
-                        (record["tk"], str(record.get("composer_id") or "")), 0
+                        (record["tk"], str(record.get("person_id") or "")), 0
                     )
 
         # 5) Representaciones por lotes.
         rep_rows: list[tuple] = []
-        for index, (record, _row) in enumerate(pending):
+        for index, (record, _row, _strong) in enumerate(pending):
             work_id = ids_by_record.get(index)
             if not work_id or work_id <= 0:
                 continue
@@ -850,6 +1099,8 @@ def _ingest_page(
                 (
                     work_id,
                     str(record.get("provider") or "omr"),
+                    str(record.get("source_rep_id") or ""),
+                    int(record.get("resource_id") or 0),
                     str(record.get("format") or "musicxml"),
                     record.get("download_url"),
                     record["title"][:1024],
@@ -859,8 +1110,9 @@ def _ingest_page(
             )
         if rep_rows:
             cur.executemany(
-                "INSERT INTO index_representations (work_id, provider, format, download_url, "
-                "title_provider, available, quality) VALUES (%s,%s,%s,%s,%s,%s,%s) "
+                "INSERT INTO index_representations (work_id, provider, source_rep_id, resource_id, "
+                "format, download_url, title_provider, available, quality) "
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) "
                 "ON DUPLICATE KEY UPDATE download_url=VALUES(download_url), "
                 "available=VALUES(available), quality=VALUES(quality)",
                 rep_rows,
@@ -872,22 +1124,26 @@ def _ingest(
     api: pymysql.Connection,
     maestro: pymysql.Connection | None,
     work: dict,
-    resolver_cache: dict[str, str],
+    resolver_cache: dict[str, tuple[str | None, str | None]],
     anchors_cache: dict[str, list[dict]] | None = None,
 ) -> tuple[str, str]:
     """Upsert de una obra en index_works + index_representations. Devuelve (estado, detalle)."""
     title = str(work.get("title") or "").strip()
     if not title:
         return "skip", "sin título"
-    composer_raw = work.get("composer")
-    composer_name = (
-        _NORMALIZER.canonical_composer(composer_raw) if composer_raw else None
-    )
+    composer_raw = str(work.get("composer") or "").strip()
+    person_id = work.get("person_id")
+    composer_name = composer_raw or None
+    if person_id and person_id in _PERSON_ID_CANON:
+        person_id, canon_name = _PERSON_ID_CANON[person_id]
+        if canon_name:
+            composer_name = canon_name
+    if not person_id and composer_name and maestro is not None:
+        person_id, canonical = _resolve_person(maestro, composer_name, resolver_cache)
+        if canonical:
+            composer_name = canonical
     if composer_name:
         composer_name = composer_name[:255]
-    composer_id = work.get("composer_id")
-    if not composer_id and composer_name and maestro is not None:
-        composer_id = _resolve_composer_id(maestro, composer_name, resolver_cache)
 
     tk = title_key(title)[:255]
     catalogue_raw = work.get("catalogue")
@@ -904,6 +1160,9 @@ def _ingest(
     fmt = str(work.get("format") or "musicxml")
     with api.cursor() as cur:
         row = None
+        # `strong` = identidad FUERTE (title_key + persona). Los matches por catálogo o
+        # anclaje son difusos: NO pueden mutar title/title_key/catalogue de la obra.
+        strong = False
         # Identidad por catálogo completo: solo si el catálogo identifica una ÚNICA obra
         # (K.618 sí; "TWV 55" es serie y no basta) + compositor + palabra significativa.
         if cat_identity and _is_unique_catalogue(cat_identity):
@@ -913,25 +1172,25 @@ def _ingest(
                     "AND catalogue IS NOT NULL ORDER BY id LIMIT 200",
                     (composer_name,),
                 )
-            elif composer_id:
+            elif person_id:
                 cur.execute(
-                    "SELECT id, title, catalogue FROM index_works WHERE composer_id=%s "
+                    "SELECT id, title, catalogue FROM index_works WHERE person_id=%s "
                     "AND catalogue IS NOT NULL ORDER BY id LIMIT 200",
-                    (composer_id,),
+                    (person_id,),
                 )
             else:
                 cur.execute("SELECT id, title, catalogue FROM index_works WHERE 1=0")
             for candidate in cur.fetchall():
                 if (
                     _canonical_catalogue_identity(str(candidate.get("catalogue") or "")) == cat_identity
-                    and _shares_significant_token(title, str(candidate.get("title") or ""))
+                    and _shares_significant_token(title, str(candidate.get("title") or ""), composer_name)
                 ):
                     row = candidate
                     break
-        if row is None and (composer_id or composer_name):
+        if row is None and (person_id or composer_name):
             # El anclaje por título consulta hasta 500 obras del compositor: se cachea por
             # compositor (si no, era una consulta de 500 filas POR OBRA → horas de rebuild).
-            cache_key = f"c:{composer_name}" if composer_name else f"i:{composer_id}"
+            cache_key = f"c:{composer_name}" if composer_name else f"i:{person_id}"
             anchors = anchors_cache.get(cache_key) if anchors_cache is not None else None
             if anchors is None:
                 if composer_name:
@@ -942,24 +1201,24 @@ def _ingest(
                     )
                 else:
                     cur.execute(
-                        "SELECT id, title FROM index_works WHERE composer_id=%s "
+                        "SELECT id, title FROM index_works WHERE person_id=%s "
                         "AND catalogue IS NOT NULL AND catalogue <> '' ORDER BY id LIMIT 500",
-                        (composer_id,),
+                        (person_id,),
                     )
                 anchors = list(cur.fetchall())
                 if anchors_cache is not None:
                     anchors_cache[cache_key] = anchors
             for anchor in anchors:
-                if _tokens_subset(title, str(anchor.get("title") or "")):
+                if _tokens_subset(title, str(anchor.get("title") or ""), composer_name):
                     row = anchor
                     break
         if row is None:
-            # El look-up debe coincidir con la clave única (title_key, composer_id): si se
+            # El look-up debe coincidir con la clave única (title_key, person_id): si se
             # busca por composer_name, dos grafías del mismo compositor insertarían duplicado.
-            if composer_id:
+            if person_id:
                 cur.execute(
-                    "SELECT id, title FROM index_works WHERE title_key=%s AND composer_id=%s",
-                    (tk, composer_id),
+                    "SELECT id, title FROM index_works WHERE title_key=%s AND person_id=%s",
+                    (tk, person_id),
                 )
                 row = cur.fetchone()
             if row is None and composer_name:
@@ -968,19 +1227,20 @@ def _ingest(
                     (tk, composer_name),
                 )
                 row = cur.fetchone()
-            if row is None and not composer_id and not composer_name:
+            if row is None and not person_id and not composer_name:
                 cur.execute(
-                    "SELECT id, title FROM index_works WHERE title_key=%s AND composer_id IS NULL",
+                    "SELECT id, title FROM index_works WHERE title_key=%s AND person_id IS NULL",
                     (tk,),
                 )
                 row = cur.fetchone()
+            strong = row is not None
         if row is None:
             try:
                 cur.execute(
-                    "INSERT INTO index_works (title, title_key, composer_name, composer_id, "
+                    "INSERT INTO index_works (title, title_key, composer_name, person_id, "
                     "catalogue, catalogue_key, year, instrumentation, genre_id, source_count, updated_at) "
                     "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,1,NOW())",
-                    (title[:1024], tk, composer_name, composer_id,
+                    (title[:1024], tk, composer_name, person_id,
                      catalogue_raw, cat_key, year_int,
                      (work.get("instrumentation") or None),
                      (int(work["genre_id"]) if work.get("genre_id") is not None else None)),
@@ -989,8 +1249,8 @@ def _ingest(
             except pymysql.err.IntegrityError:
                 # Carrera/legado con clave truncada: se reutiliza la fila existente.
                 cur.execute(
-                    "SELECT id, title FROM index_works WHERE title_key=%s AND composer_id <=> %s",
-                    (tk, composer_id),
+                    "SELECT id, title FROM index_works WHERE title_key=%s AND person_id <=> %s",
+                    (tk, person_id),
                 )
                 existing = cur.fetchone()
                 if existing is None:
@@ -998,25 +1258,43 @@ def _ingest(
                 work_id = int(existing["id"])
         else:
             work_id = row["id"]
-            cur.execute(
-                "UPDATE index_works SET title=%s, composer_name=%s, "
-                "catalogue=%s, catalogue_key=%s, year=%s, "
-                "instrumentation=%s, genre_id=%s, updated_at=NOW() "
-                "WHERE id=%s",
-                (title[:1024], composer_name, catalogue_raw,
-                 cat_key, year_int, (work.get("instrumentation") or None),
-                 (int(work["genre_id"]) if work.get("genre_id") is not None else None),
-                 work_id),
-            )
+            # Solo el match FUERTE actualiza la identidad de la obra. Un match difuso
+            # (catálogo/anclaje) NO toca title/title_key/catalogue: así un falso positivo
+            # no puede contaminar la obra (el bug de los "cubos" de OMR).
+            if strong:
+                cur.execute(
+                    "UPDATE index_works SET title=%s, composer_name=%s, "
+                    "catalogue=%s, catalogue_key=%s, year=%s, "
+                    "instrumentation=%s, genre_id=%s, updated_at=NOW() "
+                    "WHERE id=%s",
+                    (title[:1024], composer_name, catalogue_raw,
+                     cat_key, year_int, (work.get("instrumentation") or None),
+                     (int(work["genre_id"]) if work.get("genre_id") is not None else None),
+                     work_id),
+                )
         cur.execute(
-            "INSERT INTO index_representations (work_id, provider, format, "
-            "download_url, title_provider, available, quality) "
-            "VALUES (%s,%s,%s,%s,%s,%s,%s) "
+            "INSERT INTO index_representations (work_id, provider, source_rep_id, resource_id, "
+            "format, download_url, title_provider, available, quality) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s) "
             "ON DUPLICATE KEY UPDATE download_url=VALUES(download_url), "
             "available=VALUES(available), quality=VALUES(quality)",
-            (work_id, provider, fmt, work.get("download_url"), title[:1024],
+            (work_id, provider, str(work.get("source_rep_id") or ""),
+             int(work.get("resource_id") or 0), fmt, work.get("download_url"), title[:1024],
              int(work.get("available", 0)), int(work.get("quality", 0))),
         )
+        # Voicing (faceta): el voicing ES la formación vocal (`ensembles_code`). Se
+        # reemplazan las filas del work para no arrastrar un reindexado anterior.
+        voicing_terms = work.get("voicing_terms") or []
+        cur.execute("DELETE FROM index_work_voicings WHERE work_id = %s", (work_id,))
+        if voicing_terms:
+            cur.executemany(
+                "INSERT INTO index_work_voicings (work_id, kind, term) VALUES (%s, %s, %s) "
+                "ON DUPLICATE KEY UPDATE term=VALUES(term)",
+                [
+                    (work_id, str(kind)[:16], str(term)[:64])
+                    for kind, term in voicing_terms
+                ],
+            )
     return "ok", f"{provider}/{fmt}"
 
 
@@ -1044,6 +1322,8 @@ def main() -> int:
     parser.add_argument("--db-user", default="osap2027")
     parser.add_argument("--db-password", default="2027osapdb")
     parser.add_argument("--db-api", default="osap-api")
+    parser.add_argument("--dry-run", action="store_true",
+                        help="Recorre y valida sin escribir en el índice.")
     parser.add_argument("--db-omr", default="osap-storage")
     args = parser.parse_args()
 
@@ -1059,7 +1339,8 @@ def main() -> int:
     api = pymysql.connect(**api_db)
     omr = pymysql.connect(**omr_db)
     maestro = omr
-    resolver_cache: dict[str, str] = {}
+    _load_person_canon(maestro)
+    resolver_cache: dict[str, tuple[str | None, str | None]] = {}
     anchors_cache: dict[str, list[dict]] = {}
     catalogue_cache: dict[str, list[dict]] = {}
     try:
@@ -1079,6 +1360,8 @@ def main() -> int:
                     print("  error: --mb-dump es obligatorio para musicbrainz", flush=True)
                     continue
                 rows = _iter_musicbrainz(args.mb_dump, args.mb_types == "art", args.limit)
+            elif provider == "cpdl":
+                rows = _iter_cpdl(maestro, args.from_id, args.limit or 2_000_000)
             else:
                 print(f"  proveedor desconocido: {provider}", flush=True)
                 continue
@@ -1089,7 +1372,9 @@ def main() -> int:
             for w in rows:
                 page.append(w)
                 if len(page) >= 1000:
-                    if provider == "omr":
+                    if args.dry_run:
+                        skipped += len(page)
+                    elif provider == "omr":
                         ins, upd, skp = _ingest_page(
                             api, maestro, page, resolver_cache, anchors_cache, catalogue_cache
                         )
@@ -1114,7 +1399,9 @@ def main() -> int:
                             flush=True,
                         )
             if page:
-                if provider == "omr":
+                if args.dry_run:
+                    skipped += len(page)
+                elif provider == "omr":
                     ins, upd, skp = _ingest_page(
                         api, maestro, page, resolver_cache, anchors_cache, catalogue_cache
                     )

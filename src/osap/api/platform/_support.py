@@ -191,8 +191,8 @@ _PROVIDER_OPTION_LABEL = {
 _PROVIDER_OPTION_ORDER = ("imslp", "openscore", "omr", "musicbrainz", "mutopia", "rism", "cpdl")
 
 # Opciones del bloque "Formación vocal" del Estudio. Son términos REALES observados en el
-# corpus CPDL (cpdl_pages.voicing): no se inventan valores. El matching lo hace el
-# proveedor CPDL contra cpdl_voicings con coincidencia exacta de token normalizado.
+# corpus CPDL: no se inventan valores. El matching es por token normalizado exacto contra
+# el catálogo `voicings`/`work_voicing` (y `ensembles`/`voices` canónicos) en osap-storage.
 _STUDIO_VOICING_OPTIONS = [
     "SATB", "SATTB", "SSATB", "SSATTB", "SATB.SATB", "TTBB", "SAB", "SAATB",
     "ATTB", "STTB", "SSAA", "SSA", "TTB", "ATB", "SST", "SSB", "SATT", "SSAT",
@@ -244,6 +244,12 @@ _FORMAT_NAME_MAP = {
     "mid": "midi",
     "ly": "ly",
     "kern": "kern",
+    "audio": "audio",
+    "mp3": "audio",
+    "mus": "mus",
+    "sib": "sib",
+    "mscz": "mscz",
+    "capx": "capx",
 }
 
 

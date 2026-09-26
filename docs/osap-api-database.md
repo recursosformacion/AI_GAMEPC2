@@ -175,7 +175,7 @@ petición y su auditoría). API: `POST/GET .../sources/suggestions` en `platform
 Índice local derivado para búsqueda rápida/determinista (ver
 `docs/osap/search-index-evolution.md`). Una fila por **obra única**: los indexadores
 (`script/index_works.py`, `script/sync_index.py`) normalizan y deduplican por
-`title_key + composer_id`. El proveedor `IndexCatalogProvider` (`.../catalogs/index/`)
+`title_key + person_id`. El proveedor `IndexCatalogProvider` (`.../catalogs/index/`)
 hace `SELECT` sobre esta tabla + `index_representations` en ~ms. Es un **derivado**, no
 una copia del catálogo de storage; se construye en prod por un job/sync.
 
@@ -185,7 +185,7 @@ una copia del catálogo de storage; se construye en prod por un job/sync.
 | `title` | `VARCHAR(1024)` | — | Título tal como se muestra (según el proveedor/canonicalizador). En FULLTEXT junto a `composer_name`. |
 | `title_key` | `VARCHAR(255)` | Índice | **Título normalizado** (minúsculas, sin signos, sin artículo inicial, … por `MetadataNormalizer`) → clave de deduplicación y de búsqueda por prefijo/LIKE. |
 | `composer_name` | `VARCHAR(255)` | — | Nombre canónico del compositor (para mostrar y buscar); puede ser `'NA'` si no se conoce. En FULLTEXT. |
-| `composer_id` | `VARCHAR(36)` | Índice | UUID del compositor en el **Maestro** (osap-storage), si está identificado; `NULL` si es anónimo/desconocido. |
+| `person_id` | `VARCHAR(36)` | Índice | UUID del compositor en el **Maestro** (osap-storage), si está identificado; `NULL` si es anónimo/desconocido. |
 | `catalogue` | `VARCHAR(255)` | — | Número de catálogo tal como llega (p. ej. `K. 525`). |
 | `catalogue_key` | `VARCHAR(128)` | Índice | Catálogo **normalizado** (p. ej. `k525`) para buscar queries que son catálogos sin falsos positivos. |
 | `year` | `SMALLINT` | — | Año de composición (nullable). |
@@ -194,9 +194,9 @@ una copia del catálogo de storage; se construye en prod por un job/sync.
 | `source_count` | `TINYINT` | — | Nº de **proveedores distintos** que aportan representaciones a la obra (se recalcula al final de cada pasada de indexado: `COUNT(DISTINCT provider)` de `index_representations`). |
 | `updated_at` | `VARCHAR(64)` | — | Última actualización de la fila. |
 
-- Unicidad: `(title_key(191), composer_id)` → el dedupe es `INSERT ... ON DUPLICATE KEY
+- Unicidad: `(title_key(191), person_id)` → el dedupe es `INSERT ... ON DUPLICATE KEY
   UPDATE` (actualiza metadatos en vez de duplicar).
-- Índices: `idx_idx_title(title_key)`, `idx_idx_composer(composer_id)`,
+- Índices: `idx_idx_title(title_key)`, `idx_idx_composer(person_id)`,
   `idx_idx_catalogue(catalogue_key)` y FULLTEXT `ft_idx_title_composer(title,
   composer_name)` (búsqueda de un token con `MATCH ... IN BOOLEAN MODE 'moz*'`).
 

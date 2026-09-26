@@ -50,9 +50,15 @@ _FORMAT_BY_VALUE: dict[str, OutputFormat] = {
     "mid": OutputFormat.MIDI,
     "pdf": OutputFormat.PDF,
     "json": OutputFormat.SCORE,
+    "mp3": OutputFormat.AUDIO,
+    "audio": OutputFormat.AUDIO,
+    "mus": OutputFormat.MUS,
+    "sib": OutputFormat.SIB,
+    "mscz": OutputFormat.MSCZ,
+    "capx": OutputFormat.CAPX,
 }
 
-_INDEXED_PROVIDERS = ("omr", "imslp", "mutopia", "musicbrainz")
+_INDEXED_PROVIDERS = ("omr", "imslp", "mutopia", "musicbrainz", "cpdl")
 
 # Prefijos de catálogo: BWV 232 == BWV.232 == Bwv 232; KV 618 == K. 618 == K618.
 # Incluye sinónimos (Köchel: K./KV/Kochel Verzeichnis/Koch. Ver./Köchel).
@@ -179,13 +185,15 @@ class IndexCatalogProvider(ICatalogProvider):
     def get_representation(self, rep_id: str) -> dict[str, object] | None:
         """Resuelve una representación del índice por su id determinista.
 
-        Formato: ``idx-<work_id>-<provider>-<format>`` (producido por el Platform API).
+        Formato: ``idx-<work_id>-<provider>-<resource_id>-<format>`` (producido por el
+        Platform API). `resource_id` es 0 en los proveedores legacy (OMR/IMSLP/MusicBrainz).
         Permite servir `view`/`download` sin depender de la caché en memoria.
         """
         parts = rep_id.split("-")
-        if len(parts) < 4 or parts[0] != "idx":
+        if len(parts) < 5 or parts[0] != "idx":
             return None
-        work_id, provider, fmt = parts[1], parts[2], "-".join(parts[3:])
+        work_id, provider, resource_part = parts[1], parts[2], parts[3]
+        fmt = "-".join(parts[4:])
         if not work_id.isdigit():
             return None
         conn = None
@@ -198,13 +206,25 @@ class IndexCatalogProvider(ICatalogProvider):
                 cursorclass=DictCursor,
             )
             with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT i.title, i.composer_name, i.catalogue, r.provider, r.format, r.download_url "
-                    "FROM index_representations r JOIN index_works i ON i.id = r.work_id "
-                    "WHERE r.work_id = %s AND r.provider = %s "
-                    "ORDER BY (r.format = %s) DESC, r.id LIMIT 1",
-                    (work_id, provider, fmt),
-                )
+                if resource_part.isdigit() and int(resource_part) > 0:
+                    # Identidad exacta (CPDL): resource concreto de una edición.
+                    cur.execute(
+                        "SELECT i.title, i.composer_name, i.catalogue, "
+                        "r.provider, r.format, r.download_url "
+                        "FROM index_representations r JOIN index_works i ON i.id = r.work_id "
+                        "WHERE r.work_id = %s AND r.provider = %s AND r.resource_id = %s LIMIT 1",
+                        (work_id, provider, resource_part),
+                    )
+                else:
+                    # Legacy (resource_id=0): se elige por formato, como antes.
+                    cur.execute(
+                        "SELECT i.title, i.composer_name, i.catalogue, "
+                        "r.provider, r.format, r.download_url "
+                        "FROM index_representations r JOIN index_works i ON i.id = r.work_id "
+                        "WHERE r.work_id = %s AND r.provider = %s "
+                        "ORDER BY (r.format = %s) DESC, r.id LIMIT 1",
+                        (work_id, provider, fmt),
+                    )
                 row = cur.fetchone()
         except Exception:  # noqa: BLE001 — nunca tumbar por el índice
             logger.warning("No se pudo resolver la representación %s en el índice", rep_id, exc_info=True)
@@ -302,17 +322,7 @@ class IndexCatalogProvider(ICatalogProvider):
         title_tokens = [t for t in re.split(r"[\s,]+", title or "") if len(t) >= 3][:6]
         if not title_tokens:
             return []
-        clauses = ["(" + " AND ".join(["i.title LIKE %s"] * len(title_tokens)) + ")"]
-        args: list[object] = [f"%{token}%" for token in title_tokens]
-        for token in [t for t in re.split(r"[\s,]+", composer or "") if len(t) >= 3][:4]:
-            clauses.append("i.composer_name LIKE %s")
-            args.append(f"%{token}%")
-        sql = (
-            "SELECT r.provider, r.format, r.download_url FROM index_representations r "
-            "JOIN index_works i ON i.id = r.work_id "
-            f"WHERE {' AND '.join(clauses)} AND r.download_url IS NOT NULL "
-            "ORDER BY r.provider, r.format"
-        )
+        composer_tokens = [t for t in re.split(r"[\s,]+", composer or "") if len(t) >= 3][:4]
         try:
             conn = pymysql.connect(
                 host=self._host,
@@ -322,24 +332,70 @@ class IndexCatalogProvider(ICatalogProvider):
                 charset="utf8mb4",
                 cursorclass=DictCursor,
                 autocommit=True,
+                connect_timeout=5,
+                read_timeout=15,
             )
         except pymysql.err.OperationalError:
             return []
         try:
             with conn.cursor() as cur:
+                if self._has_fulltext(conn):
+                    # FULLTEXT: usa el índice y evita el full scan de index_representations
+                    # (514k filas). MATCH cruza ambas columnas, así que la semántica por-campo
+                    # se revalida abajo en Python (título en título, compositor en compositor).
+                    tokens = " ".join(f"+{t}*" for t in (*title_tokens, *composer_tokens))
+                    sql = (
+                        "SELECT i.title, i.composer_name, r.provider, r.format, r.download_url, "
+                        "r.source_rep_id, r.resource_id "
+                        "FROM index_works i "
+                        "JOIN index_representations r ON r.work_id = i.id "
+                        "WHERE MATCH(i.title, i.composer_name) AGAINST(%s IN BOOLEAN MODE) "
+                        "AND r.download_url IS NOT NULL "
+                        "ORDER BY r.provider, r.format LIMIT %s"
+                    )
+                    args: list[object] = [tokens, 200]
+                else:
+                    clauses = ["(" + " AND ".join(["i.title LIKE %s"] * len(title_tokens)) + ")"]
+                    args = [f"%{token}%" for token in title_tokens]
+                    for token in composer_tokens:
+                        clauses.append("i.composer_name LIKE %s")
+                        args.append(f"%{token}%")
+                    sql = (
+                        "SELECT i.title, i.composer_name, r.provider, r.format, r.download_url "
+                        "FROM (SELECT id, title, composer_name FROM index_works i WHERE "
+                        + " AND ".join(clauses)
+                        + " LIMIT 500) w "
+                        "JOIN index_representations r ON r.work_id = w.id "
+                        "WHERE r.download_url IS NOT NULL "
+                        "ORDER BY r.provider, r.format LIMIT %s"
+                    )
+                    args.append(200)
                 cur.execute(sql, tuple(args))
                 rows = cur.fetchall()
         except pymysql.err.OperationalError:
             return []
         finally:
             conn.close()
+        title_low = [t.lower() for t in title_tokens]
+        composer_low = [t.lower() for t in composer_tokens]
+
+        def _is_representable(row: dict[str, object]) -> bool:
+            row_title = str(row.get("title") or "").lower()
+            row_composer = str(row.get("composer_name") or "").lower()
+            return all(tok in row_title for tok in title_low) and all(
+                tok in row_composer for tok in composer_low
+            )
+
         return [
             {
                 "provider": str(row["provider"]),
                 "format": str(row["format"]),
                 "download_url": str(row["download_url"]),
+                "source_rep_id": str(row.get("source_rep_id") or ""),
+                "resource_id": int(str(row.get("resource_id") or 0)),
             }
             for row in rows
+            if _is_representable(row)
         ]
 
     def resolve(self, request: ResolveRequest) -> CandidateRepresentation | None:
@@ -361,14 +417,20 @@ def _build_sql(
 
     Devuelve (None, ()) si no hay términos utilizables (no conviene escanear 354k filas).
     El `query` libre matchea título O compositor; los campos explícitos (title, composer,
-    catalogue) se aplican estrictamente sobre sus columnas.
+    catalogue) se aplican estrictamente sobre sus columnas. `voices` filtra por la faceta
+    `index_work_voicings` (término exacto en mayúsculas).
     """
     title = (request.title or "").strip()
     composer = (request.composer or "").strip()
     catalogue = (request.catalogue or "").strip()
     free = (request.query or "").strip()
     genre_ids = tuple(sorted(set(request.genre_ids)))
-    if not title and not composer and not catalogue and not free:
+    voices = tuple(
+        dict.fromkeys(
+            v.strip().upper() for v in (request.voices or ()) if v and v.strip()
+        )
+    )
+    if not title and not composer and not catalogue and not free and not voices:
         return None, ()
     clauses: list[str] = []
     args: list[object] = []
@@ -421,12 +483,13 @@ def _build_sql(
             # full scan. Cualquier otro caso (multi-palabra, catálogo, token corto) cae
             # a LIKE (correcto, aunque full scan).
             free_tokens = free.split()
-            single_token = len(free_tokens) == 1 and len(free_tokens[0]) >= 3
-            if use_fulltext and single_token and not key and not variants:
-                # Prefijo BOOLEAN: 'moz*' matchea tokens que empiezan por 'moz'
-                # (mozart, Mozzafiato...) usando el índice FULLTEXT (sin full scan).
+            tokens_ok = 1 <= len(free_tokens) <= 8 and all(len(t) >= 3 for t in free_tokens)
+            if use_fulltext and tokens_ok and not key and not variants:
+                # BOOLEAN con prefijo por token ('+ave* +verum*'): usa el índice FULLTEXT
+                # (sin full scan). El proveedor revalida en Python (MATCH cruza ambas
+                # columnas / es por palabra).
                 free_clauses = ["MATCH(i.title, i.composer_name) AGAINST(%s IN BOOLEAN MODE)"]
-                free_args = [f"{free}*"]
+                free_args = [" ".join(f"+{t}*" for t in free_tokens)]
             else:
                 free_clauses = ["i.title LIKE %s", "i.composer_name LIKE %s"]
                 free_args = [f"%{free}%", f"%{free}%"]
@@ -442,6 +505,15 @@ def _build_sql(
         placeholders = ", ".join(["%s"] * len(genre_ids))
         clauses.append(f"i.genre_id IN ({placeholders})")
         args.extend(genre_ids)
+    if voices:
+        # Formación vocal: término exacto (mayúsculas) contra la faceta del índice
+        # (`index_work_voicings`). Solo las obras con voicing (CPDL) casan.
+        placeholders = ", ".join(["%s"] * len(voices))
+        clauses.append(
+            "EXISTS (SELECT 1 FROM index_work_voicings iv "
+            f"WHERE iv.work_id = i.id AND iv.term IN ({placeholders}))"
+        )
+        args.extend(voices)
     where = " AND ".join(clauses)
     providers = tuple(_INDEXED_PROVIDERS)
     if request.allowed_providers:
@@ -454,9 +526,10 @@ def _build_sql(
                 return None, ()
     sql = (
         "SELECT i.id, i.title, i.composer_name, i.catalogue, i.year, "
-        "r.provider, r.format, r.download_url, r.available, r.quality "
-        "FROM index_representations r "
-        "JOIN index_works i ON i.id = r.work_id "
+        "r.provider, r.format, r.download_url, r.available, r.quality, "
+        "r.source_rep_id, r.resource_id "
+        "FROM index_works i "
+        "JOIN index_representations r ON r.work_id = i.id "
         f"WHERE {where} AND r.provider IN ({', '.join(['%s'] * len(providers))}) "
         "ORDER BY i.title LIMIT %s"
     )
@@ -494,8 +567,11 @@ def _row_to_candidate(row: dict[str, object]) -> CandidateRepresentation:
         download_url = None
         view_url = url
         downloadable = False
+    # `resource_id` en el candidate_id: sin él, varias ediciones/recursos del mismo work
+    # y proveedor compartirían candidate_id y el agrupador los colapsaría.
+    resource_id = int(str(row.get("resource_id") or 0))
     return CandidateRepresentation(
-        candidate_id=CandidateId(f"index-{row['id']}-{pid}"),
+        candidate_id=CandidateId(f"index-{row['id']}-{pid}-{resource_id}"),
         work_descriptor=descriptor,
         provider_id=provider,
         format=fmt,
@@ -506,5 +582,10 @@ def _row_to_candidate(row: dict[str, object]) -> CandidateRepresentation:
         view_url=view_url,
         downloadable=downloadable,
         public_domain=True,
-        metadata={"indexed": True, "available": bool(row.get("available"))},
+        metadata={
+            "indexed": True,
+            "available": bool(row.get("available")),
+            "source_rep_id": str(row.get("source_rep_id") or ""),
+            "resource_id": resource_id,
+        },
     )

@@ -58,8 +58,9 @@ def create_platform_app(
     knowledge: KnowledgeStore | None = None,
 ) -> FastAPI:
     """Build the OSAP Platform API (V3.1) over application services."""
-    config = load_configuration(service_name="osap-api")
-    container = container or wire(Container(), configuration=config)
+    if container is None:
+        config = load_configuration(service_name="osap-api")
+        container = wire(Container(), configuration=config)
     api = PlatformApi(container, knowledge)
     _configure_osap_logging()
     app = FastAPI(

@@ -49,9 +49,14 @@ class StorageComposerClient:
         self._admin_token_provider = admin_token_provider
 
     def list_composers(
-        self, q: str | None, limit: int, offset: int, review: str | None = None
+        self,
+        q: str | None,
+        limit: int,
+        offset: int,
+        review: str | None = None,
+        public: bool = False,
     ) -> dict[str, object]:
-        return self.list_persons(("composer",), q, limit, offset, review)
+        return self.list_persons(("composer",), q, limit, offset, review, public)
 
     def list_persons(
         self,
@@ -60,11 +65,14 @@ class StorageComposerClient:
         limit: int,
         offset: int,
         review: str | None = None,
+        public: bool = False,
     ) -> dict[str, object]:
         """Personas por rol (`role=composer,arranger`) con la forma v1 (`items`/`total`).
 
-        En el modelo nuevo la consulta lleva `role`; mientras osap-storage no publique
-        `/api/admin/persons`, se cae a `/api/admin/composers` (que solo conoce compositores).
+        Con `public=True` usa `/api/v1/persons`, que filtra las no visibles y pagina sobre el
+        resultado ya filtrado. **Si ese endpoint falla, NO se degrada a `/api/admin/persons`**
+        (que devuelve también las no visibles): se devuelve una lista vacía. El mantenimiento
+        pide explícitamente `public=False`.
         """
         role_value = ",".join(roles)
         query = {"role": role_value, "limit": str(limit), "offset": str(offset)}
@@ -73,6 +81,17 @@ class StorageComposerClient:
         if review:
             query["review"] = review
         legacy_query = {k: v for k, v in query.items() if k != "role"}
+        if public:
+            status, doc = self._perform(
+                "GET",
+                f"/api/v1/persons?{urllib.parse.urlencode(query)}",
+                None,
+                "storage:read",
+                self._token_provider,
+            )
+            if 200 <= status < 300 and isinstance(doc, dict):
+                return _with_role_names(doc)
+            return {"items": [], "total": 0}
         status, doc = self._call_persons_first(
             "GET",
             f"/api/admin/persons?{urllib.parse.urlencode(query)}",

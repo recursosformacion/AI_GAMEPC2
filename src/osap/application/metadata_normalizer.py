@@ -125,6 +125,70 @@ _KNOWN_COMPOSERS: dict[str, str] = {
 
 _KNOWN_LAST_NAMES = {canonical.split()[-1].lower() for canonical in _KNOWN_COMPOSERS.values()}
 
+# Prefijo que SÍ es ruido (se puede descartar): iniciales mutiladas ("wa", "w a", "l") o
+# marca de arreglo ("anged from", "Arranged from", "transcribed by"). Nunca un nombre propio.
+_ARRANGEMENT_MARKERS = (
+    "arranged from", "anged from", "anaged from", "arranged by", "anged by",
+    "transcribed by", "transcription by", "edition by", "version by", "harmonized by",
+)
+
+
+def _is_noise_prefix(prefix: str) -> bool:
+    """`True` si `prefix` es ruido (iniciales/marca de arreglo), no un nombre propio.
+
+    "wa" (de "W. A.") o "anged from" son ruido; "Leopold" o "Franz Xaver" NO lo son.
+    """
+    cleaned = prefix.strip(" .,-")
+    if not cleaned:
+        return True
+    low = cleaned.lower()
+    if any(low == marker or low.endswith(" " + marker) for marker in _ARRANGEMENT_MARKERS):
+        return True
+    tokens = [t for t in re.split(r"[\s,]+", cleaned) if t]
+    return bool(tokens) and all(len(t.strip(".")) <= 3 and t.strip(".").isalpha() for t in tokens)
+
+
+def _initials_match(remainder: str, canonical: str) -> bool:
+    """`True` si las iniciales del prefijo corresponden a las del canónico.
+
+    Evita conflaciones entre familiares homónimos por apellido: "wa" casa con
+    "Wolfgang Amadeus Mozart", pero "c p e" NO casa con "Johann Sebastian Bach".
+    """
+    letters = [
+        t.strip(".").lower()
+        for t in re.split(r"[\s,]+", remainder.strip())
+        if t.strip(".").isalpha()
+    ]
+    if not letters:
+        return True
+    if any(len(t) > 3 for t in letters):
+        return False
+    initials = [w[0].lower() for w in canonical.split() if w[:1].isalpha()]
+    return letters == initials[: len(letters)]
+
+
+def _suffix_known_composer(text: str, original: str) -> str:
+    """Si `text` termina en un compositor canónico conocido, devuelve **solo** ese nombre.
+
+    El canonicalizador sustituye palabras una a una, pero conserva el ruido que va delante
+    ("wa mozart" -> "wa Wolfgang Amadeus Mozart"). Solo se descarta ese prefijo cuando es
+    ruido (`_is_noise_prefix`); si es un nombre propio ("Leopold", "Franz Xaver") se
+    devuelve `original` (el texto de entrada) para no fusionar compositores distintos.
+    """
+    low = text.lower()
+    best = ""
+    for canonical in _KNOWN_COMPOSERS.values():
+        token = canonical.lower()
+        if (low == token or low.endswith(" " + token)) and len(canonical) > len(best):
+            best = canonical
+    if not best:
+        return original
+    prefix = text[: len(text) - len(best)]
+    return best if _is_noise_prefix(prefix) else original
+
+
+
+
 # Central composer alias table (resources/canonical), loaded lazily.
 _CANONICALIZER: Canonicalizer | None
 try:
@@ -161,21 +225,32 @@ class MetadataNormalizer:
         text = _REMOVE_CATALOGUE.sub("", text)
         # Quitar "Composed by" / "by".
         text = re.sub(r"\b(?:composed\s+by|by)\b", " ", text, flags=re.IGNORECASE)
+        # Restaurar el prefijo mutilado de "Arranged from" ("anged from X", "anaged from X").
+        text = re.sub(r"\b(?:a?n?aged|a?nged)\s+from\b", "Arranged from", text, flags=re.IGNORECASE)
         text = _YEAR_RANGE.sub("", text)
         text = re.sub(r"\s+", " ", text).strip(" ,.-")
         # Normalización central: la tabla de aliases de compositor de resources/canonical.
         if _CANONICALIZER is not None:
             central = _CANONICALIZER.canonicalize(text).output
             if central and central != text and central.split()[-1].lower() in _KNOWN_LAST_NAMES:
-                return central
+                return _suffix_known_composer(central, text)
         key = _collapse_initials(MusicQueryNormalizer.normalize(text))
         if key in _KNOWN_COMPOSERS:
             return _KNOWN_COMPOSERS[key]
-        # Fallback: si el texto limpio contiene un compositor conocido (p. ej.
-        # "Wolfgang Amadé Mozart" -> "mozart"), usar el canónico.
-        for canonical in _KNOWN_COMPOSERS.values():
-            if canonical.split()[-1].lower() in key:
-                return canonical
+        # Fallback: solo si al apellido conocido lo acompaña **ruido** (iniciales/arreglo).
+        # "mozart" -> canónico; "wa mozart" -> canónico; pero "Leopold ... Mozart" o
+        # "Johann Christian Bach" son compositores distintos y NO se colapsan.
+        tokens = key.split()
+        if tokens:
+            last = tokens[-1]
+            remainder = " ".join(tokens[:-1])
+            for canonical in _KNOWN_COMPOSERS.values():
+                if (
+                    canonical.split()[-1].lower() == last
+                    and _is_noise_prefix(remainder)
+                    and _initials_match(remainder, canonical)
+                ):
+                    return canonical
         return text
 
     @staticmethod
@@ -256,15 +331,22 @@ class MetadataNormalizer:
         text = _REMOVE_KEY.sub("", text)
         if composer:
             canonical = MetadataNormalizer.canonical_composer(composer)
-            last = canonical.split()[-1].strip(" .,")
-            text = re.sub(rf"\s*\([^)]*{re.escape(last)}[^)]*\)", "", text, flags=re.IGNORECASE)
-            # Quitar el compositor (nombre completo + iniciales + apellido) en cualquier
-            # posición, antes de quitar el apellido suelto: "I shall be no stranger there
-            # - William J. Kirkpatrick" -> "I shall be no stranger there".
-            text = re.sub(_composer_name_regex(canonical), " ", text)
-            text = re.sub(rf"\b{re.escape(last)}\b", " ", text, flags=re.IGNORECASE)
-            text = re.sub(rf"[,\s-]+{re.escape(last)}\s*$", "", text, flags=re.IGNORECASE)
-            text = _strip_trailing_composer(text, canonical)
+            # `composer` puede no contener nombre (p. ej. "(c.1400-1460)"): tras canonicalizar
+            # queda vacío y no hay apellido que quitar; se omite el bloque sin reventar.
+            if canonical.split():
+                last = canonical.split()[-1].strip(" .,")
+                text = re.sub(
+                    rf"\s*\([^)]*{re.escape(last)}[^)]*\)", "", text, flags=re.IGNORECASE
+                )
+                # Quitar el compositor (nombre completo + iniciales + apellido) en cualquier
+                # posición, antes de quitar el apellido suelto: "I shall be no stranger there
+                # - William J. Kirkpatrick" -> "I shall be no stranger there".
+                text = re.sub(_composer_name_regex(canonical), " ", text)
+                text = re.sub(rf"\b{re.escape(last)}\b", " ", text, flags=re.IGNORECASE)
+                text = re.sub(
+                    rf"[,\s-]+{re.escape(last)}\s*$", "", text, flags=re.IGNORECASE
+                )
+                text = _strip_trailing_composer(text, canonical)
         # Drop parenthetical subtitles/comments ("Requiem (Officium defunctorum)")
         # for comparison; they are not part of the core identity.
         text = re.sub(r"\([^)]*\)", " ", text)

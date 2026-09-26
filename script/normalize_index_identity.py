@@ -249,8 +249,10 @@ def main() -> int:
             for member in mergeable:
                 cur.execute(
                     "INSERT INTO index_representations "
-                    "(work_id, provider, format, download_url, title_provider, available, quality) "
-                    "SELECT %s, provider, format, download_url, title_provider, available, quality "
+                    "(work_id, provider, source_rep_id, resource_id, format, download_url, "
+                    "title_provider, available, quality) "
+                    "SELECT %s, provider, source_rep_id, resource_id, format, download_url, "
+                    "title_provider, available, quality "
                     "FROM index_representations WHERE work_id=%s "
                     "ON DUPLICATE KEY UPDATE download_url=VALUES(download_url), "
                     "available=VALUES(available), quality=VALUES(quality)",

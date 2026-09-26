@@ -58,6 +58,22 @@ VERSION = "3.1"
 DEFAULT_SEARCH_PROVIDERS: tuple[str, ...] = ("imslp", "cpdl", "rism", "omr")
 
 
+def _rep_identity_key(rep: RepresentationInfo) -> tuple[str, ...]:
+    """Clave de identidad para deduplicar representaciones.
+
+    Prioridad: `resource_id` (recurso concreto) > `source_rep_id`+format (edición) >
+    URL (legacy/fallback). Así dos ediciones CPDL con la misma URL no colisionan, y en
+    OMR se sigue consolidando el mismo `/api/download/<id>` repetido.
+    """
+    meta = rep.metadata or {}
+    resource_id = meta.get("resource_id")
+    if resource_id:
+        return (rep.provider, f"rid:{resource_id}")
+    source_rep_id = meta.get("source_rep_id")
+    if source_rep_id:
+        return (rep.provider, f"src:{source_rep_id}", rep.format)
+    return (rep.provider, rep.url or "")
+
 
 class SearchMixin(PlatformApiCore):
     def get_representation_download(self, representation_id: str) -> dict[str, object] | None:
@@ -504,10 +520,10 @@ class SearchMixin(PlatformApiCore):
                     continue
                 # Dedupe por (provider, url): el merge de grupos puede duplicar una misma
                 # página/representación (p. ej. una página CPDL con varios voicings).
-                seen: set[tuple[str, str]] = set()
+                seen: set[tuple[str, ...]] = set()
                 unique_reps: list[RepresentationInfo] = []
                 for rep in reps:
-                    key = (rep.provider, rep.url or "")
+                    key = _rep_identity_key(rep)
                     if key in seen:
                         continue
                     seen.add(key)
@@ -749,11 +765,15 @@ class SearchMixin(PlatformApiCore):
         return out
 
     def _dedupe_reps(self, reps: list[RepresentationInfo]) -> list[RepresentationInfo]:
-        """Elimina representaciones duplicadas (misma fuente y mismo enlace)."""
-        seen: set[tuple[str, str]] = set()
+        """Elimina representaciones duplicadas por identidad real.
+
+        Usa `resource_id` / `source_rep_id` cuando existen (CPDL) y cae a la URL solo
+        como fallback legacy (OMR/IMSLP/MusicBrainz).
+        """
+        seen: set[tuple[str, ...]] = set()
         out: list[RepresentationInfo] = []
         for rep in reps:
-            key = (rep.provider, rep.url or "")
+            key = _rep_identity_key(rep)
             if key in seen:
                 continue
             seen.add(key)
@@ -789,19 +809,22 @@ class SearchMixin(PlatformApiCore):
         core_tokens = set((core or "").split())
         work_comp = _NORMALIZER.canonical_composer(work.composer) if work.composer else ""
         reps: list[RepresentationInfo] = []
-        seen: set[tuple[str, str]] = set()
+        # Dedupe por id determinista (lleva `resource_id`): NO por (provider, título),
+        # porque varias ediciones/recursos CPDL comparten proveedor y título.
+        seen_ids: set[str] = set()
         for group in groups:
             for m in group.representations:
-                t = (m.provider_id.value, str(getattr(m.work_descriptor, "title", None) or ""))
-                if t in seen:
-                    continue
-                seen.add(t)
-                if not _title_core_match(core_tokens, t[1]):
+                m_title = str(getattr(m.work_descriptor, "title", None) or "")
+                if not _title_core_match(core_tokens, m_title):
                     continue
                 rep_composer = getattr(m.work_descriptor, "composer", None)
                 rep_comp = _NORMALIZER.canonical_composer(rep_composer) if rep_composer else ""
                 if work_comp and rep_comp and rep_comp != work_comp:
                     continue
-                reps.append(self._to_rep(m, work))
+                rep = self._to_rep(m, work)
+                if rep.id in seen_ids:
+                    continue
+                seen_ids.add(rep.id)
+                reps.append(rep)
         return reps
 

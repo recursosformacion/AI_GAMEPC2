@@ -128,6 +128,11 @@ class RismStorageCatalogProvider(ICatalogProvider):
                 view_url = str(first.get("url") or "")
             elif isinstance(first, str):
                 view_url = first
+        if not view_url and source_id:
+            # Fallback: permalink de la ficha RISM derivado del `source_id`
+            # ('sources/455010113' -> https://rism.online/sources/455010113). Muchas fuentes
+            # no traen copia digitalizada (`links: []`); así siempre hay "abrir en RISM".
+            view_url = "https://rism.online/" + source_id.lstrip("/")
         metadata: dict[str, object] = {
             "rism_source_id": source_id,
             "shelfmark": row.get("shelfmark"),

@@ -88,6 +88,7 @@ class _MysqlStore(_MemoryStore):
             charset="utf8mb4",
             cursorclass=DictCursor,
             autocommit=True,
+            ssl_disabled=str(self._params["host"]) in ("127.0.0.1", "localhost"),
         )
 
     def _run(self, sql: str, args: tuple[object, ...] | None = None) -> list[dict[str, object]]:

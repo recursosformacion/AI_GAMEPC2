@@ -15,8 +15,12 @@ import {
 import { buildNoteSequence, type NoteSequenceLike } from "../viewer/osmdSequence";
 import { SynthPlayer } from "../viewer/audioSynth";
 import { parseMidi } from "../viewer/midi";
+import { limitMeasures } from "../viewer/musicxmlLimit";
 
 type State = "loading" | "rendering" | "ready" | "midi" | "pdf" | "error";
+
+// Compases por página (partituras largas). Con `?measures=all` se carga entera.
+const PAGE_MEASURES = 40;
 
 export function ViewerPage() {
   const { t } = useI18n();
@@ -24,6 +28,11 @@ export function ViewerPage() {
   const rep = params.get("rep");
   const format = params.get("format");
   const title = params.get("title") ?? "";
+  const showAll = params.get("measures") === "all";
+  const [page, setPage] = useState(0);
+  const [pagination, setPagination] = useState<{ start: number; kept: number; total: number } | null>(
+    null
+  );
   const containerRef = useRef<HTMLDivElement | null>(null);
   const playerRef = useRef<SynthPlayer | null>(null);
   const sequenceRef = useRef<NoteSequenceLike | null>(null);
@@ -32,6 +41,8 @@ export function ViewerPage() {
   const [playing, setPlaying] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
   const [audioError, setAudioError] = useState<string>("");
+  const [preparing, setPreparing] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [seqInfo, setSeqInfo] = useState<string>("");
   const [tempo, setTempo] = useState(100);
   const [volume, setVolume] = useState(80);
@@ -45,8 +56,10 @@ export function ViewerPage() {
     }
     const run = async () => {
       try {
+        setProgress(10);
         const response = await apiClient.fetchRepresentationFile(rep);
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        setProgress(25);
         const contentType = response.headers.get("content-type") ?? "";
         if (contentType.startsWith("application/pdf")) {
           if (alive) setState("pdf");
@@ -77,13 +90,34 @@ export function ViewerPage() {
           xml = new TextDecoder("utf-8").decode(bytes);
         }
         if (!alive) return;
+
+        // --- Vista: OSMD paginada (evita renders de decenas de segundos) ---
+        let toLoad = xml;
+        if (!showAll) {
+          const limited = limitMeasures(xml, page * PAGE_MEASURES, PAGE_MEASURES);
+          toLoad = limited.xml;
+          setPagination({ start: limited.start, kept: limited.kept, total: limited.total });
+        } else {
+          setPagination(null);
+        }
         setState("rendering");
+        setProgress(45);
         const OSMD = await loadOsmd();
         if (!containerRef.current || !alive) return;
-        const osmd = new OSMD(containerRef.current, { autoResize: true, backend: "svg" });
-        await osmd.load(xml);
+        setProgress(60);
+        const osmd = new OSMD(containerRef.current, {
+          autoResize: true,
+          backend: "svg",
+          // Maquetado compacto: menos sistemas -> menos altura y render más rápido
+          // (las partituras largas con el preset por defecto generan cientos de sistemas).
+          drawingParameters: "compacttight",
+        });
+        await osmd.load(toLoad);
         osmd.render();
+        setProgress(95);
         if (alive) setState("ready");
+
+        // --- Audio: del modelo OSMD ya cargado (notas de la página mostrada) ---
         try {
           const sequence = buildNoteSequence(
             osmd as unknown as Parameters<typeof buildNoteSequence>[0],
@@ -96,16 +130,13 @@ export function ViewerPage() {
           setTempo(scoreTempo);
           const player = new SynthPlayer(sequence, scoreTempo);
           player.setVolume(volume / 100);
-          player.onEnd = () => {
-            setPlaying(false);
-          };
+          player.onEnd = () => setPlaying(false);
           playerRef.current = player;
           setAudioReady(true);
+          setAudioError("");
         } catch (error) {
-          setAudioReady(false); // render sin sonido: no es un error bloqueante
+          setAudioReady(false);
           setAudioError(error instanceof Error ? error.message : String(error));
-          // eslint-disable-next-line no-console
-          console.error("audio:", error);
         }
       } catch (error) {
         if (!alive) return;
@@ -119,19 +150,23 @@ export function ViewerPage() {
       playerRef.current?.stop();
       playerRef.current = null;
     };
-  }, [rep, format, t]);
+  }, [rep, format, t, showAll, page]);
 
   const togglePlay = () => {
     const player = playerRef.current;
-    if (!player) return;
+    if (!player || preparing) return;
     if (playing) {
       player.pause();
       setPlaying(false);
       return;
     }
-    void player.play().then(() => {
-      setPlaying(true);
-    });
+    setPreparing(true);
+    setAudioError("");
+    void player
+      .play()
+      .then(() => setPlaying(true))
+      .catch((error) => setAudioError(error instanceof Error ? error.message : String(error)))
+      .finally(() => setPreparing(false));
   };
 
   const changeTempo = (value: number) => {
@@ -149,9 +184,10 @@ export function ViewerPage() {
               <button
                 type="button"
                 onClick={togglePlay}
-                className="rounded bg-osap-accent px-3 py-1 text-sm text-white"
+                disabled={preparing}
+                className="rounded bg-osap-accent px-3 py-1 text-sm text-white disabled:opacity-60"
               >
-                {playing ? t("viewer.pause") : t("viewer.play")}
+                {preparing ? t("viewer.preparing") : playing ? t("viewer.pause") : t("viewer.play")}
               </button>
               <button
                 type="button"
@@ -200,6 +236,39 @@ export function ViewerPage() {
         </div>
       </div>
 
+      {pagination ? (
+        <div className="flex flex-wrap items-center gap-2 rounded border border-osap-border bg-osap-surface p-2 text-xs text-osap-muted">
+          <button
+            type="button"
+            disabled={pagination.start <= 0}
+            onClick={() => setPage((p) => Math.max(p - 1, 0))}
+            className="rounded border border-osap-border px-2 py-0.5 disabled:opacity-40"
+          >
+            ◀
+          </button>
+          <span>
+            {t("viewer.measures")} {pagination.start + 1}–
+            {Math.min(pagination.start + pagination.kept, pagination.total)} / {pagination.total}
+          </span>
+          <button
+            type="button"
+            disabled={pagination.start + pagination.kept >= pagination.total}
+            onClick={() => setPage((p) => p + 1)}
+            className="rounded border border-osap-border px-2 py-0.5 disabled:opacity-40"
+          >
+            ▶
+          </button>
+          <a
+            className="text-osap-accent hover:underline"
+            href={`/viewer?rep=${encodeURIComponent(rep ?? "")}&title=${encodeURIComponent(
+              title
+            )}&measures=all`}
+          >
+            {t("viewer.showAll")}
+          </a>
+        </div>
+      ) : null}
+
       {state === "pdf" && rep ? (
         <iframe
           title={title || "PDF"}
@@ -223,8 +292,20 @@ export function ViewerPage() {
         <p className="text-xs text-osap-muted">{seqInfo}</p>
       ) : null}
 
+      {audioReady && audioError ? <p className="text-xs text-red-600">{audioError}</p> : null}
+
       {state === "loading" || state === "rendering" ? (
-        <p className="text-sm text-osap-muted">{t("viewer.loading")}</p>
+        <div className="space-y-1">
+          <div className="h-1.5 w-full overflow-hidden rounded bg-osap-surface">
+            <div
+              className="h-full bg-osap-accent transition-all duration-300"
+              style={{ width: `${Math.max(progress, 5)}%` }}
+            />
+          </div>
+          <p className="text-xs text-osap-muted">
+            {t("viewer.loading")} {progress}%
+          </p>
+        </div>
       ) : null}
 
       {state === "error" ? (

@@ -19,7 +19,12 @@ class _FakeComposerClient(StorageComposerClient):
         super().__init__(base_url="http://127.0.0.1:1")
 
     def list_composers(
-        self, q: str | None, limit: int, offset: int, review: str | None = None
+        self,
+        q: str | None,
+        limit: int,
+        offset: int,
+        review: str | None = None,
+        public: bool = False,
     ) -> dict[str, object]:
         return {
             "items": [{"id": "comp-a", "name": "Mozart", "status": "active", "aliases_count": 3, "works_count": 264}],
@@ -128,6 +133,31 @@ def test_anonymous_can_get_composer_works() -> None:
     resp = client.get("/api/v1/composers/comp-a/works")
     assert resp.status_code == 200
     assert resp.json()["data"]["items"][0]["work_id"] == 264
+
+
+def test_review_filter_is_admin_only() -> None:
+    # La fuga: `review` debe ser mantenimiento/admin, nunca accesible en anónimo.
+    client = _build(StaticTokenAuthenticator(TOKEN_USER, "u1"))
+    assert client.get("/api/v1/composers?review=not_reviewed_2").status_code == 401
+    assert client.get("/api/v1/persons?review=not_reviewed_2").status_code == 401
+
+
+def test_review_filter_non_admin_403() -> None:
+    client = _build(StaticTokenAuthenticator(TOKEN_USER, "u1", roles=("user",)))
+    resp = client.get(
+        "/api/v1/composers?review=not_reviewed_2",
+        headers={"Authorization": f"Bearer {TOKEN_USER}"},
+    )
+    assert resp.status_code == 403
+
+
+def test_review_filter_admin_200() -> None:
+    client = _build(StaticTokenAuthenticator(TOKEN_ADMIN, "admin1", roles=("user", "admin")))
+    resp = client.get(
+        "/api/v1/composers?review=not_reviewed_2",
+        headers={"Authorization": f"Bearer {TOKEN_ADMIN}"},
+    )
+    assert resp.status_code == 200
 
 
 def test_merge_without_token_401() -> None:

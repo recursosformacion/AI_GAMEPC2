@@ -56,7 +56,17 @@ class TestSelectBest:
 
     def test_b_varias_conocidas_recibe_exactamente_esas(self, monkeypatch: pytest.MonkeyPatch) -> None:
         api = _api(monkeypatch)
-        reps = [_rep("omr"), _rep("imslp"), _rep("cpdl", url="https://www.cpdl.org/wiki/x") ]
+        from src.osap.application import representation_selector
+
+        # Las tres son MusicXML válido y candidatas-fichero (URL descargable): el selector
+        # exige descarga+validación de cada una. (Una URL de wiki, p. ej. /wiki/x, NO es
+        # candidata por diseño: ver `_is_file_candidate`.)
+        monkeypatch.setattr(representation_selector, "_download", lambda url: REAL_MXL)
+        reps = [
+            _rep("omr"),
+            _rep("imslp"),
+            _rep("cpdl", url="https://storage.openmusicrepository.com/api/download/cpdl.mxl"),
+        ]
         result = api.select_best_representation("work-1", reps)
         assert result.representations_known == 3
         assert result.candidates_usable == 3

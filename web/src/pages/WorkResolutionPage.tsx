@@ -197,7 +197,11 @@ export function WorkResolutionPage() {
                 </div>
                 <div className="mt-1 flex flex-col gap-1">
                   {providerReps.map((rep, i) => {
-                    const ext = ({ musicxml: "mxl", pdf: "pdf", midi: "mid" } as Record<string, string>)[rep.format] ?? rep.format;
+                    const ext =
+                      ({ musicxml: "mxl", pdf: "pdf", midi: "mid", audio: "mp3", mus: "mus", sib: "sib", mscz: "mscz", capx: "capx" } as Record<
+                        string,
+                        string
+                      >)[rep.format] ?? rep.format;
                     const filename = `${top.work.title}.${ext}`;
                     const href = `/api/v1/representations/${rep.id}/download`;
                     return (

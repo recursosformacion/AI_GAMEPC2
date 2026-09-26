@@ -1,9 +1,18 @@
+"""Descarga el catálogo CPDL vía Cargo API usando Playwright (supera Cloudflare).
+
+Resumen: recorre el API `cargoquery` de CPDL paginado (200/página) con un navegador
+Chromium (para obtener cookies válidas tras el reto de Cloudflare) y guarda el
+resultado en `cpdl_bbdd_completa.json` junto al script.
+"""
+
 import json
 import os
 import time
+
 from playwright.sync_api import sync_playwright
 
 URL_BASE = "https://www.cpdl.org/wiki/api.php"
+
 
 def extraer_cpdl_playwright():
     todos_los_registros = []
@@ -17,7 +26,10 @@ def extraer_cpdl_playwright():
         # Lanzamos un navegador Chromium visible o headless
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            user_agent=(
+                "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            )
         )
         page = context.new_page()
 
@@ -28,8 +40,13 @@ def extraer_cpdl_playwright():
 
         while mas_resultados:
             print(f"Solicitando bloque desde offset {offset}...", flush=True)
-            
-            api_url = f"{URL_BASE}?action=cargoquery&tables=Works&fields=_pageName=Pagina,Title=Titulo,Composer=Compositor,Genre=Genero,Subgenre=Subgenero,MusicXML=MusicXML&limit={limit}&offset={offset}&format=json"
+
+            api_url = (
+                f"{URL_BASE}?action=cargoquery&tables=Works&"
+                "fields=_pageName=Pagina,Title=Titulo,Composer=Compositor,"
+                "Genre=Genero,Subgenre=Subgenero,MusicXML=MusicXML&"
+                f"limit={limit}&offset={offset}&format=json"
+            )
 
             try:
                 response = page.goto(api_url)

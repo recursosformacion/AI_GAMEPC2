@@ -31,6 +31,7 @@ class _MysqlStore(_MemoryStore):
             charset="utf8mb4",
             cursorclass=DictCursor,
             autocommit=True,
+            ssl_disabled=str(self._params["host"]) in ("127.0.0.1", "localhost"),
         )
 
     def _run(self, sql: str, args: tuple[object, ...] | None = None) -> list[dict[str, object]]:
@@ -43,6 +44,16 @@ class _MysqlStore(_MemoryStore):
                 return []
         finally:
             conn.close()
+
+    def _ensure_voicing_term_width(self) -> None:
+        """Amplía `index_work_voicings.term` a 64: hay términos CPDL normalizados >32."""
+        rows = self._run(
+            "SELECT CHARACTER_MAXIMUM_LENGTH AS n FROM information_schema.COLUMNS "
+            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'index_work_voicings' "
+            "AND COLUMN_NAME = 'term'"
+        )
+        if rows and int(str(rows[0]["n"] or 0)) < 64:
+            self._run("ALTER TABLE index_work_voicings MODIFY term VARCHAR(64) NOT NULL")
 
     def _init(self) -> None:
         self._run(
@@ -96,7 +107,7 @@ class _MysqlStore(_MemoryStore):
                 title VARCHAR(1024) NOT NULL,
                 title_key VARCHAR(255) NOT NULL,
                 composer_name VARCHAR(255),
-                composer_id VARCHAR(36),
+                person_id VARCHAR(36),
                 catalogue VARCHAR(255),
                 catalogue_key VARCHAR(128),
                 year SMALLINT,
@@ -105,8 +116,8 @@ class _MysqlStore(_MemoryStore):
                 source_count TINYINT NOT NULL DEFAULT 0,
                 updated_at VARCHAR(64) NOT NULL,
                 PRIMARY KEY (id),
-                UNIQUE KEY uq_idx_title_composer (title_key(191), composer_id),
-                KEY idx_idx_composer (composer_id),
+                UNIQUE KEY uq_idx_title_composer (title_key(191), person_id),
+                KEY idx_idx_composer (person_id),
                 KEY idx_idx_composer_name (composer_name),
                 KEY idx_idx_catalogue (catalogue_key),
                 KEY idx_idx_title (title_key)
@@ -119,6 +130,13 @@ class _MysqlStore(_MemoryStore):
                 id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
                 work_id BIGINT UNSIGNED NOT NULL,
                 provider VARCHAR(64) NOT NULL,
+                -- Identidad de origen (dos niveles del modelo storage):
+                --   source_rep_id = edición (p. ej. cpdlno) / '' en proveedores sin edición.
+                --   resource_id   = `works_resources.id` / 0 en proveedores sin resource.
+                -- Ambos con DEFAULT para que la clave única siga siendo idempotente en los
+                -- proveedores legacy (OMR/IMSLP/MusicBrainz), donde no existen.
+                source_rep_id VARCHAR(64) NOT NULL DEFAULT '',
+                resource_id BIGINT UNSIGNED NOT NULL DEFAULT 0,
                 format VARCHAR(32) NOT NULL,
                 download_url TEXT,
                 title_provider VARCHAR(1024),
@@ -130,7 +148,22 @@ class _MysqlStore(_MemoryStore):
                 PRIMARY KEY (id),
                 KEY idx_idxrep_work (work_id),
                 KEY idx_rep_content_hash (content_hash),
-                UNIQUE KEY uq_idxrep (work_id, provider, format, title_provider(255))
+                -- Identidad de recurso (CPDL) + el discriminante legacy `title_provider`:
+                -- en proveedores sin identidad (`''`/0) la clave equivale a la antigua
+                -- (work_id, provider, format, title_provider) y NO colapsa filas válidas.
+                UNIQUE KEY uq_idxrep
+                    (work_id, provider, source_rep_id, resource_id, format, title_provider(255))
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+            """
+        )
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS index_work_voicings (
+                work_id BIGINT UNSIGNED NOT NULL,
+                kind VARCHAR(16) NOT NULL DEFAULT 'cpdl',
+                term VARCHAR(64) NOT NULL,
+                PRIMARY KEY (work_id, kind, term),
+                KEY idx_work_voicing_term (term, kind)
             ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
             """
         )
@@ -175,10 +208,15 @@ class _MysqlStore(_MemoryStore):
             ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
             """
         )
-        self._migrate()
 
     def _migrate(self) -> None:
-        """Migraciones idempotentes sobre tablas ya existentes."""
+        """Migraciones idempotentes sobre tablas ya existentes.
+
+        NO se ejecutan al arrancar: las lanza `script/migrate_index_schema.py` una vez por
+        despliegue (evita DDL concurrente con varias réplicas). La creación de tablas
+        (`CREATE TABLE IF NOT EXISTS`) sí ocurre en `_init`.
+        """
+        self._ensure_voicing_term_width()
         columns = self._run(
             "SELECT column_name FROM information_schema.columns "
             "WHERE table_schema = DATABASE() AND table_name = 'providers'"
@@ -228,17 +266,59 @@ class _MysqlStore(_MemoryStore):
             self._run("ALTER TABLE index_representations ADD COLUMN xml_title VARCHAR(512) NULL")
         if "xml_composer" not in rep_existing:
             self._run("ALTER TABLE index_representations ADD COLUMN xml_composer VARCHAR(255) NULL")
+        # Identidad de origen CPDL (edición + resource). Legacy se rellena con '' / 0 para
+        # no romper la unicidad de los proveedores sin identidad.
+        if "source_rep_id" not in rep_existing:
+            self._run(
+                "ALTER TABLE index_representations "
+                "ADD COLUMN source_rep_id VARCHAR(64) NOT NULL DEFAULT ''"
+            )
+        if "resource_id" not in rep_existing:
+            self._run(
+                "ALTER TABLE index_representations "
+                "ADD COLUMN resource_id BIGINT UNSIGNED NOT NULL DEFAULT 0"
+            )
+        # La única antigua (work_id, provider, format, title_provider(255)) impedía tener
+        # varias ediciones CPDL del mismo formato. Se añade la identidad de recurso
+        # (`source_rep_id`, `resource_id`) MANTENIENDO `title_provider` como discriminante
+        # legacy: así los proveedores sin identidad no pierden filas.
+        _uq_wanted = [
+            "work_id", "provider", "source_rep_id", "resource_id", "format", "title_provider",
+        ]
+        uq_rows = self._run(
+            "SELECT column_name FROM information_schema.statistics "
+            "WHERE table_schema = DATABASE() AND table_name = 'index_representations' "
+            "AND index_name = 'uq_idxrep' ORDER BY seq_in_index"
+        )
+        uq_existing = [str(r["column_name"]) for r in uq_rows] if uq_rows else []
+        if uq_existing != _uq_wanted:
+            if uq_existing:
+                self._run("ALTER TABLE index_representations DROP INDEX uq_idxrep")
+                # Solo colisionarían filas idénticas en TODOS los campos de la clave; con el
+                # discriminante legacy incluido, esto no debería borrar nada.
+                self._run(
+                    "DELETE r1 FROM index_representations r1 JOIN index_representations r2 "
+                    "ON r1.work_id = r2.work_id AND r1.provider = r2.provider "
+                    "AND r1.source_rep_id = r2.source_rep_id AND r1.resource_id = r2.resource_id "
+                    "AND r1.format = r2.format AND r1.title_provider <=> r2.title_provider "
+                    "AND r1.id > r2.id"
+                )
+            self._run(
+                "ALTER TABLE index_representations ADD UNIQUE KEY uq_idxrep "
+                "(work_id, provider, source_rep_id, resource_id, format, title_provider(255))"
+            )
 
-        # El índice nombra la referencia del compositor `composer_id` (antes `person_id`).
+        # El índice referencia a la persona (`persons`) como `person_id`; antes se llamó
+        # `composer_id` (rol). Se mantiene `person_id` como nombre único de la clave.
         work_cols = self._run(
             "SELECT column_name FROM information_schema.columns "
             "WHERE table_schema = DATABASE() AND table_name = 'index_works'"
         )
         work_existing = {str(r["column_name"]) for r in work_cols} if work_cols else set()
-        if "person_id" in work_existing and "composer_id" not in work_existing:
-            self._run("ALTER TABLE index_works CHANGE person_id composer_id VARCHAR(36) NULL")
-        elif "composer_id" not in work_existing:
-            self._run("ALTER TABLE index_works ADD COLUMN composer_id VARCHAR(36) NULL")
+        if "composer_id" in work_existing and "person_id" not in work_existing:
+            self._run("ALTER TABLE index_works CHANGE composer_id person_id VARCHAR(36) NULL")
+        elif "person_id" not in work_existing:
+            self._run("ALTER TABLE index_works ADD COLUMN person_id VARCHAR(36) NULL")
         # El anclaje por título busca por `composer_name` (LIMIT 500): sin índice era un full
         # scan de index_works por compositor (el rebuild pasaba de minutos a horas).
         composer_name_index = self._run(

@@ -14,6 +14,8 @@ from src.osap.infrastructure.catalogs.cpdl import CPDLCatalogProvider
 
 
 class _FakeResponse:
+    status_code = 200
+
     def __init__(self, payload: list[dict]) -> None:
         self._payload = payload
 

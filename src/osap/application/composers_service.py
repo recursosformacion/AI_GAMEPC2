@@ -28,9 +28,14 @@ class ComposersService:
     # -- consulta (pública) --------------------------------------------------
 
     def list_composers(
-        self, q: str | None, limit: int, offset: int, review: str | None = None
+        self,
+        q: str | None,
+        limit: int,
+        offset: int,
+        review: str | None = None,
+        public: bool = False,
     ) -> dict[str, object]:
-        return self._client.list_composers(q, limit, offset, review)
+        return self._client.list_composers(q, limit, offset, review, public)
 
     def list_persons(
         self,
@@ -39,9 +44,10 @@ class ComposersService:
         limit: int,
         offset: int,
         review: str | None = None,
+        public: bool = False,
     ) -> dict[str, object]:
         """Personas por rol (modelo nuevo `persons`); `/composers` es `role=composer`."""
-        return self._client.list_persons(roles, q, limit, offset, review)
+        return self._client.list_persons(roles, q, limit, offset, review, public)
 
     def get_composer(self, person_id: str) -> dict[str, object] | None:
         return self._client.get_composer(person_id)

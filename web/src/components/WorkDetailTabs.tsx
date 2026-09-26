@@ -457,7 +457,11 @@ function _viewHref(repId: string, format: string | null | undefined, workTitle?:
 }
 
 function downloadFileName(rep: RepresentationInfo, workTitle?: string | null): string {
-  const ext = ({ musicxml: "mxl", pdf: "pdf", midi: "mid" } as Record<string, string>)[rep.format] ?? rep.format;
+  const ext =
+    ({ musicxml: "mxl", pdf: "pdf", midi: "mid", audio: "mp3", mus: "mus", sib: "sib", mscz: "mscz", capx: "capx" } as Record<
+      string,
+      string
+    >)[rep.format] ?? rep.format;
   const base = workTitle || rep.title || rep.id || "representation";
   const safe = base.replace(/[\\/:*?"<>|]+/g, "-").replace(/\s+/g, "_");
   return `${safe}.${ext}`;

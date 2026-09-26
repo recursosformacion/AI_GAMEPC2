@@ -352,6 +352,9 @@ def _composer_signal(raw: str | None) -> tuple[str, str]:
     key = MetadataNormalizer.comparison_composer(text)
     if not key or key == "anonymous":
         return "anonymous", "anonymous"
+    # Clave insensible al orden: "Mozart, Wolfgang Amadeus" (RISM/otras fuentes) ==
+    # "Wolfgang Amadeus Mozart" (índice). Sin esto no comparten bloque y no se fusionan.
+    key = " ".join(sorted(key.split()))
     return "specific", key
 
 

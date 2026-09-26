@@ -23,9 +23,9 @@ Dos tablas en la BD de osap-api:
 
 ```
 index_works          -- una fila por Obra ÚNICA (deduplicada)
-  id · title · title_key (normalizado) · composer_name · composer_id (FK → Maestro)
+  id · title · title_key (normalizado) · composer_name · person_id (FK → Maestro)
   catalogue · catalogue_key · year · instrumentation · created_at · updated_at
-  Índices: title_key, composer_id, catalogue_key
+  Índices: title_key, person_id, catalogue_key
 
 index_representations -- una fila por representación de cada obra
   id · work_id · provider · format · download_url · title_provider · available · quality
@@ -33,8 +33,8 @@ index_representations -- una fila por representación de cada obra
 ```
 
 **Clave del diseño:** el índice **guarda el resultado normalizado** (`title_key`,
-`composer_id`), no lo recalcula por búsqueda. La búsqueda es un `SELECT` por
-`title_key LIKE` / `composer_id` / `catalogue_key` → obra + representaciones.
+`person_id`), no lo recalcula por búsqueda. La búsqueda es un `SELECT` por
+`title_key LIKE` / `person_id` / `catalogue_key` → obra + representaciones.
 **~ms, determinista, idéntico siempre.**
 
 ## 3. ¿Quién lo construye? osap-api (no storage)
@@ -47,7 +47,7 @@ piezas necesarias:
 | Capa de proveedores | `osap-api` (fetchers, orquestador) | enumera los catálogos |
 | Normalización de títulos | `MetadataNormalizer` (osap-api) | `title_key` |
 | Canonicalización de compositor | `Canonicalizer` (osap-api) | compositor canónico |
-| Unificación de compositores | Maestro + autoridad + `composer_identity_resolution` (osap-api/storage) | `composer_id` |
+| Unificación de compositores | Maestro + autoridad + `person_identity_resolution` (osap-api/storage) | `person_id` |
 | Agrupación/fusión de obras | `work_merge_service` / `work_grouper` / `work_grouping_matcher` (osap-api) | dedupe del índice |
 | Búsqueda | osap-api | lee el índice |
 
@@ -78,7 +78,7 @@ ya hecho (Maestro, autoridad, resolución, normalización) **se capitaliza, no s
 - **1ª carga completa**: horas (IMSLP ~2 h, MusicBrainz más) — en background, una vez.
 - **Incrementales**: minutos. IMSLP/MusicBrainz exponen "cambios recientes"; OMR se
   difiere por `updated_at`; Mutopia es pequeño.
-- **La normalización es determinista**: misma entrada → misma `title_key`/`composer_id`.
+- **La normalización es determinista**: misma entrada → misma `title_key`/`person_id`.
   Las reglas NO cambian; se aplican a filas nuevas con las mismas funciones. No es
   "re-hacer el trabajo" — es aplicar reglas fijadas a datos nuevos.
 - **Nuevos compositores** se resuelven automáticamente con el pipeline existente (o
@@ -88,18 +88,18 @@ ya hecho (Maestro, autoridad, resolución, normalización) **se capitaliza, no s
 
 ## 6. Invalidación por cambios del Maestro (fusión, alias, atribución)
 
-**Problema:** el índice guarda `composer_id` (FK al Maestro). Si el admin fusiona
+**Problema:** el índice guarda `person_id` (FK al Maestro). Si el admin fusiona
 compositores (A→B), marca uno como atribución (lo retira) o altera aliases, el índice
 **queda desactualizado** para las obras afectadas.
 
 **Solución (tres capas):**
 1. **En la operación (recomendado):** la fusión y la conversión a atribución
    **actualizan el índice en la misma transacción**:
-   `UPDATE index_works SET composer_id = B WHERE composer_id = A`. Las correcciones del
+   `UPDATE index_works SET person_id = B WHERE person_id = A`. Las correcciones del
    admin son **puntuales y raras** → el coste es despreciable.
 2. **En la sync:** la sincronización incremental re-resuelve el compositor de las obras
    afectadas usando el Maestro actual (seguridad extra).
-3. **Aliases:** cambiar un alias no cambia `composer_id`, pero sí cómo se resuelven
+3. **Aliases:** cambiar un alias no cambia `person_id`, pero sí cómo se resuelven
    nombres nuevos → los incrementales lo aplican.
 
 El índice es un **derivado**: refleja el estado del Maestro. Cualquier cambio de

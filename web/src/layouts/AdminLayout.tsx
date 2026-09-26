@@ -30,8 +30,7 @@ const SECTIONS: AdminSection[] = [
     caption: "Mantenimiento tablas",
     items: [
       { to: "/admin/users", key: "adminUsers.title" },
-      { action: "storage-composers", key: "admin.composerMaster" },
-      { action: "storage-works", key: "admin.storageWorks" },
+      { action: "storage-main", key: "admin.storageMaint" },
       { to: "/admin/providers", key: "admin.providersAdmin" },
     ],
   },
@@ -44,9 +43,6 @@ const SECTIONS: AdminSection[] = [
   },
   { items: [{ to: "/admin/source-suggestions", key: "admin.sourceSuggestions" }] },
   { items: [{ to: "/admin/corrections", key: "admin.corrections" }] },
-  {
-    items: [{ action: "storage-main", key: "admin.storageMaint" }],
-  },
   { items: [{ to: "/jobs", key: "jobs" }] },
 ];
 
