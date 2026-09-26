@@ -33,6 +33,11 @@ if (-not $SkipBuild) {
     & ".\node_modules\.bin\tsc.cmd" --noEmit; if ($LASTEXITCODE -ne 0) { Fail "tsc falló" }
     & node "node_modules/vite/bin/vite.js" build; if ($LASTEXITCODE -ne 0) { Fail "vite build falló" }
     Pop-Location
+
+    Write-Host "== [1b/4] Construyendo admin de osap-storage ==" -ForegroundColor Cyan
+    Push-Location (Join-Path $IosapRoot "osap-storage\frontend")
+    & node "node_modules/vite/bin/vite.js" build; if ($LASTEXITCODE -ne 0) { Fail "vite build storage falló" }
+    Pop-Location
 }
 
 Write-Host "== [2/4] Empaquetando ==" -ForegroundColor Cyan
@@ -44,11 +49,15 @@ foreach ($r in $repos) {
 }
 tar -czf (Join-Path $tmp "dist.tar.gz") -C (Join-Path $apiRoot "web\dist") .
 if ($LASTEXITCODE -ne 0) { Fail "tar dist falló" }
+# Admin de osap-storage (lo sirve su API en /admin desde frontend/dist).
+tar -czf (Join-Path $tmp "storage-admin-dist.tar.gz") -C (Join-Path $IosapRoot "osap-storage\frontend\dist") .
+if ($LASTEXITCODE -ne 0) { Fail "tar storage-admin-dist falló" }
 
 Write-Host "== [3/4] Subiendo ==" -ForegroundColor Cyan
 ssh -o BatchMode=yes $HostAlias "mkdir -p /home/ocw/deploy_tmp"
 foreach ($r in $repos) { scp -o BatchMode=yes (Join-Path $tmp "$($r.Name).tar.gz") "$($HostAlias):/home/ocw/deploy_tmp/" }
 scp -o BatchMode=yes (Join-Path $tmp "dist.tar.gz") "$($HostAlias):/home/ocw/deploy_tmp/"
+scp -o BatchMode=yes (Join-Path $tmp "storage-admin-dist.tar.gz") "$($HostAlias):/home/ocw/deploy_tmp/"
 scp -o BatchMode=yes (Join-Path $apiRoot "osap.production.toml") "$($HostAlias):/home/ocw/deploy_tmp/osap.production.toml"
 if ($LASTEXITCODE -ne 0) { Fail "scp falló" }
 
@@ -59,6 +68,8 @@ $cmd = "set -e; $extract " +
     "cp -f /home/ocw/deploy_tmp/osap.production.toml $RemoteRoot/osap-api/osap.toml; " +
     "rm -rf $RemoteRoot/app/assets $RemoteRoot/app/index.html; " +
     "tar -xzf /home/ocw/deploy_tmp/dist.tar.gz -C $RemoteRoot/app; " +
+    "mkdir -p $RemoteRoot/osap-storage/frontend/dist; rm -rf $RemoteRoot/osap-storage/frontend/dist/*; " +
+    "tar -xzf /home/ocw/deploy_tmp/storage-admin-dist.tar.gz -C $RemoteRoot/osap-storage/frontend/dist; " +
     "$restart rm -rf /home/ocw/deploy_tmp; echo DEPLOY_DONE"
 ssh -o BatchMode=yes $HostAlias $cmd
 

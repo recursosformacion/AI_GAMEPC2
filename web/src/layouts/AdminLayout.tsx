@@ -57,8 +57,10 @@ export function AdminLayout(): ReactNode {
       try {
         const r = await apiClient.getStorageWebUrl(section ?? undefined);
         window.open(r.url, "_blank");
-      } catch {
-        /* storage web no disponible */
+      } catch (error) {
+        // Antes se tragaba el error y parecía que el botón "no hacía nada".
+        const detail = error instanceof Error ? error.message : String(error);
+        window.alert(`osap-storage admin no disponible · not available: ${detail}`);
       }
     })();
   };
