@@ -52,6 +52,9 @@ class SystemMixin(PlatformApiCore):
             url = f"{base}/admin/obras?token={urllib.parse.quote(service_token)}"
         elif section == "tables":
             url = f"{url}&tab=tables"
+        elif section == "mantenimiento":
+            # Página curada de opciones de mantenimiento (distinta del multimantenimiento SPA).
+            url = f"{base}/admin/mantenimiento?token={urllib.parse.quote(service_token)}"
         return url
 
     def admin_overview(self, token: str | None) -> dict[str, object]:
