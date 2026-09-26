@@ -12,7 +12,12 @@ interface AdminItem {
   to?: string;
   key: TKey;
   end?: boolean;
-  action?: "storage-composers" | "storage-works" | "storage-main" | "storage-maint";
+  action?:
+    | "storage-composers"
+    | "storage-works"
+    | "storage-main"
+    | "storage-maint"
+    | "storage-multi";
 }
 
 interface AdminSection {
@@ -31,7 +36,7 @@ const SECTIONS: AdminSection[] = [
     items: [
       { to: "/admin/users", key: "adminUsers.title" },
       { action: "storage-maint", key: "admin.maint" },
-      { action: "storage-main", key: "admin.storageMaint" },
+      { action: "storage-multi", key: "admin.storageMaint" },
       { to: "/admin/providers", key: "admin.providersAdmin" },
     ],
   },
@@ -70,6 +75,7 @@ export function AdminLayout(): ReactNode {
     if (item.action === "storage-composers") openStorage("composers");
     else if (item.action === "storage-works") openStorage("works");
     else if (item.action === "storage-maint") openStorage("mantenimiento");
+    else if (item.action === "storage-multi") openStorage("multimantenimiento");
     else if (item.action === "storage-main") openStorage(null);
   };
 
