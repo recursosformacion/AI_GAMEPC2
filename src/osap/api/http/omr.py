@@ -42,9 +42,10 @@ def build_omr_router(ctx: HttpContext) -> APIRouter:
     ) -> Response | ErrorEnvelope:
         # Cuota: misma comprobación que la descarga por representación (no otro bypass).
         user_id, is_admin = _shared._current_identity(ctx, authorization)
+        client_ip = _shared._client_ip(request)
         decision = ctx.api.consume_omr_download(
             user_id=user_id,
-            ip=_shared._client_ip(request),
+            ip=client_ip,
             is_admin=is_admin,
             work_id=None,
             resource_id=None,
@@ -52,6 +53,8 @@ def build_omr_router(ctx: HttpContext) -> APIRouter:
         )
         if not getattr(decision, "allowed", True):
             limit = getattr(decision, "limit", None)
+            # Observacional: registra el hito del funnel sin alterar el 429.
+            _shared._emit_limit_reached(ctx, user_id=user_id, ip=client_ip, limit=limit)
             return ctx.fail(
                 429,
                 response,

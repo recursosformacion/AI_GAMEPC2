@@ -95,6 +95,28 @@ def _storage_fetch_headers(ctx: object, url: str) -> dict[str, str]:
         return {}
 
 
+def _emit_limit_reached(
+    ctx: object, *, user_id: str | None, ip: str | None, limit: int | None
+) -> None:
+    """Registra `limit_reached` en el funnel tras un 429 REAL (observacional).
+
+    - No decide cuota: solo observa la decisión ya tomada por el circuito de cuota.
+    - No consulta ni modifica `download_quota_daily` ni incrementa contadores.
+    - Tolerante a fallos: si el store del funnel cae, la respuesta 429 no cambia.
+    """
+    stage = "S3" if user_id else "S1"
+    try:
+        ctx.api.record_funnel_event(  # type: ignore[attr-defined]
+            "limit_reached",
+            stage=stage,
+            user_id=user_id,
+            ip_address=ip,
+            detail={"limit": limit} if limit is not None else None,
+        )
+    except Exception:  # noqa: BLE001 — nunca debe alterar la respuesta
+        return
+
+
 def _client_ip(request: object) -> str | None:
     """IP real del cliente detrás de nginx (única fuente para la cuota de visitante).
 

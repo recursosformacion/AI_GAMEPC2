@@ -118,9 +118,10 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
 
         # Cuota: solo la descarga facturable (OMR), nunca la vista inline ni otras fuentes.
         if is_download and provider == "omr":
+            client_ip = _shared._client_ip(request)
             decision = ctx.api.consume_omr_download(
                 user_id=user_id,
-                ip=_shared._client_ip(request),
+                ip=client_ip,
                 is_admin=is_admin,
                 work_id=work_id or None,
                 resource_id=_resource_id_from_rep(representation_id),
@@ -128,6 +129,10 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
             )
             if not getattr(decision, "allowed", True):
                 limit = getattr(decision, "limit", None)
+                # Observacional: registra el hito del funnel sin alterar el 429.
+                _shared._emit_limit_reached(
+                    ctx, user_id=user_id, ip=client_ip, limit=limit
+                )
                 return ctx.fail(
                     429,
                     response,
