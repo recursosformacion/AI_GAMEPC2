@@ -9,6 +9,9 @@ import { Link } from "react-router-dom";
 import { Button } from "../components/Button";
 import { useI18n } from "../i18n/I18n";
 
+// Alta de usuario: pantalla dedicada de osap-auth (misma que el flujo real del ecosistema).
+const AUTH_REGISTER_URL = "https://auth.openmusicrepository.com/auth/register";
+
 const WAYS = [
   {
     icon: "💚",
@@ -16,27 +19,31 @@ const WAYS = [
     subKey: "collaborators.supportSub",
     ctaKey: "collaborators.supportCta",
     to: "/support",
+    external: false,
   },
   {
     icon: "🤝",
     titleKey: "collaborators.contributeTitle",
     subKey: "collaborators.contributeSub",
     ctaKey: "collaborators.createAccountCta",
-    to: "/support?mode=register",
+    to: AUTH_REGISTER_URL,
+    external: true,
   },
   {
     icon: "📣",
     titleKey: "collaborators.shareTitle",
     subKey: "collaborators.shareSub",
     ctaKey: "collaborators.createAccountCta",
-    to: "/support?mode=register",
+    to: AUTH_REGISTER_URL,
+    external: true,
   },
   {
     icon: "🎼",
     titleKey: "collaborators.contentTitle",
     subKey: "collaborators.contentSub",
     ctaKey: "collaborators.createAccountCta",
-    to: "/support?mode=register",
+    to: AUTH_REGISTER_URL,
+    external: true,
   },
 ] as const;
 
@@ -68,9 +75,15 @@ export function CollaboratorsPage() {
               <p className="mt-1 text-sm text-osap-muted">{t(way.subKey)}</p>
               {"ctaKey" in way && way.to ? (
                 <div className="mt-3">
-                  <Link to={way.to}>
-                    <Button>{t(way.ctaKey)}</Button>
-                  </Link>
+                  {way.external ? (
+                    <a href={way.to}>
+                      <Button>{t(way.ctaKey)}</Button>
+                    </a>
+                  ) : (
+                    <Link to={way.to}>
+                      <Button>{t(way.ctaKey)}</Button>
+                    </Link>
+                  )}
                 </div>
               ) : null}
             </div>

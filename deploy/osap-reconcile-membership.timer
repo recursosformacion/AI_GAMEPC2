@@ -1,0 +1,18 @@
+# OSAP API — timer systemd del reconciliador de membresía (funnel 4.2).
+# Copiar a /etc/systemd/system/osap-reconcile-membership.timer y:
+#   sudo systemctl daemon-reload && sudo systemctl enable --now osap-reconcile-membership.timer
+#
+# Cadencia: 15 min (decisión de contrato 4.2). `Persistent=true` recupera una ejecución
+# perdida si el host estuvo apagado.
+
+[Unit]
+Description=Run OSAP reconcile membership every 15 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+AccuracySec=30s
+Persistent=true
+
+[Install]
+WantedBy=timers.target

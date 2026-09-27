@@ -28,6 +28,13 @@ versión de plataforma describe el conjunto completo y es desplegable como un to
    dejar claro qué revisión del conjunto está en producción.
 
 ### Historial
+- **4.2.0** — funnel de acceso y contribución: `funnel_events` append-only
+  (`limit_reached`/`registered`/`membership_activated|lapsed`/`promotion_applied|reverted`),
+  promoción donor materializada como `user_quota_overrides` por reconciliación M2M **pull**
+  con osap-support (cada 15 min vía `osap-reconcile-membership.timer`), revocación
+  administrativa que no resucita en el mismo periodo, y métricas derivadas. Corrección del
+  cableado de `service_audience` en osap-support (`aud=osap-support` para tokens M2M).
+  Colaboradores: las altas de usuario enlazan a la pantalla de registro de osap-auth.
 - **4.1.0** — cuota de descargas OMR (planes 10/100/1000, excepción por usuario con
   vigencia, auditoría `download_usage`), gateo de `download_representation` y
   `/api/v1/omr/download`, cierre del bypass de storage (`/api/download` exige

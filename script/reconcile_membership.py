@@ -10,6 +10,10 @@ Uso (por defecto, dry-run informativo; `--apply` ejecuta):
     python script/reconcile_membership.py --apply            # candidatos desde la BD
 
 Candidatos (sin `--user-id`): usuarios con eventos de funnel o con override existente.
+
+El service token M2M se pide con `--support-audience` (por defecto `osap-support`), la
+audiencia que valida osap-support (`[identity] service_audience`). Vacío = audiencia por
+defecto de osap-auth.
 """
 
 from __future__ import annotations
@@ -45,6 +49,11 @@ def main() -> int:
     ap.add_argument("--support-base-url", default="http://127.0.0.1:8300")
     ap.add_argument("--support-client-id", default="osap-api")
     ap.add_argument("--support-client-secret", default="")
+    ap.add_argument(
+        "--support-audience",
+        default="osap-support",
+        help="Audiencia del service token M2M que valida osap-support (vacío = por defecto)",
+    )
     ap.add_argument("--token-url", default="http://osap-auth/auth-api/oauth/token")
     ap.add_argument("--user-id", action="append", default=[])
     ap.add_argument("--limit", type=int, default=0)
@@ -75,6 +84,7 @@ def main() -> int:
                 client_id=args.support_client_id,
                 client_secret=args.support_client_secret,
                 token_url=args.token_url,
+                audience=args.support_audience or None,
             ),
         )
         uc = ReconcileMembershipUseCase(source=source, quota=quota, funnel=funnel)

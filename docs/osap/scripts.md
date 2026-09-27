@@ -221,7 +221,8 @@ python scripts/test_authority_coverage.py [--db BD] [--limit 100] [--from-id 0]
 | `works_resolve_experiment.py` | Experimento v1 de `/works/resolve` (250 obras). |
 | `deploy.ps1` | Deploy de OSAP a producción (frontend + backend + reinicio). |
 | `predeploy_backup.ps1` | **Copia de seguridad antes de subir** (host `RemoteIA`): crea `/home/ocw/backups/<fecha>/` con dump comprimido de las 4 BBDD (`osap_api/auth/storage/support`) y tar de los 5 programas (`app`, `osap-api/auth/storage/support`, sin `.venv`). Punto de rollback. |
-| `reconcile_membership.py` | **Reconciliador de membresía (fase 4.2)**: consulta el M2M de osap-support y materializa/retira el override donor (1000/día) con la vigencia exacta, emitiendo eventos del funnel. Idempotente; si support no responde NO retira la promoción. Pensado para cron cada 15 min. `--user-id` (repetible) o candidatos desde BD; `--apply` para escribir (por defecto dry-run). |
+| `reconcile_membership.py` | **Reconciliador de membresía (fase 4.2)**: consulta el M2M de osap-support y materializa/retira el override donor (1000/día) con la vigencia exacta, emitiendo eventos del funnel. Idempotente; si support no responde NO retira la promoción. `--user-id` (repetible) o candidatos desde BD; `--apply` para escribir (por defecto dry-run). `--support-audience` (por defecto `osap-support`) fija la audiencia del service token M2M que valida osap-support. En producción lo ejecuta `osap-reconcile-membership.timer` cada 15 min (units en `deploy/osap-reconcile-membership.{service,timer}` + `deploy/osap-reconcile.env.example`). Ejecutar con `PYTHONPATH=<osap-api>`. |
+| `deploy_all.ps1` | Sube la SPA + el **admin de osap-storage** + los 4 backends (`osap-api/auth/storage/support`, incluyendo `script/` de osap-api) a `RemoteIA` y reinicia los servicios; **no toca las BBDD**. |
 | `sync_db_down.ps1` | **Sincroniza la BD operativa de osap-api desde el VPS a desarrollo** (solo lectura): exporta de `osap_api` (excepto `app_config`) y restaura en la BD local `osap-api`. Permite que las pruebas locales trabajen con el índice real + storage/auth reales (`dev_mode=1`). Uso: `powershell -File script/sync_db_down.ps1`. |
 | `pre_dbadmin_tunnel.ps1` | Túnel SSH para administración de BD. |
 
@@ -352,8 +353,11 @@ PYTHONPATH=<osap-api> python reseed_providers.py
   `simulate_storage_call.py` (`--base`, `--in`, `--out`, `--limit`),
   `enrich_identifiers.py` (`--composer`, `--work`, `--works`, `--archive`).
 - **Operaciones**: `deploy.ps1` (despliegue a producción, host `RemoteIA`),
-  `pre_dbadmin_tunnel.ps1` (túnel SSH de phpMyAdmin del entorno PRE — script residual de
-  otro proyecto, no parte de la operación de OSAP).
+  `deploy_all.ps1` (SPA + 4 backends + `script/`, sin BBDD), `predeploy_backup.ps1`
+  (backup de BBDD + programas), `pre_dbadmin_tunnel.ps1` (túnel SSH de phpMyAdmin del
+  entorno PRE — script residual de otro proyecto, no parte de la operación de OSAP).
+  El reconciliador de membresía corre en producción vía
+  `osap-reconcile-membership.timer` (systemd, cada 15 min).
 - **Reinicio de dev**: `restart-dev.ps1` (y su lanzador `restart-dev.cmd`) mata todos los
   procesos de los servicios locales (por puerto 8000/8001/8200/8300 y por command line) y
   los vuelve a arrancar en segundo plano esperando su healthcheck; se autoeleva (UAC).

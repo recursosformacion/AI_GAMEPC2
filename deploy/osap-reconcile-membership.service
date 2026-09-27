@@ -1,0 +1,25 @@
+# OSAP API — unit systemd del reconciliador de membresía (funnel 4.2).
+# Copiar a /etc/systemd/system/osap-reconcile-membership.service. Se ejecuta por el
+# timer `osap-reconcile-membership.timer` (cada 15 min) o a mano:
+#   sudo systemctl start osap-reconcile-membership.service
+#
+# Secretos fuera del repo: `/home/ocw/openmusicrepository.com/osap-api/osap-reconcile.env`
+# (gitignored) con OSAP_SUPPORT_CLIENT_ID/SECRET y OSAP_API_DB_*.
+# Plantilla: deploy/osap-reconcile.env.example.
+
+[Unit]
+Description=OSAP reconcile membership (funnel 4.2) — materializa/retira overrides donor
+After=network.target mysql.service
+Wants=osap-api.service
+
+[Service]
+Type=oneshot
+User=ocw
+Group=ocw
+WorkingDirectory=/home/ocw/openmusicrepository.com/osap-api
+Environment=PYTHONPATH=/home/ocw/openmusicrepository.com/osap-api
+EnvironmentFile=/home/ocw/openmusicrepository.com/osap-api/osap-reconcile.env
+ExecStart=/home/ocw/openmusicrepository.com/osap-api/.venv/bin/python script/reconcile_membership.py --apply --db-host 127.0.0.1 --db-user ${OSAP_API_DB_USER} --db-password ${OSAP_API_DB_PASSWORD} --db-api ${OSAP_API_DB_NAME} --support-base-url http://127.0.0.1:8300 --support-client-id ${OSAP_SUPPORT_CLIENT_ID} --support-client-secret ${OSAP_SUPPORT_CLIENT_SECRET} --support-audience osap-support --token-url http://127.0.0.1:8200/oauth/token
+
+[Install]
+WantedBy=multi-user.target

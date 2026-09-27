@@ -25,21 +25,27 @@ class ClientCredentialsServiceTokenProvider(IServiceTokenProvider):
         client_secret: str,
         token_url: str,
         timeout: int = 15,
+        audience: str | None = None,
     ) -> None:
         self._client_id = client_id
         self._client_secret = client_secret
         self._token_url = token_url
         self._timeout = timeout
+        # Audiencia objetivo del service token. `None` = audiencia por defecto de osap-auth
+        # (tokens para storage: `aud=osap-api`). Para consumir osap-support M2M hay que pedir
+        # explícitamente `aud=osap-support`, que el receptor valida (`service_audience`).
+        self._audience = audience
 
     def token(self, scopes: tuple[str, ...]) -> str:
-        payload = json.dumps(
-            {
-                "grant_type": "client_credentials",
-                "client_id": self._client_id,
-                "client_secret": self._client_secret,
-                "scope": " ".join(scopes),
-            }
-        ).encode("utf-8")
+        body: dict[str, object] = {
+            "grant_type": "client_credentials",
+            "client_id": self._client_id,
+            "client_secret": self._client_secret,
+            "scope": " ".join(scopes),
+        }
+        if self._audience:
+            body["audience"] = self._audience
+        payload = json.dumps(body).encode("utf-8")
         request = urllib.request.Request(
             self._token_url,
             data=payload,
