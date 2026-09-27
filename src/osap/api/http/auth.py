@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from src.osap.api.contracts import (
@@ -43,6 +43,7 @@ def build_auth_router(ctx: HttpContext) -> APIRouter:
     )
     def register_user(
         payload: RegisterRequest,
+        request: Request,
         response: Response,
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
@@ -55,6 +56,17 @@ def build_auth_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(429, response, "RATE_LIMITED", "Too many requests")
         if status >= 500:
             return ctx.fail(502, response, "BAD_GATEWAY", "Identity service unavailable")
+        # Observacional (fase 4.2): hito del funnel SOLO tras registro confirmado por
+        # osap-auth. Idempotente por user_id (reintentos no duplican). No altera auth ni
+        # el resultado: si el funnel falla, el registro sigue siendo exitoso.
+        user_id = doc.get("user_id") if isinstance(doc, dict) else None
+        if user_id:
+            ctx.api.record_funnel_event_once(
+                "registered",
+                user_id=str(user_id),
+                stage="S2",
+                ip_address=_shared._client_ip(request),
+            )
         return ctx.ok(doc)
 
     @router.post(

@@ -78,6 +78,12 @@ class MemoryStore:
             if (event is None or r["event"] == _value(event)) and (day is None or r["day"] == day)
         )
 
+    def has_event(self, user_id: str, event: FunnelEvent) -> bool:
+        """True si ya existe ese evento para el usuario (guarda de idempotencia)."""
+        return any(
+            r["user_id"] == user_id and r["event"] == _value(event) for r in self.events
+        )
+
     def events_for_user(self, user_id: str, day: str | None = None) -> list[dict[str, object]]:
         return [
             r

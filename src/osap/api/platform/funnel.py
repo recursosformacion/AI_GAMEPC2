@@ -45,3 +45,35 @@ class FunnelMixin(PlatformApiCore):
         except Exception as exc:  # noqa: BLE001 — la observación del funnel no es crítica
             _LOGGER.warning("no se pudo registrar el evento de funnel %s: %s", event, exc)
             return {}
+
+    def record_funnel_event_once(
+        self,
+        event: object,
+        *,
+        user_id: str | None,
+        stage: object | None = None,
+        ip_address: str | None = None,
+        override_id: int | None = None,
+        detail: dict[str, object] | None = None,
+        day: str | None = None,
+    ) -> dict[str, object]:
+        """Como `record_funnel_event` pero idempotente por `(user_id, event)`.
+
+        Sirve para hitos que deben registrarse una sola vez por usuario (p. ej. `registered`)
+        aunque la operación se reintente. Si el store falla, no interrumpe al llamante.
+        """
+        if not user_id:
+            return self.record_funnel_event(
+                event, stage=stage, user_id=user_id, ip_address=ip_address,
+                override_id=override_id, detail=detail, day=day,
+            )
+        try:
+            resolved = event if isinstance(event, FunnelEvent) else FunnelEvent(str(event))
+            if self._funnel_store.has_event(user_id, resolved):  # type: ignore[attr-defined]
+                return {}
+        except Exception as exc:  # noqa: BLE001 — la guarda no debe romper el hito
+            _LOGGER.warning("no se pudo comprobar el evento de funnel %s: %s", event, exc)
+        return self.record_funnel_event(
+            event, stage=stage, user_id=user_id, ip_address=ip_address,
+            override_id=override_id, detail=detail, day=day,
+        )

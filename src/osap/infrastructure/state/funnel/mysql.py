@@ -109,6 +109,13 @@ class _MysqlStore(MemoryStore):
         rows = self._run(f"SELECT COUNT(*) AS n FROM funnel_events{where}", tuple(args))
         return int(str(rows[0]["n"])) if rows else 0
 
+    def has_event(self, user_id: str, event: FunnelEvent) -> bool:
+        rows = self._run(
+            "SELECT 1 AS x FROM funnel_events WHERE user_id = %s AND event = %s LIMIT 1",
+            (user_id, _value(event)),
+        )
+        return bool(rows)
+
     def events_for_user(self, user_id: str, day: str | None = None) -> list[dict[str, object]]:
         if day is None:
             return self._run(
