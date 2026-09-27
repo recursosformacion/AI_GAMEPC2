@@ -109,6 +109,14 @@ class _MysqlStore(MemoryStore):
         rows = self._run(f"SELECT COUNT(*) AS n FROM funnel_events{where}", tuple(args))
         return int(str(rows[0]["n"])) if rows else 0
 
+    def query_events(self, from_day: str, to_day: str) -> list[dict[str, object]]:
+        # Solo lectura y sin `ip_address` (privacidad: las métricas no exponen IPs).
+        return self._run(
+            "SELECT event, stage, user_id, day FROM funnel_events "
+            "WHERE day BETWEEN %s AND %s ORDER BY id",
+            (from_day, to_day),
+        )
+
     def reverted_periods(self, user_id: str) -> set[str]:
         rows = self._run(
             "SELECT detail FROM funnel_events WHERE user_id = %s AND event = %s",

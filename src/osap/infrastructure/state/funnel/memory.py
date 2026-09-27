@@ -78,6 +78,14 @@ class MemoryStore:
             if (event is None or r["event"] == _value(event)) and (day is None or r["day"] == day)
         )
 
+    def query_events(self, from_day: str, to_day: str) -> list[dict[str, object]]:
+        """Eventos del rango [from_day, to_day] (solo lectura; SIN `ip_address`)."""
+        return [
+            {"event": r["event"], "stage": r["stage"], "user_id": r["user_id"], "day": r["day"]}
+            for r in self.events
+            if from_day <= str(r["day"]) <= to_day
+        ]
+
     def reverted_periods(self, user_id: str) -> set[str]:
         """`valid_from` de los periodos con `promotion_reverted` (revocación manual).
 

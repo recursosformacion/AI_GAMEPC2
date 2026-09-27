@@ -99,6 +99,12 @@ Reglas:
   (ya existe); límites alcanzados desde `funnel_events(event='limit_reached')`.
 - Panel admin: extiende la sección **Estadísticas** de 4.1 con el embudo.
 
+Implementación (paso 7): **servicio interno de solo lectura** `FunnelMetricsUseCase`
+(`funnel_events` + `download_usage`), **sin API pública nueva** en 4.2. Distingue
+explícitamente **eventos** (`COUNT(*)`, p. ej. renovaciones) de **usuarios únicos**
+(`COUNT(DISTINCT user_id)`, conversiones), desdobla `limit_reached` por stage (S1/S3) y
+separa `promotion_reverted` de `membership_lapsed`. No escribe nada ni expone IPs.
+
 ## Fuera de alcance (4.2)
 
 - Cambios en auth, en el store de cuota o en el circuito de descarga.
