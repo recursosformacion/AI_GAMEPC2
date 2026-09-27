@@ -28,6 +28,10 @@ versión de plataforma describe el conjunto completo y es desplegable como un to
    dejar claro qué revisión del conjunto está en producción.
 
 ### Historial
+- **4.2.1** — correos transaccionales de identidad en osap-auth: implementado el envío por
+  SMTP (`[smtp]`/`OSAP_AUTH_SMTP_*`) para verificación de email, reenvío y recuperación de
+  contraseña (antes solo se generaba el token, **sin enviar**). Verificado E2E en producción
+  (registro → correo → `verify-email`).
 - **4.2.0** — funnel de acceso y contribución: `funnel_events` append-only
   (`limit_reached`/`registered`/`membership_activated|lapsed`/`promotion_applied|reverted`),
   promoción donor materializada como `user_quota_overrides` por reconciliación M2M **pull**
