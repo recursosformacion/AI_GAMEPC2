@@ -109,6 +109,23 @@ class _MysqlStore(MemoryStore):
         rows = self._run(f"SELECT COUNT(*) AS n FROM funnel_events{where}", tuple(args))
         return int(str(rows[0]["n"])) if rows else 0
 
+    def reverted_periods(self, user_id: str) -> set[str]:
+        rows = self._run(
+            "SELECT detail FROM funnel_events WHERE user_id = %s AND event = %s",
+            (user_id, FunnelEvent.PROMOTION_REVERTED.value),
+        )
+        out: set[str] = set()
+        for row in rows:
+            detail = row.get("detail")
+            if isinstance(detail, str):
+                try:
+                    detail = json.loads(detail)
+                except ValueError:
+                    detail = None
+            if isinstance(detail, dict) and detail.get("valid_from"):
+                out.add(str(detail["valid_from"])[:10])
+        return out
+
     def has_event(self, user_id: str, event: FunnelEvent) -> bool:
         rows = self._run(
             "SELECT 1 AS x FROM funnel_events WHERE user_id = %s AND event = %s LIMIT 1",

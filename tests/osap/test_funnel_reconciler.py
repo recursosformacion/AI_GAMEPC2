@@ -113,12 +113,26 @@ def test_support_caido_no_retira_promocion() -> None:
 
 def test_fallo_del_funnel_no_rompe() -> None:
     class _Broken:
+        def reverted_periods(self, user_id: str) -> set[str]:
+            return set()
+
         def record_event(self, *a: object, **k: object) -> object:
             raise RuntimeError("funnel caido")
 
     uc, q, _f = _use_case(_Source(_Snap()), funnel=_Broken())
     assert uc.reconcile_user(USER) == "applied"
     assert _override(q) is not None
+
+
+def test_sin_poder_verificar_revocacion_no_aplica() -> None:
+    """Si no se puede leer la marca de revocación, NO se aplica (no resucitar)."""
+    class _NoRead:
+        def record_event(self, *a: object, **k: object) -> object:
+            return {}
+
+    uc, q, _f = _use_case(_Source(_Snap()), funnel=_NoRead())
+    assert uc.reconcile_user(USER) == "skipped"
+    assert _override(q) is None
 
 
 def test_fallo_del_store_de_cuota_es_seguro() -> None:

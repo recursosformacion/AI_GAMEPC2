@@ -92,6 +92,17 @@ class ReconcileMembershipUseCase:
         if promote:
             vf = _day(snap.valid_from)
             vu = _day(snap.valid_until)
+            # No resucitar una promoción revocada manualmente en el MISMO periodo: si su
+            # `valid_from` tiene `promotion_reverted`, no se aplica. Si la membresía renueva
+            # (cambia `valid_from`), es un periodo nuevo y sí se promociona.
+            try:
+                revoked = vf is not None and vf in self._funnel.reverted_periods(user_id)  # type: ignore[attr-defined]
+            except Exception:  # noqa: BLE001 — si no se puede verificar, no aplicar (seguro)
+                return "skipped"
+            if revoked:
+                if current is not None:
+                    self._quota.delete_override(user_id)  # type: ignore[attr-defined]
+                return "revoked"
             if current is None:
                 self._apply(user_id, vf, vu, snap.source)
                 self._event("membership_activated", "S4", user_id, snap)
@@ -136,7 +147,7 @@ class ReconcileMembershipUseCase:
 
     # ---- reconciliación por lotes --------------------------------------------
     def reconcile(self, user_ids: Iterable[str]) -> dict[str, int]:
-        summary = {"applied": 0, "updated": 0, "lapsed": 0, "noop": 0, "skipped": 0}
+        summary = {"applied": 0, "updated": 0, "lapsed": 0, "revoked": 0, "noop": 0, "skipped": 0}
         for user_id in user_ids:
             try:
                 outcome = self.reconcile_user(user_id)

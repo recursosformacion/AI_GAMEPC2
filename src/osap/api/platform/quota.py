@@ -78,6 +78,44 @@ class QuotaMixin(PlatformApiCore):
         self._require_admin(token)
         self._quota_store.delete_override(user_id)  # type: ignore[attr-defined]
 
+    def revoke_donor_promotion(
+        self, token: str | None, user_id: str, reason: str
+    ) -> dict[str, object]:
+        """Revoca el override donor vigente de un usuario (acción admin explícita).
+
+        - Reutiliza el override existente (no hay sistema paralelo); lo elimina.
+        - Idempotente: sin override vigente → `revoked=False` y **sin evento**.
+        - Emite `promotion_reverted` (stage S3) con `reason` y el periodo revocado, para
+          que el reconciliador NO resucite la promoción en ese mismo periodo.
+        - No toca `download_quota_daily` ni `download_usage`.
+        """
+        self._require_admin(token)
+        clean_reason = reason.strip() if isinstance(reason, str) else ""
+        current: dict[str, object] | None = None
+        for row in self._quota_store.list_overrides():  # type: ignore[attr-defined]
+            if str(row.get("user_id")) == str(user_id):
+                current = dict(row)
+                break
+        if current is None:
+            return {"user_id": user_id, "revoked": False}
+        valid_from = str(current.get("valid_from") or "")[:10] or None
+        valid_until = str(current.get("valid_until") or "")[:10] or None
+        self._quota_store.delete_override(user_id)  # type: ignore[attr-defined]
+        # El histórico es responsabilidad separada: si falla, la revocación NO se deshace.
+        self.record_funnel_event(
+            "promotion_reverted",
+            stage="S3",
+            user_id=user_id,
+            detail={"reason": clean_reason, "valid_from": valid_from, "valid_until": valid_until},
+        )
+        return {
+            "user_id": user_id,
+            "revoked": True,
+            "reason": clean_reason,
+            "valid_from": valid_from,
+            "valid_until": valid_until,
+        }
+
     def quota_usage(self, token: str | None, from_day: str, to_day: str) -> dict[str, object]:
         """Estadísticas de descargas (auditoría) en [from_day, to_day]; solo admin."""
         self._require_admin(token)

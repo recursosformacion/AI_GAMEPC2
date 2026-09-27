@@ -27,6 +27,10 @@ class OverrideUpdate(BaseModel):
     note: str | None = None
 
 
+class RevokeRequest(BaseModel):
+    reason: str
+
+
 def build_quota_router(ctx: HttpContext) -> APIRouter:
     from src.osap.api.http import shared as _shared
 
@@ -133,6 +137,28 @@ def build_quota_router(ctx: HttpContext) -> APIRouter:
         try:
             ctx.api.quota_delete_override(authorization, user_id)
             return ctx.ok({"user_id": user_id, "deleted": True})
+        except (UnauthenticatedError, ForbiddenError) as exc:
+            return _admin_error(response, exc)
+
+    @router.post(
+        "/api/v1/admin/quota/overrides/{user_id}/revoke",
+        tags=["Quota"],
+        summary="Revocar promoción donor de un usuario (admin)",
+        description="Elimina el override donor vigente y registra `promotion_reverted` "
+        "(motivo obligatorio). El reconciliador no la resucita en el mismo periodo.",
+        response_model=SuccessEnvelope[dict[str, object]] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, 403: _shared._FORBIDDEN_403},
+    )
+    def quota_revoke(
+        user_id: str,
+        payload: RevokeRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            if not payload.reason.strip():
+                return ctx.fail(422, response, "VALIDATION_ERROR", "reason required")
+            return ctx.ok(ctx.api.revoke_donor_promotion(authorization, user_id, payload.reason))
         except (UnauthenticatedError, ForbiddenError) as exc:
             return _admin_error(response, exc)
 

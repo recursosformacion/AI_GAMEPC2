@@ -78,6 +78,21 @@ class MemoryStore:
             if (event is None or r["event"] == _value(event)) and (day is None or r["day"] == day)
         )
 
+    def reverted_periods(self, user_id: str) -> set[str]:
+        """`valid_from` de los periodos con `promotion_reverted` (revocación manual).
+
+        El reconciliador lo usa para NO resucitar una promoción revocada dentro del mismo
+        periodo de membresía (una revocación administrativa no se deshace sola).
+        """
+        out: set[str] = set()
+        for r in self.events:
+            if r["user_id"] != user_id or r["event"] != FunnelEvent.PROMOTION_REVERTED.value:
+                continue
+            detail = r.get("detail")
+            if isinstance(detail, dict) and detail.get("valid_from"):
+                out.add(str(detail["valid_from"])[:10])
+        return out
+
     def has_event(self, user_id: str, event: FunnelEvent) -> bool:
         """True si ya existe ese evento para el usuario (guarda de idempotencia)."""
         return any(
