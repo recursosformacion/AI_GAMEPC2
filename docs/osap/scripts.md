@@ -221,6 +221,7 @@ python scripts/test_authority_coverage.py [--db BD] [--limit 100] [--from-id 0]
 | `works_resolve_experiment.py` | Experimento v1 de `/works/resolve` (250 obras). |
 | `deploy.ps1` | Deploy de OSAP a producción (frontend + backend + reinicio). |
 | `predeploy_backup.ps1` | **Copia de seguridad antes de subir** (host `RemoteIA`): crea `/home/ocw/backups/<fecha>/` con dump comprimido de las 4 BBDD (`osap_api/auth/storage/support`) y tar de los 5 programas (`app`, `osap-api/auth/storage/support`, sin `.venv`). Punto de rollback. |
+| `reconcile_membership.py` | **Reconciliador de membresía (fase 4.2)**: consulta el M2M de osap-support y materializa/retira el override donor (1000/día) con la vigencia exacta, emitiendo eventos del funnel. Idempotente; si support no responde NO retira la promoción. Pensado para cron cada 15 min. `--user-id` (repetible) o candidatos desde BD; `--apply` para escribir (por defecto dry-run). |
 | `sync_db_down.ps1` | **Sincroniza la BD operativa de osap-api desde el VPS a desarrollo** (solo lectura): exporta de `osap_api` (excepto `app_config`) y restaura en la BD local `osap-api`. Permite que las pruebas locales trabajen con el índice real + storage/auth reales (`dev_mode=1`). Uso: `powershell -File script/sync_db_down.ps1`. |
 | `pre_dbadmin_tunnel.ps1` | Túnel SSH para administración de BD. |
 
