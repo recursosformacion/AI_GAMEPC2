@@ -1,8 +1,7 @@
 # Verificación 4.2 — Funnel (E2E en producción)
 
-Estado: **validada E2E en producción**. Pendiente solo el commit/tag de cierre (el código
-en `main` va por detrás de lo desplegado: incluye las correcciones del E2E). No se tocaron
-auth, cuotas ni el circuito de descarga.
+Estado: **CERRADA — v4.2.0** (desplegada en producción). No se tocaron auth, cuotas ni el
+circuito de descarga.
 
 ## Baseline pre-despliegue (producción = 4.1 / `v4.1.0`)
 
@@ -67,6 +66,18 @@ limpieza → mantenimiento OFF → comprobación pública.
   **todo 0**; planes intactos (`visitor 10 / registered 100 / donor 1000`).
 - `auth_enabled=true`; público `app/`, `/viewer`, `/api/v1/system/health`, auth, support,
   storage → **200**.
+
+## Release v4.2.0
+
+| repo | `main` / tag `v4.2.0` |
+|---|---|
+| osap-api | `d692b68` (funnel + fix `service_audience` + Colaboradores → registro + timer) |
+| osap-support | `71059c4` (`service_audience` mapeado + tests) |
+| osap-storage | `af27242` (versión coordinada) |
+| osap-auth | `5af002b` (versión coordinada) |
+
+Además: los 3 botones no-Apoyar de **Colaboradores** enlazan a la pantalla de registro de
+osap-auth (`/auth/register`); "Apoyar a OSAP" sigue en `/support`.
 
 ## Notas / supuestos
 
