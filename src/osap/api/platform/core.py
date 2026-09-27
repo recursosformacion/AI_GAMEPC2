@@ -52,6 +52,7 @@ class PlatformApiCore:
     _acquisition: AcquisitionService
     _analytics_store: AnalyticsStore
     _analytics: AnalyticsRecorder
+    _quota_store: object  # QuotaStore (evita import circular del módulo de cuotas)
 
     # Helpers transversales usados por varios dominios (implementados en PlatformApi).
     def _paginate(
@@ -173,6 +174,20 @@ class PlatformApiCore:
         raise NotImplementedError
 
     def record_download_failure_event(self, *, provider: str) -> None:
+        raise NotImplementedError
+
+    # --- cuota de descargas OMR (implementado por QuotaMixin) -----------------
+
+    def consume_omr_download(
+        self,
+        *,
+        user_id: str | None,
+        ip: str | None,
+        is_admin: bool,
+        work_id: str | None,
+        resource_id: int | None,
+        fmt: str | None,
+    ) -> object:
         raise NotImplementedError
 
     def analytics_overview(self, from_day: str, to_day: str) -> dict[str, int]:

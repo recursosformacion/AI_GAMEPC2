@@ -22,6 +22,7 @@ from src.osap.api.http.knowledge import build_knowledge_router
 from src.osap.api.http.omr import build_omr_router
 from src.osap.api.http.persons import build_persons_router
 from src.osap.api.http.providers import build_providers_router
+from src.osap.api.http.quota import build_quota_router
 from src.osap.api.http.search import build_search_router
 from src.osap.api.http.sessions import build_sessions_router
 from src.osap.api.http.shared import (
@@ -149,6 +150,7 @@ def create_platform_app(
     app.include_router(build_works_router(ctx))
     app.include_router(build_sessions_router(ctx))
     app.include_router(build_admin_ops_router(ctx))
+    app.include_router(build_quota_router(ctx))
     app.include_router(build_omr_router(ctx))
 
     return app

@@ -10,6 +10,19 @@ import { WorkRating } from "./WorkRating";
 
 export type WorkDetailTab = "overview" | "representations" | "evidence" | "providers";
 
+// El endpoint /api/download/{id} de storage exige token de servicio (cuota OMR): no se
+// enlaza directo desde la web; las descargas van siempre por osap-api.
+const _STORAGE_HOSTS = ["storage.openmusicrepository.com", "127.0.0.1", "localhost", "osap-storage"];
+function _isStorageUrl(url?: string | null): boolean {
+  if (!url) return false;
+  if (url.startsWith("/api/download/")) return true;
+  try {
+    return _STORAGE_HOSTS.includes(new URL(url, window.location.origin).hostname);
+  } catch {
+    return false;
+  }
+}
+
 const TABS: { id: WorkDetailTab; labelKey: string }[] = [
   { id: "overview", labelKey: "work.overview" },
   { id: "representations", labelKey: "work.representations" },
@@ -134,7 +147,7 @@ function KnownSelectionBlock({
                   {t("actions.viewScore")}
                 </a>
               ) : null}
-              {sel.source_id || sel.url ? (
+              {sel.source_id || (sel.url && !_isStorageUrl(sel.url)) ? (
                 <a
                   href={
                     sel.source_id
@@ -337,7 +350,7 @@ function RepresentationsTab({
             </span>
             <span className="flex shrink-0 items-center gap-1.5">
               {rep.available === false ? (
-                rep.url ? (
+                rep.url && !_isStorageUrl(rep.url) ? (
                   <a
                     href={rep.url}
                     target="_blank"
@@ -418,7 +431,7 @@ function ProvidersTab({ byProvider }: { byProvider: Map<string, RepresentationIn
       <ul className="divide-y divide-osap-border">
         {[...byProvider.entries()].map(([provider, reps]) => {
           const formats = [...new Set(reps.map((r) => r.format))].join(" · ");
-          const url = reps.find((r) => r.url)?.url ?? null;
+          const url = reps.find((r) => r.url && !_isStorageUrl(r.url))?.url ?? null;
           return (
             <li key={provider} className="flex items-center justify-between py-2 text-sm">
               <div>

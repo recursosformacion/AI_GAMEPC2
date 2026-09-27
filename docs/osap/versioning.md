@@ -28,6 +28,10 @@ versión de plataforma describe el conjunto completo y es desplegable como un to
    dejar claro qué revisión del conjunto está en producción.
 
 ### Historial
+- **4.1.0** — cuota de descargas OMR (planes 10/100/1000, excepción por usuario con
+  vigencia, auditoría `download_usage`), gateo de `download_representation` y
+  `/api/v1/omr/download`, cierre del bypass de storage (`/api/download` exige
+  `storage:read`) y panel de administración de cuotas/estadísticas.
 - **4.0.0** — entrega coordinada: modelo de datos nuevo de `osap-storage`
   (`persons`, voicings→ensembles; migraciones 006–008), identidad de recurso en el índice
   de `osap-api` (`source_rep_id`/`resource_id`, `person_id`), formatos CPDL ampliados y

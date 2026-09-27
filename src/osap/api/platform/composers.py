@@ -1,5 +1,6 @@
 """PlatformApi: mixin de compositores (F5.4)."""
 
+import secrets
 from typing import cast
 
 from src.osap.api.contracts import (
@@ -27,6 +28,18 @@ VERSION = "3.1"
 class ComposersMixin(PlatformApiCore):
     def composers(self) -> ComposersService:
         return self._container.composers_service()
+
+    def storage_fetch_headers(self) -> dict[str, str]:
+        """Cabeceras para que osap-api lea ficheros del storage.
+
+        `/api/download/{id}` de storage exige token de servicio `storage:read`: así una
+        llamada externa no puede saltarse la cuota de OMR. En dev-bypass se envía uno
+        simbólico (el storage local no valida).
+        """
+        if self._container.dev_auth_bypass():
+            return {"Authorization": f"Bearer {secrets.token_urlsafe(16)}"}
+        token = self.composers().storage_read_token()
+        return {"Authorization": f"Bearer {token}"} if token else {}
 
     def list_composers(
         self,

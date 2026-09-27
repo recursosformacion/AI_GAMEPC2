@@ -71,6 +71,61 @@ def _media_type_for_format(fmt: str) -> str:
 # el fichero. El proxy de descarga de osap-api las usa.
 _BROWSER_FETCH_HEADERS = browser_headers({"Accept": "*/*"})
 
+
+_STORAGE_API_HOSTS = {"storage.openmusicrepository.com", "127.0.0.1", "localhost", "osap-storage"}
+
+
+def _storage_fetch_headers(ctx: object, url: str) -> dict[str, str]:
+    """Cabeceras para leer un fichero del storage (token storage:read) si la URL es de su API.
+
+    Solo para el host de la **API** de storage (no para el CDN/R2, donde una cabecera
+    `Authorization` podría romper una URL prefirmada).
+    """
+    import urllib.parse
+
+    try:
+        host = (urllib.parse.urlparse(url).hostname or "").lower()
+    except Exception:  # noqa: BLE001
+        return {}
+    if host not in _STORAGE_API_HOSTS:
+        return {}
+    try:
+        return dict(ctx.api.storage_fetch_headers() or {})  # type: ignore[attr-defined]
+    except Exception:  # noqa: BLE001
+        return {}
+
+
+def _client_ip(request: object) -> str | None:
+    """IP real del cliente detrás de nginx (única fuente para la cuota de visitante).
+
+    Prioriza `X-Forwarded-For` (primer salto), luego `X-Real-IP` y, si no, el socket.
+    """
+    headers = getattr(request, "headers", None)
+    if headers is not None:
+        xff = headers.get("x-forwarded-for")
+        if xff:
+            first = str(xff).split(",")[0].strip()
+            if first:
+                return first
+        xri = headers.get("x-real-ip")
+        if xri and str(xri).strip():
+            return str(xri).strip()
+    client = getattr(request, "client", None)
+    return getattr(client, "host", None) if client is not None else None
+
+
+def _current_identity(ctx: object, authorization: str | None) -> tuple[str | None, bool]:
+    """(user_id, is_admin) del llamante; `(None, False)` si es anónimo. Nunca lanza."""
+    try:
+        principal = ctx.api.current_user(authorization)  # type: ignore[attr-defined]
+    except Exception:  # noqa: BLE001 — la cuota de visitante no depende del token
+        return None, False
+    if principal is None:
+        return None, False
+    user_id = getattr(principal, "user_id", None) or getattr(principal, "sub", None)
+    roles = getattr(principal, "roles", ()) or ()
+    return (str(user_id) if user_id else None), ("admin" in roles)
+
 _TAGS = [
     {"name": "Searches", "description": "Create and retrieve searches."},
     {"name": "Jobs", "description": "Orchestrate long-running tasks."},
@@ -84,6 +139,7 @@ _TAGS = [
     {"name": "Auth", "description": "Registro, verificación y OIDC."},
     {"name": "Admin", "description": "Mantenimiento y administración."},
     {"name": "Support", "description": "Contacto y correcciones de catálogo."},
+    {"name": "Quota", "description": "Cuotas de descarga OMR y estadísticas de uso."},
 ]
 
 

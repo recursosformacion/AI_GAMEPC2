@@ -101,6 +101,10 @@ export class ApiClient {
     return this.request<T>("DELETE", path);
   }
 
+  async put<T>(path: string, body?: unknown): Promise<T> {
+    return this.request<T>("PUT", path, body);
+  }
+
   async getComposers(
     q: string,
     limit: number,
@@ -266,6 +270,33 @@ export class ApiClient {
     return this.get<{ url: string }>(`/admin/storage-web${qs}`);
   }
 
+  // --- cuotas de descarga OMR (admin) ---------------------------------------
+  async getQuotaPlans(): Promise<QuotaPlan[]> {
+    return this.get<QuotaPlan[]>("/admin/quota/plans");
+  }
+
+  async setQuotaPlan(name: string, payload: QuotaPlanUpdate): Promise<{ name: string; downloads_per_day: number }> {
+    return this.put(`/admin/quota/plans/${encodeURIComponent(name)}`, payload);
+  }
+
+  async getQuotaOverrides(): Promise<QuotaOverride[]> {
+    return this.get<QuotaOverride[]>("/admin/quota/overrides");
+  }
+
+  async setQuotaOverride(userId: string, payload: QuotaOverrideUpdate): Promise<{ user_id: string }> {
+    return this.put(`/admin/quota/overrides/${encodeURIComponent(userId)}`, payload);
+  }
+
+  async deleteQuotaOverride(userId: string): Promise<{ user_id: string }> {
+    return this.delete(`/admin/quota/overrides/${encodeURIComponent(userId)}`);
+  }
+
+  async getQuotaUsage(from: string, to: string): Promise<QuotaUsage> {
+    return this.get<QuotaUsage>(
+      `/admin/quota/usage?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+    );
+  }
+
   async listOpProviders(): Promise<OpProvider[]> {
     return this.get<OpProvider[]>("/admin/op/providers");
   }
@@ -383,3 +414,46 @@ export class ApiClient {
 }
 
 export const apiClient = new ApiClient();
+
+// --- cuotas de descarga OMR (admin) -----------------------------------------
+
+export interface QuotaPlan {
+  name: string;
+  downloads_per_day: number;
+  valid_from?: string | null;
+  valid_until?: string | null;
+}
+
+export interface QuotaPlanUpdate {
+  downloads_per_day: number;
+  valid_from?: string | null;
+  valid_until?: string | null;
+}
+
+export interface QuotaOverride {
+  user_id: string;
+  downloads_per_day: number;
+  valid_from?: string | null;
+  valid_until?: string | null;
+  note?: string | null;
+}
+
+export interface QuotaOverrideUpdate {
+  downloads_per_day: number;
+  valid_from?: string | null;
+  valid_until?: string | null;
+  note?: string | null;
+}
+
+export interface QuotaUsage {
+  from: string;
+  to: string;
+  total: number;
+  registered: number;
+  anonymous: number;
+  distinct_users: number;
+  distinct_ips: number;
+  by_day: { day: string; total: number }[];
+  by_provider: { provider: string; total: number }[];
+  top_works: { work_id: string; total: number }[];
+}

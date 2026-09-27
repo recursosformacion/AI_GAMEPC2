@@ -142,6 +142,9 @@ class ComposersService:
     def storage_web_admin_url(self) -> str:
         return self._client.storage_web_admin_url()
 
+    def storage_read_token(self) -> str:
+        return self._client.storage_read_token()
+
     def storage_base_url(self) -> str:
         return self._client.storage_base_url()
 

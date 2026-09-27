@@ -10,6 +10,7 @@ import { AdminUserDetailPage } from "../pages/AdminUserDetailPage";
 import { AdminUsersPage } from "../pages/AdminUsersPage";
 import { AdminPaymentsPage } from "../pages/AdminPaymentsPage";
 import { AdminPage } from "../pages/AdminPage";
+import { AdminQuotaPage } from "../pages/AdminQuotaPage";
 import { AliasPage } from "../pages/AliasPage";
 import { AuthCallbackPage } from "../pages/AuthCallbackPage";
 import { CollaboratorsPage } from "../pages/CollaboratorsPage";
@@ -71,6 +72,7 @@ export function AppRoutes() {
         <Route path="/admin/aliases" element={<AliasPage />} />
         <Route path="/admin/source-suggestions" element={<AdminSourceSuggestionsPage />} />
         <Route path="/admin/providers" element={<AdminProvidersPage />} />
+        <Route path="/admin/quota" element={<AdminQuotaPage />} />
         <Route path="/admin/corrections" element={<AdminCorrectionsPage />} />
       </Route>
     </Routes>

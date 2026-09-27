@@ -318,6 +318,19 @@ class StorageComposerClient:
                 return ""
         return ""
 
+    def storage_read_token(self) -> str:
+        """Token de servicio storage:read, para que osap-api pueda traer ficheros internos.
+
+        El endpoint `/api/download/{id}` de storage exige este token: así una llamada
+        externa no puede saltarse la cuota de OMR de osap-api.
+        """
+        if self._token_provider is not None:
+            try:
+                return self._token_provider.token(("storage:read",))
+            except Exception:  # noqa: BLE001
+                return ""
+        return ""
+
     # -- helpers -------------------------------------------------------------
 
     def _call(

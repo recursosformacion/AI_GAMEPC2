@@ -6,7 +6,7 @@ import urllib.parse
 from typing import TYPE_CHECKING
 
 import requests
-from fastapi import APIRouter, Header, Query, Response
+from fastapi import APIRouter, Header, Query, Request, Response
 from fastapi.responses import RedirectResponse
 
 from src.osap.api.contracts import (
@@ -72,6 +72,17 @@ def _current_user_id(ctx: HttpContext, authorization: str | None) -> str | None:
     return str(user_id) if user_id else None
 
 
+def _resource_id_from_rep(rep_id: str) -> int | None:
+    """`resource_id` del id determinista `idx-<work>-<provider>-<resource>-<format>`."""
+    parts = rep_id.split("-")
+    if len(parts) >= 5 and parts[0] == "idx":
+        try:
+            return int(parts[3])
+        except ValueError:
+            return None
+    return None
+
+
 def build_search_router(ctx: HttpContext) -> APIRouter:
     from src.osap.api.http import shared as _shared
 
@@ -90,6 +101,7 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
     )
     def download_representation(
         representation_id: str,
+        request: Request,
         response: Response,
         view: int = Query(default=0, ge=0, le=1),
         authorization: str | None = Header(default=None),
@@ -101,8 +113,28 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
         if not url:
             return ctx.fail(404, response, "NOT_FOUND", "No download available")
         provider, work_id, fmt = _analytics_target(info, representation_id)
-        user_id = _current_user_id(ctx, authorization)
+        user_id, is_admin = _shared._current_identity(ctx, authorization)
         is_download = view == 0
+
+        # Cuota: solo la descarga facturable (OMR), nunca la vista inline ni otras fuentes.
+        if is_download and provider == "omr":
+            decision = ctx.api.consume_omr_download(
+                user_id=user_id,
+                ip=_shared._client_ip(request),
+                is_admin=is_admin,
+                work_id=work_id or None,
+                resource_id=_resource_id_from_rep(representation_id),
+                fmt=fmt or None,
+            )
+            if not getattr(decision, "allowed", True):
+                limit = getattr(decision, "limit", None)
+                return ctx.fail(
+                    429,
+                    response,
+                    "QUOTA_EXCEEDED",
+                    f"Has alcanzado el límite diario de descargas ({limit}/día). "
+                    "Regístrate o amplía tu plan para seguir descargando.",
+                )
 
         # OMR/OSAP storage: el fichero vive en nuestro storage bajo un nombre hash.
         # En lugar de redirigir (el navegador usaría el hash como nombre), lo servimos
@@ -114,7 +146,11 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
 
         if _belongs_to_storage(url_normalized, storage_base) or (view and _is_file_url(url_normalized)):
             try:
-                upstream = requests.get(url, timeout=120, headers=_shared._BROWSER_FETCH_HEADERS)
+                upstream = requests.get(
+                    url,
+                    timeout=120,
+                    headers={**_shared._BROWSER_FETCH_HEADERS, **_shared._storage_fetch_headers(ctx, url)},
+                )
             except requests.RequestException:
                 if is_download and provider:
                     ctx.api.record_download_failure_event(provider=provider)

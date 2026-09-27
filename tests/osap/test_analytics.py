@@ -17,9 +17,11 @@ from src.osap.api.http.search import build_search_router
 from src.osap.api.platform import PlatformApi
 from src.osap.api.platform._support import _search_signature
 from src.osap.api.platform.analytics import AnalyticsMixin
+from src.osap.api.platform.quota import QuotaMixin
 from src.osap.infrastructure.state.analytics.memory import MemoryStore, today
 from src.osap.infrastructure.state.analytics.recorder import AnalyticsRecorder
 from src.osap.infrastructure.state.analytics_store import build_analytics_store
+from src.osap.infrastructure.state.quota.memory import MemoryStore as QuotaStore
 
 DAY = "2026-09-12"
 TEST_DB = "osap_api_test"
@@ -208,11 +210,12 @@ class _FakeContainer:
         return "https://cdn.openmusicrepository.com"
 
 
-class _DownloadApi(AnalyticsMixin):
+class _DownloadApi(AnalyticsMixin, QuotaMixin):
     """API mínima con los métodos que usa la ruta de descarga."""
 
     def __init__(self, analytics: object) -> None:
         self._analytics = analytics
+        self._quota_store = QuotaStore()
         self._info: dict[str, object] = {
             "download_url": "https://cdn.openmusicrepository.com/api/download/x.mxl",
             "provider": "omr",
