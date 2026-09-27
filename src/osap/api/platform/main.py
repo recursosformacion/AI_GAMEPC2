@@ -14,6 +14,7 @@ from src.osap.api.platform.analytics import AnalyticsMixin
 from src.osap.api.platform.composers import ComposersMixin
 from src.osap.api.platform.core import PlatformApiCore
 from src.osap.api.platform.corrections import CorrectionsMixin
+from src.osap.api.platform.funnel import FunnelMixin
 from src.osap.api.platform.jobs import JobsMixin
 from src.osap.api.platform.knowledge import KnowledgeMixin
 from src.osap.api.platform.providers import ProvidersMixin
@@ -25,6 +26,7 @@ from src.osap.api.platform.system import SystemMixin
 from src.osap.api.platform.votes_users import VotesUsersMixin
 from src.osap.bootstrap.container import Container
 from src.osap.infrastructure.state.analytics_store import AnalyticsRecorder, build_analytics_store
+from src.osap.infrastructure.state.funnel import build_funnel_store
 from src.osap.infrastructure.state.op_store import build_op_store
 from src.osap.infrastructure.state.quota import build_quota_store
 from src.osap.infrastructure.state.resolution_store import build_resolution_store
@@ -58,6 +60,7 @@ class PlatformApi(
     VotesUsersMixin,
     AnalyticsMixin,
     QuotaMixin,
+    FunnelMixin,
     ProvidersMixin,
     SourcesMixin,
     CorrectionsMixin,
@@ -99,6 +102,7 @@ class PlatformApi(
         self._analytics_store = build_analytics_store(**(self._container.op_store_config() or {}))
         self._analytics = AnalyticsRecorder(self._analytics_store)
         self._quota_store = build_quota_store(**(self._container.op_store_config() or {}))
+        self._funnel_store = build_funnel_store(**(self._container.op_store_config() or {}))
         self._acquisition = self._build_acquisition_service()
         highest = 0
         for item in self._store.list_suggestions():

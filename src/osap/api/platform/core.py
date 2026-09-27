@@ -53,6 +53,7 @@ class PlatformApiCore:
     _analytics_store: AnalyticsStore
     _analytics: AnalyticsRecorder
     _quota_store: object  # QuotaStore (evita import circular del módulo de cuotas)
+    _funnel_store: object  # FunnelStore (eventos append-only del funnel 4.2)
 
     # Helpers transversales usados por varios dominios (implementados en PlatformApi).
     def _paginate(
@@ -188,6 +189,21 @@ class PlatformApiCore:
         resource_id: int | None,
         fmt: str | None,
     ) -> object:
+        raise NotImplementedError
+
+    # --- eventos del funnel (implementado por FunnelMixin) --------------------
+
+    def record_funnel_event(
+        self,
+        event: object,
+        *,
+        stage: object | None = None,
+        user_id: str | None = None,
+        ip_address: str | None = None,
+        override_id: int | None = None,
+        detail: dict[str, object] | None = None,
+        day: str | None = None,
+    ) -> dict[str, object]:
         raise NotImplementedError
 
     def analytics_overview(self, from_day: str, to_day: str) -> dict[str, int]:
