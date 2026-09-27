@@ -106,9 +106,11 @@ class SystemMixin(PlatformApiCore):
             *self._container.auth_proxy().admin_update_user(bearer, user_id, payload)
         )
 
-    def admin_user_disable(self, token: str | None, user_id: str) -> object:
-        """Soft delete: deshabilitar (conserva identidad e historial en Auth)."""
-        return self.admin_user_update(token, user_id, status="disabled")
+    def admin_user_delete(self, token: str | None, user_id: str) -> object:
+        """Baja definitiva: osap-auth elimina/anonimiza la cuenta (irreversible)."""
+        self._require_admin(token)
+        bearer = token or ""
+        return self._auth_result(*self._container.auth_proxy().admin_delete_user(bearer, user_id))
 
     def health(self) -> str:
         return "ok"

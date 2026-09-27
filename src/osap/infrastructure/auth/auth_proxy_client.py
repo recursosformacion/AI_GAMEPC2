@@ -49,6 +49,10 @@ class AuthProxyClient:
     ) -> tuple[int, object]:
         return self._call_bearer("PATCH", f"/auth/admin/users/{user_id}", access_token, payload)
 
+    def admin_delete_user(self, access_token: str, user_id: str) -> tuple[int, object]:
+        """Baja definitiva: osap-auth elimina/anonimiza la cuenta (irreversible)."""
+        return self._call_bearer("DELETE", f"/auth/admin/users/{user_id}", access_token)
+
     # -- helpers -------------------------------------------------------------
 
     def _call_bearer(

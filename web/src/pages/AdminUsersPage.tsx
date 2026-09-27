@@ -1,5 +1,6 @@
 // Listado de usuarios (admin). La identidad vive en osap-auth; osap-api reenvía la
-// petición con el token admin. Acciones: ver, editar y deshabilitar (soft delete).
+// petición con el token admin. Acciones: ver, editar, dar de baja (anonimiza la cuenta,
+// inclusive pendientes de verificar) y habilitar (reactivar un usuario deshabilitado).
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -39,8 +40,8 @@ export function AdminUsersPage() {
     ? users
     : users.filter((u) => u.status === "active" || u.status === "pending_verification");
 
-  const disableUser = (user: AdminUser) => {
-    if (!window.confirm(t("adminUsers.confirmDisable"))) return;
+  const deleteUser = (user: AdminUser) => {
+    if (!window.confirm(t("adminUsers.confirmDelete"))) return;
     void apiClient
       .delete(`/admin/users/${encodeURIComponent(user.user_id)}`)
       .then(load)
@@ -107,23 +108,22 @@ export function AdminUsersPage() {
                   >
                     {t("adminUsers.edit")}
                   </Link>
-                  {isActive(user) ? (
-                    <button
-                      type="button"
-                      onClick={() => disableUser(user)}
-                      className="text-red-500 hover:underline"
-                    >
-                      {t("adminUsers.disable")}
-                    </button>
-                  ) : (
+                  {user.status === "disabled" && (
                     <button
                       type="button"
                       onClick={() => enableUser(user)}
-                      className="text-emerald-600 hover:underline"
+                      className="mr-3 text-emerald-600 hover:underline"
                     >
                       {t("adminUsers.enable")}
                     </button>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => deleteUser(user)}
+                    className="text-red-500 hover:underline"
+                  >
+                    {t("adminUsers.delete")}
+                  </button>
                 </td>
               </tr>
             ))}

@@ -28,6 +28,10 @@ versión de plataforma describe el conjunto completo y es desplegable como un to
    dejar claro qué revisión del conjunto está en producción.
 
 ### Historial
+- **4.2.2** — admin: "Dar de baja" **anonimiza** la cuenta (incluye pendientes de verificar)
+  y se corrige que `users.email_lookup` no se persistía en el `ON DUPLICATE` (la baja no
+  liberaba el email y el cambio de email no surtía efecto). Web de osap-auth: favicon y
+  build/despliegue integrados en `deploy_all`.
 - **4.2.1** — correos transaccionales de identidad en osap-auth: implementado el envío por
   SMTP (`[smtp]`/`OSAP_AUTH_SMTP_*`) para verificación de email, reenvío y recuperación de
   contraseña (antes solo se generaba el token, **sin enviar**). Verificado E2E en producción

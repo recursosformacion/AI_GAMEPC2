@@ -352,24 +352,25 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
     @router.delete(
         "/api/v1/admin/users/{user_id}",
         tags=["Admin"],
-        summary="Disable OSAP user (admin, soft delete)",
-        description="Deshabilita la cuenta (soft delete): se conserva la identidad e historial "
-        "en osap-auth y se bloquea el acceso. Nunca borra físicamente.",
+        summary="Dar de baja OSAP user (admin, anonimiza)",
+        description="Baja definitiva: osap-auth anonimiza la cuenta (borra email/contraseña, "
+        "revoca sesiones y marca el estado como eliminado). Es irreversible. Sirve también "
+        "para dar de baja usuarios pendientes de verificar.",
         response_model=SuccessEnvelope[object] | ErrorEnvelope,
         responses={
-            200: _shared._resp("User disabled", _shared._example({})),
+            200: _shared._resp("User deleted", _shared._example({})),
             401: _shared._UNAUTHORIZED_401,
             403: _shared._FORBIDDEN_403,
             404: _shared._NOT_FOUND_404,
         },
     )
-    def admin_user_disable(
+    def admin_user_delete(
         user_id: str,
         response: Response,
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            data = ctx.api.admin_user_disable(authorization, user_id)
+            data = ctx.api.admin_user_delete(authorization, user_id)
         except UnauthenticatedError:
             return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
         except ForbiddenError:
