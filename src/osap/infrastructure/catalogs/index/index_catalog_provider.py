@@ -311,6 +311,122 @@ class IndexCatalogProvider(ICatalogProvider):
             conn.close()
         return {str(row["person_id"]): int(row["total"]) for row in rows}
 
+    def get_work_with_representations(self, work_id: str) -> dict[str, object] | None:
+        """Ficha de una obra del índice (por `index-<id>` o `<id>`) + sus representaciones.
+
+        Es la fuente de la página pública de obra (SEO): datos estables y sin búsqueda en
+        vivo. Devuelve `None` si la obra no existe en el índice o MySQL no responde.
+        """
+        work_ref = work_id[len("index-") :] if work_id.startswith("index-") else work_id
+        if not work_ref.isdigit():
+            return None
+        conn = None
+        try:
+            conn = pymysql.connect(
+                host=self._host,
+                user=self._user,
+                password=self._password,
+                database=self._database,
+                charset="utf8mb4",
+                cursorclass=DictCursor,
+                autocommit=True,
+            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, title, composer_name, person_id, catalogue, year, "
+                    "instrumentation, updated_at FROM index_works WHERE id = %s LIMIT 1",
+                    (work_ref,),
+                )
+                work = cur.fetchone()
+                if work is None:
+                    return None
+                cur.execute(
+                    "SELECT provider, format, download_url, available "
+                    "FROM index_representations WHERE work_id = %s ORDER BY provider, format",
+                    (work_ref,),
+                )
+                rep_rows = cur.fetchall()
+        except pymysql.err.OperationalError as exc:
+            logger.warning("index provider: MySQL no disponible al leer la obra %s (%s)", work_id, exc)
+            return None
+        finally:
+            if conn is not None:
+                conn.close()
+        representations = [
+            {
+                "provider": str(row.get("provider") or ""),
+                "format": str(row.get("format") or ""),
+                "url": str(row.get("download_url") or "") or None,
+                "downloadable": bool(row.get("download_url"))
+                and str(row.get("provider") or "") in ("omr", "mutopia"),
+            }
+            for row in rep_rows
+        ]
+        year = work.get("year")
+        year_str = str(year or "").strip()
+        return {
+            "work_id": f"index-{int(str(work.get('id') or 0))}",
+            "title": str(work.get("title") or ""),
+            "composer": str(work.get("composer_name") or "") or None,
+            "composer_id": str(work.get("person_id") or "") or None,
+            "catalogue": str(work.get("catalogue") or "") or None,
+            "year": int(year_str) if year_str.isdigit() else None,
+            "instrumentation": str(work.get("instrumentation") or "") or None,
+            "updated_at": str(work.get("updated_at") or "") or None,
+            "representations": representations,
+        }
+
+    def list_works_by_person(self, person_id: str, limit: int, offset: int) -> dict[str, object]:
+        """Obras del índice de un compositor (`person_id`), paginadas y por título.
+
+        Sustituye a la búsqueda en vivo en la página pública de compositor (SEO): las obras
+        ya indexadas se sirven en milisegundos y de forma determinista.
+        """
+        if not person_id:
+            return {"items": [], "total": 0}
+        conn = None
+        try:
+            conn = pymysql.connect(
+                host=self._host,
+                user=self._user,
+                password=self._password,
+                database=self._database,
+                charset="utf8mb4",
+                cursorclass=DictCursor,
+                autocommit=True,
+            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT COUNT(*) AS total FROM index_works WHERE person_id = %s",
+                    (person_id,),
+                )
+                total_row = cur.fetchone()
+                total = int(str(total_row["total"])) if total_row else 0
+                cur.execute(
+                    "SELECT id, title, catalogue, year FROM index_works "
+                    "WHERE person_id = %s ORDER BY title LIMIT %s OFFSET %s",
+                    (person_id, limit, offset),
+                )
+                rows = cur.fetchall()
+        except pymysql.err.OperationalError as exc:
+            logger.warning("index provider: MySQL no disponible al listar obras de %s (%s)", person_id, exc)
+            return {"items": [], "total": 0}
+        finally:
+            if conn is not None:
+                conn.close()
+        items: list[dict[str, object]] = []
+        for row in rows:
+            year = str(row.get("year") or "").strip()
+            items.append(
+                {
+                    "work_id": f"index-{int(str(row.get('id') or 0))}",
+                    "title": str(row.get("title") or ""),
+                    "catalogue": str(row.get("catalogue") or "") or None,
+                    "year": int(year) if year.isdigit() else None,
+                }
+            )
+        return {"items": items, "total": total}
+
     def representations_for_title(
         self, title: str, composer: str | None = None
     ) -> list[dict[str, object]]:

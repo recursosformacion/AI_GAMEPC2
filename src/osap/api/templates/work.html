@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block title %}{{ view.title }}{% if view.composer %} — {{ view.composer }}{% endif %}{% if view.catalogue %} ({{ view.catalogue }}){% endif %} | OpenMusicRepository{% endblock %}
+{% block description %}{{ view.description }}{% endblock %}
+{% block json_ld %}<script type="application/ld+json">{{ view.json_ld | safe }}</script>{% endblock %}
+{% block content %}
+<nav class="crumbs" aria-label="breadcrumb">
+  <a href="/">Inicio</a> ›
+  {% if view.composer and view.composer_id and view.composer_slug %}
+  <a href="/composers">Compositores</a> ›
+  <a href="/compositor/{{ view.composer_id }}/{{ view.composer_slug }}">{{ view.composer }}</a> ›
+  {% endif %}
+  <span>{{ view.title }}</span>
+</nav>
+
+<h1>{{ view.title }}</h1>
+<div class="badges">
+  {% if view.composer %}
+    {% if view.composer_id and view.composer_slug %}
+    <a class="badge" href="/compositor/{{ view.composer_id }}/{{ view.composer_slug }}">{{ view.composer }}</a>
+    {% else %}
+    <span class="badge">{{ view.composer }}</span>
+    {% endif %}
+  {% endif %}
+  {% if view.catalogue %}<span class="badge">{{ view.catalogue }}</span>{% endif %}
+  {% if view.year %}<span class="badge">{{ view.year }}</span>{% endif %}
+  {% if view.instrumentation %}<span class="badge">{{ view.instrumentation }}</span>{% endif %}
+</div>
+
+<h2>Partituras y recursos</h2>
+{% if view.representations %}
+<div class="reps">
+  {% for rep in view.representations %}
+  <div class="rep">
+    {% if rep.url %}
+    <a href="{{ rep.url }}" rel="nofollow noopener" target="_blank">{{ rep.format or rep.provider }}</a>
+    {% else %}
+    <strong>{{ rep.format or rep.provider }}</strong>
+    {% endif %}
+    <span>{{ rep.provider }}{% if rep.downloadable %} · descargable{% endif %}</span>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<p class="muted">Todavía no hay recursos digitales registrados para esta obra.</p>
+{% endif %}
+
+{% if view.related %}
+<h2>Más obras de {{ view.composer }}</h2>
+<ul class="works">
+  {% for work in view.related %}
+  <li>
+    <a href="/obra/{{ work.work_id }}/{{ work.slug }}">{{ work.title }}</a>
+    {% if work.catalogue %}<span class="cat">{{ work.catalogue }}</span>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% endif %}
+
+{% if view.composer_id %}
+<a class="cta" href="/composers/{{ view.composer_id | urlencode }}">Abrir en la aplicación</a>
+{% endif %}
+{% endblock %}

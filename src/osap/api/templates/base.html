@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}{% endblock %}</title>
+    <meta name="description" content="{% block description %}{% endblock %}" />
+    <meta name="robots" content="{% block robots %}index, follow{% endblock %}" />
+    {% block canonical %}<link rel="canonical" href="{{ canonical_url }}" />{% endblock %}
+    {% block json_ld %}{% endblock %}
+    <style>
+      :root { color-scheme: light dark; }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        line-height: 1.5;
+        color: #1f2430;
+        background: #f7f7fb;
+      }
+      a { color: #6d28d9; }
+      header, footer { background: #ffffff; border-bottom: 1px solid #e6e6ef; }
+      footer { border-top: 1px solid #e6e6ef; border-bottom: none; margin-top: 2rem; }
+      .wrap { max-width: 860px; margin: 0 auto; padding: 1rem; }
+      .brand { font-weight: 700; color: #7c3aed; text-decoration: none; }
+      .brand small { display: block; font-weight: 400; color: #6b7280; }
+      nav.crumbs { font-size: 0.8rem; color: #6b7280; padding: 0.6rem 0; }
+      nav.crumbs a { text-decoration: none; }
+      h1 { margin: 0.2rem 0 0.4rem; font-size: 1.7rem; }
+      h2 { margin-top: 1.6rem; font-size: 1.1rem; }
+      .badges { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.2rem 0 0.8rem; }
+      .badge { background: #ede9fe; color: #5b21b6; border-radius: 999px; padding: 0.1rem 0.6rem; font-size: 0.78rem; }
+      .muted { color: #6b7280; }
+      ul.works { list-style: none; padding: 0; margin: 0; border: 1px solid #e6e6ef; border-radius: 8px; overflow: hidden; }
+      ul.works li { padding: 0.5rem 0.75rem; border-bottom: 1px solid #eef; background: #fff; }
+      ul.works li:last-child { border-bottom: none; }
+      ul.works a { text-decoration: none; font-weight: 500; }
+      ul.works .cat { color: #6b7280; font-size: 0.82rem; margin-left: 0.4rem; }
+      .reps { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+      .rep { border: 1px solid #e6e6ef; border-radius: 8px; padding: 0.4rem 0.7rem; background: #fff; font-size: 0.85rem; }
+      .rep a { text-decoration: none; font-weight: 600; }
+      .rep span { color: #6b7280; margin-left: 0.35rem; }
+      .cta { display: inline-block; margin-top: 1rem; border: 1px solid #c4b5fd; border-radius: 8px; padding: 0.45rem 0.8rem; text-decoration: none; font-size: 0.9rem; }
+      .card { background: #fff; border: 1px solid #e6e6ef; border-radius: 10px; padding: 1rem; }
+      p { margin: 0.5rem 0; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="wrap">
+        <a class="brand" href="/">OpenMusicRepository <small>OSAP — Open Score Acquisition Platform</small></a>
+      </div>
+    </header>
+    <main class="wrap">
+      {% block content %}{% endblock %}
+    </main>
+    <footer>
+      <div class="wrap muted">
+        OpenMusicRepository · <a href="/">Inicio</a> · <a href="/composers">Compositores</a> · <a href="/about">Acerca de</a>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -21,6 +21,7 @@ from src.osap.api.platform.providers import ProvidersMixin
 from src.osap.api.platform.quota import QuotaMixin
 from src.osap.api.platform.resolution import ResolutionMixin
 from src.osap.api.platform.search import SearchMixin
+from src.osap.api.platform.seo import SeoMixin
 from src.osap.api.platform.sources import SourcesMixin
 from src.osap.api.platform.system import SystemMixin
 from src.osap.api.platform.votes_users import VotesUsersMixin
@@ -57,6 +58,7 @@ class PlatformApi(
     SearchMixin,
     ResolutionMixin,
     ComposersMixin,
+    SeoMixin,
     VotesUsersMixin,
     AnalyticsMixin,
     QuotaMixin,

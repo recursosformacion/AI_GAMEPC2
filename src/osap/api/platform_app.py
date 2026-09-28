@@ -24,6 +24,7 @@ from src.osap.api.http.persons import build_persons_router
 from src.osap.api.http.providers import build_providers_router
 from src.osap.api.http.quota import build_quota_router
 from src.osap.api.http.search import build_search_router
+from src.osap.api.http.seo import build_seo_router
 from src.osap.api.http.sessions import build_sessions_router
 from src.osap.api.http.shared import (
     _TAGS,
@@ -152,6 +153,9 @@ def create_platform_app(
     app.include_router(build_admin_ops_router(ctx))
     app.include_router(build_quota_router(ctx))
     app.include_router(build_omr_router(ctx))
+
+    # --- capa pública SEO (HTML server-rendered: /compositor y /obra) ---------
+    app.include_router(build_seo_router(ctx))
 
     return app
 

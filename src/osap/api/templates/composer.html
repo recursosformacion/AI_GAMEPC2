@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}{{ view.name }}{% if view.years %} ({{ view.years }}){% endif %} — Obras y partituras | OpenMusicRepository{% endblock %}
+{% block description %}{{ view.description }}{% endblock %}
+{% block json_ld %}<script type="application/ld+json">{{ view.json_ld | safe }}</script>{% endblock %}
+{% block content %}
+<nav class="crumbs" aria-label="breadcrumb">
+  <a href="/">Inicio</a> ›
+  <a href="/composers">Compositores</a> ›
+  <span>{{ view.name }}</span>
+</nav>
+
+<h1>{{ view.name }}</h1>
+<div class="badges">
+  {% if view.years %}<span class="badge">{{ view.years }}</span>{% endif %}
+  {% if view.era %}<span class="badge">{{ view.era }}</span>{% endif %}
+  {% if view.nationality %}<span class="badge">{{ view.nationality }}</span>{% endif %}
+  <span class="badge">{{ view.works_total }} obras</span>
+</div>
+
+{% if view.summary %}
+<div class="card">
+  <p>{{ view.summary }}</p>
+</div>
+{% endif %}
+
+{% if view.key_works %}
+<h2>Obras clave</h2>
+<div class="badges">
+  {% for key_work in view.key_works %}<span class="badge">{{ key_work }}</span>{% endfor %}
+</div>
+{% endif %}
+
+<h2>Obras disponibles</h2>
+{% if view.works %}
+<ul class="works">
+  {% for work in view.works %}
+  <li>
+    <a href="/obra/{{ work.work_id }}/{{ work.slug }}">{{ work.title }}</a>
+    {% if work.catalogue %}<span class="cat">{{ work.catalogue }}</span>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% if view.works_total > view.works | length %}
+<p class="muted">Mostrando {{ view.works | length }} de {{ view.works_total }} obras.</p>
+{% endif %}
+{% else %}
+<p class="muted">Todavía no hay obras indexadas para este compositor.</p>
+{% endif %}
+
+<a class="cta" href="/composers/{{ view.person_id | urlencode }}">Abrir {{ view.name }} en la aplicación</a>
+{% endblock %}

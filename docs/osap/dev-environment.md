@@ -17,6 +17,7 @@ http://osap-app                     Apache (XAMPP) — VirtualHost *:80
    │   RewriteRule ^ /index.html [L]                        (SPA fallback)
    │
    ├─ /api/*            → ProxyPass → http://127.0.0.1:8001/api/   (backend uvicorn)
+   ├─ /obra/*, /compositor/* → osap-api (HTML SEO server-rendered, `api/http/seo.py`)
    ├─ /docs             → ProxyPass → http://127.0.0.1:8001/docs
    ├─ /openapi.json     → ProxyPass → http://127.0.0.1:8001/openapi.json
    └─ /redoc            → ProxyPass → http://127.0.0.1:8001/redoc
@@ -107,6 +108,26 @@ en `C:\xampp\apache\conf\httpd.conf`.
     CustomLog "logs/osap-app-access.log" combined
 </VirtualHost>
 ```
+
+---
+
+## Capa pública SEO (/obra y /compositor)
+
+Las URLs indexables de entidad las sirve **osap-api** con HTML server-rendered
+(`src/osap/api/http/seo.py` + plantillas en `src/osap/api/templates/`). No forman parte de
+`/api` y no las renderiza la SPA:
+
+- `/compositor/{person_id}` → 301 a `/compositor/{person_id}/{slug}`
+- `/compositor/{person_id}/{slug}` → ficha HTML (biografía + obras + JSON-LD)
+- `/obra/{work_id}` → 301 a `/obra/{work_id}/{slug}`
+- `/obra/{work_id}/{slug}` → ficha HTML (recursos + JSON-LD)
+
+En **desarrollo** el proxy lo hace `web/public/.htaccess` (regla `[P]` a `127.0.0.1:8001`),
+así que tras cambiar el backend **reinicia uvicorn**. En **producción** lo hace la
+`location` de `deploy/app.openmusicrepository.com.conf`. El resto de rutas sigue siendo la SPA.
+
+La base canónica se puede cambiar con la variable de entorno `OSAP_PUBLIC_BASE_URL`
+(por defecto `https://app.openmusicrepository.com`).
 
 ---
 
