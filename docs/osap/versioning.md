@@ -176,3 +176,28 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 - **Post-revocación:** los cuatro servicios siguen `active` con operaciones OK; `osap` ya no
   existe ni tiene grants.
 - **Fuera de alcance (acordado):** separar usuario runtime DML / usuario de migración DDL.
+
+### SEC-D — Rotación de client secrets de osap-api (2026-09-28) — CERRADA
+
+- **Secretos:** `OSAP_SERVICE_CLIENT_SECRET` y `OSAP_ADMIN_CLIENT_SECRET` (drop-in
+  `osap-api.service.d/env.conf`) y `OSAP_OIDC_CLIENT_SECRET` (drop-in `oidc-secret.conf`).
+  No había duplicación dev/prod.
+- **Consumidores:** SERVICE → `osap-auth` client_credentials (`storage:read/write`); ADMIN →
+  client_credentials (`storage:admin`); OIDC → `authorization_code` (login de usuario).
+- **Almacenamiento del hash en osap-auth** (`service_clients` / `oauth_clients`),
+  verificado con **`HmacTokenHasher`** (HMAC-SHA256 + `token_hmac_pepper`), no Argon2.
+  Sin dual-secret → **rotación coordinada sin solape**; impacto acotado (emisión de token
+  M2M / logins nuevos).
+- **Método (uno a uno, SERVICE → ADMIN → OIDC):** generar secreto; calcular hash con
+  `HmacTokenHasher(pepper)`; `UPDATE` del `client_secret_hash` del cliente concreto; backup
+  del drop-in; actualizar el drop-in; `daemon-reload` + reinicio de osap-api; verificar
+  **nuevo** y **antiguo**.
+- **Verificación:** SERVICE token 200 + `storage:read` 200 y antiguo 401; ADMIN token 200 +
+  `storage:admin` 200 y antiguo 401; OIDC nuevo → `invalid_grant` (cliente autenticado),
+  antiguo → `invalid_client`. Los cuatro servicios `active`; health api/auth/storage 200;
+  `api persons` 200.
+- **Backups conservados:** `env.conf.sec-d-backup-*`, `env.conf.sec-d-admin-backup-*`,
+  `oidc-secret.conf.sec-d-backup-*`.
+- **Nota operativa:** el primer intento de SERVICE calculó el hash con Argon2 (incorrecto);
+  corregido en la misma ventana usando `HmacTokenHasher`.
+- **Fuera de alcance (acordado):** filas heredadas de `service_clients`.
