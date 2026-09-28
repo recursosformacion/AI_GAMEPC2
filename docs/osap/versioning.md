@@ -151,3 +151,28 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 - **Pendiente en la fase de credenciales/permisos:** crear credenciales distintas por servicio
   (buzones o app passwords), rotar `support@` y eliminar la reutilización dev/prod.
 - **No se modificó ninguna configuración.**
+
+### SEC-C — Identidades de BD por servicio (2026-09-28) — CERRADA
+
+- **Antes:** los cuatro servicios usaban `osap@localhost` con `ALL PRIVILEGES` sobre las
+  cuatro bases (sin aislamiento, misma contraseña).
+- **Nuevos usuarios, uno por servicio y limitado a su base:**
+  - `osap_api` → `SELECT, INSERT, UPDATE, DELETE, CREATE` sobre `osap_api` (el `CREATE` es
+    necesario por el DDL en runtime de `analytics_*`).
+  - `osap_auth`, `osap_storage`, `osap_support` → DML + `CREATE, ALTER, DROP, INDEX,
+    REFERENCES, CREATE TEMPORARY TABLES, LOCK TABLES` sobre su base (requerido por sus
+    migraciones/Alembic).
+- **Credenciales efectivas:** auth y storage en `config.production.yaml`, support en
+  `osap.production.toml`, api en el drop-in de systemd
+  `osap-api.service.d/override.conf` (se vaciaron las credenciales obsoletas de
+  `osap.production.toml`). Backups `.sec-c-backup-*`.
+- **Verificación:** matriz de aislamiento (cada usuario accede solo a su base; las otras tres
+  **denegadas**), operaciones reales por servicio (auth login → 401 con lectura a BD,
+  storage search → 200, support membership → 200, api analytics → 200) y los cuatro
+  servicios `active`.
+- **Revocación:** retirados los grants de `osap@localhost` sobre las cuatro bases y usuario
+  **eliminado**. Evidencia pre-cambio en
+  `/home/ocw/openmusicrepository.com/sec-c-shared-user-grants.txt`.
+- **Post-revocación:** los cuatro servicios siguen `active` con operaciones OK; `osap` ya no
+  existe ni tiene grants.
+- **Fuera de alcance (acordado):** separar usuario runtime DML / usuario de migración DDL.
