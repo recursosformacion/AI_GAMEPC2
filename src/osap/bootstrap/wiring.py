@@ -471,10 +471,10 @@ def _build_authenticator(config: Configuration) -> IAuthenticator:
     decodificador de desarrollo cuando NO estamos en producción; en producción se falla el
     arranque para no confiar nunca en un token sin verificar (W1).
     """
-    if config.oidc_jwks_url and config.oidc_issuer and config.oidc_audience:
+    if config.oidc_jwks_url and config.oidc_audience and (config.oidc_token_issuer or config.oidc_issuer):
         return JwksJwtAuthenticator(
             jwks_url=config.oidc_jwks_url,
-            issuer=config.oidc_issuer,
+            issuer=config.oidc_token_issuer or config.oidc_issuer or "",
             audience=config.oidc_audience,
         )
     if os.environ.get("OSAP_ENV", "").strip().lower() == "production":
@@ -482,7 +482,7 @@ def _build_authenticator(config: Configuration) -> IAuthenticator:
             service="osap-api",
             message=(
                 "osap-api: verificación JWT obligatoria en producción "
-                "(oidc.jwks_url / oidc.issuer / oidc.audience)"
+                "(oidc.jwks_url / oidc.token_issuer / oidc.audience)"
             ),
         )
     return JwtAuthenticator()

@@ -68,6 +68,9 @@ class Configuration:
     oidc_scope: str = "openid profile"
     oidc_jwks_url: str | None = None
     oidc_audience: str | None = None
+    # `iss` esperado en los access tokens (normalmente el issuer "raíz" de osap-auth, que
+    # NO tiene por qué coincidir con oidc_issuer, el issuer de discovery OIDC `/auth-api`).
+    oidc_token_issuer: str | None = None
 
 
 # Campo -> (variable de entorno, convertidor)
@@ -100,6 +103,7 @@ _CONFIG_FIELDS: dict[str, tuple[str, Any]] = {
     "oidc_scope": ("OSAP_OIDC_SCOPE", str),
     "oidc_jwks_url": ("OSAP_OIDC_JWKS_URL", str),
     "oidc_audience": ("OSAP_OIDC_AUDIENCE", str),
+    "oidc_token_issuer": ("OSAP_OIDC_TOKEN_ISSUER", str),
     "dev_auth_bypass": ("OSAP_DEV_AUTH_BYPASS", bool),
     "storage_web_base": ("OSAP_STORAGE_WEB_BASE", str),
     "storage_base_url": ("OSAP_STORAGE_BASE_URL", str),
@@ -127,6 +131,7 @@ _TOML_SECTIONS: dict[str, tuple[str, str]] = {
     "oidc_scope": ("oidc", "scope"),
     "oidc_jwks_url": ("oidc", "jwks_url"),
     "oidc_audience": ("oidc", "audience"),
+    "oidc_token_issuer": ("oidc", "token_issuer"),
     "dev_auth_bypass": ("osap", "dev_auth_bypass"),
     "storage_web_base": ("osap", "storage_web_base"),
     "storage_base_url": ("osap", "storage_base_url"),
@@ -139,7 +144,7 @@ _TOML_SECTIONS: dict[str, tuple[str, str]] = {
 _SERVICE_REQUIRED_SECTIONS: dict[str, dict[str, list[str]]] = {
     "osap-api": {
         "db": ["host", "name", "user", "password"],
-        "oidc": ["issuer", "client_id", "redirect_uri", "client_secret", "jwks_url", "audience"],
+        "oidc": ["issuer", "client_id", "redirect_uri", "client_secret", "jwks_url", "audience", "token_issuer"],
     },
     "osap-storage": {
         "db": ["host", "name", "user", "password"],

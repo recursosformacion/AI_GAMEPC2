@@ -32,6 +32,7 @@ redirect_uri = "http://osap-app/api/v1/auth/oidc/callback"
 client_secret = "dev-secret"
 jwks_url = "http://osap-auth/auth/.well-known/jwks.json"
 audience = "osap-api"
+token_issuer = "http://osap-auth"
 """
 
 
@@ -148,7 +149,7 @@ class TestValidateLenient:
 class TestValidateConfigurationIntegration:
     def test_production_mode_requires_sections(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("OSAP_ENV", "production")
-        data = _toml("[db]\nhost = 'db.prod'\nname = 'prod_db'\nuser = 'admin'\npassword = 'secret'\n[oidc]\nissuer = 'http://x'\nclient_id = 'id'\nredirect_uri = 'http://x'\nclient_secret = 'secret'\njwks_url = 'http://x/jwks'\naudience = 'osap-api'\n")  # noqa: E501
+        data = _toml("[db]\nhost = 'db.prod'\nname = 'prod_db'\nuser = 'admin'\npassword = 'secret'\n[oidc]\nissuer = 'http://x'\nclient_id = 'id'\nredirect_uri = 'http://x'\nclient_secret = 'secret'\njwks_url = 'http://x/jwks'\naudience = 'osap-api'\ntoken_issuer = 'http://x'\n")  # noqa: E501
         config = _config(
             osap_api_db_host="db.prod",
             osap_api_db_user="admin",
