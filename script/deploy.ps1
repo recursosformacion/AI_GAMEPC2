@@ -60,7 +60,7 @@ if ($LASTEXITCODE -ne 0) { Fail "scp vhost falló" }
 Write-Host "== [4/6] Extrayendo en el servidor y reiniciando ==" -ForegroundColor Cyan
 $remoteCmd = "set -e; cd $BackendDir && tar -xzf ~/deploy_tmp/backend.tar.gz && " +
     "cp -f ~/deploy_tmp/osap.production.toml $BackendDir/osap.toml && " +
-    ".venv/bin/pip install --quiet PyMySQL requests Jinja2 && " +
+    ".venv/bin/pip install --quiet PyMySQL requests Jinja2 PyJWT cryptography && " +
     "cd $SpaDir && rm -rf assets index.html && tar -xzf ~/deploy_tmp/dist.tar.gz && " +
     "sudo cp ~/deploy_tmp/app.conf /etc/nginx/sites-enabled/app.openmusicrepository.com.conf && " +
     "sudo nginx -t && sudo nginx -s reload && " +

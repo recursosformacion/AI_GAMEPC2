@@ -66,6 +66,8 @@ class Configuration:
     oidc_redirect_uri: str | None = None
     oidc_spa_origin: str | None = None
     oidc_scope: str = "openid profile"
+    oidc_jwks_url: str | None = None
+    oidc_audience: str | None = None
 
 
 # Campo -> (variable de entorno, convertidor)
@@ -96,6 +98,8 @@ _CONFIG_FIELDS: dict[str, tuple[str, Any]] = {
     "oidc_redirect_uri": ("OSAP_OIDC_REDIRECT_URI", str),
     "oidc_spa_origin": ("OSAP_OIDC_SPA_ORIGIN", str),
     "oidc_scope": ("OSAP_OIDC_SCOPE", str),
+    "oidc_jwks_url": ("OSAP_OIDC_JWKS_URL", str),
+    "oidc_audience": ("OSAP_OIDC_AUDIENCE", str),
     "dev_auth_bypass": ("OSAP_DEV_AUTH_BYPASS", bool),
     "storage_web_base": ("OSAP_STORAGE_WEB_BASE", str),
     "storage_base_url": ("OSAP_STORAGE_BASE_URL", str),
@@ -121,6 +125,8 @@ _TOML_SECTIONS: dict[str, tuple[str, str]] = {
     "oidc_redirect_uri": ("oidc", "redirect_uri"),
     "oidc_spa_origin": ("oidc", "spa_origin"),
     "oidc_scope": ("oidc", "scope"),
+    "oidc_jwks_url": ("oidc", "jwks_url"),
+    "oidc_audience": ("oidc", "audience"),
     "dev_auth_bypass": ("osap", "dev_auth_bypass"),
     "storage_web_base": ("osap", "storage_web_base"),
     "storage_base_url": ("osap", "storage_base_url"),
@@ -133,7 +139,7 @@ _TOML_SECTIONS: dict[str, tuple[str, str]] = {
 _SERVICE_REQUIRED_SECTIONS: dict[str, dict[str, list[str]]] = {
     "osap-api": {
         "db": ["host", "name", "user", "password"],
-        "oidc": ["issuer", "client_id", "redirect_uri", "client_secret"],
+        "oidc": ["issuer", "client_id", "redirect_uri", "client_secret", "jwks_url", "audience"],
     },
     "osap-storage": {
         "db": ["host", "name", "user", "password"],

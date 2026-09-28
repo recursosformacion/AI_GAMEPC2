@@ -11,9 +11,20 @@ osap-auth; no se introducen heurísticas nuevas.
 
 import base64
 import json
+import time
+from collections.abc import Callable
+from typing import Any
+
+import jwt
+import requests
 
 from src.osap.domain.principal import Principal, ServicePrincipal, UserPrincipal
 from src.osap.ports.votes import IAuthenticator
+
+_BROWSER_UA = (
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+    "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+)
 
 
 class StaticTokenAuthenticator(IAuthenticator):
@@ -137,3 +148,101 @@ def _resolve_legacy(payload: dict[str, object]) -> Principal | None:
 def _b64decode(data: str) -> bytes:
     padding = "=" * (-len(data) % 4)
     return base64.urlsafe_b64decode(data + padding)
+
+
+class JwksJwtAuthenticator(IAuthenticator):
+    """Verifica firma RS256 contra el JWKS de osap-auth (selección por `kid`) y los claims
+    del contrato (iss/aud/exp/iat/jti) antes de resolver el `Principal`.
+
+    Un token manipulado, con firma inválida, `kid` desconocido o expirado se rechaza
+    (devuelve `None`); no se confía en el payload decodificado.
+    """
+
+    def __init__(
+        self,
+        *,
+        jwks_url: str,
+        issuer: str,
+        audience: str,
+        clock_skew_seconds: int = 60,
+        timeout_seconds: float = 10.0,
+        cache_ttl_seconds: float = 3600.0,
+        jwks_provider: Callable[[], dict[str, Any]] | None = None,
+    ) -> None:
+        if not jwks_url or not issuer or not audience:
+            raise ValueError("jwks_url/issuer/audience son obligatorios")
+        self._jwks_url = jwks_url
+        self._issuer = issuer
+        self._audience = audience
+        self._leeway = clock_skew_seconds
+        self._timeout = timeout_seconds
+        self._cache_ttl = cache_ttl_seconds
+        self._jwks_provider = jwks_provider
+        self._jwks_cache: dict[str, Any] | None = None
+        self._jwks_fetched_at = 0.0
+
+    def resolve(self, token: str | None) -> Principal | None:
+        if not token:
+            return None
+        bearer = "Bearer "
+        if token.startswith(bearer):
+            token = token[len(bearer):]
+        try:
+            header = jwt.get_unverified_header(token)
+            key = self._verification_key(header.get("kid"))
+            if key is None:
+                return None
+            payload = jwt.decode(
+                token,
+                key,
+                algorithms=["RS256"],
+                issuer=self._issuer,
+                audience=self._audience,
+                leeway=self._leeway,
+                options={"require": ["iss", "sub", "aud", "exp", "iat", "jti"]},
+            )
+        except jwt.PyJWTError:
+            return None
+        return _principal_from_payload(payload)
+
+    def _verification_key(self, kid: object) -> Any | None:
+        jwks = self._load_jwks()
+        keys = jwks.get("keys") if isinstance(jwks, dict) else None
+        if not isinstance(keys, list) or not keys:
+            return None
+        if isinstance(kid, str):
+            for key in keys:
+                if isinstance(key, dict) and key.get("kid") == kid:
+                    return _rsa_from_jwk(key)
+            return None
+        # Sin `kid`: solo aceptable si el JWKS publica una única clave.
+        if len(keys) == 1 and isinstance(keys[0], dict):
+            return _rsa_from_jwk(keys[0])
+        return None
+
+    def _load_jwks(self) -> dict[str, Any] | None:
+        now = time.monotonic()
+        if self._jwks_cache is not None and now - self._jwks_fetched_at < self._cache_ttl:
+            return self._jwks_cache
+        try:
+            data = self._jwks_provider() if self._jwks_provider is not None else self._fetch()
+        except Exception:  # noqa: BLE001 — JWKS no disponible ⇒ no se autentica (fail-closed)
+            return self._jwks_cache
+        if isinstance(data, dict):
+            self._jwks_cache = data
+            self._jwks_fetched_at = now
+        return self._jwks_cache
+
+    def _fetch(self) -> dict[str, Any]:
+        response = requests.get(
+            self._jwks_url, timeout=self._timeout, headers={"User-Agent": _BROWSER_UA}
+        )
+        response.raise_for_status()
+        data = response.json()
+        return data if isinstance(data, dict) else {}
+
+
+def _rsa_from_jwk(jwk: dict[str, Any]) -> Any:
+    from jwt.algorithms import RSAAlgorithm
+
+    return RSAAlgorithm.from_jwk(json.dumps(jwk))

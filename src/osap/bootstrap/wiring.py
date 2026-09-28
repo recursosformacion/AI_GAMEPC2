@@ -1,4 +1,5 @@
 import logging
+import os
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +17,10 @@ from src.osap.infrastructure.adapters.validation import BasicValidator
 from src.osap.infrastructure.auth.auth_proxy_client import AuthProxyClient
 from src.osap.infrastructure.auth.oidc_rp_client import OidcRpClient
 from src.osap.infrastructure.auth.service_token_provider import ClientCredentialsServiceTokenProvider
-from src.osap.infrastructure.auth.token_authenticator import JwtAuthenticator
+from src.osap.infrastructure.auth.token_authenticator import (
+    JwksJwtAuthenticator,
+    JwtAuthenticator,
+)
 from src.osap.infrastructure.cache import InMemoryCache
 from src.osap.infrastructure.catalogs import IndexCatalogProvider, LocalCatalogProvider
 from src.osap.infrastructure.catalogs.cpdl import CPDLCatalogProvider
@@ -53,6 +57,7 @@ from src.osap.infrastructure.state.op_store import build_op_store
 from src.osap.infrastructure.storage.storage_composer_client import StorageComposerClient
 from src.osap.infrastructure.storage.work_store import StorageWorkStore
 from src.osap.infrastructure.user_profile import InMemoryUserProfileStore
+from src.osap.ports.votes import IAuthenticator
 
 DEFAULT_PROVIDER_ORDER = (
     "local_library",
@@ -410,7 +415,7 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     # osap-api se autentica frente a storage con identidad de servicio (least privilege).
     vote_store = StorageVoteStore(base_url=storage_base, token_provider=service_token_provider)
     work_store = StorageWorkStore(base_url=storage_base, token_provider=service_token_provider)
-    authenticator = JwtAuthenticator()
+    authenticator = _build_authenticator(config)
     votes_service = VotesService(vote_store, work_store, authenticator)
     container.set_vote_store(vote_store)
     container.set_work_store(work_store)
@@ -457,3 +462,27 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     container.register_composer_resolver(WikidataIdentityResolver())
 
     return container
+
+
+def _build_authenticator(config: Configuration) -> IAuthenticator:
+    """Autenticador de access tokens.
+
+    Con JWKS configurado (prod) valida firma RS256 y claims. Sin él, solo se permite el
+    decodificador de desarrollo cuando NO estamos en producción; en producción se falla el
+    arranque para no confiar nunca en un token sin verificar (W1).
+    """
+    if config.oidc_jwks_url and config.oidc_issuer and config.oidc_audience:
+        return JwksJwtAuthenticator(
+            jwks_url=config.oidc_jwks_url,
+            issuer=config.oidc_issuer,
+            audience=config.oidc_audience,
+        )
+    if os.environ.get("OSAP_ENV", "").strip().lower() == "production":
+        raise ConfigurationError(
+            service="osap-api",
+            message=(
+                "osap-api: verificación JWT obligatoria en producción "
+                "(oidc.jwks_url / oidc.issuer / oidc.audience)"
+            ),
+        )
+    return JwtAuthenticator()
