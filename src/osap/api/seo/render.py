@@ -23,7 +23,7 @@ def _env() -> Environment:
     if _ENV is None:
         _ENV = Environment(
             loader=FileSystemLoader(str(_TEMPLATES_DIR)),
-            autoescape=select_autoescape(["html"]),
+            autoescape=select_autoescape(["html", "xml"]),
             trim_blocks=True,
             lstrip_blocks=True,
         )
@@ -40,3 +40,12 @@ def render_person(view: PersonView) -> str:
 
 def render_not_found() -> str:
     return _env().get_template("not_found.html").render()
+
+
+def render_sitemap_index(sitemaps: list[str]) -> str:
+    return _env().get_template("sitemap_index.xml").render(sitemaps=sitemaps)
+
+
+def render_sitemap_urlset(urls: list[tuple[str, str | None]]) -> str:
+    entries = [{"loc": loc, "lastmod": lastmod} for loc, lastmod in urls]
+    return _env().get_template("sitemap_urlset.xml").render(urls=entries)

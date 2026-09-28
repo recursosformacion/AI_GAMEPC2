@@ -427,6 +427,67 @@ class IndexCatalogProvider(ICatalogProvider):
             )
         return {"items": items, "total": total}
 
+    def count_works(self) -> int:
+        """Número total de obras del índice (para dimensionar los sitemaps)."""
+        conn = None
+        try:
+            conn = pymysql.connect(
+                host=self._host,
+                user=self._user,
+                password=self._password,
+                database=self._database,
+                charset="utf8mb4",
+                cursorclass=DictCursor,
+                autocommit=True,
+            )
+            with conn.cursor() as cur:
+                cur.execute("SELECT COUNT(*) AS total FROM index_works")
+                row = cur.fetchone()
+        except pymysql.err.OperationalError as exc:
+            logger.warning("index provider: MySQL no disponible al contar obras (%s)", exc)
+            return 0
+        finally:
+            if conn is not None:
+                conn.close()
+        return int(str(row["total"])) if row else 0
+
+    def list_work_sitemap_entries(self, limit: int, offset: int) -> list[dict[str, object]]:
+        """Página de obras para el sitemap: id, título y `updated_at` (lastmod).
+
+        Orden estable por `id` para que la paginación del sitemap sea determinista.
+        """
+        conn = None
+        try:
+            conn = pymysql.connect(
+                host=self._host,
+                user=self._user,
+                password=self._password,
+                database=self._database,
+                charset="utf8mb4",
+                cursorclass=DictCursor,
+                autocommit=True,
+            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, title, updated_at FROM index_works ORDER BY id LIMIT %s OFFSET %s",
+                    (limit, offset),
+                )
+                rows = cur.fetchall()
+        except pymysql.err.OperationalError as exc:
+            logger.warning("index provider: MySQL no disponible al listar el sitemap (%s)", exc)
+            return []
+        finally:
+            if conn is not None:
+                conn.close()
+        return [
+            {
+                "work_id": f"index-{int(str(row.get('id') or 0))}",
+                "title": str(row.get("title") or ""),
+                "updated_at": str(row.get("updated_at") or "") or None,
+            }
+            for row in rows
+        ]
+
     def representations_for_title(
         self, title: str, composer: str | None = None
     ) -> list[dict[str, object]]:

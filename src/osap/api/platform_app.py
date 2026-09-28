@@ -29,6 +29,7 @@ from src.osap.api.http.sessions import build_sessions_router
 from src.osap.api.http.shared import (
     _TAGS,
 )
+from src.osap.api.http.sitemap import build_sitemap_router
 from src.osap.api.http.sources import build_sources_router
 from src.osap.api.http.support import build_support_router
 from src.osap.api.http.system import build_system_router
@@ -156,6 +157,9 @@ def create_platform_app(
 
     # --- capa pública SEO (HTML server-rendered: /compositor y /obra) ---------
     app.include_router(build_seo_router(ctx))
+
+    # --- sitemaps dinámicos (/sitemap.xml + /sitemaps/{kind}-{page}.xml) ------
+    app.include_router(build_sitemap_router(ctx))
 
     return app
 

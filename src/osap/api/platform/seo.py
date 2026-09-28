@@ -57,3 +57,48 @@ class SeoMixin(PlatformApiCore):
         except Exception:  # noqa: BLE001 — la capa SEO nunca debe tumbar la app
             return None
         return None
+
+    # --- sitemap dinámico (Fase 3) -------------------------------------------
+
+    def sitemap_works_total(self) -> int:
+        provider = self._index_provider()
+        if provider is None:
+            return 0
+        counter = getattr(provider, "count_works", None)
+        if not callable(counter):
+            return 0
+        return int(counter())
+
+    def sitemap_works_page(self, limit: int, offset: int) -> list[dict[str, object]]:
+        provider = self._index_provider()
+        if provider is None:
+            return []
+        lister = getattr(provider, "list_work_sitemap_entries", None)
+        if not callable(lister):
+            return []
+        data = lister(limit, offset)
+        if not isinstance(data, list):
+            return []
+        return [item for item in data if isinstance(item, dict)]
+
+    def sitemap_persons_total(self) -> int:
+        page = self._sitemap_persons(1, 0)
+        total = page.get("total")
+        return int(total) if isinstance(total, int) else 0
+
+    def sitemap_persons_page(self, limit: int, offset: int) -> list[dict[str, object]]:
+        items = self._sitemap_persons(limit, offset).get("items")
+        if not isinstance(items, list):
+            return []
+        return [item for item in items if isinstance(item, dict)]
+
+    def _sitemap_persons(self, limit: int, offset: int) -> dict[str, object]:
+        try:
+            data = self.composers().list_persons(("composer",), None, limit, offset, None, public=True)
+        except StorageComposerError:
+            return {"items": [], "total": 0}
+        total = data.get("total")
+        return {
+            "items": data.get("items") if isinstance(data.get("items"), list) else [],
+            "total": total if isinstance(total, int) else 0,
+        }

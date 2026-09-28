@@ -18,6 +18,7 @@ http://osap-app                     Apache (XAMPP) — VirtualHost *:80
    │
    ├─ /api/*            → ProxyPass → http://127.0.0.1:8001/api/   (backend uvicorn)
    ├─ /obra/*, /compositor/* → osap-api (HTML SEO server-rendered, `api/http/seo.py`)
+   ├─ /sitemap.xml, /sitemaps/* → osap-api (sitemaps dinámicos, `api/http/sitemap.py`)
    ├─ /docs             → ProxyPass → http://127.0.0.1:8001/docs
    ├─ /openapi.json     → ProxyPass → http://127.0.0.1:8001/openapi.json
    └─ /redoc            → ProxyPass → http://127.0.0.1:8001/redoc
@@ -121,6 +122,10 @@ Las URLs indexables de entidad las sirve **osap-api** con HTML server-rendered
 - `/compositor/{person_id}/{slug}` → ficha HTML (biografía + obras + JSON-LD)
 - `/obra/{work_id}` → 301 a `/obra/{work_id}/{slug}`
 - `/obra/{work_id}/{slug}` → ficha HTML (recursos + JSON-LD)
+- `/sitemap.xml` → índice de sitemaps (referencias a `/sitemaps/works-N.xml` y `persons-N.xml`)
+- `/sitemaps/{works|persons}-{N}.xml` → páginas de URLs: obras hasta
+  `OSAP_SITEMAP_PAGE_SIZE` (por defecto 20.000, tope 50.000) y personas hasta 500
+  (límite del API de personas). Cacheadas en memoria y en el cliente.
 
 En **desarrollo** el proxy lo hace `web/public/.htaccess` (regla `[P]` a `127.0.0.1:8001`),
 así que tras cambiar el backend **reinicia uvicorn**. En **producción** lo hace la

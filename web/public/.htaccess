@@ -24,6 +24,10 @@ RewriteEngine On
 # Va antes del modo mantenimiento: estas páginas públicas siguen accesibles.
 RewriteRule ^(obra|compositor)/(.*)$ http://127.0.0.1:8001/$1/$2 [P,QSA,L]
 
+# Sitemaps dinámicos (osap-api): índice y páginas de obras/personas.
+RewriteRule ^sitemap\.xml$ http://127.0.0.1:8001/sitemap.xml [P,QSA,L]
+RewriteRule ^sitemaps/(.*)$ http://127.0.0.1:8001/sitemaps/$1 [P,QSA,L]
+
 # Siempre accesibles: assets estáticos y la propia página de mantenimiento
 RewriteCond %{REQUEST_URI} ^/(assets/|maintenance\.html$|favicon\.ico$|android-|apple-touch-|robots\.txt$|sitemap\.xml$) [NC]
 RewriteRule ^ - [L]
