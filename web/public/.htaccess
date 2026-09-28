@@ -29,7 +29,7 @@ RewriteRule ^sitemap\.xml$ http://127.0.0.1:8001/sitemap.xml [P,QSA,L]
 RewriteRule ^sitemaps/(.*)$ http://127.0.0.1:8001/sitemaps/$1 [P,QSA,L]
 
 # Siempre accesibles: assets estáticos y la propia página de mantenimiento
-RewriteCond %{REQUEST_URI} ^/(assets/|maintenance\.html$|favicon\.ico$|android-|apple-touch-|robots\.txt$|sitemap\.xml$) [NC]
+RewriteCond %{REQUEST_URI} ^/(assets/|maintenance\.html$|favicon\.ico$|android-|apple-touch-|robots\.txt$|sitemap\.xml$|yandex_.*\.html$) [NC]
 RewriteRule ^ - [L]
 
 # Con el flag activo y sin cookie de revisión, todo lo demás responde 503

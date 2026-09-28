@@ -61,6 +61,13 @@ como un todo.
   `pyproject.toml` + `web/package.json` y ejecuta `script/check-versions.ps1`.
 - No crea ni empuja tags/releases sin autorización explícita.
 
+## Cambios operativos (no suben versión)
+
+Artefactos operativos —ficheros de verificación de buscadores (p. ej. `yandex_<id>.html`,
+`BingSiteAuth.xml`), `robots.txt` o ajustes de proxy/nginx— se registran como operativos y
+**no** constituyen una entrega: no suben la versión ni requieren entrada en el historial.
+Sí se commitean en el repo correspondiente para que el despliegue los reproduzca.
+
 ## Decisión rápida
 
 | Cambio | A | B | C |
