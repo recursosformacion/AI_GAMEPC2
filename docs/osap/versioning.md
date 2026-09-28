@@ -109,3 +109,33 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
   (`persons`, voicings→ensembles; migraciones 006–008), identidad de recurso en el índice
   de `osap-api` (`source_rep_id`/`resource_id`, `person_id`), formatos CPDL ampliados y
   editor de relaciones de obra; despliegue de los 4 programas.
+
+## Operaciones registradas
+
+### SEC-A — Rotación de la clave JWT de osap-auth (2026-09-28) — CERRADA
+
+- **Motivo:** la clave de firma JWT de producción era **la misma que la de desarrollo**, con
+  el mismo `kid` (`osap-auth-v1`).
+- **Cambios de código asociados:**
+  - W1 (osap-api): verificación real de firma RS256 + JWKS por `kid` + `token_issuer`
+    (`f0090ee`, `ca887d1`).
+  - osap-auth: JWKS multi-clave por `kid` (`c0621c2`) y carga de `jwt_kid` desde YAML
+    (`0b45d06`).
+  - osap-storage: selección de clave de verificación por el `kid` de la **cabecera** JWT
+    (`ac7b25c`).
+- **Rotación:** nueva clave `osap-auth-v2` firmando; `osap-auth-v1` publicada como
+  `previous_public_keys` (solape). Reinicio coordinado de osap-api/storage/support para
+  refrescar sus cachés JWKS.
+- **Cierre:** tras `access_token_ttl + skew` (930 s) se retiró `osap-auth-v1`.
+- **Verificación final:** JWKS → **solo `osap-auth-v2`**; token v2 aceptado y **v1 rechazado**
+  en osap-api (200/401), osap-storage (200/401) y osap-support (200/401); token forjado → 401
+  en osap-api; los cuatro servicios activos y sanos.
+- **Backups con la clave antigua: CONSERVADOS** (reversibilidad) hasta la fase de
+  permisos/credenciales:
+  - servidor: `osap-auth/config.yaml.sec-a-backup-20260928-181811`,
+    `osap-auth/config.yaml.a4-smtp-backup-20260928-182411`;
+  - local: `osap-auth/config.production.yaml.sec-a-backup-20260928-182431`.
+- **Desviación registrada:** al desplegar el código de osap-auth, A4 (SMTP obligatorio en
+  producción) impidió el arranque; se configuró SMTP **reutilizando temporalmente el de
+  osap-support** para restaurar el servicio. La separación/rotación de esa credencial queda
+  pendiente en su fase.
