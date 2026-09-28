@@ -44,3 +44,26 @@ Frontend: `tsc --noEmit` y `vitest run` en `web/`.
   PowerShell) y estar **documentado en `docs/osap/scripts.md`** (propósito + uso).
 - Aplica a los scripts existentes y a los nuevos.
 
+## Regla permanente: versionado A.B.C (obligatoria)
+Detalle en `docs/osap/versioning.md`. Antes de commitear código, clasifica el cambio y
+respétalo; si no encaja en la regla, no lo commitees.
+- **A** — orientación (MAJOR): rompe contrato/esquema. Exige **punto de control** (tag +
+  rama de mantenimiento de la línea anterior) antes de empezar. Afecta a todos los programas.
+- **B** — mejora (MINOR): capacidad nueva **compatible**, puede tocar ≥1 programa.
+- **C** — corrección (PATCH): solo corrige un defecto, **exactamente un programa**, sin
+  cambiar contratos ni esquema, y con prueba. Si toca dos programas → es B; si rompe
+  contrato → es A.
+- Un número para todo el conjunto: al preparar entrega se alinean los cuatro `pyproject.toml`
+  + `osap-api/web/package.json`, se verifica con `script/check-versions.ps1` y se etiqueta
+  `vX.Y.Z` en los cuatro repos. Nunca versionar un programa en solitario; nunca reutilizar
+  un número; nunca empujar tags/releases sin autorización explícita.
+- Toda entrega añade su entrada (clasificación + alcance + evidencia) al historial de
+  `docs/osap/versioning.md`.
+
+## Dependencias nuevas en producción
+Si un cambio añade una dependencia de Python, hay que instalarla en el venv de producción
+(el deploy solo instala lo que explicita `script/deploy.ps1`). Comprobar su presencia con
+`ssh RemoteIA ".../.venv/bin/pip show <paquete>"` **antes** de desplegar, para no tumbar el
+servicio por un `ImportError` en el arranque.
+
+
