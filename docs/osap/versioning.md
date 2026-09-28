@@ -139,3 +139,15 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
   producción) impidió el arranque; se configuró SMTP **reutilizando temporalmente el de
   osap-support** para restaurar el servicio. La separación/rotación de esa credencial queda
   pendiente en su fase.
+
+### SEC-B — Separación/rotación de la credencial SMTP — DIFERIDA (aceptada)
+
+- **Decisión (2026-09-28):** se acepta temporalmente **compartir la misma cuenta SMTP**
+  (`support@openmusicrepository.com`, Raiola Networks) entre `osap-auth`, `osap-support` y
+  los entornos dev/prod.
+- **Motivo:** rotarla afecta a consumidores del buzón fuera de los servicios y requiere
+  acceso al panel de Raiola, que no está disponible en esta fase.
+- **Riesgo aceptado:** credencial SMTP única y reutilizada.
+- **Pendiente en la fase de credenciales/permisos:** crear credenciales distintas por servicio
+  (buzones o app passwords), rotar `support@` y eliminar la reutilización dev/prod.
+- **No se modificó ninguna configuración.**
