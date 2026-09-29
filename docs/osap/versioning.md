@@ -220,3 +220,15 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
   Google/GitHub se **dan por buenos sin rotación** (decisión: no se consideran expuestos).
 - **Fuera de esta entrega:** SEC-F (permisos 664→600/640 y secretos inline de systemd →
   `EnvironmentFile`) y SEC-G (peppers/AEAD).
+
+### SEC-F — Permisos y secretos inline de systemd
+
+#### F.1 — Permisos de ficheros con secretos (2026-09-29) — HECHO
+
+- Ficheros con secretos pasados a **600** (antes `644`/`664`): `osap-api/osap.toml`
+  (+ `.bak_20260823`, `.seo-backup-…`), `osap-storage/config.yaml` y
+  `config.production.yaml`, `osap-support/osap.toml`,
+  `/etc/systemd/system/osap-api.service.d/override.conf` y backups `.sec-*` en el servidor.
+- Verificado: **ningún** fichero con secretos legible por grupo/otros
+  (`find … -perm /037` sin resultados); los cuatro servicios `active` y health OK
+  (api 200, auth 200, storage 200).
