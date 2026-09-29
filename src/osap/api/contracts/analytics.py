@@ -76,3 +76,49 @@ class AnalyticsMeResponse(_Frozen):
     access: AnalyticsMeAccess
     quota: AnalyticsMeQuota
     downloads: AnalyticsMeDownloads
+
+
+class FunnelMetricsPeriod(_Frozen):
+    from_day: str
+    to_day: str
+
+
+class FunnelEventCounts(_Frozen):
+    anon_limit_reached: int = 0
+    registered: int = 0
+    user_limit_reached: int = 0
+    membership_activated: int = 0
+    membership_lapsed: int = 0
+    promotion_applied: int = 0
+    promotion_reverted: int = 0
+
+
+class FunnelConversions(_Frozen):
+    anon_to_user: int = 0
+    user_to_donor: int = 0
+
+
+class FunnelDownloadProvider(_Frozen):
+    provider: str
+    total: int = 0
+
+
+class FunnelDownloads(_Frozen):
+    total: int = 0
+    anonymous: int = 0
+    registered: int = 0
+    by_provider: list[FunnelDownloadProvider] = Field(default_factory=list)
+
+
+class FunnelMetricsResponse(_Frozen):
+    """Métricas del funnel S0–S4 (`/api/v1/admin/analytics/funnel`).
+
+    Derivadas exclusivamente de `funnel_events` + `download_usage` (sin contadores ni tablas
+    nuevas). `events` cuenta operaciones; `users`, usuarios únicos.
+    """
+
+    period: FunnelMetricsPeriod
+    events: FunnelEventCounts
+    users: FunnelEventCounts
+    conversions: FunnelConversions
+    downloads: FunnelDownloads

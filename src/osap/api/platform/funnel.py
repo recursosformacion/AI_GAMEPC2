@@ -10,6 +10,7 @@ from __future__ import annotations
 import logging
 
 from src.osap.api.platform.core import PlatformApiCore
+from src.osap.application.funnel_metrics import FunnelMetricsUseCase
 from src.osap.infrastructure.state.funnel.memory import FunnelEvent, FunnelStage
 
 _LOGGER = logging.getLogger("osap.funnel")
@@ -77,3 +78,15 @@ class FunnelMixin(PlatformApiCore):
             event, stage=stage, user_id=user_id, ip_address=ip_address,
             override_id=override_id, detail=detail, day=day,
         )
+
+    def funnel_metrics(self, from_day: str, to_day: str) -> dict[str, object]:
+        """Métricas del funnel derivadas de `funnel_events` + `download_usage` (solo admin).
+
+        Reutiliza `FunnelMetricsUseCase`; no añade contadores ni escribe nada. El `period`
+        se normaliza a `from_day`/`to_day` (convención de los contratos de analítica).
+        """
+        data = FunnelMetricsUseCase(funnel=self._funnel_store, quota=self._quota_store).metrics(
+            from_day, to_day
+        )
+        data["period"] = {"from_day": from_day, "to_day": to_day}
+        return data

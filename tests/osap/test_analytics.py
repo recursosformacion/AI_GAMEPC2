@@ -5,6 +5,8 @@ respuesta** de una búsqueda ni de una descarga (la analítica es observación, 
 crítico).
 """
 
+from typing import cast
+
 import pymysql
 import pytest
 from fastapi import FastAPI
@@ -18,11 +20,15 @@ from src.osap.api.http.search import build_search_router
 from src.osap.api.platform import PlatformApi
 from src.osap.api.platform._support import _search_signature
 from src.osap.api.platform.analytics import AnalyticsMixin
+from src.osap.api.platform.funnel import FunnelMixin
 from src.osap.api.platform.quota import QuotaMixin
 from src.osap.domain.principal import Principal, UserPrincipal
+from src.osap.domain.votes import ForbiddenError, UnauthenticatedError
 from src.osap.infrastructure.state.analytics.memory import MemoryStore, today
 from src.osap.infrastructure.state.analytics.recorder import AnalyticsRecorder
 from src.osap.infrastructure.state.analytics_store import build_analytics_store
+from src.osap.infrastructure.state.funnel.memory import FunnelEvent, FunnelStage
+from src.osap.infrastructure.state.funnel.memory import MemoryStore as FunnelStore
 from src.osap.infrastructure.state.quota.memory import MemoryStore as QuotaStore
 
 DAY = "2026-09-12"
@@ -375,3 +381,96 @@ def test_http_analytics_me_ok_e_ignora_parametro_user_id() -> None:
     resp = client.get("/api/v1/analytics/me?user_id=otro-usuario")
     assert resp.status_code == 200
     assert '"used":17' in resp.text
+
+
+# --- Admin: funnel (FunnelMetricsUseCase vía endpoint admin) -----------------
+
+
+class _FunnelApi(FunnelMixin):
+    def __init__(self, funnel: FunnelStore, quota: QuotaStore) -> None:
+        self._funnel_store = funnel
+        self._quota_store = quota
+
+
+def _funnel_usage(day: str, user_id: str | None, ip: str | None) -> dict[str, object]:
+    return {
+        "day": day,
+        "user_id": user_id,
+        "ip_address": ip,
+        "work_id": "9",
+        "resource_id": None,
+        "provider": "omr",
+        "format": "musicxml",
+        "counts_against_plan": 1,
+    }
+
+
+def test_funnel_metrics_deriva_de_eventos_y_descargas() -> None:
+    funnel = FunnelStore()
+    funnel.record_event(FunnelEvent.LIMIT_REACHED, stage=FunnelStage.S1, ip_address="1.2.3.4", day=DAY)
+    funnel.record_event(FunnelEvent.REGISTERED, stage=FunnelStage.S2, user_id="u1", day=DAY)
+    funnel.record_event(FunnelEvent.LIMIT_REACHED, stage=FunnelStage.S3, user_id="u1", day=DAY)
+    funnel.record_event(FunnelEvent.MEMBERSHIP_ACTIVATED, stage=FunnelStage.S4, user_id="u1", day=DAY)
+    quota = QuotaStore()
+    quota.usage.append(_funnel_usage(DAY, None, "1.2.3.4"))
+    quota.usage.append(_funnel_usage(DAY, "u1", None))
+    data = _FunnelApi(funnel, quota).funnel_metrics(DAY, DAY)
+    assert data["period"] == {"from_day": DAY, "to_day": DAY}
+    events = cast("dict[str, int]", data["events"])
+    assert events["anon_limit_reached"] == 1
+    assert events["registered"] == 1
+    assert events["user_limit_reached"] == 1
+    assert events["membership_activated"] == 1
+    users = cast("dict[str, int]", data["users"])
+    assert users["registered"] == 1
+    conversions = cast("dict[str, int]", data["conversions"])
+    assert conversions["anon_to_user"] == 1
+    downloads = cast("dict[str, object]", data["downloads"])
+    assert downloads["total"] == 2
+    assert downloads["anonymous"] == 1
+    assert downloads["registered"] == 1
+
+
+_FUNNEL_PAYLOAD: dict[str, object] = {
+    "period": {"from_day": DAY, "to_day": DAY},
+    "events": {"registered": 3},
+    "users": {"registered": 2},
+    "conversions": {"anon_to_user": 2},
+    "downloads": {"total": 5, "anonymous": 1, "registered": 4},
+}
+
+
+class _FakeFunnelApi:
+    def __init__(self, *, token_ok: bool, admin: bool) -> None:
+        self._token_ok = token_ok
+        self._admin = admin
+
+    def require_admin(self, token: str | None) -> None:
+        if not self._token_ok:
+            raise UnauthenticatedError("login required")
+        if not self._admin:
+            raise ForbiddenError("admin required")
+
+    def funnel_metrics(self, from_day: str, to_day: str) -> dict[str, object]:
+        return _FUNNEL_PAYLOAD
+
+
+def _funnel_client(*, token_ok: bool, admin: bool) -> TestClient:
+    app = FastAPI()
+    api = _FakeFunnelApi(token_ok=token_ok, admin=admin)
+    app.include_router(build_analytics_router(HttpContext(api=api, container=object())))  # type: ignore[arg-type]
+    return TestClient(app)
+
+
+def test_http_admin_funnel_sin_token_401() -> None:
+    assert _funnel_client(token_ok=False, admin=False).get("/api/v1/admin/analytics/funnel").status_code == 401
+
+
+def test_http_admin_funnel_sin_admin_403() -> None:
+    assert _funnel_client(token_ok=True, admin=False).get("/api/v1/admin/analytics/funnel").status_code == 403
+
+
+def test_http_admin_funnel_ok() -> None:
+    resp = _funnel_client(token_ok=True, admin=True).get("/api/v1/admin/analytics/funnel")
+    assert resp.status_code == 200
+    assert '"registered":2' in resp.text

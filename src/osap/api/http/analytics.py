@@ -14,6 +14,7 @@ from src.osap.api.contracts import (
     AnalyticsMeResponse,
     AnalyticsOverviewResponse,
     ErrorEnvelope,
+    FunnelMetricsResponse,
     SuccessEnvelope,
 )
 from src.osap.domain.votes import ForbiddenError, UnauthenticatedError
@@ -83,5 +84,37 @@ def build_analytics_router(ctx: HttpContext) -> APIRouter:
         if data is None:
             return ctx.fail(401, response, "UNAUTHORIZED", "Login required")
         return ctx.ok(AnalyticsMeResponse.model_validate(data))
+
+    @router.get(
+        "/api/v1/admin/analytics/funnel",
+        tags=["Admin"],
+        summary="Funnel metrics (S0-S4)",
+        description="Métricas del funnel de acceso/contribución (eventos y usuarios únicos) "
+        "derivadas de `funnel_events` + `download_usage` en [from_day, to_day]. Exige role=admin.",
+        response_model=SuccessEnvelope[FunnelMetricsResponse] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("Funnel metrics", _shared._example({})),
+            401: _shared._UNAUTHORIZED_401,
+            403: _shared._FORBIDDEN_403,
+        },
+    )
+    def admin_funnel_metrics(
+        response: Response,
+        from_day: str | None = Query(default=None),
+        to_day: str | None = Query(default=None),
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            ctx.api.require_admin(authorization)
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Login required")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        default_day = today()
+        start = from_day or default_day
+        end = to_day or default_day
+        if start > end:
+            start, end = end, start
+        return ctx.ok(FunnelMetricsResponse.model_validate(ctx.api.funnel_metrics(start, end)))
 
     return router
