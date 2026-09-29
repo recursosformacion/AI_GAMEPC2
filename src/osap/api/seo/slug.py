@@ -50,6 +50,16 @@ def work_slug(title: str) -> str:
     return slugify(title) or "obra"
 
 
+def work_canonical_slug(title: str, composer: str | None = None) -> str:
+    """Slug canónico de obra: título + compositor (si se conoce).
+
+    Incluye el nombre del compositor para dar contexto en la URL; la identidad sigue
+    siendo el `work_id`, así que un cambio de slug solo provoca un 301.
+    """
+    combined = " ".join(part for part in (title or "", composer or "") if part)
+    return work_slug(combined)
+
+
 def person_slug(name: str) -> str:
     """Slug de una persona; nunca vacío (fallback estable "compositor")."""
     return slugify(name) or "compositor"

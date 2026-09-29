@@ -13,9 +13,19 @@ from src.osap.api.http.sitemap import build_sitemap_router
 _BASE = "https://app.openmusicrepository.com"
 
 _WORKS = [
-    {"work_id": "index-1", "title": "Ave verum corpus", "updated_at": "2026-01-02T10:00:00"},
-    {"work_id": "index-2", "title": "Anónimo", "updated_at": None},
-    {"work_id": "index-3", "title": "Réquiem", "updated_at": "2026-01-03"},
+    {
+        "work_id": "index-1",
+        "title": "Ave verum corpus",
+        "composer": "Wolfgang Amadeus Mozart",
+        "updated_at": "2026-01-02T10:00:00",
+    },
+    {"work_id": "index-2", "title": "Anónimo", "composer": None, "updated_at": None},
+    {
+        "work_id": "index-3",
+        "title": "Réquiem",
+        "composer": "Wolfgang Amadeus Mozart",
+        "updated_at": "2026-01-03",
+    },
 ]
 _PERSONS = [{"id": "person-1", "name": "Wolfgang Amadeus Mozart"}]
 
@@ -61,10 +71,10 @@ def test_sitemap_works_urls_canonicas_y_lastmod(client: TestClient) -> None:
     resp = client.get("/sitemaps/works-1.xml")
     assert resp.status_code == 200
     assert "<urlset" in resp.text
-    assert f"<loc>{_BASE}/obra/index-1/ave-verum-corpus</loc>" in resp.text
+    assert f"<loc>{_BASE}/obra/index-1/ave-verum-corpus-wolfgang-amadeus-mozart</loc>" in resp.text
     assert "<lastmod>2026-01-02</lastmod>" in resp.text
     assert f"<loc>{_BASE}/obra/index-2/anonimo</loc>" in resp.text
-    assert f"<loc>{_BASE}/obra/index-3/requiem</loc>" in resp.text
+    assert f"<loc>{_BASE}/obra/index-3/requiem-wolfgang-amadeus-mozart</loc>" in resp.text
 
 
 def test_sitemap_persons_urls_canonicas(client: TestClient) -> None:

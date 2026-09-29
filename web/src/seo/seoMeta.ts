@@ -84,8 +84,9 @@ function isNoindex(pathname: string, search: string): boolean {
   const matchesSegment = NOINDEX_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`),
   );
-  // Búsquedas con parámetros (?q=…): resultado, no contenido canónico.
-  const isQuery = /[?&]q=/.test(search);
+  // Cualquier URL con parámetros es un estado de navegación, no contenido canónico:
+  // se excluye de indexación (p. ej. /support?mode=register, /corrections?kind=…).
+  const isQuery = search.trim() !== "";
   return matchesSegment || isQuery;
 }
 

@@ -105,21 +105,24 @@ def _json_ld(html: str) -> dict[str, object]:
 def test_obra_sin_slug_redirige_al_canonico(client: TestClient) -> None:
     resp = client.get("/obra/index-7", follow_redirects=False)
     assert resp.status_code == 301
-    assert resp.headers["location"] == "/obra/index-7/ave-verum-corpus"
+    assert resp.headers["location"] == "/obra/index-7/ave-verum-corpus-wolfgang-amadeus-mozart"
 
 
 def test_obra_slug_incorrecto_redirige_al_canonico(client: TestClient) -> None:
     resp = client.get("/obra/index-7/cualquier-cosa", follow_redirects=False)
     assert resp.status_code == 301
-    assert resp.headers["location"] == "/obra/index-7/ave-verum-corpus"
+    assert resp.headers["location"] == "/obra/index-7/ave-verum-corpus-wolfgang-amadeus-mozart"
 
 
 def test_pagina_de_obra_tiene_html_real_y_metadatos(client: TestClient) -> None:
-    resp = client.get("/obra/index-7/ave-verum-corpus")
+    resp = client.get("/obra/index-7/ave-verum-corpus-wolfgang-amadeus-mozart")
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith("text/html")
     assert "<h1>Ave verum corpus</h1>" in resp.text
-    assert f'<link rel="canonical" href="{_BASE}/obra/index-7/ave-verum-corpus" />' in resp.text
+    assert (
+        f'<link rel="canonical" href="{_BASE}/obra/index-7/ave-verum-corpus-wolfgang-amadeus-mozart" />'
+        in resp.text
+    )
     assert "Wolfgang Amadeus Mozart" in resp.text
     assert 'href="/compositor/person-1/wolfgang-amadeus-mozart"' in resp.text
     assert "KV 618" in resp.text
@@ -129,7 +132,9 @@ def test_pagina_de_obra_tiene_html_real_y_metadatos(client: TestClient) -> None:
 
 
 def test_pagina_de_obra_json_ld_es_music_composition(client: TestClient) -> None:
-    payload = _json_ld(client.get("/obra/index-7/ave-verum-corpus").text)
+    payload = _json_ld(
+        client.get("/obra/index-7/ave-verum-corpus-wolfgang-amadeus-mozart").text
+    )
     graph = payload["@graph"]
     assert isinstance(graph, list)
     composition = next(node for node in graph if node["@type"] == "MusicComposition")
@@ -190,7 +195,7 @@ def test_titulos_unicode_y_acentos_no_rompen_el_html() -> None:
     client = _client(_FakeApi(work=unicode_work))
     resp = client.get("/obra/index-7", follow_redirects=False)
     assert resp.status_code == 301
-    assert resp.headers["location"] == "/obra/index-7/cantico-de-la-resurrection-oeuvre"
+    assert resp.headers["location"] == "/obra/index-7/cantico-de-la-resurrection-oeuvre-jose-perez"
     page = client.get(resp.headers["location"]).text
     assert "Cántico de la Résurrection — Œuvre" in page
     assert "José Pérez" in page
@@ -206,8 +211,8 @@ def test_pagina_de_compositor_lista_obras_y_json_ld(client: TestClient) -> None:
     resp = client.get("/compositor/person-1/wolfgang-amadeus-mozart")
     assert resp.status_code == 200
     assert "<h1>Wolfgang Amadeus Mozart</h1>" in resp.text
-    assert 'href="/obra/index-7/ave-verum-corpus"' in resp.text
-    assert 'href="/obra/index-8/requiem"' in resp.text
+    assert 'href="/obra/index-7/ave-verum-corpus-wolfgang-amadeus-mozart"' in resp.text
+    assert 'href="/obra/index-8/requiem-wolfgang-amadeus-mozart"' in resp.text
     assert f'<link rel="canonical" href="{_BASE}/compositor/person-1/wolfgang-amadeus-mozart" />' in resp.text
     payload = _json_ld(resp.text)
     graph = payload["@graph"]

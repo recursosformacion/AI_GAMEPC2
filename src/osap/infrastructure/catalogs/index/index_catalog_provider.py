@@ -469,7 +469,8 @@ class IndexCatalogProvider(ICatalogProvider):
             )
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT id, title, updated_at FROM index_works ORDER BY id LIMIT %s OFFSET %s",
+                    "SELECT id, title, composer_name, updated_at FROM index_works "
+                    "ORDER BY id LIMIT %s OFFSET %s",
                     (limit, offset),
                 )
                 rows = cur.fetchall()
@@ -483,6 +484,7 @@ class IndexCatalogProvider(ICatalogProvider):
             {
                 "work_id": f"index-{int(str(row.get('id') or 0))}",
                 "title": str(row.get("title") or ""),
+                "composer": str(row.get("composer_name") or "") or None,
                 "updated_at": str(row.get("updated_at") or "") or None,
             }
             for row in rows

@@ -10,6 +10,15 @@ describe("seoMetaForPath", () => {
     expect(seoMetaForPath("/candidates", "?q=mozart").robots).toBe("noindex, nofollow");
   });
 
+  it("marca noindex cualquier URL con parámetros (no es contenido canónico)", () => {
+    expect(seoMetaForPath("/support", "").robots).toBe("index, follow");
+    expect(seoMetaForPath("/support", "?mode=register").robots).toBe("noindex, nofollow");
+    expect(
+      seoMetaForPath("/corrections", "?kind=composer&entity_id=abc").robots,
+    ).toBe("noindex, nofollow");
+    expect(seoMetaForPath("/composers", "?page=2").robots).toBe("noindex, nofollow");
+  });
+
   it("no confunde /composer (búsqueda) con /composers (listado)", () => {
     expect(seoMetaForPath("/composer").robots).toBe("noindex, nofollow");
     expect(seoMetaForPath("/composers").robots).toBe("index, follow");

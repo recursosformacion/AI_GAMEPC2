@@ -2,7 +2,13 @@
 
 from __future__ import annotations
 
-from src.osap.api.seo.slug import normalize_work_id, person_slug, slugify, work_slug
+from src.osap.api.seo.slug import (
+    normalize_work_id,
+    person_slug,
+    slugify,
+    work_canonical_slug,
+    work_slug,
+)
 
 
 def test_slugify_quita_acentos_y_normaliza_separadores() -> None:
@@ -27,6 +33,15 @@ def test_work_y_person_slug_tienen_fallback_estable() -> None:
     assert work_slug("") == "obra"
     assert person_slug("Mozart") == "mozart"
     assert person_slug("") == "compositor"
+
+
+def test_work_canonical_slug_incluye_compositor() -> None:
+    assert (
+        work_canonical_slug("Ave verum corpus", "Wolfgang Amadeus Mozart")
+        == "ave-verum-corpus-wolfgang-amadeus-mozart"
+    )
+    assert work_canonical_slug("Anónimo", None) == "anonimo"
+    assert work_canonical_slug("Réquiem", "") == "requiem"
 
 
 def test_normalize_work_id_acepta_index_y_numerico() -> None:

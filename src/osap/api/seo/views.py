@@ -12,7 +12,7 @@ import json
 import os
 from dataclasses import dataclass, field
 
-from src.osap.api.seo.slug import person_slug, work_slug
+from src.osap.api.seo.slug import person_slug, work_canonical_slug
 
 _DEFAULT_BASE_URL = "https://app.openmusicrepository.com"
 _JSON_LD_CONTEXT = "https://schema.org"
@@ -138,8 +138,8 @@ def _dump(payload: dict[str, object]) -> str:
 def build_work_view(data: dict[str, object], related: list[dict[str, object]]) -> WorkView:
     work_id = str(data.get("work_id") or "")
     title = str(data.get("title") or "").strip() or "Obra"
-    slug = work_slug(title)
     composer = _str_or_none(data.get("composer"))
+    slug = work_canonical_slug(title, composer)
     composer_id = _str_or_none(data.get("composer_id"))
     catalogue = _str_or_none(data.get("catalogue"))
     year = _int_or_none(data.get("year"))
@@ -170,7 +170,7 @@ def build_work_view(data: dict[str, object], related: list[dict[str, object]]) -
         related_links.append(
             WorkLink(
                 work_id=str(item.get("work_id") or ""),
-                slug=work_slug(item_title),
+                slug=work_canonical_slug(item_title, composer),
                 title=item_title,
                 catalogue=_str_or_none(item.get("catalogue")),
             )
@@ -257,7 +257,7 @@ def build_person_view(detail: dict[str, object], works: dict[str, object]) -> Pe
             work_links.append(
                 WorkLink(
                     work_id=str(item.get("work_id") or ""),
-                    slug=work_slug(item_title),
+                    slug=work_canonical_slug(item_title, name),
                     title=item_title,
                     catalogue=_str_or_none(item.get("catalogue")),
                 )

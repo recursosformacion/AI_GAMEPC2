@@ -19,7 +19,7 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter, Response
 
 from src.osap.api.seo.render import render_sitemap_index, render_sitemap_urlset
-from src.osap.api.seo.slug import person_slug, work_slug
+from src.osap.api.seo.slug import person_slug, work_canonical_slug
 from src.osap.api.seo.views import (
     canonical_person_url,
     canonical_work_url,
@@ -100,7 +100,13 @@ def _works_urlset(ctx: HttpContext, page: int) -> str:
         title = str(row.get("title") or "")
         if not work_id or not title:
             continue
-        urls.append((canonical_work_url(work_id, work_slug(title)), _lastmod(row.get("updated_at"))))
+        composer = str(row.get("composer") or "") or None
+        urls.append(
+            (
+                canonical_work_url(work_id, work_canonical_slug(title, composer)),
+                _lastmod(row.get("updated_at")),
+            )
+        )
     return render_sitemap_urlset(urls)
 
 

@@ -14,7 +14,7 @@ from fastapi import APIRouter, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from src.osap.api.seo.render import render_not_found, render_person, render_work
-from src.osap.api.seo.slug import normalize_work_id, person_slug, work_slug
+from src.osap.api.seo.slug import normalize_work_id, person_slug, work_canonical_slug
 from src.osap.api.seo.views import build_person_view, build_work_view
 
 if TYPE_CHECKING:
@@ -40,7 +40,7 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
         data = ctx.api.seo_work(canonical) if canonical is not None else None
         if data is None:
             return _html(render_not_found(), status_code=404)
-        slug = work_slug(str(data.get("title") or ""))
+        slug = work_canonical_slug(str(data.get("title") or ""), str(data.get("composer") or "") or None)
         return RedirectResponse(url=f"/obra/{canonical}/{slug}", status_code=301)
 
     @router.get("/obra/{work_id}/{slug}", include_in_schema=False)
@@ -49,7 +49,7 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
         data = ctx.api.seo_work(canonical) if canonical is not None else None
         if data is None:
             return _html(render_not_found(), status_code=404)
-        expected = work_slug(str(data.get("title") or ""))
+        expected = work_canonical_slug(str(data.get("title") or ""), str(data.get("composer") or "") or None)
         if slug != expected:
             return RedirectResponse(url=f"/obra/{canonical}/{expected}", status_code=301)
         related: list[dict[str, object]] = []
