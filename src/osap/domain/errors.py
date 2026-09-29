@@ -50,3 +50,19 @@ class ProposalNotAssignableError(DomainError):
     """
 
 
+class ProposalStateError(DomainError):
+    """La propuesta no está en `pending`: ya fue aceptada, rechazada o marcada dudosa.
+
+    osap-storage responde 409 `PROPOSAL_NOT_PENDING`; aceptar dos veces o revisar una
+    propuesta ya resuelta no es una transición válida.
+    """
+
+
+class StorageUnavailableError(DomainError):
+    """osap-storage devolvió un error propio (5xx) o un fallo de IA/DB inesperado.
+
+    Se propaga como 503 `ADMIN_SERVICE_UNAVAILABLE` para no disfrazarlo de 403.
+    """
+
+
+

@@ -5,7 +5,12 @@ usuario). Fusión: exige ``UserPrincipal`` con ``role=admin`` y delega con scope
 ``storage:admin``. Nunca se usa ``tier`` para autorizar.
 """
 
-from src.osap.domain.errors import AiNotConfiguredError, ProposalNotAssignableError
+from src.osap.domain.errors import (
+    AiNotConfiguredError,
+    ProposalNotAssignableError,
+    ProposalStateError,
+    StorageUnavailableError,
+)
 from src.osap.domain.principal import Principal, UserPrincipal
 from src.osap.domain.votes import ForbiddenError, UnauthenticatedError, WorkNotFoundError
 from src.osap.infrastructure.storage.storage_composer_client import StorageComposerClient
@@ -177,27 +182,49 @@ class ComposersService:
         return self._storage_result(self._client.propose_work_attribution(work_id, batch_id))
 
     def review_work_attribution_proposal(
-        self, token: str | None, proposal_id: int, action: str, note: str | None, reviewed_by: str | None
+        self, token: str | None, proposal_id: int, action: str, note: str | None
     ) -> dict[str, object]:
-        self.require_admin(token)
+        # La identidad del revisor se deriva del token: nunca del cuerpo de la petición.
+        principal = self.require_admin(token)
         self._ensure_writable()
         return self._storage_result(
-            self._client.review_work_attribution_proposal(proposal_id, action, note, reviewed_by)
+            self._client.review_work_attribution_proposal(proposal_id, action, note, principal.user_id)
         )
 
-    @staticmethod
-    def _storage_result(status_doc: tuple[int, dict[str, object]]) -> dict[str, object]:
-        """Traduce la respuesta de storage a errores de dominio (503 IA, 404, resto)."""
+    @classmethod
+    def _storage_result(cls, status_doc: tuple[int, dict[str, object]]) -> dict[str, object]:
+        """Traduce la respuesta de storage a errores de dominio (conservando el código real)."""
         status, doc = status_doc
         if 200 <= status < 300:
             return doc
+        code, message = cls._storage_error(doc)
         if status == 503:
-            raise AiNotConfiguredError("IA no configurada")
+            raise AiNotConfiguredError(message or "IA no configurada")
         if status == 409:
-            raise ProposalNotAssignableError("Proposal requires a matched person")
+            if code == "PROPOSAL_NOT_PENDING":
+                raise ProposalStateError(message or "La propuesta ya no está pendiente")
+            raise ProposalNotAssignableError(message or "No se puede aceptar la propuesta")
         if status == 404:
-            raise WorkNotFoundError("Attribution proposal not found")
-        raise ForbiddenError(f"Storage rejected work attribution request (HTTP {status})")
+            raise WorkNotFoundError(message or "Attribution proposal not found")
+        if status in (401, 403):
+            raise ForbiddenError(message or f"Storage rejected the request (HTTP {status})")
+        if status >= 500:
+            # Nunca disfrazar un 5xx de storage (DB/IA) como un 403 de autorización.
+            raise StorageUnavailableError(message or f"Storage error (HTTP {status})")
+        raise ForbiddenError(message or f"Storage rejected the request (HTTP {status})")
+
+    @staticmethod
+    def _storage_error(doc: dict[str, object]) -> tuple[str, str]:
+        """Extrae `(code, message)` del `detail` estructurado que devuelve osap-storage."""
+        detail = doc.get("detail")
+        if isinstance(detail, dict):
+            code = str(detail.get("code") or "")
+            message = str(detail.get("message") or "")
+            return code, message
+        if isinstance(detail, str):
+            return "", detail
+        return "", ""
+
 
     def _ensure_writable(self) -> None:
         if self._read_only:

@@ -1,7 +1,7 @@
 """Atribución asistida por IA — endpoints admin (propuestas y revisión humana).
 
-Sin IA configurada storage responde 503; osap-api lo propaga como 503 AI_NOT_CONFIGURED.
-Aceptar una propuesta sin persona resuelta (409 en storage) se propaga como 409.
+Se verifica el contrato con osap-storage: códigos 409/503 propagados sin disfrazarse de 403,
+`reviewed_by` derivado del token (nunca del cuerpo) y errores de storage 5xx como 503.
 """
 
 from __future__ import annotations
@@ -16,6 +16,7 @@ from src.osap.infrastructure.storage.storage_composer_client import StorageCompo
 
 TOKEN_USER = "tok-user"
 TOKEN_ADMIN = "tok-admin"
+ADMIN_USER_ID = "admin1"
 ADMIN_HEADERS = {"Authorization": f"Bearer {TOKEN_ADMIN}"}
 
 
@@ -28,6 +29,8 @@ class _FakeAiClient(StorageComposerClient):
         self, status_filter: str | None, limit: int, offset: int
     ) -> tuple[int, dict[str, object]]:
         self.calls.append(("list", (status_filter, limit, offset)))
+        if offset == 999:
+            return 500, {"detail": {"code": "DB_ERROR", "message": "table missing"}}
         return 200, {
             "items": [
                 {
@@ -38,7 +41,7 @@ class _FakeAiClient(StorageComposerClient):
                     "candidate_person_id": "p1",
                     "candidate_name": "Louise Farrenc",
                     "role_id": 1,
-                    "role_name": "Compositor/a",
+                    "role_name": "composer",
                     "status": status_filter or "pending",
                     "confidence": 0.96,
                     "model": "fake",
@@ -50,7 +53,7 @@ class _FakeAiClient(StorageComposerClient):
 
     def get_work_attribution_proposal(self, proposal_id: int) -> tuple[int, dict[str, object]]:
         if proposal_id == 999:
-            return 404, {}
+            return 404, {"detail": {"code": "NOT_FOUND", "message": "propuesta no encontrada"}}
         return 200, {
             "id": proposal_id,
             "work_id": 310455,
@@ -62,7 +65,7 @@ class _FakeAiClient(StorageComposerClient):
 
     def propose_work_attribution(self, work_id: int, batch_id: str | None) -> tuple[int, dict[str, object]]:
         if work_id == 500:
-            return 503, {}
+            return 503, {"detail": {"code": "AI_NOT_CONFIGURED", "message": "IA no configurada"}}
         return 200, {
             "id": 7,
             "work_id": work_id,
@@ -76,25 +79,34 @@ class _FakeAiClient(StorageComposerClient):
     ) -> tuple[int, dict[str, object]]:
         self.calls.append(("review", (proposal_id, action, note, reviewed_by)))
         if proposal_id == 123:
-            return 409, {}
+            return 409, {
+                "detail": {"code": "PROPOSAL_NOT_ASSIGNABLE", "message": "requiere persona resuelta"}
+            }
+        if proposal_id == 124:
+            return 409, {
+                "detail": {"code": "PROPOSAL_NOT_PENDING", "message": "la propuesta ya no está pendiente"}
+            }
+        if proposal_id == 125:
+            return 500, {"detail": {"code": "DB_ERROR", "message": "audit table missing"}}
         status = {"accept": "accepted", "reject": "rejected", "uncertain": "uncertain"}[action]
         return 200, {"id": proposal_id, "status": status}
 
 
-def _build(auth) -> TestClient:  # type: ignore[no-untyped-def]
-    service = ComposersService(_FakeAiClient(), auth)
+def _build(auth) -> tuple[TestClient, _FakeAiClient]:  # type: ignore[no-untyped-def]
+    fake = _FakeAiClient()
+    service = ComposersService(fake, auth)
     container = Container()
     container.set_authenticator(auth)
     container.set_composers(service)
-    return TestClient(create_platform_app(container=container))
+    return TestClient(create_platform_app(container=container)), fake
 
 
 def _user_client() -> TestClient:
-    return _build(StaticTokenAuthenticator(TOKEN_USER, "u1", roles=("user",)))
+    return _build(StaticTokenAuthenticator(TOKEN_USER, "u1", roles=("user",)))[0]
 
 
 def _admin_client() -> TestClient:
-    return _build(StaticTokenAuthenticator(TOKEN_ADMIN, "admin1", roles=("user", "admin")))
+    return _build(StaticTokenAuthenticator(TOKEN_ADMIN, ADMIN_USER_ID, roles=("user", "admin")))[0]
 
 
 def test_list_requires_token_401() -> None:
@@ -144,22 +156,62 @@ def test_propose_admin_200() -> None:
     assert resp.json()["data"]["status"] == "pending"
 
 
-def test_review_accept_200() -> None:
-    resp = _admin_client().post(
+def test_review_accept_200_y_usa_la_identidad_del_token() -> None:
+    client = _admin_client()
+    resp = client.post(
         "/api/v1/admin/work-person-ai/1/review",
-        json={"action": "accept", "note": "ok", "reviewed_by": "admin1"},
+        json={"action": "accept", "note": "ok", "reviewed_by": "otro-admin"},
         headers=ADMIN_HEADERS,
     )
     assert resp.status_code == 200
     assert resp.json()["data"]["status"] == "accepted"
 
 
-def test_review_unresolved_409() -> None:
+def test_reviewed_by_sale_del_token_no_del_cuerpo() -> None:
+    client, fake = _build(
+        StaticTokenAuthenticator(TOKEN_ADMIN, ADMIN_USER_ID, roles=("user", "admin"))
+    )
+    client.post(
+        "/api/v1/admin/work-person-ai/1/review",
+        json={"action": "accept", "reviewed_by": "otro-admin"},
+        headers=ADMIN_HEADERS,
+    )
+    review_calls = [call for call in fake.calls if call[0] == "review"]
+    assert review_calls[0][1][3] == ADMIN_USER_ID
+
+
+def test_review_unresolved_409_conserva_el_mensaje() -> None:
     resp = _admin_client().post(
         "/api/v1/admin/work-person-ai/123/review", json={"action": "accept"}, headers=ADMIN_HEADERS
     )
     assert resp.status_code == 409
     assert resp.json()["error"]["code"] == "PROPOSAL_NOT_ASSIGNABLE"
+    assert "persona resuelta" in resp.json()["error"]["message"]
+
+
+def test_review_no_pending_409() -> None:
+    resp = _admin_client().post(
+        "/api/v1/admin/work-person-ai/124/review", json={"action": "accept"}, headers=ADMIN_HEADERS
+    )
+    assert resp.status_code == 409
+    assert resp.json()["error"]["code"] == "PROPOSAL_NOT_PENDING"
+
+
+def test_storage_5xx_se_propaga_como_503_y_no_como_403() -> None:
+    resp = _admin_client().post(
+        "/api/v1/admin/work-person-ai/125/review", json={"action": "accept"}, headers=ADMIN_HEADERS
+    )
+    assert resp.status_code == 503
+    assert resp.json()["error"]["code"] == "ADMIN_SERVICE_UNAVAILABLE"
+    assert "audit table missing" in resp.json()["error"]["message"]
+
+
+def test_list_storage_5xx_503() -> None:
+    resp = _admin_client().get(
+        "/api/v1/admin/work-person-ai?status=pending&offset=999", headers=ADMIN_HEADERS
+    )
+    assert resp.status_code == 503
+    assert resp.json()["error"]["code"] == "ADMIN_SERVICE_UNAVAILABLE"
 
 
 def test_review_accion_invalida_422() -> None:

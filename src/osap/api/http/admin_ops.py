@@ -29,7 +29,12 @@ from src.osap.api.contracts import (
     UpsertProviderRequest,
     WorkAiReviewRequest,
 )
-from src.osap.domain.errors import AiNotConfiguredError, ProposalNotAssignableError
+from src.osap.domain.errors import (
+    AiNotConfiguredError,
+    ProposalNotAssignableError,
+    ProposalStateError,
+    StorageUnavailableError,
+)
 from src.osap.domain.votes import ForbiddenError, UnauthenticatedError, WorkNotFoundError
 from src.osap.infrastructure.storage.storage_composer_client import StorageComposerError
 
@@ -718,6 +723,8 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(404, response, "NOT_FOUND", "Work not found")
         except AiNotConfiguredError:
             return ctx.fail(503, response, "AI_NOT_CONFIGURED", "IA no configurada")
+        except StorageUnavailableError as exc:
+            return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", str(exc))
         except StorageComposerError:
             return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", "Storage admin service unavailable")
 
@@ -747,6 +754,8 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
         except ForbiddenError:
             return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        except StorageUnavailableError as exc:
+            return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", str(exc))
         except StorageComposerError:
             return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", "Storage admin service unavailable")
 
@@ -777,6 +786,8 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
         except WorkNotFoundError:
             return ctx.fail(404, response, "NOT_FOUND", "Proposal not found")
+        except StorageUnavailableError as exc:
+            return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", str(exc))
         except StorageComposerError:
             return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", "Storage admin service unavailable")
 
@@ -794,7 +805,8 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
             403: _shared._FORBIDDEN_403,
             404: _shared._NOT_FOUND_404,
             409: _shared._resp(
-                "Proposal cannot be accepted", _shared._example({"code": "PROPOSAL_NOT_ASSIGNABLE"})
+                "Proposal cannot be reviewed",
+                _shared._example({"code": "PROPOSAL_NOT_ASSIGNABLE"}),
             ),
             **_shared._standard_errors(422),
         },
@@ -810,7 +822,7 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         try:
             return ctx.ok(
                 ctx.api.review_work_attribution_proposal(
-                    authorization, proposal_id, payload.action, payload.note, payload.reviewed_by
+                    authorization, proposal_id, payload.action, payload.note
                 )
             )
         except UnauthenticatedError:
@@ -819,10 +831,14 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
         except WorkNotFoundError:
             return ctx.fail(404, response, "NOT_FOUND", "Proposal not found")
-        except ProposalNotAssignableError:
-            return ctx.fail(409, response, "PROPOSAL_NOT_ASSIGNABLE", "Proposal requires a matched person")
+        except ProposalStateError as exc:
+            return ctx.fail(409, response, "PROPOSAL_NOT_PENDING", str(exc))
+        except ProposalNotAssignableError as exc:
+            return ctx.fail(409, response, "PROPOSAL_NOT_ASSIGNABLE", str(exc))
         except AiNotConfiguredError:
             return ctx.fail(503, response, "AI_NOT_CONFIGURED", "IA no configurada")
+        except StorageUnavailableError as exc:
+            return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", str(exc))
         except StorageComposerError:
             return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", "Storage admin service unavailable")
 

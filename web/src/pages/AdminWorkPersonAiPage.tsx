@@ -48,6 +48,10 @@ const STATUS_CLASS: Record<string, string> = {
   uncertain: "bg-slate-200 text-slate-800",
 };
 
+const ROLE_LABEL: Record<string, string> = {
+  composer: "Compositor/a",
+};
+
 function evidenceTexts(raw: string | null | undefined): string[] {
   if (!raw) return [];
   try {
@@ -116,6 +120,10 @@ export function AdminWorkPersonAiPage() {
     } catch (cause) {
       if (cause instanceof ApiError && cause.code === "PROPOSAL_NOT_ASSIGNABLE") {
         setError("No se puede aceptar: la persona de la propuesta no está resuelta (match exacto).");
+      } else if (cause instanceof ApiError && cause.code === "PROPOSAL_NOT_PENDING") {
+        // Recargar primero: `load` limpia el error, así el aviso no se pierde.
+        await load();
+        setError("La propuesta ya no está pendiente: solo se puede revisar una vez.");
       } else if (cause instanceof ApiError && cause.code === "AI_NOT_CONFIGURED") {
         setError("IA no configurada en storage (falta la API key).");
       } else {
@@ -221,7 +229,9 @@ export function AdminWorkPersonAiPage() {
             ) : (
               <span className="text-osap-muted">Sin persona propuesta</span>
             )}
-            {p.role_name && <span className="text-osap-muted">rol: {p.role_name}</span>}
+            {p.role_name && (
+              <span className="text-osap-muted">rol: {ROLE_LABEL[p.role_name] ?? p.role_name}</span>
+            )}
           </div>
 
           {evidenceTexts(p.evidence_json).length > 0 && (
@@ -233,30 +243,38 @@ export function AdminWorkPersonAiPage() {
           )}
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <button
-              type="button"
-              onClick={() => void review(p, "accept")}
-              disabled={busyId === p.id}
-              className="rounded bg-green-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
-            >
-              Aceptar
-            </button>
-            <button
-              type="button"
-              onClick={() => void review(p, "reject")}
-              disabled={busyId === p.id}
-              className="rounded bg-red-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
-            >
-              Rechazar
-            </button>
-            <button
-              type="button"
-              onClick={() => void review(p, "uncertain")}
-              disabled={busyId === p.id}
-              className="rounded border border-osap-border px-3 py-1.5 text-sm hover:bg-osap-surface disabled:opacity-50"
-            >
-              Marcar dudosa
-            </button>
+            {p.status === "pending" ? (
+              <>
+                <button
+                  type="button"
+                  onClick={() => void review(p, "accept")}
+                  disabled={busyId === p.id}
+                  className="rounded bg-green-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+                >
+                  Aceptar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void review(p, "reject")}
+                  disabled={busyId === p.id}
+                  className="rounded bg-red-600 px-3 py-1.5 text-sm text-white disabled:opacity-50"
+                >
+                  Rechazar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void review(p, "uncertain")}
+                  disabled={busyId === p.id}
+                  className="rounded border border-osap-border px-3 py-1.5 text-sm hover:bg-osap-surface disabled:opacity-50"
+                >
+                  Marcar dudosa
+                </button>
+              </>
+            ) : (
+              <span className="text-xs text-osap-muted">
+                Ya revisada: solo se revisa una propuesta pendiente.
+              </span>
+            )}
             <button
               type="button"
               onClick={() => void toggleDetail(p)}

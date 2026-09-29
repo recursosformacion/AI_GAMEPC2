@@ -393,11 +393,11 @@ export class ApiClient {
     proposalId: number,
     action: WorkAiReviewAction,
     note?: string,
-    reviewedBy?: string,
   ): Promise<{ id: number; status: WorkAiProposalStatus }> {
+    // `reviewed_by` no se envía: el servidor lo deriva del usuario autenticado.
     return this.post<{ id: number; status: WorkAiProposalStatus }>(
       `/admin/work-person-ai/${proposalId}/review`,
-      { action, note, reviewed_by: reviewedBy },
+      { action, note },
     );
   }
 

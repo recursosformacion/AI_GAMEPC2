@@ -455,7 +455,18 @@ class StorageComposerClient:
                     doc = {}
                 return response.status, doc
         except urllib.error.HTTPError as exc:
-            return exc.code, {}
+            # Se conserva el cuerpo de error de storage (`detail` estructurado) para que
+            # osap-api pueda propagar el código exacto (409/503) sin inventar un 403.
+            raw = b""
+            try:
+                raw = exc.read()
+            except Exception:  # noqa: BLE001
+                raw = b""
+            try:
+                error_doc: object = json.loads(raw) if raw else {}
+            except json.JSONDecodeError:
+                error_doc = {}
+            return exc.code, error_doc
         except Exception as exc:
             raise StorageComposerError(str(exc)) from exc
 

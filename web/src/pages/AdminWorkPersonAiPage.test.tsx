@@ -103,6 +103,22 @@ describe("AdminWorkPersonAiPage", () => {
     expect(await screen.findByText(/IA no configurada en storage/)).toBeTruthy();
   });
 
+  it("una propuesta ya revisada no ofrece acciones", async () => {
+    mocks.list.mockResolvedValue({ items: [{ ...PROPOSAL, status: "rejected" }], total: 1 });
+    renderPage();
+    await screen.findAllByText(/Obra #310455/);
+    expect(screen.queryByRole("button", { name: "Aceptar" })).toBeNull();
+    expect(screen.getByText(/Ya revisada/)).toBeTruthy();
+  });
+
+  it("si la propuesta ya no está pendiente lo indica y recarga", async () => {
+    renderPage();
+    await screen.findAllByText(/Obra #310455/);
+    mocks.review.mockRejectedValue(new ApiError("PROPOSAL_NOT_PENDING", "not pending"));
+    fireEvent.click(screen.getByRole("button", { name: "Aceptar" }));
+    expect(await screen.findByText(/ya no está pendiente/)).toBeTruthy();
+  });
+
   it("aceptar una propuesta sin persona resuelta avisa sin asignar", async () => {
     renderPage();
     await screen.findAllByText(/Obra #310455/);

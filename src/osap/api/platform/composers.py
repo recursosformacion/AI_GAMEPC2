@@ -140,9 +140,9 @@ class ComposersMixin(PlatformApiCore):
         return self.composers().propose_work_attribution(token, work_id, batch_id)
 
     def review_work_attribution_proposal(
-        self, token: str | None, proposal_id: int, action: str, note: str | None, reviewed_by: str | None
+        self, token: str | None, proposal_id: int, action: str, note: str | None
     ) -> dict[str, object]:
-        return self.composers().review_work_attribution_proposal(token, proposal_id, action, note, reviewed_by)
+        return self.composers().review_work_attribution_proposal(token, proposal_id, action, note)
 
     async def resolve_composer(
         self,
