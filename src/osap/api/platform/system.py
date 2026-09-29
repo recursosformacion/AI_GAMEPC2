@@ -1,6 +1,7 @@
 """PlatformApi: mixin de system/admin/auth (F5.4)."""
 
 import json
+import re
 import secrets
 import urllib.parse
 import urllib.request
@@ -50,6 +51,8 @@ class SystemMixin(PlatformApiCore):
             url = f"{base}/admin/maestros?token={urllib.parse.quote(service_token)}"
         elif section == "works":
             url = f"{base}/admin/obras?token={urllib.parse.quote(service_token)}"
+        elif section == "representations":
+            url = f"{base}/admin/representations?token={urllib.parse.quote(service_token)}"
         elif section == "tables":
             url = f"{url}&tab=tables"
         elif section == "mantenimiento":
@@ -59,6 +62,11 @@ class SystemMixin(PlatformApiCore):
             # SPA genérica (acceso a cualquier tabla). Con barra final para no caer en la
             # página curada, que ocupa /admin exacto.
             url = f"{base}/admin/?token={urllib.parse.quote(service_token)}"
+        elif section and section.startswith("table:"):
+            # Deep link del SPA de mantenimiento a la tabla concreta (/admin/t/<tabla>).
+            name = section[len("table:") :]
+            if re.fullmatch(r"[a-z][a-z0-9_]*", name):
+                url = f"{base}/admin/t/{name}?token={urllib.parse.quote(service_token)}"
         return url
 
     def admin_overview(self, token: str | None) -> dict[str, object]:

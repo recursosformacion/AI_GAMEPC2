@@ -2,8 +2,9 @@
 // (solo visible para admins). Los hijos se renderizan en <Outlet/> a ancho completo.
 //
 // La navegación agrupa por función administrativa (no por implementación de BD). Los
-// ítems de storage abren la capa web de osap-storage con un service token `storage:admin`
-// (pestañas `composers` | `works` | `tables`); los de osap-api son rutas internas.
+// ítems de storage abren la capa web de osap-storage con un service token `storage:admin`:
+// páginas curadas (/admin/maestros, /admin/obras) y el SPA de mantenimiento
+// (/admin/representations, /admin/t/<tabla>, /admin/ multimantenimiento).
 
 import type { ReactNode } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
@@ -12,15 +13,15 @@ import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
 import { useAuth } from "../state/auth";
 
-type StorageAction = "storage-composers" | "storage-works" | "storage-tables" | "storage-multi";
-
 interface AdminItem {
   to?: string;
   key?: TKey;
   label?: string;
   end?: boolean;
   title?: string;
-  action?: StorageAction;
+  /** Sección de la web de storage a abrir con service token (composers|works|tables|
+   *  representations|mantenimiento|multimantenimiento|table:<tabla>). */
+  storage?: string;
   children?: AdminItem[];
 }
 
@@ -57,7 +58,7 @@ const SECTIONS: AdminSection[] = [
       {
         label: "Personas",
         children: [
-          { action: "storage-composers", label: "Maestro personas" },
+          { storage: "composers", label: "Maestro personas" },
           { to: "/admin/composers", key: "admin.composersFusion" },
           { to: "/admin/aliases", key: "admin.aliases" },
         ],
@@ -65,34 +66,22 @@ const SECTIONS: AdminSection[] = [
       {
         label: "Obras",
         children: [
-          { action: "storage-works", label: "Works" },
-          {
-            action: "storage-tables",
-            label: "Representaciones",
-            title: "Abre el CRUD de tablas; selecciona `representations`.",
-          },
+          { storage: "works", label: "Works" },
+          { storage: "representations", label: "Representaciones" },
         ],
       },
       {
         label: "Servicios",
         children: [
-          { action: "storage-tables", label: "Instrumentos", title: "Selecciona `instruments`." },
-          {
-            action: "storage-tables",
-            label: "Tipos de instrumentos",
-            title: "Selecciona `instrument_categories`.",
-          },
-          { action: "storage-tables", label: "Catálogos", title: "Selecciona `catalog`." },
-          { action: "storage-tables", label: "Categoría", title: "Selecciona `category`." },
-          { action: "storage-tables", label: "Ensembles", title: "Selecciona `ensembles`." },
-          { action: "storage-tables", label: "Épocas", title: "Selecciona `epochs`." },
-          { action: "storage-tables", label: "Géneros", title: "Selecciona `genres`." },
-          {
-            action: "storage-tables",
-            label: "Mapeado de géneros",
-            title: "Selecciona `genre_mappings`.",
-          },
-          { action: "storage-tables", label: "Lenguas", title: "Selecciona `languages`." },
+          { storage: "table:instruments", label: "Instrumentos" },
+          { storage: "table:instrument_categories", label: "Tipos de instrumentos" },
+          { storage: "table:catalog", label: "Catálogos" },
+          { storage: "table:category", label: "Categoría" },
+          { storage: "table:ensembles", label: "Ensembles" },
+          { storage: "table:epochs", label: "Épocas" },
+          { storage: "table:genres", label: "Géneros" },
+          { storage: "table:genre_mappings", label: "Mapeado de géneros" },
+          { storage: "table:languages", label: "Lenguas" },
         ],
       },
     ],
@@ -105,7 +94,7 @@ const SECTIONS: AdminSection[] = [
       { to: "/jobs", key: "jobs" },
     ],
   },
-  { items: [{ action: "storage-multi", key: "admin.storageMaint" }] },
+  { items: [{ storage: "multimantenimiento", key: "admin.storageMaint" }] },
 ];
 
 export function AdminLayout(): ReactNode {
@@ -114,10 +103,10 @@ export function AdminLayout(): ReactNode {
   const logout = useAuth((s) => s.logout);
   const navigate = useNavigate();
 
-  const openStorage = (section: string | null) => {
+  const openStorage = (section: string) => {
     void (async () => {
       try {
-        const r = await apiClient.getStorageWebUrl(section ?? undefined);
+        const r = await apiClient.getStorageWebUrl(section);
         window.open(r.url, "_blank");
       } catch (error) {
         const detail = error instanceof Error ? error.message : String(error);
@@ -126,14 +115,8 @@ export function AdminLayout(): ReactNode {
     })();
   };
 
-  const onAction = (item: AdminItem) => {
-    if (item.action === "storage-composers") openStorage("composers");
-    else if (item.action === "storage-works") openStorage("works");
-    else if (item.action === "storage-tables") openStorage("tables");
-    else if (item.action === "storage-multi") openStorage("multimantenimiento");
-  };
-
   const label = (item: AdminItem): string => item.label ?? (item.key ? t(item.key) : "");
+  const itemKey = (item: AdminItem): string => (item.to ?? item.storage ?? "") + label(item);
 
   if (!isAdmin) {
     return (
@@ -143,6 +126,37 @@ export function AdminLayout(): ReactNode {
           {t("nav.home")}
         </Link>
       </div>
+    );
+  }
+
+  function renderLeaf(item: AdminItem): ReactNode {
+    if (item.to) {
+      return (
+        <NavLink
+          to={item.to}
+          end={item.end}
+          title={item.title}
+          className={({ isActive }) =>
+            `block rounded px-3 py-1.5 text-sm ${
+              isActive
+                ? "bg-osap-accent text-white"
+                : "text-osap-muted hover:bg-osap-border hover:text-osap-ink"
+            }`
+          }
+        >
+          {label(item)}
+        </NavLink>
+      );
+    }
+    return (
+      <button
+        type="button"
+        onClick={() => openStorage(item.storage ?? "multimantenimiento")}
+        title={item.title}
+        className="block w-full rounded px-3 py-1.5 text-left text-sm text-osap-muted hover:bg-osap-border hover:text-osap-ink"
+      >
+        {label(item)}
+      </button>
     );
   }
 
@@ -165,7 +179,7 @@ export function AdminLayout(): ReactNode {
               )}
               <ul className="space-y-0.5">
                 {section.items.map((item) => (
-                  <li key={(item.to ?? item.action ?? "") + label(item)}>
+                  <li key={itemKey(item)}>
                     {item.children ? (
                       <div>
                         <p className="px-3 pb-0.5 pt-2 text-[11px] font-semibold uppercase tracking-wide text-osap-muted">
@@ -173,7 +187,7 @@ export function AdminLayout(): ReactNode {
                         </p>
                         <ul className="space-y-0.5 pl-2">
                           {item.children.map((child) => (
-                            <li key={(child.to ?? child.action ?? "") + label(child)}>{renderLeaf(child)}</li>
+                            <li key={itemKey(child)}>{renderLeaf(child)}</li>
                           ))}
                         </ul>
                       </div>
@@ -206,35 +220,4 @@ export function AdminLayout(): ReactNode {
       </main>
     </div>
   );
-
-  function renderLeaf(item: AdminItem): ReactNode {
-    if (item.to) {
-      return (
-        <NavLink
-          to={item.to}
-          end={item.end}
-          title={item.title}
-          className={({ isActive }) =>
-            `block rounded px-3 py-1.5 text-sm ${
-              isActive
-                ? "bg-osap-accent text-white"
-                : "text-osap-muted hover:bg-osap-border hover:text-osap-ink"
-            }`
-          }
-        >
-          {label(item)}
-        </NavLink>
-      );
-    }
-    return (
-      <button
-        type="button"
-        onClick={() => onAction(item)}
-        title={item.title}
-        className="block w-full rounded px-3 py-1.5 text-left text-sm text-osap-muted hover:bg-osap-border hover:text-osap-ink"
-      >
-        {label(item)}
-      </button>
-    );
-  }
 }
