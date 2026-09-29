@@ -32,6 +32,7 @@ import type {
   RegisterResult,
   VerifyEmailResult,
   VotesOverview,
+  AnalyticsMe,
   WorkDetail,
   WorkStatistics,
 } from "./types";
@@ -340,6 +341,15 @@ export class ApiClient {
 
   async getVotesOverview(): Promise<VotesOverview> {
     return this.get<VotesOverview>("/admin/votes");
+  }
+
+  /** Estadísticas del propio usuario (la identidad va en el token, no en parámetros). */
+  async getAnalyticsMe(from?: string, to?: string): Promise<AnalyticsMe> {
+    const params = new URLSearchParams();
+    if (from) params.set("from_day", from);
+    if (to) params.set("to_day", to);
+    const qs = params.toString();
+    return this.get<AnalyticsMe>(`/analytics/me${qs ? `?${qs}` : ""}`);
   }
 
   async register(email: string, password: string, name?: string): Promise<RegisterResult> {

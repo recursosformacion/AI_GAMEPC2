@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from "react-router-dom";
 import { Layout } from "../layouts/Layout";
 import { AdminLayout } from "../layouts/AdminLayout";
 import { AboutPage } from "../pages/AboutPage";
+import { ActivityPage } from "../pages/ActivityPage";
 import { AdminComposerDetailPage } from "../pages/AdminComposerDetailPage";
 import { AdminComposersPage } from "../pages/AdminComposersPage";
 import { AdminSourceSuggestionsPage } from "../pages/AdminSourceSuggestionsPage";
@@ -47,6 +48,7 @@ export function AppRoutes() {
         <Route path="/studio" element={<SearchStudioPage />} />
         <Route path="/composer" element={<ComposerPage />} />
         <Route path="/composers" element={<ComposersPage />} />
+        <Route path="/activity" element={<ActivityPage />} />
         <Route path="/composers/:personId" element={<ComposerDetailPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/about/how-it-works" element={<HowItWorksPage />} />

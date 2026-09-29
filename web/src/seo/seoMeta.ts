@@ -26,6 +26,10 @@ const ROUTE_META: Record<string, { title: string; description: string }> = {
     description:
       "Listado de compositores con sus obras y partituras disponibles en OpenMusicRepository.",
   },
+  "/activity": {
+    title: "Mi actividad | OpenMusicRepository",
+    description: "Estadísticas personales de uso: descargas, cuota y etapa de acceso.",
+  },
   "/discover": {
     title: "Descubrir fuentes musicales | OpenMusicRepository",
     description: "Fuentes y catálogos musicales integrados en OpenMusicRepository.",
@@ -62,6 +66,7 @@ const ROUTE_META: Record<string, { title: string; description: string }> = {
 const NOINDEX_ROUTES = [
   "/studio",
   "/composer",
+  "/activity",
   "/admin",
   "/viewer",
   "/resolution",

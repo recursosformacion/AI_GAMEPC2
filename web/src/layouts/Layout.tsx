@@ -17,6 +17,7 @@ const MAIN_NAV = [
   { to: "/", key: "nav.home" },
   { to: "/explore", key: "nav.explore" },
   { to: "/composers", key: "nav.composers" },
+  { to: "/activity", key: "nav.activity" },
   { to: "/collaborators", key: "nav.collaborators" },
   { to: "/about/how-it-works", key: "nav.howItWorks" },
     { to: "/support", key: "nav.support" },

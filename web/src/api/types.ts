@@ -564,3 +564,38 @@ export interface RegisterResult {
 export interface VerifyEmailResult {
   message: string;
 }
+
+export interface AnalyticsMeProvider {
+  provider: string;
+  downloads: number;
+  bytes: number;
+}
+
+export interface AnalyticsMePeriod {
+  from_day: string;
+  to_day: string;
+}
+
+export interface AnalyticsMeAccess {
+  stage: string;
+  tier: string;
+}
+
+export interface AnalyticsMeQuota {
+  limit: number;
+  used: number;
+  remaining: number;
+}
+
+export interface AnalyticsMeDownloads {
+  count: number;
+  bytes: number;
+  providers: AnalyticsMeProvider[];
+}
+
+export interface AnalyticsMe {
+  period: AnalyticsMePeriod;
+  access: AnalyticsMeAccess;
+  quota: AnalyticsMeQuota;
+  downloads: AnalyticsMeDownloads;
+}
