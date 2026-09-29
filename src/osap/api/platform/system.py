@@ -53,6 +53,8 @@ class SystemMixin(PlatformApiCore):
             url = f"{base}/admin/obras?token={urllib.parse.quote(service_token)}"
         elif section == "representations":
             url = f"{base}/admin/representations?token={urllib.parse.quote(service_token)}"
+        elif section == "work-persons":
+            url = f"{base}/admin/work-persons?token={urllib.parse.quote(service_token)}"
         elif section == "tables":
             url = f"{url}&tab=tables"
         elif section == "mantenimiento":

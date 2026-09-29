@@ -37,6 +37,7 @@ def test_secciones_curadas() -> None:
     assert _url("composers") == "https://storage.example/admin/maestros?token=TOK"
     assert _url("works") == "https://storage.example/admin/obras?token=TOK"
     assert _url("representations") == "https://storage.example/admin/representations?token=TOK"
+    assert _url("work-persons") == "https://storage.example/admin/work-persons?token=TOK"
     assert _url("mantenimiento") == "https://storage.example/admin/mantenimiento?token=TOK"
     assert _url("multimantenimiento") == "https://storage.example/admin/?token=TOK"
     assert _url("tables") == "https://storage.example/admin?token=TOK&tab=tables"

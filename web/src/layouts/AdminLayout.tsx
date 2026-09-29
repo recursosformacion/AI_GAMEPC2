@@ -68,6 +68,7 @@ const SECTIONS: AdminSection[] = [
         children: [
           { storage: "works", label: "Works" },
           { storage: "representations", label: "Representaciones" },
+          { storage: "work-persons", label: "Obras → Personas" },
         ],
       },
       {
