@@ -202,7 +202,7 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
   corregido en la misma ventana usando `HmacTokenHasher`.
 - **Fuera de alcance (acordado):** filas heredadas de `service_clients`.
 
-### SEC-E — Rotación de credenciales externas · R2 (2026-09-29) — R2 CERRADA
+### SEC-E — Rotación de credenciales externas · R2 (2026-09-29) — CERRADA
 
 - **R2 (Cloudflare):** token S3 del bucket `osap-storage` (account `649d3187e49cf9ee8dbbc2b0c22d2f4e`),
   consumido por `osap-storage` (cliente S3 boto3). Sin duplicación dev/prod.
@@ -216,4 +216,7 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
   `3e3523fdc6`; fecha de rotación 2026-09-29.
 - **Backups conservados:** servidor `config.yaml.sec-e-r2-backup-…` y
   `config.yaml.sec-e-r2-switch-…` (600); local `config.production.yaml.sec-e-r2-backup`.
-- **Pendiente de SEC-E:** MusicBrainz, PayPal (live) y social Google/GitHub.
+- **Alcance cerrado:** solo se rotó R2. MusicBrainz, PayPal (live) y social
+  Google/GitHub se **dan por buenos sin rotación** (decisión: no se consideran expuestos).
+- **Fuera de esta entrega:** SEC-F (permisos 664→600/640 y secretos inline de systemd →
+  `EnvironmentFile`) y SEC-G (peppers/AEAD).
