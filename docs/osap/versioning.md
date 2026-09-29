@@ -232,3 +232,16 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 - Verificado: **ningún** fichero con secretos legible por grupo/otros
   (`find … -perm /037` sin resultados); los cuatro servicios `active` y health OK
   (api 200, auth 200, storage 200).
+
+#### F.2 — Secretos inline de systemd → EnvironmentFile (2026-09-29) — HECHO
+
+- Movidos a `/etc/openmusicrepository/osap-api.env` (directorio `700`, fichero `600`):
+  `OSAP_API_DB_PASSWORD`, `OSAP_ADMIN_CLIENT_SECRET`, `OSAP_SERVICE_CLIENT_SECRET`,
+  `OSAP_OIDC_CLIENT_SECRET`.
+- Añadido `EnvironmentFile=/etc/openmusicrepository/osap-api.env` al unit y **eliminadas**
+  las líneas de secreto de los drop-ins (y el stub `oidc-secret.conf`).
+- Verificado:
+  - **entorno efectivo idéntico** antes/después (`/proc/<pid>/environ` por clave),
+  - **sin secretos** en los ficheros activos del unit/drop-ins,
+  - backups con secretos movidos a `/etc/openmusicrepository/backups` (dir `700`, ficheros `600`),
+  - los cuatro servicios `active`; api health 200; `persons` (M2M SERVICE) 200.
