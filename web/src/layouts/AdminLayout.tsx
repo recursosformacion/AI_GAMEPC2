@@ -1,5 +1,9 @@
 // Layout de administración a pantalla completa: menú vertical izquierdo permanente
 // (solo visible para admins). Los hijos se renderizan en <Outlet/> a ancho completo.
+//
+// La navegación agrupa por función administrativa (no por implementación de BD). Los
+// ítems de storage abren la capa web de osap-storage con un service token `storage:admin`
+// (pestañas `composers` | `works` | `tables`); los de osap-api son rutas internas.
 
 import type { ReactNode } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
@@ -8,16 +12,16 @@ import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
 import { useAuth } from "../state/auth";
 
+type StorageAction = "storage-composers" | "storage-works" | "storage-tables" | "storage-multi";
+
 interface AdminItem {
   to?: string;
-  key: TKey;
+  key?: TKey;
+  label?: string;
   end?: boolean;
-  action?:
-    | "storage-composers"
-    | "storage-works"
-    | "storage-main"
-    | "storage-maint"
-    | "storage-multi";
+  title?: string;
+  action?: StorageAction;
+  children?: AdminItem[];
 }
 
 interface AdminSection {
@@ -26,32 +30,82 @@ interface AdminSection {
 }
 
 const SECTIONS: AdminSection[] = [
-  { items: [{ to: "/admin", key: "admin.resumen", end: true }] },
   {
-    caption: "Gestión de pagos",
-    items: [{ to: "/admin/payments", key: "admin.paymentsTitle" }],
+    caption: "Administración",
+    items: [
+      { to: "/admin", key: "admin.resumen", end: true },
+      { to: "/admin/funnel", label: "Estadísticas" },
+    ],
   },
   {
-    caption: "Mantenimiento tablas",
+    caption: "Gestión de pagos",
+    items: [
+      { to: "/admin/payments", key: "admin.paymentsTitle" },
+      { to: "/admin/quota", key: "admin.quota" },
+    ],
+  },
+  {
+    caption: "Mantenimiento de datos",
     items: [
       { to: "/admin/users", key: "adminUsers.title" },
-      { action: "storage-maint", key: "admin.maint" },
-      { action: "storage-multi", key: "admin.storageMaint" },
-      { to: "/admin/quota", key: "admin.quota" },
-      { to: "/admin/funnel", key: "admin.funnel" },
       { to: "/admin/providers", key: "admin.providersAdmin" },
     ],
   },
   {
-    caption: "Gestión compositores",
+    caption: "Mantenimiento storage",
     items: [
-      { to: "/admin/composers", key: "admin.composersFusion" },
-      { to: "/admin/aliases", key: "admin.aliases" },
+      {
+        label: "Personas",
+        children: [
+          { action: "storage-composers", label: "Maestro personas" },
+          { to: "/admin/composers", key: "admin.composersFusion" },
+          { to: "/admin/aliases", key: "admin.aliases" },
+        ],
+      },
+      {
+        label: "Obras",
+        children: [
+          { action: "storage-works", label: "Works" },
+          {
+            action: "storage-tables",
+            label: "Representaciones",
+            title: "Abre el CRUD de tablas; selecciona `representations`.",
+          },
+        ],
+      },
+      {
+        label: "Servicios",
+        children: [
+          { action: "storage-tables", label: "Instrumentos", title: "Selecciona `instruments`." },
+          {
+            action: "storage-tables",
+            label: "Tipos de instrumentos",
+            title: "Selecciona `instrument_categories`.",
+          },
+          { action: "storage-tables", label: "Catálogos", title: "Selecciona `catalog`." },
+          { action: "storage-tables", label: "Categoría", title: "Selecciona `category`." },
+          { action: "storage-tables", label: "Ensembles", title: "Selecciona `ensembles`." },
+          { action: "storage-tables", label: "Épocas", title: "Selecciona `epochs`." },
+          { action: "storage-tables", label: "Géneros", title: "Selecciona `genres`." },
+          {
+            action: "storage-tables",
+            label: "Mapeado de géneros",
+            title: "Selecciona `genre_mappings`.",
+          },
+          { action: "storage-tables", label: "Lenguas", title: "Selecciona `languages`." },
+        ],
+      },
     ],
   },
-  { items: [{ to: "/admin/source-suggestions", key: "admin.sourceSuggestions" }] },
-  { items: [{ to: "/admin/corrections", key: "admin.corrections" }] },
-  { items: [{ to: "/jobs", key: "jobs" }] },
+  {
+    caption: "Seguimiento del producto",
+    items: [
+      { to: "/admin/source-suggestions", key: "admin.sourceSuggestions" },
+      { to: "/admin/corrections", key: "admin.corrections" },
+      { to: "/jobs", key: "jobs" },
+    ],
+  },
+  { items: [{ action: "storage-multi", key: "admin.storageMaint" }] },
 ];
 
 export function AdminLayout(): ReactNode {
@@ -66,7 +120,6 @@ export function AdminLayout(): ReactNode {
         const r = await apiClient.getStorageWebUrl(section ?? undefined);
         window.open(r.url, "_blank");
       } catch (error) {
-        // Antes se tragaba el error y parecía que el botón "no hacía nada".
         const detail = error instanceof Error ? error.message : String(error);
         window.alert(`osap-storage admin no disponible · not available: ${detail}`);
       }
@@ -76,10 +129,11 @@ export function AdminLayout(): ReactNode {
   const onAction = (item: AdminItem) => {
     if (item.action === "storage-composers") openStorage("composers");
     else if (item.action === "storage-works") openStorage("works");
-    else if (item.action === "storage-maint") openStorage("mantenimiento");
+    else if (item.action === "storage-tables") openStorage("tables");
     else if (item.action === "storage-multi") openStorage("multimantenimiento");
-    else if (item.action === "storage-main") openStorage(null);
   };
+
+  const label = (item: AdminItem): string => item.label ?? (item.key ? t(item.key) : "");
 
   if (!isAdmin) {
     return (
@@ -110,35 +164,24 @@ export function AdminLayout(): ReactNode {
                 </p>
               )}
               <ul className="space-y-0.5">
-                {section.items.map((item) =>
-                  item.to ? (
-                    <li key={item.to + item.key}>
-                      <NavLink
-                        to={item.to}
-                        end={item.end}
-                        className={({ isActive }) =>
-                          `block rounded px-3 py-1.5 text-sm ${
-                            isActive
-                              ? "bg-osap-accent text-white"
-                              : "text-osap-muted hover:bg-osap-border hover:text-osap-ink"
-                          }`
-                        }
-                      >
-                        {t(item.key)}
-                      </NavLink>
-                    </li>
-                  ) : (
-                    <li key={item.key}>
-                      <button
-                        type="button"
-                        onClick={() => onAction(item)}
-                        className="block w-full rounded px-3 py-1.5 text-left text-sm text-osap-muted hover:bg-osap-border hover:text-osap-ink"
-                      >
-                        {t(item.key)}
-                      </button>
-                    </li>
-                  ),
-                )}
+                {section.items.map((item) => (
+                  <li key={(item.to ?? item.action ?? "") + label(item)}>
+                    {item.children ? (
+                      <div>
+                        <p className="px-3 pb-0.5 pt-2 text-[11px] font-semibold uppercase tracking-wide text-osap-muted">
+                          {label(item)}
+                        </p>
+                        <ul className="space-y-0.5 pl-2">
+                          {item.children.map((child) => (
+                            <li key={(child.to ?? child.action ?? "") + label(child)}>{renderLeaf(child)}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    ) : (
+                      renderLeaf(item)
+                    )}
+                  </li>
+                ))}
               </ul>
             </div>
           ))}
@@ -163,4 +206,35 @@ export function AdminLayout(): ReactNode {
       </main>
     </div>
   );
+
+  function renderLeaf(item: AdminItem): ReactNode {
+    if (item.to) {
+      return (
+        <NavLink
+          to={item.to}
+          end={item.end}
+          title={item.title}
+          className={({ isActive }) =>
+            `block rounded px-3 py-1.5 text-sm ${
+              isActive
+                ? "bg-osap-accent text-white"
+                : "text-osap-muted hover:bg-osap-border hover:text-osap-ink"
+            }`
+          }
+        >
+          {label(item)}
+        </NavLink>
+      );
+    }
+    return (
+      <button
+        type="button"
+        onClick={() => onAction(item)}
+        title={item.title}
+        className="block w-full rounded px-3 py-1.5 text-left text-sm text-osap-muted hover:bg-osap-border hover:text-osap-ink"
+      >
+        {label(item)}
+      </button>
+    );
+  }
 }
