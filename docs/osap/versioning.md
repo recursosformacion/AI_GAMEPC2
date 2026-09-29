@@ -268,4 +268,7 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 - **Incidencia:** el primer intento falló por los nombres de variable de los client ids
   (están en el drop-in); el rollback requirió restaurar `users` desde el dump y se reintentó
   con éxito.
-- **Dev:** pendiente de claves propias distintas (siguiente paso).
+- **Dev:** conserva **claves propias** (las antiguas, que producción ya **no** usa) → se
+  elimina la reutilización dev/prod. Los datos de dev se migraron y se **revirtieron** para
+  dejarlo consistente con su `osap-auth` en marcha (el proceso de dev no era reiniciable
+  desde esta sesión); consistencia verificada (13/13) y health 200.
