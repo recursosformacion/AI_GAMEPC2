@@ -38,6 +38,7 @@ const SECTIONS: AdminSection[] = [
       { action: "storage-maint", key: "admin.maint" },
       { action: "storage-multi", key: "admin.storageMaint" },
       { to: "/admin/quota", key: "admin.quota" },
+      { to: "/admin/funnel", key: "admin.funnel" },
       { to: "/admin/providers", key: "admin.providersAdmin" },
     ],
   },

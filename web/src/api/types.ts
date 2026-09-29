@@ -599,3 +599,43 @@ export interface AnalyticsMe {
   quota: AnalyticsMeQuota;
   downloads: AnalyticsMeDownloads;
 }
+
+export interface FunnelMetricsPeriod {
+  from_day: string;
+  to_day: string;
+}
+
+export interface FunnelEventCounts {
+  anon_limit_reached: number;
+  registered: number;
+  user_limit_reached: number;
+  membership_activated: number;
+  membership_lapsed: number;
+  promotion_applied: number;
+  promotion_reverted: number;
+}
+
+export interface FunnelConversions {
+  anon_to_user: number;
+  user_to_donor: number;
+}
+
+export interface FunnelDownloadProvider {
+  provider: string;
+  total: number;
+}
+
+export interface FunnelDownloads {
+  total: number;
+  anonymous: number;
+  registered: number;
+  by_provider: FunnelDownloadProvider[];
+}
+
+export interface FunnelMetrics {
+  period: FunnelMetricsPeriod;
+  events: FunnelEventCounts;
+  users: FunnelEventCounts;
+  conversions: FunnelConversions;
+  downloads: FunnelDownloads;
+}

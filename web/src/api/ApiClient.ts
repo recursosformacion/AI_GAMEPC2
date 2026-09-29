@@ -33,6 +33,7 @@ import type {
   VerifyEmailResult,
   VotesOverview,
   AnalyticsMe,
+  FunnelMetrics,
   WorkDetail,
   WorkStatistics,
 } from "./types";
@@ -350,6 +351,15 @@ export class ApiClient {
     if (to) params.set("to_day", to);
     const qs = params.toString();
     return this.get<AnalyticsMe>(`/analytics/me${qs ? `?${qs}` : ""}`);
+  }
+
+  /** Métricas del funnel S0–S4 (solo admin). */
+  async getFunnelMetrics(from?: string, to?: string): Promise<FunnelMetrics> {
+    const params = new URLSearchParams();
+    if (from) params.set("from_day", from);
+    if (to) params.set("to_day", to);
+    const qs = params.toString();
+    return this.get<FunnelMetrics>(`/admin/analytics/funnel${qs ? `?${qs}` : ""}`);
   }
 
   async register(email: string, password: string, name?: string): Promise<RegisterResult> {

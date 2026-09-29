@@ -7,6 +7,7 @@ import { AdminComposerDetailPage } from "../pages/AdminComposerDetailPage";
 import { AdminComposersPage } from "../pages/AdminComposersPage";
 import { AdminSourceSuggestionsPage } from "../pages/AdminSourceSuggestionsPage";
 import { AdminProvidersPage } from "../pages/AdminProvidersPage";import { AdminCorrectionsPage } from "../pages/AdminCorrectionsPage";
+import { AdminFunnelPage } from "../pages/AdminFunnelPage";
 import { AdminUserDetailPage } from "../pages/AdminUserDetailPage";
 import { AdminUsersPage } from "../pages/AdminUsersPage";
 import { AdminPaymentsPage } from "../pages/AdminPaymentsPage";
@@ -75,6 +76,7 @@ export function AppRoutes() {
         <Route path="/admin/source-suggestions" element={<AdminSourceSuggestionsPage />} />
         <Route path="/admin/providers" element={<AdminProvidersPage />} />
         <Route path="/admin/quota" element={<AdminQuotaPage />} />
+        <Route path="/admin/funnel" element={<AdminFunnelPage />} />
         <Route path="/admin/corrections" element={<AdminCorrectionsPage />} />
       </Route>
     </Routes>
