@@ -245,3 +245,27 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
   - **sin secretos** en los ficheros activos del unit/drop-ins,
   - backups con secretos movidos a `/etc/openmusicrepository/backups` (dir `700`, ficheros `600`),
   - los cuatro servicios `active`; api health 200; `persons` (M2M SERVICE) 200.
+
+### SEC-G — Rotación de peppers/AEAD (2026-09-29) — PROD HECHO
+
+- **Claves:** `email_hmac_pepper` (`users.email_lookup`), `email_aead_key_b64`
+  (`users.email_cipher`, AES-256-GCM) y `token_hmac_pepper` (hashes de `tokens`,
+  `sessions`, `authorization_codes`, `service_clients`, `oauth_clients`).
+- **Estrategia:** one-shot con `osap-auth` detenida brevemente (sin key-ring; 20 usuarios).
+- **Pasos:** backup (`mysqldump` de las tablas + config en `/root/sec-g-backups-…`);
+  migración de 18 `users` (descifrado con AEAD antiguo → `email_lookup`/`email_cipher`
+  nuevos, `key_version=2`); re-hash de los client secrets **conocidos** (SERVICE, ADMIN,
+  `243ae…`, oauth `osap-api`) con el `token_hmac_pepper` nuevo. Config (`config.yaml`, 600)
+  con las claves nuevas y reinicio.
+- **Efectos conocidos:** sesiones/tokens/códigos existentes quedan inválidos → **re-login**;
+  los clientes `81c78ac9…` (support:ingest) y `f9152dd9…` quedan invalidados (secretos
+  desconocidos → no re-hasheados; sin uso en la auditoría).
+- **Verificación:** 18/18 consistentes; 0 lookups casan con el pepper antiguo; el AEAD
+  antiguo no descifra; SERVICE/ADMIN/`243ae` emiten token **200** y storage read/admin **200**;
+  OIDC → `invalid_grant` (cliente autenticado); 4 servicios `active`; health 200; `persons` 200.
+- **Hashes de claves:** antiguas `5d56bf2118`/`4992416e4d`/`8242108c37`; nuevas
+  `2ece7e8afe`/`4016ee1ace`/`7d7445ad43` (solo hash, sin valores).
+- **Incidencia:** el primer intento falló por los nombres de variable de los client ids
+  (están en el drop-in); el rollback requirió restaurar `users` desde el dump y se reintentó
+  con éxito.
+- **Dev:** pendiente de claves propias distintas (siguiente paso).
