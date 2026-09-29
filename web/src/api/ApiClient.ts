@@ -36,6 +36,10 @@ import type {
   FunnelMetrics,
   WorkDetail,
   WorkStatistics,
+  WorkAiProposal,
+  WorkAiProposalPage,
+  WorkAiProposalStatus,
+  WorkAiReviewAction,
 } from "./types";
 import { ApiError } from "./errors";
 
@@ -362,8 +366,42 @@ export class ApiClient {
     return this.get<FunnelMetrics>(`/admin/analytics/funnel${qs ? `?${qs}` : ""}`);
   }
 
-  async register(email: string, password: string, name?: string): Promise<RegisterResult> {
-    return this.post<RegisterResult>("/auth/register", { email, password, name });
+  // --- atribución asistida por IA (solo admin) -------------------------------
+  //
+  // La SPA no habla con Gemini: solo consume las propuestas de osap-api (que delega en
+  // osap-storage). Aceptar es lo único que asigna la persona.
+
+  async listWorkAttributionProposals(
+    status: WorkAiProposalStatus,
+    limit: number,
+    offset: number,
+  ): Promise<WorkAiProposalPage> {
+    const params = new URLSearchParams({ status, limit: String(limit), offset: String(offset) });
+    return this.get<WorkAiProposalPage>(`/admin/work-person-ai?${params.toString()}`);
+  }
+
+  async getWorkAttributionProposal(proposalId: number): Promise<WorkAiProposal> {
+    return this.get<WorkAiProposal>(`/admin/work-person-ai/${proposalId}`);
+  }
+
+  async proposeWorkAttribution(workId: number, batchId?: string): Promise<WorkAiProposal> {
+    const qs = batchId ? `?batch_id=${encodeURIComponent(batchId)}` : "";
+    return this.post<WorkAiProposal>(`/admin/work-person-ai/propose/${workId}${qs}`);
+  }
+
+  async reviewWorkAttributionProposal(
+    proposalId: number,
+    action: WorkAiReviewAction,
+    note?: string,
+    reviewedBy?: string,
+  ): Promise<{ id: number; status: WorkAiProposalStatus }> {
+    return this.post<{ id: number; status: WorkAiProposalStatus }>(
+      `/admin/work-person-ai/${proposalId}/review`,
+      { action, note, reviewed_by: reviewedBy },
+    );
+  }
+
+  async register(email: string, password: string, name?: string): Promise<RegisterResult> {    return this.post<RegisterResult>("/auth/register", { email, password, name });
   }
 
   async verifyEmail(token: string): Promise<VerifyEmailResult> {

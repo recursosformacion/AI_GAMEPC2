@@ -124,6 +124,26 @@ class ComposersMixin(PlatformApiCore):
     def set_attribution(self, token: str | None, person_ids: list[str], attribution_type: str) -> dict[str, object]:
         return self.composers().set_attribution(token, person_ids, attribution_type)
 
+    # --- atribución asistida por IA (propuestas + revisión humana) -----------
+
+    def list_work_attribution_proposals(
+        self, token: str | None, status_filter: str | None, limit: int, offset: int
+    ) -> dict[str, object]:
+        return self.composers().list_work_attribution_proposals(token, status_filter, limit, offset)
+
+    def get_work_attribution_proposal(self, token: str | None, proposal_id: int) -> dict[str, object]:
+        return self.composers().get_work_attribution_proposal(token, proposal_id)
+
+    def propose_work_attribution(
+        self, token: str | None, work_id: int, batch_id: str | None = None
+    ) -> dict[str, object]:
+        return self.composers().propose_work_attribution(token, work_id, batch_id)
+
+    def review_work_attribution_proposal(
+        self, token: str | None, proposal_id: int, action: str, note: str | None, reviewed_by: str | None
+    ) -> dict[str, object]:
+        return self.composers().review_work_attribution_proposal(token, proposal_id, action, note, reviewed_by)
+
     async def resolve_composer(
         self,
         work_title: str,

@@ -69,6 +69,7 @@ const SECTIONS: AdminSection[] = [
           { storage: "works", label: "Works" },
           { storage: "representations", label: "Representaciones" },
           { storage: "work-persons", label: "Obras → Personas" },
+          { to: "/admin/work-person-ai", label: "Atribución IA (revisión)" },
         ],
       },
       {

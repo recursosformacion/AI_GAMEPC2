@@ -284,6 +284,57 @@ class StorageComposerClient:
         return doc if 200 <= status < 300 and isinstance(doc, dict) else None
 
 
+    # -- atribución asistida por IA (osap-storage /api/admin/work-person-ai) ---
+    #
+    # Gemini solo propone: estas llamadas listan/consultan/revisan propuestas. La asignación
+    # efectiva (y su auditoría en work_attribution_history) ocurre en osap-storage al aceptar.
+
+    def propose_work_attribution(self, work_id: int, batch_id: str | None) -> tuple[int, dict[str, object]]:
+        payload: dict[str, object] = {"batch_id": batch_id} if batch_id else {}
+        status, doc = self._call(
+            "POST",
+            f"/api/admin/work-person-ai/propose/{int(work_id)}",
+            payload=payload,
+            scope="storage:admin",
+            provider=self._admin_token_provider,
+        )
+        return status, doc if isinstance(doc, dict) else {}
+
+    def list_work_attribution_proposals(
+        self, status_filter: str | None, limit: int, offset: int
+    ) -> tuple[int, dict[str, object]]:
+        query: dict[str, str] = {"limit": str(limit), "offset": str(offset)}
+        if status_filter:
+            query["status"] = status_filter
+        status, doc = self._call(
+            "GET",
+            f"/api/admin/work-person-ai?{urllib.parse.urlencode(query)}",
+            scope="storage:admin",
+            provider=self._admin_token_provider,
+        )
+        return status, doc if isinstance(doc, dict) else {}
+
+    def get_work_attribution_proposal(self, proposal_id: int) -> tuple[int, dict[str, object]]:
+        status, doc = self._call(
+            "GET",
+            f"/api/admin/work-person-ai/{int(proposal_id)}",
+            scope="storage:admin",
+            provider=self._admin_token_provider,
+        )
+        return status, doc if isinstance(doc, dict) else {}
+
+    def review_work_attribution_proposal(
+        self, proposal_id: int, action: str, note: str | None, reviewed_by: str | None
+    ) -> tuple[int, dict[str, object]]:
+        status, doc = self._call(
+            "POST",
+            f"/api/admin/work-person-ai/{int(proposal_id)}/review",
+            payload={"action": action, "note": note, "reviewed_by": reviewed_by},
+            scope="storage:admin",
+            provider=self._admin_token_provider,
+        )
+        return status, doc if isinstance(doc, dict) else {}
+
     def catalogues(self, prefix: str | None = None, composer: str | None = None) -> list[dict[str, object]]:
         query = {}
         if prefix:

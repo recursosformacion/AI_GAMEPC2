@@ -639,3 +639,38 @@ export interface FunnelMetrics {
   conversions: FunnelConversions;
   downloads: FunnelDownloads;
 }
+
+// --- atribución asistida por IA (propuestas + revisión humana) ---------------
+
+export type WorkAiResolution = "identified" | "anonymous" | "traditional" | "unknown";
+export type WorkAiPersonMatch = "matched" | "ambiguous" | "unresolved" | "not_applicable";
+export type WorkAiProposalStatus = "pending" | "accepted" | "rejected" | "uncertain";
+export type WorkAiReviewAction = "accept" | "reject" | "uncertain";
+
+/** Una propuesta de atribución de la IA: hipótesis pendiente de revisión humana. */
+export interface WorkAiProposal {
+  id: number;
+  work_id: number;
+  batch_id?: string | null;
+  resolution: WorkAiResolution;
+  person_match: WorkAiPersonMatch;
+  candidate_person_id?: string | null;
+  candidate_name?: string | null;
+  role_id?: number | null;
+  role_name?: string | null;
+  status: WorkAiProposalStatus;
+  confidence?: number | null;
+  model?: string | null;
+  prompt_version?: string | null;
+  answer_json?: string | null;
+  evidence_json?: string | null;
+  review_note?: string | null;
+  reviewed_by?: string | null;
+  reviewed_at?: string | null;
+  created_at?: string | null;
+}
+
+export interface WorkAiProposalPage {
+  items: WorkAiProposal[];
+  total: number;
+}

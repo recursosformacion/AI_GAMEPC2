@@ -33,3 +33,20 @@ class DatasetOperationError(DomainError):
 
 class DatasetCancelledError(DatasetOperationError):
     """Raised when a dataset operation is cancelled by the user."""
+
+
+class AiNotConfiguredError(DomainError):
+    """La IA de atribución no está configurada en osap-storage (falta la API key).
+
+    osap-storage responde 503 en este caso; osap-api lo traduce a un 503 explícito para el
+    panel de revisión, sin afectar al resto del mantenimiento.
+    """
+
+
+class ProposalNotAssignableError(DomainError):
+    """La propuesta no se puede aceptar (p. ej. persona sin coincidencia exacta en storage).
+
+    osap-storage responde 409: aceptar sin persona resuelta duplicaría o inventaría identidad.
+    """
+
+

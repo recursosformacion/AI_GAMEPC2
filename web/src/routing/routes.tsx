@@ -10,6 +10,7 @@ import { AdminProvidersPage } from "../pages/AdminProvidersPage";import { AdminC
 import { AdminFunnelPage } from "../pages/AdminFunnelPage";
 import { AdminUserDetailPage } from "../pages/AdminUserDetailPage";
 import { AdminUsersPage } from "../pages/AdminUsersPage";
+import { AdminWorkPersonAiPage } from "../pages/AdminWorkPersonAiPage";
 import { AdminPaymentsPage } from "../pages/AdminPaymentsPage";
 import { AdminPage } from "../pages/AdminPage";
 import { AdminQuotaPage } from "../pages/AdminQuotaPage";
@@ -78,6 +79,7 @@ export function AppRoutes() {
         <Route path="/admin/quota" element={<AdminQuotaPage />} />
         <Route path="/admin/funnel" element={<AdminFunnelPage />} />
         <Route path="/admin/corrections" element={<AdminCorrectionsPage />} />
+        <Route path="/admin/work-person-ai" element={<AdminWorkPersonAiPage />} />
       </Route>
     </Routes>
   );

@@ -5,6 +5,7 @@ usuario). Fusión: exige ``UserPrincipal`` con ``role=admin`` y delega con scope
 ``storage:admin``. Nunca se usa ``tier`` para autorizar.
 """
 
+from src.osap.domain.errors import AiNotConfiguredError, ProposalNotAssignableError
 from src.osap.domain.principal import Principal, UserPrincipal
 from src.osap.domain.votes import ForbiddenError, UnauthenticatedError, WorkNotFoundError
 from src.osap.infrastructure.storage.storage_composer_client import StorageComposerClient
@@ -150,6 +151,53 @@ class ComposersService:
 
     def storage_admin_token(self) -> str:
         return self._client.storage_admin_token()
+
+    # -- atribución asistida por IA (propuestas + revisión humana) ------------
+    #
+    # Gemini solo propone; aceptar una propuesta es lo único que escribe en
+    # `works_person_roles` (y lo audita osap-storage en `work_attribution_history`).
+
+    def list_work_attribution_proposals(
+        self, token: str | None, status_filter: str | None, limit: int, offset: int
+    ) -> dict[str, object]:
+        self.require_admin(token)
+        return self._storage_result(
+            self._client.list_work_attribution_proposals(status_filter, limit, offset)
+        )
+
+    def get_work_attribution_proposal(self, token: str | None, proposal_id: int) -> dict[str, object]:
+        self.require_admin(token)
+        return self._storage_result(self._client.get_work_attribution_proposal(proposal_id))
+
+    def propose_work_attribution(
+        self, token: str | None, work_id: int, batch_id: str | None = None
+    ) -> dict[str, object]:
+        self.require_admin(token)
+        self._ensure_writable()
+        return self._storage_result(self._client.propose_work_attribution(work_id, batch_id))
+
+    def review_work_attribution_proposal(
+        self, token: str | None, proposal_id: int, action: str, note: str | None, reviewed_by: str | None
+    ) -> dict[str, object]:
+        self.require_admin(token)
+        self._ensure_writable()
+        return self._storage_result(
+            self._client.review_work_attribution_proposal(proposal_id, action, note, reviewed_by)
+        )
+
+    @staticmethod
+    def _storage_result(status_doc: tuple[int, dict[str, object]]) -> dict[str, object]:
+        """Traduce la respuesta de storage a errores de dominio (503 IA, 404, resto)."""
+        status, doc = status_doc
+        if 200 <= status < 300:
+            return doc
+        if status == 503:
+            raise AiNotConfiguredError("IA no configurada")
+        if status == 409:
+            raise ProposalNotAssignableError("Proposal requires a matched person")
+        if status == 404:
+            raise WorkNotFoundError("Attribution proposal not found")
+        raise ForbiddenError(f"Storage rejected work attribution request (HTTP {status})")
 
     def _ensure_writable(self) -> None:
         if self._read_only:

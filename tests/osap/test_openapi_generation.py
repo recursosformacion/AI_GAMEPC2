@@ -202,6 +202,7 @@ def test_tags_grouped() -> None:
         "Support",
         "System",
         "Votes",
+        "Work attribution",
         "Works",
     }
     declared = {tag["name"] for tag in spec.get("tags", [])}

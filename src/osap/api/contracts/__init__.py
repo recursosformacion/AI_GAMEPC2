@@ -96,6 +96,7 @@ from .votes import (
     VotesOverviewResponse,
     WorkStatisticsResponse,
 )
+from .work_attribution_ai import WorkAiReviewRequest
 from .works_resolution import (
     ErrorEnvelope,
     ResolutionItemResponse,
@@ -205,6 +206,7 @@ __all__ = [
     'VoteRequest',
     'VoteResponse',
     'VotesOverviewResponse',
+    'WorkAiReviewRequest',
     'WorkInfo',
     'WorkRelationships',
     'WorkStatisticsResponse',

@@ -27,7 +27,9 @@ from src.osap.api.contracts import (
     SourceSuggestionResolveRequest,
     SuccessEnvelope,
     UpsertProviderRequest,
+    WorkAiReviewRequest,
 )
+from src.osap.domain.errors import AiNotConfiguredError, ProposalNotAssignableError
 from src.osap.domain.votes import ForbiddenError, UnauthenticatedError, WorkNotFoundError
 from src.osap.infrastructure.storage.storage_composer_client import StorageComposerError
 
@@ -678,5 +680,150 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         except StorageComposerError:
             return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", "Composer admin service is not configured")
         return ctx.ok(SetAttributionResultResponse.model_validate(result))
+
+    # --- atribución asistida por IA (propuestas + revisión humana) -------------
+    #
+    # Gemini solo propone; la asignación efectiva y su auditoría viven en osap-storage.
+
+    @router.post(
+        "/api/v1/admin/work-person-ai/propose/{work_id}",
+        status_code=200,
+        tags=["Work attribution"],
+        summary="Propose a work attribution with AI (admin)",
+        description="Pide a la IA una propuesta de atribución para la obra y la guarda como "
+        "hipótesis pendiente de revisión (nunca asigna). Exige role=admin; backend: "
+        "osap-storage con storage:admin. Responde 503 si la IA no está configurada.",
+        response_model=SuccessEnvelope[dict[str, object]] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("Proposal", _shared._example({})),
+            401: _shared._UNAUTHORIZED_401,
+            403: _shared._FORBIDDEN_403,
+            404: _shared._NOT_FOUND_404,
+            503: _shared._resp("IA not configured", _shared._example({"code": "AI_NOT_CONFIGURED"})),
+        },
+    )
+    def propose_work_attribution(
+        work_id: int,
+        response: Response,
+        batch_id: str | None = Query(default=None),
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            return ctx.ok(ctx.api.propose_work_attribution(authorization, work_id, batch_id))
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return ctx.fail(404, response, "NOT_FOUND", "Work not found")
+        except AiNotConfiguredError:
+            return ctx.fail(503, response, "AI_NOT_CONFIGURED", "IA no configurada")
+        except StorageComposerError:
+            return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", "Storage admin service unavailable")
+
+    @router.get(
+        "/api/v1/admin/work-person-ai",
+        tags=["Work attribution"],
+        summary="List AI attribution proposals (admin)",
+        description="Lista propuestas de atribución con filtro por estado "
+        "(pending|accepted|rejected|uncertain). Exige role=admin.",
+        response_model=SuccessEnvelope[dict[str, object]] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("Proposals page", _shared._example({"items": [], "total": 0})),
+            401: _shared._UNAUTHORIZED_401,
+            403: _shared._FORBIDDEN_403,
+        },
+    )
+    def list_work_attribution_proposals(
+        response: Response,
+        status: str | None = Query(default=None, pattern=r"^(pending|accepted|rejected|uncertain)$"),
+        limit: int = Query(default=50, ge=1, le=500),
+        offset: int = Query(default=0, ge=0),
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            return ctx.ok(ctx.api.list_work_attribution_proposals(authorization, status, limit, offset))
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        except StorageComposerError:
+            return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", "Storage admin service unavailable")
+
+    @router.get(
+        "/api/v1/admin/work-person-ai/{proposal_id}",
+        tags=["Work attribution"],
+        summary="AI attribution proposal detail (admin)",
+        description="Detalle de una propuesta (evidencia y respuesta del modelo incluidos). "
+        "Exige role=admin.",
+        response_model=SuccessEnvelope[dict[str, object]] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("Proposal detail", _shared._example({})),
+            401: _shared._UNAUTHORIZED_401,
+            403: _shared._FORBIDDEN_403,
+            404: _shared._NOT_FOUND_404,
+        },
+    )
+    def get_work_attribution_proposal(
+        proposal_id: int,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            return ctx.ok(ctx.api.get_work_attribution_proposal(authorization, proposal_id))
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return ctx.fail(404, response, "NOT_FOUND", "Proposal not found")
+        except StorageComposerError:
+            return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", "Storage admin service unavailable")
+
+    @router.post(
+        "/api/v1/admin/work-person-ai/{proposal_id}/review",
+        status_code=200,
+        tags=["Work attribution"],
+        summary="Review an AI attribution proposal (admin)",
+        description="Acepta, rechaza o marca como dudosa una propuesta. Aceptar es lo único que "
+        "asigna la persona (vía canónica de storage) y lo audita. Exige role=admin.",
+        response_model=SuccessEnvelope[dict[str, object]] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("Review result", _shared._example({"id": 1, "status": "accepted"})),
+            401: _shared._UNAUTHORIZED_401,
+            403: _shared._FORBIDDEN_403,
+            404: _shared._NOT_FOUND_404,
+            409: _shared._resp(
+                "Proposal cannot be accepted", _shared._example({"code": "PROPOSAL_NOT_ASSIGNABLE"})
+            ),
+            **_shared._standard_errors(422),
+        },
+    )
+    def review_work_attribution_proposal(
+        proposal_id: int,
+        payload: WorkAiReviewRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        if payload.action not in ("accept", "reject", "uncertain"):
+            return ctx.fail(422, response, "VALIDATION_ERROR", "action must be accept|reject|uncertain")
+        try:
+            return ctx.ok(
+                ctx.api.review_work_attribution_proposal(
+                    authorization, proposal_id, payload.action, payload.note, payload.reviewed_by
+                )
+            )
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return ctx.fail(404, response, "NOT_FOUND", "Proposal not found")
+        except ProposalNotAssignableError:
+            return ctx.fail(409, response, "PROPOSAL_NOT_ASSIGNABLE", "Proposal requires a matched person")
+        except AiNotConfiguredError:
+            return ctx.fail(503, response, "AI_NOT_CONFIGURED", "IA no configurada")
+        except StorageComposerError:
+            return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", "Storage admin service unavailable")
 
     return router

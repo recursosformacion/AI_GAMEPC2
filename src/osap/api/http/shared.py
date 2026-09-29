@@ -162,6 +162,10 @@ _TAGS = [
     {"name": "Admin", "description": "Mantenimiento y administración."},
     {"name": "Support", "description": "Contacto y correcciones de catálogo."},
     {"name": "Quota", "description": "Cuotas de descarga OMR y estadísticas de uso."},
+    {
+        "name": "Work attribution",
+        "description": "Propuestas de atribución asistidas por IA y su revisión humana.",
+    },
 ]
 
 
