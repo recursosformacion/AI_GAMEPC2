@@ -169,6 +169,27 @@ class _MysqlStore(_MemoryStore):
             (day, provider),
         )
 
+    def usage_for_user(self, user_id: str, from_day: str, to_day: str) -> dict[str, object]:
+        rows = self._run(
+            "SELECT provider, SUM(quantity) AS quantity, SUM(bytes) AS bytes "
+            "FROM analytics_downloads WHERE user_id=%s AND day>=%s AND day<=%s "
+            "GROUP BY provider ORDER BY provider",
+            (user_id, from_day, to_day),
+        )
+        agg: list[tuple[str, int, int]] = [
+            (str(row["provider"]), _as_int(row["quantity"]), _as_int(row["bytes"]))
+            for row in rows
+        ]
+        providers = [
+            {"provider": provider, "downloads": downloads, "bytes": size}
+            for provider, downloads, size in agg
+        ]
+        return {
+            "count": sum(downloads for _p, downloads, _s in agg),
+            "bytes": sum(size for _p, _d, size in agg),
+            "providers": providers,
+        }
+
     def usage_overview(self, from_day: str, to_day: str) -> dict[str, int]:
         search_rows = self._run(
             """

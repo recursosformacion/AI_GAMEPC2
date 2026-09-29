@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter, Header, Query, Response
 
 from src.osap.api.contracts import (
+    AnalyticsMeResponse,
     AnalyticsOverviewResponse,
     ErrorEnvelope,
     SuccessEnvelope,
@@ -59,5 +60,28 @@ def build_analytics_router(ctx: HttpContext) -> APIRouter:
             start, end = end, start
         data = ctx.api.analytics_overview(start, end)
         return ctx.ok(AnalyticsOverviewResponse(from_day=start, to_day=end, **data))
+
+    @router.get(
+        "/api/v1/analytics/me",
+        tags=["Quota"],
+        summary="My usage analytics",
+        description="Estadísticas del propio usuario autenticado (descargas, cuota y etapa del "
+        "funnel). La identidad se toma del token; no acepta parámetros de usuario.",
+        response_model=SuccessEnvelope[AnalyticsMeResponse] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("My analytics", _shared._example({})),
+            401: _shared._UNAUTHORIZED_401,
+        },
+    )
+    def analytics_me(
+        response: Response,
+        from_day: str | None = Query(default=None),
+        to_day: str | None = Query(default=None),
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        data = ctx.api.analytics_me(authorization, from_day, to_day)
+        if data is None:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Login required")
+        return ctx.ok(AnalyticsMeResponse.model_validate(data))
 
     return router

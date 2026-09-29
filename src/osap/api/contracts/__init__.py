@@ -17,7 +17,7 @@ from .admin_selection import (
     SetProviderWiredRequest,
     UpsertProviderRequest,
 )
-from .analytics import AnalyticsOverviewResponse
+from .analytics import AnalyticsMeResponse, AnalyticsOverviewResponse
 from .base import _Frozen
 from .composers import (
     AddAliasRequest,
@@ -121,6 +121,7 @@ __all__ = [
     'AdminOverviewResponse',
     'AliasResponse',
     'AnalyticsOverviewResponse',
+    'AnalyticsMeResponse',
     'CatalogueRead',
     'ComposerCreationEvidenceResponse',
     'ComposerDetailResponse',

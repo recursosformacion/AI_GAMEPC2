@@ -74,6 +74,27 @@ class MemoryStore:
             return self.plan_limit("registered")
         return self.plan_limit("visitor")
 
+    # ---- estado de cuota de un usuario (solo lectura) ------------------------
+    def status_for_user(self, user_id: str, day: str) -> dict[str, object]:
+        """Límite/consumo/restante de un usuario autenticado para `day`.
+
+        Reutiliza la resolución de límite ya existente (override vigente o plan
+        `registered`) y el contador del día. No consume ni crea filas.
+        """
+        registered = self.plan_limit("registered") or 100
+        override = self.override_limit(user_id, day)
+        limit = override if override is not None else registered
+        tier = "donor" if (override is not None and override > registered) else "registered"
+        used = self._used(day, f"u:{user_id}")
+        remaining = max(0, limit - used)
+        return {
+            "limit": limit,
+            "used": used,
+            "remaining": remaining,
+            "tier": tier,
+            "donor": tier == "donor",
+        }
+
     # ---- operación atómica (implementada por subclass en MySQL) --------------
     def _atomic_increment(self, day: str, identity_key: str, limit: int) -> bool:
         key = (day, identity_key)

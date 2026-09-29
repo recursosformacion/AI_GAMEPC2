@@ -12,12 +12,14 @@ from fastapi.testclient import TestClient
 
 from src.osap.api.contracts import SearchRequest, SearchResponse
 from src.osap.api.http import search as search_http
+from src.osap.api.http.analytics import build_analytics_router
 from src.osap.api.http.context import HttpContext
 from src.osap.api.http.search import build_search_router
 from src.osap.api.platform import PlatformApi
 from src.osap.api.platform._support import _search_signature
 from src.osap.api.platform.analytics import AnalyticsMixin
 from src.osap.api.platform.quota import QuotaMixin
+from src.osap.domain.principal import Principal, UserPrincipal
 from src.osap.infrastructure.state.analytics.memory import MemoryStore, today
 from src.osap.infrastructure.state.analytics.recorder import AnalyticsRecorder
 from src.osap.infrastructure.state.analytics_store import build_analytics_store
@@ -272,3 +274,104 @@ def test_download_labels_zip_musicxml_as_mxl(monkeypatch: pytest.MonkeyPatch) ->
     assert response.status_code == 200
     assert '.mxl"' in response.headers["content-disposition"]
     assert response.headers["content-type"].startswith("application/vnd.recordare.musicxml")
+
+
+# --- Fase U: estadísticas del propio usuario ---------------------------------
+
+
+def test_usage_for_user_filters_and_aggregates() -> None:
+    store = MemoryStore()
+    store.record_download(DAY, "u1", "omr", "42", "musicxml", bytes_transferred=100)
+    store.record_download(DAY, "u1", "imslp", "7", "pdf", bytes_transferred=50)
+    store.record_download(DAY, "u2", "omr", "9", "pdf", bytes_transferred=999)
+    result = store.usage_for_user("u1", DAY, DAY)
+    assert result["count"] == 2
+    assert result["bytes"] == 150
+    providers = {p["provider"]: p for p in result["providers"]}  # type: ignore[union-attr]
+    assert providers["omr"]["downloads"] == 1
+    assert providers["imslp"]["bytes"] == 50
+
+
+def test_quota_status_for_user_registered_y_donor() -> None:
+    store = QuotaStore()
+    store.counters[(DAY, "u:u1")] = 17
+    status = store.status_for_user("u1", DAY)
+    assert status == {"limit": 100, "used": 17, "remaining": 83, "tier": "registered", "donor": False}
+    store.set_override("u1", 1000, DAY, None)
+    donor = store.status_for_user("u1", DAY)
+    assert donor["limit"] == 1000
+    assert donor["remaining"] == 983
+    assert donor["tier"] == "donor" and donor["donor"] is True
+
+
+class _Flush:
+    def flush(self) -> None:
+        return None
+
+
+class _MeApi(AnalyticsMixin):
+    def __init__(
+        self, principal: Principal | None, analytics_store: MemoryStore, quota_store: QuotaStore
+    ) -> None:
+        self._principal = principal
+        self._analytics_store = analytics_store
+        self._quota_store = quota_store
+        self._analytics = _Flush()
+
+    def current_user(self, token: str | None) -> Principal | None:
+        return self._principal
+
+
+def test_analytics_me_solo_datos_propios() -> None:
+    astore = MemoryStore()
+    astore.record_download(DAY, "u1", "omr", "42", "musicxml", bytes_transferred=100)
+    astore.record_download(DAY, "u2", "omr", "9", "pdf", bytes_transferred=999)
+    qstore = QuotaStore()
+    qstore.counters[(today(), "u:u1")] = 3
+    api = _MeApi(UserPrincipal(user_id="u1"), astore, qstore)
+    data = api.analytics_me("Bearer x", DAY, DAY)
+    assert data is not None
+    assert data["downloads"]["count"] == 1  # type: ignore[index]
+    assert data["downloads"]["bytes"] == 100  # type: ignore[index]
+    assert data["quota"]["used"] == 3  # type: ignore[index]
+    assert data["quota"]["remaining"] == 97  # type: ignore[index]
+    assert data["access"]["stage"] == "S2"  # type: ignore[index]
+    assert data["access"]["tier"] == "registered"  # type: ignore[index]
+
+
+def test_analytics_me_sin_usuario_devuelve_none() -> None:
+    api = _MeApi(None, MemoryStore(), QuotaStore())
+    assert api.analytics_me(None, DAY, DAY) is None
+
+
+class _FakeMeApi:
+    def __init__(self, payload: dict[str, object] | None) -> None:
+        self._payload = payload
+
+    def analytics_me(self, token: str | None, from_day: str | None, to_day: str | None) -> dict[str, object] | None:
+        return self._payload
+
+
+_ME_PAYLOAD: dict[str, object] = {
+    "period": {"from_day": DAY, "to_day": DAY},
+    "access": {"stage": "S2", "tier": "registered"},
+    "quota": {"limit": 100, "used": 17, "remaining": 83},
+    "downloads": {"count": 17, "bytes": 1234, "providers": []},
+}
+
+
+def _me_client(payload: dict[str, object] | None) -> TestClient:
+    app = FastAPI()
+    app.include_router(build_analytics_router(HttpContext(api=_FakeMeApi(payload), container=object())))  # type: ignore[arg-type]
+    return TestClient(app)
+
+
+def test_http_analytics_me_401_sin_usuario() -> None:
+    assert _me_client(None).get("/api/v1/analytics/me").status_code == 401
+
+
+def test_http_analytics_me_ok_e_ignora_parametro_user_id() -> None:
+    client = _me_client(_ME_PAYLOAD)
+    resp = client.get("/api/v1/analytics/me?user_id=otro-usuario")
+    assert resp.status_code == 200
+    assert '"used":17' in resp.text

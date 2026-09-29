@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from src.osap.api.platform._support import KnowledgeStore, SessionSources, SourceCatalog
     from src.osap.application.composers_service import ComposersService
     from src.osap.bootstrap.container import Container
+    from src.osap.domain.principal import Principal
     from src.osap.infrastructure.resolution.acquisition_service import AcquisitionService
     from src.osap.infrastructure.state.analytics.memory import MemoryStore as AnalyticsStore
     from src.osap.infrastructure.state.analytics.recorder import AnalyticsRecorder
@@ -144,6 +145,10 @@ class PlatformApiCore:
 
     def _require_admin(self, token: str | None) -> None:
         """Implementado por el mixin de votos/usuarios; consumido por providers/admin."""
+        raise NotImplementedError
+
+    def current_user(self, token: str | None) -> Principal | None:
+        """Implementado por el mixin de votos/usuarios; consumido por analítica personal."""
         raise NotImplementedError
 
     def composers(self) -> ComposersService:

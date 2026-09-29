@@ -78,6 +78,29 @@ class MemoryStore:
         provider_row = self._provider_daily.setdefault((day, provider), self._provider_row())
         provider_row["downloads_failed"] += 1
 
+    def usage_for_user(self, user_id: str, from_day: str, to_day: str) -> dict[str, object]:
+        """Descargas del propio usuario en [from_day, to_day] (dimensión usuario).
+
+        Devuelve `{count, bytes, providers: [{provider, downloads, bytes}]}`. Solo lectura de
+        las filas ya existentes; no introduce métricas nuevas.
+        """
+        count = 0
+        bytes_total = 0
+        by_provider: dict[str, dict[str, int]] = {}
+        for (day, uid, provider, _work, _fmt), row in self._downloads.items():
+            if uid != user_id or not (from_day <= day <= to_day):
+                continue
+            count += row["quantity"]
+            bytes_total += row["bytes"]
+            bucket = by_provider.setdefault(provider, {"downloads": 0, "bytes": 0})
+            bucket["downloads"] += row["quantity"]
+            bucket["bytes"] += row["bytes"]
+        providers = [
+            {"provider": name, "downloads": data["downloads"], "bytes": data["bytes"]}
+            for name, data in sorted(by_provider.items())
+        ]
+        return {"count": count, "bytes": bytes_total, "providers": providers}
+
     def usage_overview(self, from_day: str, to_day: str) -> dict[str, int]:
         searches_total = 0
         searches_with = 0
