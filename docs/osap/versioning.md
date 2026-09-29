@@ -201,3 +201,19 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 - **Nota operativa:** el primer intento de SERVICE calculó el hash con Argon2 (incorrecto);
   corregido en la misma ventana usando `HmacTokenHasher`.
 - **Fuera de alcance (acordado):** filas heredadas de `service_clients`.
+
+### SEC-E — Rotación de credenciales externas · R2 (2026-09-29) — R2 CERRADA
+
+- **R2 (Cloudflare):** token S3 del bucket `osap-storage` (account `649d3187e49cf9ee8dbbc2b0c22d2f4e`),
+  consumido por `osap-storage` (cliente S3 boto3). Sin duplicación dev/prod.
+- **Rotación con solape** (R2 admite varios tokens): token nuevo configurado en
+  `osap-storage` (local `config.production.yaml` y prod `config.yaml`) y servicio
+  reiniciado. Verificado `put/get/delete` y **lectura de objetos reales** del bucket;
+  el token antiguo seguía válido (solape). Revocado en Cloudflare → el **antiguo queda
+  rechazado** (`Unauthorized`) y el **nuevo sigue operativo**; storage `active` y
+  `health` con `repository: true`.
+- **Evidencia:** token antiguo `access_key` hash `4b19f6b641` / `secret_key` hash
+  `3e3523fdc6`; fecha de rotación 2026-09-29.
+- **Backups conservados:** servidor `config.yaml.sec-e-r2-backup-…` y
+  `config.yaml.sec-e-r2-switch-…` (600); local `config.production.yaml.sec-e-r2-backup`.
+- **Pendiente de SEC-E:** MusicBrainz, PayPal (live) y social Google/GitHub.
