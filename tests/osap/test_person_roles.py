@@ -31,6 +31,7 @@ def test_role_ids_y_nombres() -> None:
     assert role_ids(("composer", "arranger")) == (1, 3)
     assert role_names([1, 3, 999, "10"]) == ["composer", "arranger", "performer"]
     assert ROLE_IDS["editor"] == 6
+    assert ROLE_IDS["adapter"] == 16  # migración 013 en osap-storage ("Adaptador/a")
 
 
 def test_person_has_role_por_nombre_o_id() -> None:

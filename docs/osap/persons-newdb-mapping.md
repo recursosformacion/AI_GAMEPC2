@@ -105,7 +105,7 @@ clave en verde) pero la adaptación funcional completa depende de que storage ex
   - `GET /api/v1/persons?role=composer[,arranger…]` (rol desconocido → 400)
   - `GET /api/v1/persons/{person_id}`
   - `GET /api/v1/persons/{person_id}/works`
-- **Mapeo de roles** en `domain/person_roles.py` (tabla `roles` 1..15; parseo y validación).
+- **Mapeo de roles** en `domain/person_roles.py` (tabla `roles` 1..16; parseo y validación).
 - **Cliente de storage** con **puente**: intenta `/persons` y cae a `/composers` si aún no existe
   (`_call` / `_call_persons_first`), y anota `roles` a partir de `role_ids` cuando storage los envíe.
 - `roles` añadido a `ComposerSummaryResponse`/`ComposerDetailResponse` (aditivo, default `[]`).

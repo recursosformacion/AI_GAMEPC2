@@ -4,8 +4,8 @@ osap-storage publica los roles con id numérico (tabla `roles`) y la API los pid
 (`GET /api/v1/persons?role=composer,arranger`). Aquí se centraliza el mapeo para no
 repartir "1 = compositor" por el código.
 
-Fuente: `osap-storage.roles` (1..15). Debe mantenerse estable; si storage añade roles, se
-amplía aquí (y con test).
+Fuente: `osap-storage.roles` (1..16; el 16, "Adaptador/a", se añadió en la migración 013). Debe
+mantenerse estable; si storage añade roles, se amplía aquí (y con test).
 """
 
 from __future__ import annotations
@@ -32,6 +32,7 @@ ROLE_IDS: dict[str, int] = {
     "dedicatee": 13,
     "patron": 14,
     "inspiration": 15,
+    "adapter": 16,
 }
 
 # id → nombre de API
