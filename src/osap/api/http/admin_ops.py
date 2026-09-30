@@ -31,6 +31,7 @@ from src.osap.api.contracts import (
 )
 from src.osap.domain.errors import (
     AiNotConfiguredError,
+    AiUnavailableError,
     ProposalNotAssignableError,
     ProposalStateError,
     StorageUnavailableError,
@@ -728,6 +729,8 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(404, response, "NOT_FOUND", "Work not found")
         except AiNotConfiguredError:
             return ctx.fail(503, response, "AI_NOT_CONFIGURED", "IA no configurada")
+        except AiUnavailableError as exc:
+            return ctx.fail(503, response, "AI_UNAVAILABLE", str(exc))
         except StorageUnavailableError as exc:
             return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", str(exc))
         except StorageComposerError:
@@ -842,6 +845,8 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(409, response, "PROPOSAL_NOT_ASSIGNABLE", str(exc))
         except AiNotConfiguredError:
             return ctx.fail(503, response, "AI_NOT_CONFIGURED", "IA no configurada")
+        except AiUnavailableError as exc:
+            return ctx.fail(503, response, "AI_UNAVAILABLE", str(exc))
         except StorageUnavailableError as exc:
             return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", str(exc))
         except StorageComposerError:

@@ -69,6 +69,13 @@ class _FakeAiClient(StorageComposerClient):
         self.calls.append(("propose", (work_id, batch_id, force)))
         if work_id == 500:
             return 503, {"detail": {"code": "AI_NOT_CONFIGURED", "message": "IA no configurada"}}
+        if work_id == 501:
+            return 503, {
+                "detail": {
+                    "code": "AI_UNAVAILABLE",
+                    "message": "Gemini no disponible tras 3 intentos (gemini-flash-lite-latest)",
+                }
+            }
         reused = not force
         return 200, {
             "proposal": {
@@ -155,6 +162,13 @@ def test_propose_sin_ia_configurada_503() -> None:
     resp = _admin_client().post("/api/v1/admin/work-person-ai/propose/500", headers=ADMIN_HEADERS)
     assert resp.status_code == 503
     assert resp.json()["error"]["code"] == "AI_NOT_CONFIGURED"
+
+
+def test_propose_gemini_caido_503_ai_unavailable() -> None:
+    resp = _admin_client().post("/api/v1/admin/work-person-ai/propose/501", headers=ADMIN_HEADERS)
+    assert resp.status_code == 503
+    assert resp.json()["error"]["code"] == "AI_UNAVAILABLE"
+    assert "3 intentos" in resp.json()["error"]["message"]
 
 
 def test_propose_admin_200() -> None:

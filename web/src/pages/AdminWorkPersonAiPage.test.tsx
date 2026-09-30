@@ -37,7 +37,7 @@ const PROPOSAL: WorkAiProposal = {
   role_name: "Compositor/a",
   status: "pending",
   confidence: 0.96,
-  model: "gemini-2.5-flash",
+  model: "gemini-flash-lite-latest",
   evidence_json: '[{"type":"source_metadata","text":"PDMX"}]',
 };
 

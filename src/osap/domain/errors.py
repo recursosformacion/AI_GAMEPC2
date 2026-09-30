@@ -65,4 +65,13 @@ class StorageUnavailableError(DomainError):
     """
 
 
+class AiUnavailableError(DomainError):
+    """Gemini no respondió (timeout o 429/503 tras reintentos) al pedir una propuesta.
+
+    osap-storage responde 503 `AI_UNAVAILABLE` sin guardar propuesta; se propaga igual para
+    que el panel lo muestre como fallo temporal y se pueda reintentar.
+    """
+
+
+
 

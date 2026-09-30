@@ -7,6 +7,7 @@ usuario). Fusión: exige ``UserPrincipal`` con ``role=admin`` y delega con scope
 
 from src.osap.domain.errors import (
     AiNotConfiguredError,
+    AiUnavailableError,
     ProposalNotAssignableError,
     ProposalStateError,
     StorageUnavailableError,
@@ -199,6 +200,8 @@ class ComposersService:
             return doc
         code, message = cls._storage_error(doc)
         if status == 503:
+            if code == "AI_UNAVAILABLE":
+                raise AiUnavailableError(message or "Gemini no disponible")
             raise AiNotConfiguredError(message or "IA no configurada")
         if status == 409:
             if code == "PROPOSAL_NOT_PENDING":
