@@ -38,6 +38,7 @@ import type {
   WorkStatistics,
   WorkAiProposal,
   WorkAiProposalPage,
+  WorkAiProposalResult,
   WorkAiProposalStatus,
   WorkAiReviewAction,
 } from "./types";
@@ -384,9 +385,15 @@ export class ApiClient {
     return this.get<WorkAiProposal>(`/admin/work-person-ai/${proposalId}`);
   }
 
-  async proposeWorkAttribution(workId: number, batchId?: string): Promise<WorkAiProposal> {
-    const qs = batchId ? `?batch_id=${encodeURIComponent(batchId)}` : "";
-    return this.post<WorkAiProposal>(`/admin/work-person-ai/propose/${workId}${qs}`);
+  async proposeWorkAttribution(
+    workId: number,
+    options?: { batchId?: string; force?: boolean },
+  ): Promise<WorkAiProposalResult> {
+    const params = new URLSearchParams();
+    if (options?.batchId) params.set("batch_id", options.batchId);
+    if (options?.force) params.set("force", "true");
+    const qs = params.toString();
+    return this.post<WorkAiProposalResult>(`/admin/work-person-ai/propose/${workId}${qs ? `?${qs}` : ""}`);
   }
 
   async reviewWorkAttributionProposal(

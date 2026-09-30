@@ -289,11 +289,15 @@ class StorageComposerClient:
     # Gemini solo propone: estas llamadas listan/consultan/revisan propuestas. La asignación
     # efectiva (y su auditoría en work_attribution_history) ocurre en osap-storage al aceptar.
 
-    def propose_work_attribution(self, work_id: int, batch_id: str | None) -> tuple[int, dict[str, object]]:
+    def propose_work_attribution(
+        self, work_id: int, batch_id: str | None, force: bool
+    ) -> tuple[int, dict[str, object]]:
+        """Sin `force`, storage devuelve la última propuesta con `reused=true` (sin llamar a la IA)."""
         payload: dict[str, object] = {"batch_id": batch_id} if batch_id else {}
+        query = "?force=true" if force else ""
         status, doc = self._call(
             "POST",
-            f"/api/admin/work-person-ai/propose/{int(work_id)}",
+            f"/api/admin/work-person-ai/propose/{int(work_id)}{query}",
             payload=payload,
             scope="storage:admin",
             provider=self._admin_token_provider,

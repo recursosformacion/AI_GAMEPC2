@@ -674,3 +674,9 @@ export interface WorkAiProposalPage {
   items: WorkAiProposal[];
   total: number;
 }
+
+/** Resultado de pedir una propuesta: `reused=true` significa que no se consultó a la IA. */
+export interface WorkAiProposalResult {
+  proposal: WorkAiProposal;
+  reused: boolean;
+}

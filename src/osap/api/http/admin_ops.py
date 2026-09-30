@@ -696,11 +696,15 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         tags=["Work attribution"],
         summary="Propose a work attribution with AI (admin)",
         description="Pide a la IA una propuesta de atribución para la obra y la guarda como "
-        "hipótesis pendiente de revisión (nunca asigna). Exige role=admin; backend: "
-        "osap-storage con storage:admin. Responde 503 si la IA no está configurada.",
+        "hipótesis pendiente de revisión (nunca asigna). Sin `force`, si la obra ya tiene "
+        "propuesta devuelve la última con `reused=true` sin consultar a la IA; con "
+        "`force=true` vuelve a consultar y crea una propuesta nueva. Exige role=admin; "
+        "backend: osap-storage con storage:admin. Responde 503 si la IA no está configurada.",
         response_model=SuccessEnvelope[dict[str, object]] | ErrorEnvelope,
         responses={
-            200: _shared._resp("Proposal", _shared._example({})),
+            200: _shared._resp(
+                "Proposal (with reused flag)", _shared._example({"proposal": {}, "reused": False})
+            ),
             401: _shared._UNAUTHORIZED_401,
             403: _shared._FORBIDDEN_403,
             404: _shared._NOT_FOUND_404,
@@ -711,10 +715,11 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         work_id: int,
         response: Response,
         batch_id: str | None = Query(default=None),
+        force: bool = Query(default=False),
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            return ctx.ok(ctx.api.propose_work_attribution(authorization, work_id, batch_id))
+            return ctx.ok(ctx.api.propose_work_attribution(authorization, work_id, batch_id, force))
         except UnauthenticatedError:
             return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
         except ForbiddenError:

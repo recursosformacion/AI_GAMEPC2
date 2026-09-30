@@ -175,11 +175,11 @@ class ComposersService:
         return self._storage_result(self._client.get_work_attribution_proposal(proposal_id))
 
     def propose_work_attribution(
-        self, token: str | None, work_id: int, batch_id: str | None = None
+        self, token: str | None, work_id: int, batch_id: str | None = None, force: bool = False
     ) -> dict[str, object]:
         self.require_admin(token)
         self._ensure_writable()
-        return self._storage_result(self._client.propose_work_attribution(work_id, batch_id))
+        return self._storage_result(self._client.propose_work_attribution(work_id, batch_id, force))
 
     def review_work_attribution_proposal(
         self, token: str | None, proposal_id: int, action: str, note: str | None

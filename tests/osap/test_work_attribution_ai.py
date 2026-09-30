@@ -63,15 +63,22 @@ class _FakeAiClient(StorageComposerClient):
             "evidence_json": "[]",
         }
 
-    def propose_work_attribution(self, work_id: int, batch_id: str | None) -> tuple[int, dict[str, object]]:
+    def propose_work_attribution(
+        self, work_id: int, batch_id: str | None, force: bool
+    ) -> tuple[int, dict[str, object]]:
+        self.calls.append(("propose", (work_id, batch_id, force)))
         if work_id == 500:
             return 503, {"detail": {"code": "AI_NOT_CONFIGURED", "message": "IA no configurada"}}
+        reused = not force
         return 200, {
-            "id": 7,
-            "work_id": work_id,
-            "resolution": "unknown",
-            "person_match": "not_applicable",
-            "status": "pending",
+            "proposal": {
+                "id": 7 if force else 6,
+                "work_id": work_id,
+                "resolution": "unknown",
+                "person_match": "not_applicable",
+                "status": "pending",
+            },
+            "reused": reused,
         }
 
     def review_work_attribution_proposal(
@@ -153,7 +160,22 @@ def test_propose_sin_ia_configurada_503() -> None:
 def test_propose_admin_200() -> None:
     resp = _admin_client().post("/api/v1/admin/work-person-ai/propose/310455", headers=ADMIN_HEADERS)
     assert resp.status_code == 200
-    assert resp.json()["data"]["status"] == "pending"
+    data = resp.json()["data"]
+    assert data["reused"] is True
+    assert data["proposal"]["status"] == "pending"
+
+
+def test_propose_force_reconsulta_y_pasa_force_a_storage() -> None:
+    client, fake = _build(
+        StaticTokenAuthenticator(TOKEN_ADMIN, ADMIN_USER_ID, roles=("user", "admin"))
+    )
+    resp = client.post(
+        "/api/v1/admin/work-person-ai/propose/310455?force=true", headers=ADMIN_HEADERS
+    )
+    assert resp.status_code == 200
+    assert resp.json()["data"]["reused"] is False
+    propose_calls = [call for call in fake.calls if call[0] == "propose"]
+    assert propose_calls[0][1] == (310455, None, True)
 
 
 def test_review_accept_200_y_usa_la_identidad_del_token() -> None:
