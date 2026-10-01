@@ -33,6 +33,7 @@ ROLE_IDS: dict[str, int] = {
     "patron": 14,
     "inspiration": 15,
     "adapter": 16,
+    "translator": 17,
 }
 
 # id → nombre de API
