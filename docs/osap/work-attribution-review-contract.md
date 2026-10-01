@@ -32,8 +32,8 @@ Medido en el artefacto: los clústeres de identidad se reparten así.
 | **E** persona nueva | 3.581 | 7.278 | Sin coincidencia en catálogo | Decisión binaria: `create_person` o `not_a_person` |
 | **F** ambiguo | 30 | 1.923 | Varios candidatos | Elegir candidato (`map_to_existing`) o `leave_unresolved` |
 | Artefactos | 3.146 | 4.259 | Motivo (`posible_titulo`, `concatenacion`, …) | `descartar` o `conservar_para_investigacion` |
-| Atribuciones | 12.569 | 12.569 | Contexto completo por obra | Decisión por obra, agrupable por patrón (`attr_type`/nota ya coherentes) |
-| Conflictos | 119 | — | Ambas propuestas | `persona_gana` / `atribucion_gana` / `revisar_manual` |
+| Atribuciones | 12.569 | 12.569 | Contexto completo por obra | Decisión por obra; agrupable por patrón coherente (`attr_type`/nota) |
+| Conflictos (plan incompleto) | 119 | — | Ambas propuestas | `persona_gana` / `atribucion_gana` / `revisar_manual` |
 
 ## 3. Contrato de `review_decisions`
 
@@ -55,27 +55,70 @@ Claves **lógicas, sin UUID ni ids locales** (aplicables idénticamente en Dev y
 | `identity` | `leave_unresolved` | — | No se decide ahora → no se aplica |
 | `relation` | `accept` \| `reject` \| `uncertain` | — | Excepción por obra×persona×rol (override del clúster) |
 | `attribution` | `anonymous` \| `traditional` \| `unknown` \| `identified` | — | Atribución de la obra (con `attr_type`/nota cuando aplique) |
-| `artefacto` | `descartar` \| `conservar_para_investigacion` | — | No escribe en catálogo; descarta o encola investigación |
+| `artefacto` | `descartar` \| `conservar_para_investigacion` | — | No escribe en catálogo; descarta el registro o lo encola para investigación. El motivo va en evidencia, no en el estado |
 | `conflict` | `persona_gana` \| `atribucion_gana` \| `revisar_manual` | — | Resuelve la coherencia de la obra |
 
 Campos: `item_key` (trazabilidad al item), `evidence_json` (texto de origen, muestra, motivo),
 `notes`, `decided_by`, `decided_at`, `batch`.
 
-### Decisiones por lote (sin cambiar el esquema)
-Una acción humana sobre un lote (p. ej. “aceptar el tramo A”) se materializa como **una decisión por
-unidad** con el mismo `batch` y `evidence.decision_mode = "bulk:<tramo>"` + `evidence.sample_ref`.
-Así el artefacto sigue teniendo una fila por unidad (auditable) y la UI puede crearlas en bloque.
+**Vocabulario de artefactos**: `descartar` / `conservar_para_investigacion` (no `reject`/`keep`:
+expresan qué se decide sobre el **registro**, no un rechazo a una persona). Los motivos
+(`posible_titulo`, `concatenacion`, `texto_truncado`, `prefijo_atribucion`) **no son estados**:
+viajan en `evidence.artifact_reason`.
 
-## 4. Cómo lo consumirá el aplicador (Fase 6, sin construir aún)
+**`works_attr_type` nunca es efecto de una decisión `identity`.** Solo una decisión `attribution`
+puede desembocar en escribir `works.works_attr_type` / `works_attribution_note`, y **solo** cuando el
+conflicto de esa obra esté resuelto. En particular, `persona + traditional` **no** se convierte
+automáticamente en `traditional`: una obra tradicional puede tener arreglista, transcriptor o editor.
+
+### Lotes explícitos (mecanismo de creación, no sustituto de decisiones)
+Un **lote** no sustituye las decisiones: es un mecanismo para **generarlas**.
+
+```
+acción humana → batch explícito → N unidades seleccionadas → una decisión por unidad
+                (evidence.decision_mode = "bulk:<tramo>", evidence.sample registrada)
+```
+
+- **Tramo A** (ancla tipada, evidencia fuerte): se permiten **lotes grandes**.
+- **Tramo B**: **nunca** un “aceptar todo B” global. Solo **sublotes homogéneos por evidencia**, con
+  la forma `B / person_key / role / patrón de evidencia`, y cada sublote debe mostrar **antes** de
+  aplicarlo: número de obras, identidad candidata, anclas disponibles, nombres observados,
+  fuentes/patrones, una muestra representativa y las excepciones detectadas.
+- Cada resolución queda **materializada y auditable como decisión individual** en `review_decisions`.
+
+## 4. Separación decisión ↔ ejecución, y plan final por obra
+
+La **decisión humana** (arriba) y la **ejecución** (Fase 6, aún sin construir) son planos distintos:
+`review_decisions` registra qué decidió una persona; el aplicador decide **cuándo** y **cómo** el
+catálogo pasa a un estado coherente.
+
+**Regla de coherencia**: *una obra no se aplica hasta que todas las decisiones que afectan a su estado
+final sean coherentes*. Los 119 conflictos no son un caso especial del SQL: son simplemente **obras
+cuyo plan todavía está incompleto**.
+
+El aplicador no ejecuta decisiones aisladas; construye un **plan final por obra**:
+
+```
+obra
+ ├── identidad/personas aprobadas
+ ├── relaciones aprobadas (persona × rol)
+ ├── attribución final
+ └── conflicto resuelto
+          ↓
+      una transacción
+```
 
 1. Resolver `work_key` → `works.id` y `person_key` → `persons_id` **por entorno**.
-2. Construir el plan por obra: relaciones (`persona×rol`) + atribución decidida.
-3. **Coherencia obligatoria**: si una obra tiene `identity=accept|map_to_existing|create_person` **y**
-   `attribution=anonymous|traditional`, no se aplica hasta que exista una decisión `conflict`.
-4. Escribir en una transacción: `works_person_roles` + `work_attribution_audit` (con `proposal_id`/
-   decision) y, si procede, `works.works_attr_type`/`works_attribution_note`.
-5. Idempotente y reversible: el historial liga relación ↔ decisión.
-6. `create_person` es el **único** camino que crea personas.
+2. Componer el plan por obra a partir de las decisiones (incluidas las excepciones `relation`).
+3. **Bloquear** la obra si su plan no es coherente (p. ej. identidad aprobada + atribución
+   `anonymous`/`traditional` sin decisión de `conflict`).
+4. Escribir en una transacción: `works_person_roles` + `work_attribution_audit` (ligado a la decisión)
+   y, solo desde una decisión `attribution`, `works.works_attr_type` / `works_attribution_note`.
+5. **`set_attribution` no se invoca directamente desde cada decisión** de revisión: el aplicador
+   determina primero el estado coherente de la obra y ejecuta la modificación necesaria. Así se evita
+   que borre relaciones de persona recién aprobadas.
+6. Idempotente y reversible: el historial liga relación ↔ decisión.
+7. `create_person` es el **único** camino que crea personas.
 
 ## 5. Orden de revisión propuesto (eficiencia)
 
