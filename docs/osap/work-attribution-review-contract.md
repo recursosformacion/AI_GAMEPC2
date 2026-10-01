@@ -144,9 +144,14 @@ sin convertir la revisión en 41.535 pulsaciones.
 ## 7. Hallazgos de la revisión (y pendientes anotados)
 
 ### 7.1 Corregido
-- **Conflicto ≠ “hay persona y atribución”**: solo hay conflicto si la persona propuesta es **compositor/a**.
-  Una obra tradicional puede tener arreglista, transcriptor o editor sin contradicción. Efecto: los conflictos
-  pasan de **119 a 36** (34 `traditional` + 2 `anonymous`; en los 36 el rol del clúster incluye `composer`).
+- **Conflicto ≠ “hay persona y atribución”**: solo hay conflicto si la persona propuesta es **compositor/a**
+  **en esa obra**. Una obra tradicional puede tener arreglista, transcriptor o editor sin contradicción.
+  Efecto: los conflictos pasan de **119 a 36** (34 `traditional` + 2 `anonymous`; en los 36 la relación en
+  conflicto es la de **compositor**).
+- **El conflicto es por (obra × persona × rol)**, no por persona agregada: la misma persona puede aparecer
+  como **arreglista** en una obra tradicional (correcto) y como **compositor** en otra (conflicto). La vista
+  y la decisión **nunca** mezclan roles: la decisión `conflict` afecta **solo a la hipótesis de compositor**
+  de esa obra; las relaciones de arreglista/transcriptor/editor de esa persona quedan intactas.
 - **Vocabulario**: el idioma interno (`attribution_status`, inglés minúscula) y el del catálogo
   (`works.attr_type`, castellano mayúscula) son el mismo concepto — `traditional` ≡ `TRADICIONAL`,
   `anonymous` ≡ `ANONIMA`. La vista muestra ambos.
