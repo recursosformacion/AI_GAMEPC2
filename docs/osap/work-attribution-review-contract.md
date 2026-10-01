@@ -144,14 +144,14 @@ sin convertir la revisión en 41.535 pulsaciones.
 ## 7. Hallazgos de la revisión (y pendientes anotados)
 
 ### 7.1 Corregido
-- **Conflicto ≠ “hay persona y atribución”**: solo hay conflicto si la persona propuesta es **compositor/a**
-  **en esa obra**. Una obra tradicional puede tener arreglista, transcriptor o editor sin contradicción.
-  Efecto: los conflictos pasan de **119 a 36** (34 `traditional` + 2 `anonymous`; en los 36 la relación en
-  conflicto es la de **compositor**).
-- **El conflicto es por (obra × persona × rol)**, no por persona agregada: la misma persona puede aparecer
-  como **arreglista** en una obra tradicional (correcto) y como **compositor** en otra (conflicto). La vista
-  y la decisión **nunca** mezclan roles: la decisión `conflict` afecta **solo a la hipótesis de compositor**
-  de esa obra; las relaciones de arreglista/transcriptor/editor de esa persona quedan intactas.
+- **Conflicto ≠ “hay persona y atribución”**: un conflicto exige que la persona esté propuesta como **compositor/a
+  en esa misma obra** (relación `obra × persona × rol=compositor`), no en otra obra del mismo clúster. Una obra
+  tradicional puede tener arreglista, transcriptor o editor sin contradicción.
+  Efecto medido: **119 → 36 → 3** conflictos. Los 119 iniciales contaban cualquier persona; los 36, personas
+  compositoras *del clúster* (no necesariamente de esa obra); los **3** reales son obras con atribución
+  `traditional`/`anonymous` **y** una propuesta de compositor para esa obra.
+- **La vista separa roles**: muestra la persona **en conflicto como Compositor/a** y, aparte, las que aparecen
+  sin conflicto (Arreglista, Transcriptor/a…). Nunca se presenta un rol agregado ni mezclado entre obras.
 - **Vocabulario**: el idioma interno (`attribution_status`, inglés minúscula) y el del catálogo
   (`works.attr_type`, castellano mayúscula) son el mismo concepto — `traditional` ≡ `TRADICIONAL`,
   `anonymous` ≡ `ANONIMA`. La vista muestra ambos.
@@ -163,12 +163,13 @@ sin convertir la revisión en 41.535 pulsaciones.
 2. **Catálogo — rol “Traductor/a”** (id 17, clave `translator`) + marcadores `translated by`, `translation by`,
    `traducido por`, `traducción de`, `traductor`. Sin él, `translated by X` pierde la persona. **Nunca** usar
    “trad.” a secas como marcador (colisiona con `Traditional`).
-3. **Catálogo/alias — usuarios digitales**: `EFPIANIST` es el nombre de usuario del pianista Eduardo Fernández;
+3. **Artefacto — 'Composer : trad. …'**: nombres como `trad. Dm (drop D)` (afinación) entran hoy como persona/compositor; el detector de posible_artefacto debe cubrir el patrón `trad.`/`composer: trad` en contextos de afinación.
+4. **Catálogo/alias — usuarios digitales**: `EFPIANIST` es el nombre de usuario del pianista Eduardo Fernández;
    mapearlo a la persona real es tarea de **alias**, no del parser (el parser respeta lo que dice la fuente).
-4. **Proceso — corrección de decisiones**: hoy `DecisionExistenteDistinta` impide sobrescribir una decisión
+5. **Proceso — corrección de decisiones**: hoy `DecisionExistenteDistinta` impide sobrescribir una decisión
    humana; falta definir el mecanismo explícito de revisión/corrección **con historial** antes de que la
    revisión sea prolongada.
-5. **Operativo — Prod**: re-ejecutar el generador en Producción para que sus conflictos pasen de 119 a 36
+6. **Operativo — Prod**: re-ejecutar el generador en Producción para que sus conflictos pasen de 119 a 36
    (backup → `build_review_items --apply` → controles), antes de revisar.
 
 ### 7.3 Glosario de la fuente
