@@ -140,3 +140,33 @@ sin convertir la revisión en 41.535 pulsaciones.
 - `review_decisions` = 0 mientras no empiece la revisión.
 - El generador no se toca salvo defecto sistemático demostrado por la revisión.
 - Toda decisión es trazable (quién, cuándo, con qué evidencia) y reproducible en Dev y Prod.
+
+## 7. Hallazgos de la revisión (y pendientes anotados)
+
+### 7.1 Corregido
+- **Conflicto ≠ “hay persona y atribución”**: solo hay conflicto si la persona propuesta es **compositor/a**.
+  Una obra tradicional puede tener arreglista, transcriptor o editor sin contradicción. Efecto: los conflictos
+  pasan de **119 a 36** (34 `traditional` + 2 `anonymous`; en los 36 el rol del clúster incluye `composer`).
+- **Vocabulario**: el idioma interno (`attribution_status`, inglés minúscula) y el del catálogo
+  (`works.attr_type`, castellano mayúscula) son el mismo concepto — `traditional` ≡ `TRADICIONAL`,
+  `anonymous` ≡ `ANONIMA`. La vista muestra ambos.
+
+### 7.2 Pendientes (parser / catálogo / proceso)
+1. **Parser — cortar en marcadores sin “by”**: `transcribed`, `arranged`, `adapted`, `composed`, `edited`,
+   `orchestrated` (hoy solo se corta en `… by`). Ejemplo: `English Traditional arr. Hardy Oliver Urbank
+   transcribed T. Potten` extrae hoy el arranger como “Hardy Oliver Urbank transcribed T. Potten”.
+2. **Catálogo — rol “Traductor/a”** (id 17, clave `translator`) + marcadores `translated by`, `translation by`,
+   `traducido por`, `traducción de`, `traductor`. Sin él, `translated by X` pierde la persona. **Nunca** usar
+   “trad.” a secas como marcador (colisiona con `Traditional`).
+3. **Catálogo/alias — usuarios digitales**: `EFPIANIST` es el nombre de usuario del pianista Eduardo Fernández;
+   mapearlo a la persona real es tarea de **alias**, no del parser (el parser respeta lo que dice la fuente).
+4. **Proceso — corrección de decisiones**: hoy `DecisionExistenteDistinta` impide sobrescribir una decisión
+   humana; falta definir el mecanismo explícito de revisión/corrección **con historial** antes de que la
+   revisión sea prolongada.
+5. **Operativo — Prod**: re-ejecutar el generador en Producción para que sus conflictos pasen de 119 a 36
+   (backup → `build_review_items --apply` → controles), antes de revisar.
+
+### 7.3 Glosario de la fuente
+- `Traditional English carol` = **Villancico tradicional inglés** (descriptor de género; no es una persona).
+- `Trad. ed. X` = tradicional + **editor/a** (rol 6). Confirmar si en algún contexto `ed.` significa traducción.
+- `arr.` / `arranged by` = arreglista (rol 3) · `transcribed by` = transcriptor (rol 5) · `adap.` = adaptador (rol 16).
