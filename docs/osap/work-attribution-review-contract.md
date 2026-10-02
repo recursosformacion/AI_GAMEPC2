@@ -208,3 +208,25 @@ Diferencias registradas (diagnosticar, no cuadrar a mano):
    invocación); `decided_by`, `batch` y `decision_mode=individual` sí quedaron registrados.
 5. **Paridad Dev**: el staging de Dev no se re-parseó tras los cortes; para comparar limpio, ejecutar allí
    `parse_import_persons --apply` + `build_review_items --apply`.
+
+### 7.5 Cierre de la fase de resolución de identidad (2026-10-02)
+- **913 decisiones** en `review_decisions`, todas humanas y auditables:
+  A **858** · F **28** · D-1 **20** · D-2 **3** · conflictos **4**. Desde D-1/D-2 cada lote lleva
+  `batch` explícito (`--batch`); las 44 anteriores quedan como `IDENTIDAD` (no se reescribieron).
+- **Catálogo intacto** en todo momento (`works_person_roles` 218.241 · `works` 310.455 · `persons` 42.676 ·
+  `work_attribution_audit` 0); el motor **solo** escribe `review_decisions`; proceso **reversible**.
+- **Pendientes conscientes** (no bloquean): `G. Dempsey` y `S. L. Howard` (identidad sin discriminante) y la
+  **atribución por obra** de los dos psalters (conservar compositor identificado; `anonymous` solo donde no
+  haya persona). Las dos `not_a_person` de los psalters ya están registradas; **no** se cierra su parte
+  atributiva.
+- **No se hace otra ronda de matching local.** La prueba sobre el dump local de MusicBrainz
+  (`imspl\mbdump` + `artist_alias`) confirma que las fuentes disponibles (MusicBrainz/RISM/VIAF/Discogs/
+  Wikidata) ya se usaron y **no** resuelven los casos atascados: aciertan en quien ya era identificable
+  (Freylinghausen) o destapan un autor de texto (Doddridge), pero no dan match para `G. Dempsey`,
+  `S. L. Howard` ni `Mpp Bliss`.
+- **Diagnóstico de rol** (autor de texto asignado como compositor): en el catálogo aplicado **1** obra; en el
+  artefacto de import **2** (sobre 137.442 / 147.372 obras con compositor). 3.390 obras mencionan un autor
+  textual (`Author:`/`Words:`/`Text:`) y solo en 1–2 coincide con la persona en rol compositor. El patrón de
+  los psalters («Music by &lt;autor de texto&gt;») no es detectable por marcador simple: es un **defecto
+  acotado de origen**, no un problema masivo del catálogo.
+- **Fase cerrada.** Siguientes trabajos: producto (búsqueda externa + IA sobre obras, SEO).
