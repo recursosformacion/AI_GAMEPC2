@@ -224,9 +224,11 @@ Diferencias registradas (diagnosticar, no cuadrar a mano):
   Wikidata) ya se usaron y **no** resuelven los casos atascados: aciertan en quien ya era identificable
   (Freylinghausen) o destapan un autor de texto (Doddridge), pero no dan match para `G. Dempsey`,
   `S. L. Howard` ni `Mpp Bliss`.
-- **Diagnóstico de rol** (autor de texto asignado como compositor): en el catálogo aplicado **1** obra; en el
-  artefacto de import **2** (sobre 137.442 / 147.372 obras con compositor). 3.390 obras mencionan un autor
-  textual (`Author:`/`Words:`/`Text:`) y solo en 1–2 coincide con la persona en rol compositor. El patrón de
-  los psalters («Music by &lt;autor de texto&gt;») no es detectable por marcador simple: es un **defecto
-  acotado de origen**, no un problema masivo del catálogo.
+- **Diagnóstico de rol** — un autor textual es **letrista** (rol `librettist`), **nunca** compositor; el
+  defecto es asignar como compositor a quien la evidencia sitúa como letrista. En el catálogo aplicado **1**
+  obra; en el artefacto de import **2** (sobre 137.442 / 147.372 obras con compositor). 3.390 obras mencionan
+  un autor textual (`Author:`/`Words:`/`Text:`) y solo en 1–2 coincide con la persona en rol compositor. El
+  patrón de los psalters («Music by &lt;letrista&gt;») no es detectable por marcador simple: es un **defecto
+  acotado de origen**, no un problema masivo del catálogo. La corrección de rol es `librettist`, no descartar
+  a la persona.
 - **Fase cerrada.** Siguientes trabajos: producto (búsqueda externa + IA sobre obras, SEO).
