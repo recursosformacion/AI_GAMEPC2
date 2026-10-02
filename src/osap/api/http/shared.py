@@ -161,6 +161,10 @@ _TAGS = [
     {"name": "Auth", "description": "Registro, verificación y OIDC."},
     {"name": "Admin", "description": "Mantenimiento y administración."},
     {"name": "Support", "description": "Contacto y correcciones de catálogo."},
+    {
+        "name": "Collaborators",
+        "description": "Listado público de colaboradores reconocidos (reconocimiento + nombre).",
+    },
     {"name": "Quota", "description": "Cuotas de descarga OMR y estadísticas de uso."},
     {
         "name": "Work attribution",

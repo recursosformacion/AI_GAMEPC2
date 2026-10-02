@@ -1,4 +1,5 @@
 from src.osap.application.catalog_manager import CatalogManager
+from src.osap.application.collaborators import ComposePublicCollaboratorsUseCase
 from src.osap.application.composer_resolution_engine import ComposerResolutionEngine, WorkMatcher
 from src.osap.application.composers_service import ComposersService
 from src.osap.application.evidence_engine import EvidenceEngine
@@ -69,6 +70,7 @@ class Container:
         self._dev_auth_bypass: bool = False
         self._storage_web_base: str | None = None
         self._op_store_config: dict[str, str] | None = None
+        self._collaborators: ComposePublicCollaboratorsUseCase | None = None
 
     def register_catalog_provider(self, provider: ICatalogProvider) -> None:
         self._catalog_providers.append(provider)
@@ -161,6 +163,14 @@ class Container:
         if self._auth_proxy is None:
             raise RuntimeError("AuthProxyClient not wired")
         return self._auth_proxy
+
+    def set_collaborators(self, use_case: ComposePublicCollaboratorsUseCase) -> None:
+        self._collaborators = use_case
+
+    def collaborators(self) -> ComposePublicCollaboratorsUseCase:
+        if self._collaborators is None:
+            raise RuntimeError("Collaborators use case not wired")
+        return self._collaborators
 
     def vote_store(self) -> IVoteStore:
         if self._vote_store is None:
