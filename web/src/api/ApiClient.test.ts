@@ -80,4 +80,17 @@ describe("ApiClient", () => {
     const client = new ApiClient("/api/v1", fetcher as unknown as typeof fetch);
     await expect(client.get("/api/v1/system/health")).rejects.toMatchObject({ code: "INVALID_RESPONSE" });
   });
+
+  it("getCollaborators calls /api/v1/public/collaborators with the project and unwraps data", async () => {
+    const fetcher = vi.fn(async () =>
+      okResponse([{ name: "Ana", recognitions: [{ type: "supporter", granted_at: "2026-01-01" }] }]),
+    );
+    const client = new ApiClient("/api/v1", fetcher as unknown as typeof fetch);
+    const result = await client.getCollaborators("omr");
+    expect(result[0]?.name).toBe("Ana");
+    expect(fetcher).toHaveBeenCalledWith(
+      "/api/v1/public/collaborators?project=omr",
+      expect.objectContaining({ method: "GET" }),
+    );
+  });
 });

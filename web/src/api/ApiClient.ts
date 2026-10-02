@@ -9,6 +9,7 @@
 // Pages never call fetch/axios directly. Everything goes through this class.
 
 import type {
+  Collaborator,
   ComposerDetail,
   CorrectionRequestRead,
   ComposerList,
@@ -142,6 +143,11 @@ export class ApiClient {
 
   async getWork(workId: string): Promise<WorkDetail> {
     return this.get<WorkDetail>(`/works/${encodeURIComponent(workId)}`);
+  }
+
+  /** Colaboradores públicos de un proyecto (fachada osap-api → support + auth). */
+  async getCollaborators(project = "omr"): Promise<Collaborator[]> {
+    return this.get<Collaborator[]>(`/public/collaborators?project=${encodeURIComponent(project)}`);
   }
 
   async getComposerWorks(personId: string, limit: number, offset: number): Promise<ComposerWorks> {

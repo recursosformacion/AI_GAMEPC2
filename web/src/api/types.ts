@@ -20,6 +20,17 @@ export interface ErrorEnvelope {
 
 export type Envelope<T> = SuccessEnvelope<T> | ErrorEnvelope;
 
+// Colaboradores públicos (GET /api/v1/public/collaborators). No incluye user_id ni datos internos.
+export interface CollaboratorRecognition {
+  type: string;
+  granted_at: string;
+}
+
+export interface Collaborator {
+  name: string;
+  recognitions: CollaboratorRecognition[];
+}
+
 export interface SearchRequest {
   query: string;
   limit: number;

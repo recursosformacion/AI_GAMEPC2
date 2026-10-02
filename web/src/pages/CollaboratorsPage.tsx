@@ -1,13 +1,20 @@
-// Página pública "Colaboradores": puente entre "Cómo funciona" y "Apoyar".
+// Página pública "Colaboradores".
 //
-// NO explica el funcionamiento interno de OSAP (eso vive en /about/how-it-works).
-// Muestra que participar no significa solo aportar dinero: cuatro formas de colaborar y
-// el significado de los reconocimientos (Supporter/Contributor/Voice/Founder), con la
-// nota de consentimiento para los reconocimientos públicos.
+// 1) Reconocimiento real: lista pública (GET /api/v1/public/collaborators?project=omr),
+//    una entrada por persona con sus badges. El backend ya agrupa y ordena: aquí no se
+//    reordena ni se muestra granted_at.
+// 2) Contenido informativo existente: formas de colaborar, significado de los
+//    reconocimientos y nota de consentimiento.
+//
+// La SPA no conoce user_id ni habla con auth/support: solo con osap-api.
 
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
+import type { TKey } from "../i18n/translations";
 import { Button } from "../components/Button";
+import { Envelope } from "../components/Envelope";
 import { useI18n } from "../i18n/I18n";
+import { useCollaborators } from "../state/collaborators";
 
 // Alta de usuario: pantalla dedicada de osap-auth (misma que el flujo real del ecosistema).
 const AUTH_REGISTER_URL = "https://auth.openmusicrepository.com/auth/register";
@@ -54,14 +61,71 @@ const RECOGNITIONS = [
   { icon: "🏛️", labelKey: "collaborators.recFounder" },
 ] as const;
 
+// Badges cortos por tipo de reconocimiento (los textos largos viven en la leyenda inferior).
+const BADGES: Record<string, { icon: string; labelKey: TKey }> = {
+  supporter: { icon: "❤️", labelKey: "collaborators.badgeSupporter" },
+  contributor: { icon: "🎼", labelKey: "collaborators.badgeContributor" },
+  voice: { icon: "📣", labelKey: "collaborators.badgeVoice" },
+  founder: { icon: "🏛️", labelKey: "collaborators.badgeFounder" },
+};
+
+function Badge({ type }: { type: string }) {
+  const { t } = useI18n();
+  const meta = BADGES[type.toLowerCase()];
+  if (!meta) {
+    return null;
+  }
+  return (
+    <span className="inline-flex items-center gap-1 rounded border border-osap-border px-2 py-0.5 text-xs">
+      <span aria-hidden="true">{meta.icon}</span>
+      {t(meta.labelKey)}
+    </span>
+  );
+}
+
 export function CollaboratorsPage() {
   const { t } = useI18n();
+  const { data, loading, error, list } = useCollaborators();
+  useEffect(() => {
+    void list("omr");
+  }, [list]);
+
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <div className="text-center">
         <h1 className="text-2xl font-semibold">{t("collaborators.title")}</h1>
         <p className="mx-auto mt-2 max-w-xl text-sm text-osap-muted">{t("collaborators.idea")}</p>
       </div>
+
+      <section>
+        <h2 className="text-lg font-semibold">{t("collaborators.listTitle")}</h2>
+        <div className="mt-4">
+          <Envelope
+            loading={loading}
+            error={error}
+            data={data}
+            emptyMessage={t("collaborators.empty")}
+          >
+            {(people) => (
+              <ul className="space-y-3">
+                {people.map((person, index) => (
+                  <li
+                    key={`${person.name}-${index}`}
+                    className="rounded border border-osap-border bg-osap-surface p-4"
+                  >
+                    <p className="font-semibold">{person.name}</p>
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {person.recognitions.map((rec) => (
+                        <Badge key={`${person.name}-${rec.type}`} type={rec.type} />
+                      ))}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Envelope>
+        </div>
+      </section>
 
       <section>
         <h2 className="text-lg font-semibold">{t("collaborators.joinTitle")}</h2>
