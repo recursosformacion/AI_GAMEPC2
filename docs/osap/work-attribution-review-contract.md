@@ -170,9 +170,41 @@ sin convertir la revisión en 41.535 pulsaciones.
    humana; falta definir el mecanismo explícito de revisión/corrección **con historial** antes de que la
    revisión sea prolongada.
 6. **Operativo — Prod**: re-ejecutar el generador en Producción para que sus conflictos pasen de 119 a 36
-   (backup → `build_review_items --apply` → controles), antes de revisar.
+   (backup → `build_review_items --apply` → controles), antes de revisar. **Hecho** (ver 7.4):
+   con el generador corregido los conflictos reales son **1**.
 
 ### 7.3 Glosario de la fuente
 - `Traditional English carol` = **Villancico tradicional inglés** (descriptor de género; no es una persona).
 - `Trad. ed. X` = tradicional + **editor/a** (rol 6). Confirmar si en algún contexto `ed.` significa traducción.
 - `arr.` / `arranged by` = arreglista (rol 3) · `transcribed by` = transcriptor (rol 5) · `adap.` = adaptador (rol 16).
+
+### 7.4 Pase a Prod (2026-10-01) — cierre
+- **Backup previo**: `/home/ocw/backups/20261001-215657/osap_storage-pre-pase-revision.sql.gz`.
+- **Desplegado**: parser (cortes/artefactos), `review_engine` (evidencia + corrección con historial),
+  `sql_review_repository`, `person_roles` (translator), `build_review_items`, `parse_import_persons`;
+  migraciones `017` (rol 17 «Traductor/a») y `018` (`review_decision_history`).
+- **Generador en Prod** (desde datos de Prod; no se copió nada de Dev): `items_total=41.543`;
+  `identity_cluster=25.783` (121.794 obras) · `ambiguous_identity=31` (1.124) · `work_attribution=12.569` ·
+  `posible_artefacto=3.160` (4.278); `clusters_con_colision=2.540`; `clusters_con_excepcion=793`;
+  `duplicados_logicos=0`; **`obras_con_conflicto=1`**.
+- **Verificaciones**: `psf traditional` → **0** identidades (falso positivo eliminado); motivo de artefacto
+  nuevo `nombre_con_atribucion=9`; `staging_translator=6` (el rol traductor ya se extrae).
+- **Conflictos**: **1** — Gaudeamus Igitur (`name:j brahms`), hash `c86417f89a26c74f`.
+- **Decisiones registradas** (`decided_by=mgarcia`, `batch=CONFLICTOS`, vía `decide`, sin SQL):
+  Gaudeamus Igitur → `conflict: atribucion_gana` + `attribution: anonymous`; Mwynen Merch →
+  `attribution: traditional`; Scarborough Fair → `attribution: traditional`. **`review_decisions=4`**
+  (la tabla implicaba 4 filas: Gaudeamus lleva dos tipos de decisión), no 3.
+- **Invariantes tras el pase**: `review_decisions=4` · `works_person_roles=218.241` · `works=310.455` ·
+  `persons=42.676` · `work_attribution_audit=0` · `review_decision_history=0`. **Catálogo intacto**.
+
+Diferencias registradas (diagnosticar, no cuadrar a mano):
+1. **Conflictos: Prod=1 vs contrato=3.** El «3» se documentó en `a6a8e75`, antes de los últimos cortes del
+   parser (`fbf00cf`); el generador corregido produce **1**.
+2. **Inventario**: `identity_cluster` 25.783 (vs 25.789 del contrato) y `posible_artefacto` 3.160
+   (vs 3.146), por los cortes de marcadores y el rol traductor.
+3. **Residual parser**: `arranger_con_transcribed=1` (un arranger aún conserva «transcribed»); pendiente de
+   diagnóstico.
+4. **Evidencia**: el `researcher_note` de las 4 decisiones no se almacenó (incidencia de *quoting* en la
+   invocación); `decided_by`, `batch` y `decision_mode=individual` sí quedaron registrados.
+5. **Paridad Dev**: el staging de Dev no se re-parseó tras los cortes; para comparar limpio, ejecutar allí
+   `parse_import_persons --apply` + `build_review_items --apply`.
