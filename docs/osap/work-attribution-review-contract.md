@@ -88,7 +88,7 @@ acción humana → batch explícito → N unidades seleccionadas → una decisi�
 
 ## 4. Separación decisión ↔ ejecución, y plan final por obra
 
-La **decisión humana** (arriba) y la **ejecución** (Fase 6, aún sin construir) son planos distintos:
+La **decisión humana** (arriba) y la **ejecución** (Fase 6, construida — ver 7.6) son planos distintos:
 `review_decisions` registra qué decidió una persona; el aplicador decide **cuándo** y **cómo** el
 catálogo pasa a un estado coherente.
 
@@ -232,3 +232,18 @@ Diferencias registradas (diagnosticar, no cuadrar a mano):
   acotado de origen**, no un problema masivo del catálogo. La corrección de rol es `librettist`, no descartar
   a la persona.
 - **Fase cerrada.** Siguientes trabajos: producto (búsqueda externa + IA sobre obras, SEO).
+
+### 7.6 Fase 6 (aplicador) construida y ejecutada (2026-10-02)
+- Construido `scripts/apply_review_decisions.py` (`plan`/`apply`/`revert`). Migración **020**
+  (`020_work_attribution_audit_review_link.sql`) enlaza `work_attribution_audit` con
+  `review_decision_key`/`batch` y guarda `before_json`/`after_json`/`reverted_at`.
+- **Dry-run final de Prod**: **144 INSERT** · 15.582 no-op · **12 bloqueadas** · 3 attributions · 0 retiradas.
+- **Aplicado el lote `F6-PROD-0001`**: `works_person_roles` 218.241 → **218.385** (+144), **sin tocar** las
+  15.582 preexistentes; 3 `works_attr_type` (Gaudeamus `ANONIMA`; Mwynen y Scarborough `TRADICIONAL`); las
+  **12** `map_to_existing` con clave `name:` ambigua quedan **pendientes** (no aplicadas). Auditoría:
+  144 `assign` + 3 `set_attribution` vivas, 0 duplicados. `works`/`persons` intactos.
+- **Reversión** validada antes en Dev (`DEVTEST`: +31 → revert exacto a 218.241). **No** se revierte el lote real.
+- **Backup previo**: `/home/ocw/backups/20261002-175834/osap_storage-pre-f6.sql.gz`.
+- **Nota operativa**: el runner `infrastructure/db/migrate.py` **no** es usable sobre el checkout de Prod (el
+  directorio `migrations/` está mezclado con la serie v1 y reaplica migraciones ya reflejadas → `Duplicate
+  column`); la 020 se aplicó y registró con un ejecutor de una sola migración.
