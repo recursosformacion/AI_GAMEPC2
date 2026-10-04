@@ -210,6 +210,20 @@ class _MysqlStore(_MemoryStore):
             for row in rows
         ]
 
+    def downloads_by_day(
+        self, user_id: str, from_day: str, to_day: str
+    ) -> list[dict[str, object]]:
+        """Serie diaria de descargas del usuario (para estadísticas)."""
+        rows = self._run(
+            "SELECT day, SUM(quantity) AS quantity, SUM(bytes) AS bytes FROM analytics_downloads "
+            "WHERE user_id=%s AND day>=%s AND day<=%s GROUP BY day ORDER BY day",
+            (user_id, from_day, to_day),
+        )
+        return [
+            {"day": str(row["day"]), "downloads": _as_int(row["quantity"]), "bytes": _as_int(row["bytes"])}
+            for row in rows
+        ]
+
     def downloads_for_works(self, work_ids: list[str]) -> dict[str, object]:
         """Uso (descargas) generado por las obras indicadas — base del «impacto»."""
         if not work_ids:

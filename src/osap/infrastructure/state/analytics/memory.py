@@ -117,6 +117,21 @@ class MemoryStore:
         items.sort(key=lambda x: (str(x["day"]), int(str(x["quantity"]))), reverse=True)
         return items[:limit]
 
+    def downloads_by_day(
+        self, user_id: str, from_day: str, to_day: str
+    ) -> list[dict[str, object]]:
+        agg: dict[str, dict[str, int]] = {}
+        for (day, uid, _provider, _work, _fmt), row in self._downloads.items():
+            if uid != user_id or not (from_day <= day <= to_day):
+                continue
+            bucket = agg.setdefault(day, {"downloads": 0, "bytes": 0})
+            bucket["downloads"] += row["quantity"]
+            bucket["bytes"] += row["bytes"]
+        return [
+            {"day": day, "downloads": data["downloads"], "bytes": data["bytes"]}
+            for day, data in sorted(agg.items())
+        ]
+
     def downloads_for_works(self, work_ids: list[str]) -> dict[str, object]:
         wanted = set(work_ids)
         total = 0

@@ -193,6 +193,76 @@ export function ActivityPage(): ReactNode {
           </section>
 
           <section className="rounded-card border border-osap-border bg-osap-surface p-4 shadow-card">
+            <h2 className="text-lg text-osap-ink">Mis obras / recursos</h2>
+            {activity.data.my_works.length === 0 ? (
+              <p className="mt-2 text-sm text-osap-muted">Aún no tienes recursos materializados.</p>
+            ) : (
+              <table className="mt-2 w-full text-sm">
+                <thead>
+                  <tr className="text-left text-osap-muted">
+                    <th className="py-1">Obra</th>
+                    <th className="py-1">Representación</th>
+                    <th className="py-1">Recurso</th>
+                    <th className="py-1">Fichero</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {activity.data.my_works.map((w) => (
+                    <tr key={w.resource_id} className="border-t border-osap-border">
+                      <td className="py-1">{w.work_id ?? "—"}</td>
+                      <td className="py-1">{w.representation_id ?? "—"}</td>
+                      <td className="py-1">{w.resource_id}</td>
+                      <td className="py-1">{w.file_id ?? "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </section>
+
+          <section className="rounded-card border border-osap-border bg-osap-surface p-4 shadow-card">
+            <h2 className="text-lg text-osap-ink">Estadísticas</h2>
+            <div className="mt-2 grid gap-4 sm:grid-cols-2">
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-osap-muted">
+                  Descargas por día
+                </h3>
+                {activity.data.stats.downloads_by_day.length === 0 ? (
+                  <p className="text-sm text-osap-muted">Sin datos.</p>
+                ) : (
+                  <ul className="mt-1 space-y-1 text-sm text-osap-ink">
+                    {activity.data.stats.downloads_by_day.map((d) => (
+                      <li key={d.day} className="flex items-center gap-2">
+                        <span className="w-24 text-osap-muted">{d.day}</span>
+                        <span className="inline-block h-2 rounded bg-osap-accent" style={{ width: `${Math.min(d.downloads * 8, 160)}px` }} />
+                        <span>{d.downloads}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+              <div>
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-osap-muted">
+                  Aportaciones por día
+                </h3>
+                {activity.data.stats.contributions_by_day.length === 0 ? (
+                  <p className="text-sm text-osap-muted">Sin datos.</p>
+                ) : (
+                  <ul className="mt-1 space-y-1 text-sm text-osap-ink">
+                    {activity.data.stats.contributions_by_day.map((d) => (
+                      <li key={d.day} className="flex items-center gap-2">
+                        <span className="w-24 text-osap-muted">{d.day}</span>
+                        <span className="inline-block h-2 rounded bg-osap-accent" style={{ width: `${Math.min(d.count * 8, 160)}px` }} />
+                        <span>{d.count}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+          </section>
+
+          <section className="rounded-card border border-osap-border bg-osap-surface p-4 shadow-card">
             <h2 className="text-lg text-osap-ink">Mis descargas</h2>
             {activity.data.my_downloads.length === 0 ? (
               <p className="mt-2 text-sm text-osap-muted">Sin descargas registradas.</p>

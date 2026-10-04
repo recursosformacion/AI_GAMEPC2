@@ -100,9 +100,11 @@ class ActivityMeResponse(_Frozen):
     quota: AnalyticsMeQuota
     summary: ActivityMeSummary
     my_downloads: list[dict[str, object]] = Field(default_factory=list)
+    my_works: list[dict[str, object]] = Field(default_factory=list)
     my_contributions: list[dict[str, object]] = Field(default_factory=list)
     pending: list[dict[str, object]] = Field(default_factory=list)
     impact: dict[str, object] = Field(default_factory=dict)
+    stats: dict[str, object] = Field(default_factory=dict)
     recent: list[dict[str, object]] = Field(default_factory=list)
 
 

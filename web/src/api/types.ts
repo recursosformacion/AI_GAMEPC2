@@ -703,6 +703,19 @@ export interface ActivityImpactWork {
   bytes: number;
 }
 
+export interface ActivityWork {
+  work_id?: string | null;
+  resource_id: number;
+  file_id?: number | null;
+  representation_id?: string | null;
+  contribution_id: number;
+}
+
+export interface ActivityStats {
+  downloads_by_day: { day: string; downloads: number; bytes: number }[];
+  contributions_by_day: { day: string; count: number }[];
+}
+
 export interface ActivityMe {
   user_id: string;
   period: AnalyticsMePeriod;
@@ -717,9 +730,11 @@ export interface ActivityMe {
     works: number;
   };
   my_downloads: ActivityDownloadRow[];
+  my_works: ActivityWork[];
   my_contributions: ActivityContribution[];
   pending: ActivityContribution[];
   impact: { downloads: number; bytes: number; works: ActivityImpactWork[] };
+  stats: ActivityStats;
   recent: ActivityRecentItem[];
 }
 

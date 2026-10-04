@@ -138,6 +138,20 @@ class AnalyticsMixin(PlatformApiCore):
                 }
             ),
         }
+        period = base.get("period")
+        period = period if isinstance(period, dict) else {}
+        from_day = str(period.get("from_day") or today())
+        to_day = str(period.get("to_day") or today())
+        by_day: dict[str, int] = {}
+        for contribution in contribs:
+            day = str(contribution["created_at"])[:10]
+            by_day[day] = by_day.get(day, 0) + 1
+        stats = {
+            "downloads_by_day": self._analytics_store.downloads_by_day(uid, from_day, to_day),
+            "contributions_by_day": [
+                {"day": day, "count": count} for day, count in sorted(by_day.items())
+            ],
+        }
         return {
             "user_id": uid,
             "period": base["period"],
@@ -145,11 +159,44 @@ class AnalyticsMixin(PlatformApiCore):
             "quota": base["quota"],
             "summary": summary,
             "my_downloads": self._analytics_store.list_user_downloads(uid, limit=50),
+            "my_works": self._my_works(rows),
             "my_contributions": contribs,
             "pending": pending,
             "impact": self._impact(rows),
+            "stats": stats,
             "recent": self._recent(rows),
         }
+
+    def _my_works(self, rows: list[dict[str, object]]) -> list[dict[str, object]]:
+        """Obras/recursos del usuario a partir de los eventos `materialized`."""
+        seen: set[int] = set()
+        works: list[dict[str, object]] = []
+        for row in rows:
+            cid = int(str(row["id"]))
+            representation_id = str(row["target_id"]) if row.get("target_id") else None
+            for event in self._store.list_contribution_events(cid):
+                if str(event.get("event_type")) != "materialized":
+                    continue
+                try:
+                    detail = json.loads(str(event.get("detail_json") or "{}"))
+                except ValueError:
+                    continue
+                if not isinstance(detail, dict) or detail.get("resource_id") is None:
+                    continue
+                resource_id = int(str(detail["resource_id"]))
+                if resource_id in seen:
+                    continue
+                seen.add(resource_id)
+                works.append(
+                    {
+                        "work_id": str(detail["work_id"]) if detail.get("work_id") is not None else None,
+                        "resource_id": resource_id,
+                        "file_id": int(str(detail["file_id"])) if detail.get("file_id") is not None else None,
+                        "representation_id": representation_id,
+                        "contribution_id": cid,
+                    }
+                )
+        return works
 
     @staticmethod
     def _contribution_brief(row: dict[str, object]) -> dict[str, object]:
