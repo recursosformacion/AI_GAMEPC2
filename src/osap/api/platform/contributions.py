@@ -93,12 +93,22 @@ class ContributionsMixin(PlatformApiCore):
             raise ContributionError(404, "NOT_FOUND", "Aportación no encontrada")
         if str(row["status"]) not in ("draft", "submitted"):
             raise ContributionError(409, "INVALID_STATE", "No se puede subir en este estado")
-        representation_id = row.get("target_id")
-        if not representation_id:
-            raise ContributionError(422, "TARGET_REQUIRED", "Falta la representación destino")
+        operation = str(row.get("operation"))
+        target_id = row.get("target_id")
         client = self._container.storage_contributions()
-        if client.representation_work_id(str(representation_id)) is None:
-            raise ContributionError(404, "REPRESENTATION_NOT_FOUND", "La representación no existe")
+        if operation == "add_resource":
+            if not target_id:
+                raise ContributionError(422, "TARGET_REQUIRED", "Falta la representación destino")
+            if client.representation_work_id(str(target_id)) is None:
+                raise ContributionError(
+                    404, "REPRESENTATION_NOT_FOUND", "La representación no existe"
+                )
+        elif operation == "add_representation":
+            if not target_id:
+                raise ContributionError(422, "TARGET_REQUIRED", "Falta la obra destino")
+            if not client.work_exists(str(target_id)):
+                raise ContributionError(404, "WORK_NOT_FOUND", "La obra no existe")
+        # create_work: no hay destino previo que validar
         try:
             uploaded = client.upload_file(name=name, mime_type=mime_type, data=data)
         except StorageContributionError as exc:
