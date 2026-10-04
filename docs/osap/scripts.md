@@ -233,6 +233,7 @@ python scripts/test_authority_coverage.py [--db BD] [--limit 100] [--from-id 0]
 | `deploy_all.ps1` | Construye y sube la SPA, el **admin de osap-storage** y la **web de osap-auth**, más el código de los 4 backends (`osap-api/auth/storage/support`, incluyendo `script/` de osap-api) a `RemoteIA`, y reinicia los servicios; **no toca las BBDD**. |
 | `sync_db_down.ps1` | **Sincroniza la BD operativa de osap-api desde el VPS a desarrollo** (solo lectura): exporta de `osap_api` (excepto `app_config`) y restaura en la BD local `osap-api`. Permite que las pruebas locales trabajen con el índice real + storage/auth reales (`dev_mode=1`). Uso: `powershell -File script/sync_db_down.ps1`. |
 | `pre_dbadmin_tunnel.ps1` | Túnel SSH para administración de BD. |
+| `migrate_contributions_schema.py` | **Prepara (NO ejecuta por defecto) el esquema de aportaciones** en la DB `osap-api`: crea idempotentemente `contributions`, `contribution_relations`, `contribution_events` y `contribution_artifacts`. FKs solo intra-api; `file_id`/`person_id` opacos sin FK cross-service; sin `representation_id` (impacto en migración aparte). `--dry-run` imprime el plan sin tocar la BD. Uso: `PYTHONPATH=<osap-api> python script/migrate_contributions_schema.py --dry-run`. Ver `docs/osap/contributions-migration.md`. |
 
 ### candidate_resolver.py
 Resuelve los candidatos de `composer_candidate` minimizando red: los prolíficos (≥ `--threshold`
