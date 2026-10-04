@@ -165,6 +165,14 @@ _TAGS = [
         "name": "Collaborators",
         "description": "Listado público de colaboradores reconocidos (reconocimiento + nombre).",
     },
+    {
+        "name": "Epochs",
+        "description": "Épocas históricas de la música (catálogo público).",
+    },
+    {
+        "name": "Classifications",
+        "description": "Clasificaciones musicales: géneros, instrumentos, ensembles y catálogos.",
+    },
     {"name": "Quota", "description": "Cuotas de descarga OMR y estadísticas de uso."},
     {
         "name": "Work attribution",
@@ -532,6 +540,7 @@ def _composer_summary_dto(d: dict[str, object]) -> ComposerSummaryResponse:
         visible=cast("bool", d.get("visible", True)),
         birth_year=cast("str | None", d.get("birth_year")),
         death_year=cast("str | None", d.get("death_year")),
+        biography_nationality=cast("str | None", d.get("biography_nationality")),
         roles=_str_list(d.get("roles")) or [],
     )
 

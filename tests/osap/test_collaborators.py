@@ -1,4 +1,4 @@
-"""Fachada pública de colaboradores: composición y clientes support/auth."""
+"""Fachada pública de colaboradores: composición y clientes M2M support/auth."""
 
 from __future__ import annotations
 
@@ -8,33 +8,31 @@ import requests
 from src.osap.application.collaborators import (
     CollaboratorsUnavailableError,
     ComposePublicCollaboratorsUseCase,
+    PublicProfile,
     PublicProjectNotFoundError,
+    PublicUser,
 )
-from src.osap.infrastructure.auth import public_names_client as pnc
-from src.osap.infrastructure.auth.public_names_client import PublicNamesClient
+from src.osap.infrastructure.auth import public_profiles_client as ppc
+from src.osap.infrastructure.auth.public_profiles_client import PublicProfilesClient
 from src.osap.infrastructure.auth.service_token_provider import StaticServiceTokenProvider
-from src.osap.infrastructure.support import public_recognitions_client as prc
-from src.osap.infrastructure.support.public_recognitions_client import (
-    SupportPublicRecognitionsClient,
-)
+from src.osap.infrastructure.support import recognitions_client as recs
+from src.osap.infrastructure.support.recognitions_client import SupportRecognitionsClient
 
 
 class _Rec:
     def __init__(self, rows: list[dict]) -> None:
         self.rows = rows
 
-    def public_project_recognitions(self, project: str) -> list[dict]:
+    def active_project_recognitions(self, project: str) -> list[dict]:
         return self.rows
 
 
-class _Names:
-    def __init__(self, mapping: dict[str, str | None]) -> None:
-        self.mapping = mapping
-        self.seen: list[str] = []
+class _Profiles:
+    def __init__(self, users: list[PublicUser]) -> None:
+        self.users = users
 
-    def names(self, user_ids: list[str]) -> dict[str, str | None]:
-        self.seen = user_ids
-        return self.mapping
+    def public_users(self) -> list[PublicUser]:
+        return self.users
 
 
 class _Resp:
@@ -48,99 +46,158 @@ class _Resp:
         return self._doc
 
 
-def test_compose_omits_missing_or_null_name_and_never_exposes_user_id() -> None:
+def test_compose_lists_all_public_users_and_attaches_badges() -> None:
+    # La lista la dirige auth (usuarios públicos con nickname). Support solo aporta badges.
+    users = [PublicUser("u1", "ana"), PublicUser("u2", "bob")]
     rows = [
         {"user_id": "u1", "recognitions": [{"type": "contributor", "granted_at": "2026-01-01"}]},
-        {"user_id": "u2", "recognitions": [{"type": "voice", "granted_at": "2026-02-01"}]},
-        {"user_id": "u3", "recognitions": [{"type": "supporter", "granted_at": "2026-03-01"}]},
+        # u2 público sin reconocimientos → aparece con badges vacíos
     ]
-    names = _Names({"u1": "Ana", "u2": None})  # u2 sin nombre; u3 eliminado (ausente)
-    uc = ComposePublicCollaboratorsUseCase(recognitions=_Rec(rows), names=names)
+    uc = ComposePublicCollaboratorsUseCase(recognitions=_Rec(rows), profiles=_Profiles(users))
 
     result = uc.execute("omr")
 
     assert result == [
-        {"name": "Ana", "recognitions": [{"type": "contributor", "granted_at": "2026-01-01"}]}
+        {"nickname": "ana", "recognitions": [{"type": "contributor", "granted_at": "2026-01-01"}]},
+        {"nickname": "bob", "recognitions": []},
     ]
-    assert names.seen == ["u1", "u2", "u3"]
     assert "user_id" not in result[0]
+    assert "name" not in result[0]
 
 
-def test_support_public_parses_and_quotes(monkeypatch) -> None:
+def test_support_recognitions_parses_quotes_and_uses_token(monkeypatch) -> None:
     visto: dict[str, str] = {}
 
     def _get(url: str, **k: object) -> object:
         visto["url"] = url
-        return _Resp(200, [{"user_id": "u1", "recognitions": [{"type": "voice", "granted_at": "x"}]}])
+        visto["auth"] = str(k.get("headers"))
+        return _Resp(
+            200, [{"user_id": "u1", "recognitions": [{"type": "voice", "granted_at": "x"}]}]
+        )
 
-    monkeypatch.setattr(prc.requests, "get", _get)
-    client = SupportPublicRecognitionsClient(base_url="http://support")
-    rows = client.public_project_recognitions("o mr")
+    monkeypatch.setattr(recs.requests, "get", _get)
+    client = SupportRecognitionsClient(
+        base_url="http://support", token_provider=StaticServiceTokenProvider("tok")
+    )
+    rows = client.active_project_recognitions("o mr")
 
     assert rows == [{"user_id": "u1", "recognitions": [{"type": "voice", "granted_at": "x"}]}]
     assert "o%20mr" in visto["url"]
+    assert "/api/v1/m2m/recognitions?project=" in visto["url"]
+    assert "Bearer tok" in visto["auth"]
 
 
-def test_support_public_404_is_project_not_found(monkeypatch) -> None:
-    monkeypatch.setattr(prc.requests, "get", lambda *a, **k: _Resp(404, {}))
-    client = SupportPublicRecognitionsClient(base_url="http://support")
+def test_support_recognitions_404_is_project_not_found(monkeypatch) -> None:
+    monkeypatch.setattr(recs.requests, "get", lambda *a, **k: _Resp(404, {}))
+    client = SupportRecognitionsClient(
+        base_url="http://support", token_provider=StaticServiceTokenProvider("tok")
+    )
     with pytest.raises(PublicProjectNotFoundError):
-        client.public_project_recognitions("nope")
+        client.active_project_recognitions("nope")
 
 
-def test_support_public_http_error_is_unavailable(monkeypatch) -> None:
-    monkeypatch.setattr(prc.requests, "get", lambda *a, **k: _Resp(500, {}))
-    client = SupportPublicRecognitionsClient(base_url="http://support")
+def test_support_recognitions_http_error_is_unavailable(monkeypatch) -> None:
+    monkeypatch.setattr(recs.requests, "get", lambda *a, **k: _Resp(500, {}))
+    client = SupportRecognitionsClient(
+        base_url="http://support", token_provider=StaticServiceTokenProvider("tok")
+    )
     with pytest.raises(CollaboratorsUnavailableError):
-        client.public_project_recognitions("omr")
+        client.active_project_recognitions("omr")
 
 
-def test_names_batches_at_500_and_parses(monkeypatch) -> None:
+def test_support_recognitions_token_failure_is_unavailable() -> None:
+    class _Bad:
+        def token(self, scopes: tuple[str, ...]) -> str:
+            raise RuntimeError("auth caido")
+
+    client = SupportRecognitionsClient(base_url="http://support", token_provider=_Bad())
+    with pytest.raises(CollaboratorsUnavailableError):
+        client.active_project_recognitions("omr")
+
+
+def test_support_recognitions_network_error_is_unavailable(monkeypatch) -> None:
+    def _get(*a: object, **k: object) -> object:
+        raise requests.RequestException("timeout")
+
+    monkeypatch.setattr(recs.requests, "get", _get)
+    client = SupportRecognitionsClient(
+        base_url="http://support", token_provider=StaticServiceTokenProvider("tok")
+    )
+    with pytest.raises(CollaboratorsUnavailableError):
+        client.active_project_recognitions("omr")
+
+
+def test_profiles_batches_at_500_and_parses_consent(monkeypatch) -> None:
     urls: list[str] = []
 
     def _get(url: str, **k: object) -> object:
         urls.append(url)
         ids = url.split("ids=", 1)[1].split(",")
-        return _Resp(200, [{"id": i, "name": f"n-{i}"} for i in ids])
+        return _Resp(
+            200,
+            [
+                {"id": i, "name": f"n-{i}", "nickname": f"nick-{i}", "nickname_public_consent": True}
+                for i in ids
+            ],
+        )
 
-    monkeypatch.setattr(pnc.requests, "get", _get)
-    client = PublicNamesClient(
+    monkeypatch.setattr(ppc.requests, "get", _get)
+    client = PublicProfilesClient(
         base_url="http://auth",
         token_provider=StaticServiceTokenProvider("tok"),
         batch_size=2,
     )
-    result = client.names(["a", "b", "c", "a"])
+    result = client.public_profiles(["a", "b", "c", "a"])
 
-    assert result == {"a": "n-a", "b": "n-b", "c": "n-c"}
+    assert result == {
+        "a": PublicProfile(nickname="nick-a", nickname_public_consent=True),
+        "b": PublicProfile(nickname="nick-b", nickname_public_consent=True),
+        "c": PublicProfile(nickname="nick-c", nickname_public_consent=True),
+    }
     assert len(urls) == 2  # 3 únicos con lote de 2
 
 
-def test_names_token_failure_is_unavailable() -> None:
+def test_public_users_parses_list(monkeypatch) -> None:
+    def _get(url: str, **k: object) -> object:
+        assert url.endswith("/auth/m2m/public-users")
+        return _Resp(
+            200,
+            [{"id": "u1", "nickname": "ana"}, {"id": "u2", "nickname": None}, "basura"],
+        )
+
+    monkeypatch.setattr(ppc.requests, "get", _get)
+    client = PublicProfilesClient(
+        base_url="http://auth", token_provider=StaticServiceTokenProvider("tok")
+    )
+    assert client.public_users() == [PublicUser(user_id="u1", nickname="ana")]
+
+
+def test_profiles_token_failure_is_unavailable() -> None:
     class _Bad:
         def token(self, scopes: tuple[str, ...]) -> str:
             raise RuntimeError("auth caido")
 
-    client = PublicNamesClient(base_url="http://auth", token_provider=_Bad())
+    client = PublicProfilesClient(base_url="http://auth", token_provider=_Bad())
     with pytest.raises(CollaboratorsUnavailableError):
-        client.names(["a"])
+        client.public_profiles(["a"])
 
 
-def test_names_http_error_is_unavailable(monkeypatch) -> None:
-    monkeypatch.setattr(pnc.requests, "get", lambda *a, **k: _Resp(403, {}))
-    client = PublicNamesClient(
+def test_profiles_http_error_is_unavailable(monkeypatch) -> None:
+    monkeypatch.setattr(ppc.requests, "get", lambda *a, **k: _Resp(403, {}))
+    client = PublicProfilesClient(
         base_url="http://auth", token_provider=StaticServiceTokenProvider("tok")
     )
     with pytest.raises(CollaboratorsUnavailableError):
-        client.names(["a"])
+        client.public_profiles(["a"])
 
 
-def test_names_network_error_is_unavailable(monkeypatch) -> None:
+def test_profiles_network_error_is_unavailable(monkeypatch) -> None:
     def _get(*a: object, **k: object) -> object:
         raise requests.RequestException("timeout")
 
-    monkeypatch.setattr(pnc.requests, "get", _get)
-    client = PublicNamesClient(
+    monkeypatch.setattr(ppc.requests, "get", _get)
+    client = PublicProfilesClient(
         base_url="http://auth", token_provider=StaticServiceTokenProvider("tok")
     )
     with pytest.raises(CollaboratorsUnavailableError):
-        client.names(["a"])
+        client.public_profiles(["a"])

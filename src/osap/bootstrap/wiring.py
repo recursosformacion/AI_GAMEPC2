@@ -17,7 +17,7 @@ from src.osap.infrastructure.adapters.library.local import LocalLibrary
 from src.osap.infrastructure.adapters.validation import BasicValidator
 from src.osap.infrastructure.auth.auth_proxy_client import AuthProxyClient
 from src.osap.infrastructure.auth.oidc_rp_client import OidcRpClient
-from src.osap.infrastructure.auth.public_names_client import PublicNamesClient
+from src.osap.infrastructure.auth.public_profiles_client import PublicProfilesClient
 from src.osap.infrastructure.auth.service_token_provider import ClientCredentialsServiceTokenProvider
 from src.osap.infrastructure.auth.token_authenticator import (
     JwksJwtAuthenticator,
@@ -58,8 +58,11 @@ from src.osap.infrastructure.resolvers.work_match import WorkComposerMatcher
 from src.osap.infrastructure.state.op_store import build_op_store
 from src.osap.infrastructure.storage.storage_composer_client import StorageComposerClient
 from src.osap.infrastructure.storage.work_store import StorageWorkStore
-from src.osap.infrastructure.support.public_recognitions_client import (
-    SupportPublicRecognitionsClient,
+from src.osap.infrastructure.support.admin_recognitions_client import (
+    SupportAdminRecognitionsClient,
+)
+from src.osap.infrastructure.support.recognitions_client import (
+    SupportRecognitionsClient,
 )
 from src.osap.infrastructure.user_profile import InMemoryUserProfileStore
 from src.osap.ports.votes import IAuthenticator
@@ -466,15 +469,22 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     container.register_composer_resolver(MusicBrainzResolver())
     container.register_composer_resolver(WikidataIdentityResolver())
 
-    # --- colaboradores públicos (fachada: support reconoce + auth resuelve nombre) ---
-    # Support sigue siendo la fuente de verdad de los reconocimientos; auth la de la
-    # identidad. osap-api no replica reglas: solo compone y oculta el user_id.
+    # --- colaboradores públicos (fachada: support reconoce + auth consiente) ---
+    # Support sigue siendo la fuente de verdad de los reconocimientos (lectura M2M de los
+    # activos del proyecto) y auth la del consentimiento de cuenta. osap-api no replica
+    # reglas: compone, publica solo con `nickname_public_consent` y oculta el user_id.
     container.set_collaborators(
         ComposePublicCollaboratorsUseCase(
-            recognitions=SupportPublicRecognitionsClient(
-                base_url=config.support_base_url or "http://127.0.0.1:8300"
+            recognitions=SupportRecognitionsClient(
+                base_url=config.support_base_url or "http://127.0.0.1:8300",
+                token_provider=ClientCredentialsServiceTokenProvider(
+                    client_id=config.service_client_id or "osap-api",
+                    client_secret=config.service_client_secret or "",
+                    token_url=auth_token_url,
+                    audience="osap-support",
+                ),
             ),
-            names=PublicNamesClient(
+            profiles=PublicProfilesClient(
                 base_url=auth_base,
                 token_provider=ClientCredentialsServiceTokenProvider(
                     client_id=config.service_client_id or "osap-api",
@@ -482,6 +492,19 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
                     token_url=auth_token_url,
                     audience="osap-auth",
                 ),
+            ),
+        )
+    )
+
+    # Admin de reconocimientos: osap-api usa un service token (aud=osap-support, support:admin).
+    container.set_support_admin_recognitions(
+        SupportAdminRecognitionsClient(
+            base_url=config.support_base_url or "http://127.0.0.1:8300",
+            token_provider=ClientCredentialsServiceTokenProvider(
+                client_id=config.service_client_id or "osap-api",
+                client_secret=config.service_client_secret or "",
+                token_url=auth_token_url,
+                audience="osap-support",
             ),
         )
     )

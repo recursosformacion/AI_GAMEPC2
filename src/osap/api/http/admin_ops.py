@@ -357,6 +357,128 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(502, response, "AUTH_UNAVAILABLE", str(exc))
         return ctx.ok(data)
 
+    @router.put(
+        "/api/v1/admin/users/{user_id}/public-consent",
+        tags=["Admin"],
+        summary="Set public nickname consent (admin)",
+        description="Activa/desactiva la autorización pública del nickname del usuario. "
+        "Exige role=admin; operación auditada por separado.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("User", _shared._example({})),
+            401: _shared._UNAUTHORIZED_401,
+            403: _shared._FORBIDDEN_403,
+            404: _shared._NOT_FOUND_404,
+        },
+    )
+    def admin_user_set_public_consent(
+        user_id: str,
+        payload: dict[str, object],
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            data = ctx.api.admin_user_set_public_consent(
+                authorization, user_id, bool(payload.get("value"))
+            )
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return ctx.fail(404, response, "NOT_FOUND", "User not found")
+        except Exception as exc:  # noqa: BLE001 — osap-auth no disponible
+            return ctx.fail(502, response, "AUTH_UNAVAILABLE", str(exc))
+        return ctx.ok(data)
+
+    def _support_detail(doc: object) -> str:
+        if isinstance(doc, dict):
+            return str(doc.get("detail") or doc)
+        return str(doc)
+
+    @router.get(
+        "/api/v1/admin/users/{user_id}/recognitions",
+        tags=["Admin"],
+        summary="List user recognitions (admin)",
+        description="Reconocimientos del usuario (osap-support). Exige role=admin.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, 403: _shared._FORBIDDEN_403},
+    )
+    def admin_user_recognitions(
+        user_id: str,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            status, doc = ctx.api.admin_user_recognitions(authorization, user_id)
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        except Exception as exc:  # noqa: BLE001 — osap-support no disponible
+            return ctx.fail(502, response, "SUPPORT_UNAVAILABLE", str(exc))
+        if 200 <= status < 300:
+            return ctx.ok(doc)
+        return ctx.fail(status, response, "SUPPORT_ERROR", _support_detail(doc))
+
+    @router.post(
+        "/api/v1/admin/users/{user_id}/recognitions",
+        tags=["Admin"],
+        summary="Grant user recognition (admin)",
+        description="Concede un reconocimiento (project, type). Exige role=admin.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, 403: _shared._FORBIDDEN_403},
+    )
+    def admin_user_grant_recognition(
+        user_id: str,
+        payload: dict[str, object],
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            status, doc = ctx.api.admin_user_grant_recognition(
+                authorization,
+                user_id,
+                str(payload.get("project") or "omr"),
+                str(payload.get("type") or ""),
+                cast("str | None", payload.get("reason")),
+            )
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        except Exception as exc:  # noqa: BLE001 — osap-support no disponible
+            return ctx.fail(502, response, "SUPPORT_UNAVAILABLE", str(exc))
+        if 200 <= status < 300:
+            return ctx.ok(doc)
+        return ctx.fail(status, response, "SUPPORT_ERROR", _support_detail(doc))
+
+    @router.post(
+        "/api/v1/admin/users/{user_id}/recognitions/{recognition_id}/revoke",
+        tags=["Admin"],
+        summary="Revoke user recognition (admin)",
+        description="Revoca un reconocimiento por id. Exige role=admin.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, 403: _shared._FORBIDDEN_403},
+    )
+    def admin_user_revoke_recognition(
+        user_id: str,
+        recognition_id: int,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            status, doc = ctx.api.admin_user_revoke_recognition(authorization, recognition_id)
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        except Exception as exc:  # noqa: BLE001 — osap-support no disponible
+            return ctx.fail(502, response, "SUPPORT_UNAVAILABLE", str(exc))
+        if 200 <= status < 300:
+            return ctx.ok(doc)
+        return ctx.fail(status, response, "SUPPORT_ERROR", _support_detail(doc))
+
     @router.delete(
         "/api/v1/admin/users/{user_id}",
         tags=["Admin"],
@@ -415,6 +537,36 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(401, response, "UNAUTHORIZED", "Login required")
         except ForbiddenError:
             return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        return ctx.ok({"url": url})
+
+    @router.get(
+        "/api/v1/admin/support-web",
+        tags=["System"],
+        summary="Support web admin URL (reconocimientos)",
+        description="Devuelve la URL de la capa web de mantenimiento de osap-support "
+        "(reconocimientos), autenticada con token de servicio (support:admin). Exige role=admin.",
+        response_model=SuccessEnvelope[dict[str, str]] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("URL", _shared._example({})),
+            401: _shared._UNAUTHORIZED_401,
+            403: _shared._FORBIDDEN_403,
+        },
+    )
+    def support_web(
+        response: Response,
+        section: str | None = Query(default=None),
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            url = ctx.api.support_web(authorization, section)
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Login required")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        except StorageUnavailableError as exc:
+            return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", str(exc))
+        except Exception as exc:  # noqa: BLE001 — token de servicio o sección no soportada
+            return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", str(exc))
         return ctx.ok({"url": url})
 
     @router.post(

@@ -20,15 +20,70 @@ export interface ErrorEnvelope {
 
 export type Envelope<T> = SuccessEnvelope<T> | ErrorEnvelope;
 
-// Colaboradores públicos (GET /api/v1/public/collaborators). No incluye user_id ni datos internos.
+// Colaboradores públicos (GET /api/v1/public/collaborators). Solo con consentimiento de
+// cuenta (`nickname_public_consent`); no incluye user_id, name ni datos internos.
 export interface CollaboratorRecognition {
   type: string;
   granted_at: string;
 }
 
 export interface Collaborator {
-  name: string;
+  nickname: string;
   recognitions: CollaboratorRecognition[];
+}
+
+// Épocas históricas (GET /api/v1/epochs).
+export interface Epoch {
+  id: number;
+  title: string;
+  year_start: number | null;
+  year_end: number | null;
+  description: string;
+}
+
+// Clasificación (endpoints independientes del menú/ruta).
+export interface Genre {
+  id: number;
+  name: string;
+  description: string;
+}
+
+export interface Catalogue {
+  id: number;
+  prefix: string;
+  composer: string;
+  catalogue_name: string;
+  creator: string;
+  ordering_criterion: string;
+  description: string;
+}
+
+export interface InstrumentCategory {
+  id: number;
+  code: string;
+  name: string;
+  mb_type: string;
+  parent_id: number | null;
+  sort: number;
+}
+
+export interface Instrument {
+  id: number;
+  code: string;
+  category_id: number;
+  name_en: string;
+  name_es: string;
+  aliases: object[] | null;
+  imslp_codes: object[] | null;
+  clef: string | null;
+  sort: number;
+}
+
+export interface Ensemble {
+  id: number;
+  code: string;
+  name: string;
+  description: string | null;
 }
 
 export interface SearchRequest {
@@ -316,6 +371,9 @@ export interface ComposerSummary {
   aliases_count: number;
   works_count: number;
   review_status: string | null;
+  birth_year?: string | null;
+  death_year?: string | null;
+  biography_nationality?: string | null;
 }
 
 export interface ComposerList {
@@ -662,6 +720,8 @@ export type WorkAiReviewAction = "accept" | "reject" | "uncertain";
 export interface WorkAiProposal {
   id: number;
   work_id: number;
+  work_title?: string | null;
+  work_note?: string | null;
   batch_id?: string | null;
   resolution: WorkAiResolution;
   person_match: WorkAiPersonMatch;

@@ -22,6 +22,8 @@ interface AdminItem {
   /** Sección de la web de storage a abrir con service token (composers|works|tables|
    *  representations|mantenimiento|multimantenimiento|table:<tabla>). */
   storage?: string;
+  /** Sección de la web de mantenimiento de osap-support a abrir con service token. */
+  support?: string;
   children?: AdminItem[];
 }
 
@@ -51,6 +53,10 @@ const SECTIONS: AdminSection[] = [
       { to: "/admin/users", key: "adminUsers.title" },
       { to: "/admin/providers", key: "admin.providersAdmin" },
     ],
+  },
+  {
+    caption: "Mantenimiento support",
+    items: [{ support: "recognitions", label: "Reconocimientos" }],
   },
   {
     caption: "Mantenimiento storage",
@@ -117,8 +123,21 @@ export function AdminLayout(): ReactNode {
     })();
   };
 
+  const openSupport = (section: string) => {
+    void (async () => {
+      try {
+        const r = await apiClient.getSupportWebUrl(section);
+        window.open(r.url, "_blank");
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        window.alert(`osap-support admin no disponible · not available: ${detail}`);
+      }
+    })();
+  };
+
   const label = (item: AdminItem): string => item.label ?? (item.key ? t(item.key) : "");
-  const itemKey = (item: AdminItem): string => (item.to ?? item.storage ?? "") + label(item);
+  const itemKey = (item: AdminItem): string =>
+    (item.to ?? item.storage ?? item.support ?? "") + label(item);
 
   if (!isAdmin) {
     return (
@@ -153,7 +172,11 @@ export function AdminLayout(): ReactNode {
     return (
       <button
         type="button"
-        onClick={() => openStorage(item.storage ?? "multimantenimiento")}
+        onClick={() =>
+          item.support
+            ? openSupport(item.support)
+            : openStorage(item.storage ?? "multimantenimiento")
+        }
         title={item.title}
         className="block w-full rounded px-3 py-1.5 text-left text-sm text-osap-muted hover:bg-osap-border hover:text-osap-ink"
       >

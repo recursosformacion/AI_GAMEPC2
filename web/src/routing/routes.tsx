@@ -21,8 +21,13 @@ import { HowItWorksPage } from "../pages/HowItWorksPage";
 import { CandidatesPage } from "../pages/CandidatesPage";
 import { ComposerDetailPage } from "../pages/ComposerDetailPage";
 import { ComposerPage } from "../pages/ComposerPage";
+import { CataloguesPage } from "../pages/CataloguesPage";
 import { ComposersPage } from "../pages/ComposersPage";
 import { DiscoverPage } from "../pages/DiscoverPage";
+import { EnsemblesPage } from "../pages/EnsemblesPage";
+import { EpochsPage } from "../pages/EpochsPage";
+import { GenresPage } from "../pages/GenresPage";
+import { InstrumentsPage } from "../pages/InstrumentsPage";
 import { ExplorePage } from "../pages/ExplorePage";
 import { HomePage } from "../pages/HomePage";
 import { ViewerPage } from "../pages/ViewerPage";
@@ -50,6 +55,11 @@ export function AppRoutes() {
         <Route path="/studio" element={<SearchStudioPage />} />
         <Route path="/composer" element={<ComposerPage />} />
         <Route path="/composers" element={<ComposersPage />} />
+        <Route path="/epochs" element={<EpochsPage />} />
+        <Route path="/genres" element={<GenresPage />} />
+        <Route path="/catalogues" element={<CataloguesPage />} />
+        <Route path="/instruments" element={<InstrumentsPage />} />
+        <Route path="/ensembles" element={<EnsemblesPage />} />
         <Route path="/activity" element={<ActivityPage />} />
         <Route path="/composers/:personId" element={<ComposerDetailPage />} />
         <Route path="/about" element={<AboutPage />} />

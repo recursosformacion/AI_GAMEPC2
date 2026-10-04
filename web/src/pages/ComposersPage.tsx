@@ -16,6 +16,24 @@ const REVIEW_OPTIONS: { value: string; key: TKey }[] = [
   { value: "not_reviewed", key: "composers.reviewNotReviewed" },
 ];
 
+// Monograma: iniciales del nombre (primera y última palabra).
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  const first = parts[0]?.[0] ?? "";
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
+  return (first + last).toUpperCase();
+}
+
+// "1685–1750" a partir de los años disponibles (puede faltar alguno).
+function lifespan(birth?: string | null, death?: string | null): string {
+  const b = (birth ?? "").trim();
+  const d = (death ?? "").trim();
+  if (b && d) return `${b}–${d}`;
+  if (b) return `${b}–`;
+  if (d) return `–${d}`;
+  return "";
+}
+
 export function ComposersPage() {
   const { t } = useI18n();
   const { list, loading, error, q, setQuery, fetchList, review, setReview } = useComposers();
@@ -43,82 +61,106 @@ export function ComposersPage() {
   };
 
   return (
-    <div className="space-y-4">
-      <h1 className="text-xl font-semibold">{t("composers.title")}</h1>
-      <div className="flex gap-2">
-        <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && search()}
-          placeholder={t("composers.searchPlaceholder")}
-          className="w-full rounded border border-osap-border bg-osap-surface px-3 py-1 text-sm"
-        />
-        <button onClick={search} className="rounded bg-osap-accent px-4 py-1 text-sm text-white">
-          {t("search")}
-        </button>
-      </div>
+    <div className="space-y-6">
+      <header className="border-b border-osap-border pb-5">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-osap-accent">
+          {t("composers.indexLabel")}
+        </p>
+        <h1 className="mt-2 text-3xl font-semibold text-osap-ink">{t("composers.title")}</h1>
+        <p className="mt-2 max-w-2xl text-sm text-osap-muted">{t("composers.subtitle")}</p>
+      </header>
 
-      <div className="flex items-center gap-2 text-sm">
-        <label htmlFor="review-filter" className="text-xs text-osap-muted">
-          {t("composers.reviewFilter")}:
-        </label>
-        <select
-          id="review-filter"
-          value={review ?? ""}
-          onChange={(e) => onReviewChange(e.target.value)}
-          className="rounded border border-osap-border bg-osap-surface px-2 py-1 text-sm"
-        >
-          <option value="">{t("composers.reviewAll")}</option>
-          {REVIEW_OPTIONS.map((o) => (
-            <option key={o.value} value={o.value}>
-              {t(o.key)}
-            </option>
-          ))}
-        </select>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+        <div className="flex flex-1 gap-2">
+          <input
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && search()}
+            placeholder={t("composers.searchPlaceholder")}
+            className="w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
+          />
+          <button onClick={search} className="rounded-md bg-osap-accent px-4 py-2 text-sm text-white">
+            {t("search")}
+          </button>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <label htmlFor="review-filter" className="text-xs text-osap-muted">
+            {t("composers.reviewFilter")}:
+          </label>
+          <select
+            id="review-filter"
+            value={review ?? ""}
+            onChange={(e) => onReviewChange(e.target.value)}
+            className="rounded-md border border-osap-border bg-osap-surface px-2 py-2 text-sm"
+          >
+            <option value="">{t("composers.reviewAll")}</option>
+            {REVIEW_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {t(o.key)}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <Envelope loading={loading} error={error} data={list} emptyMessage={t("states.empty")}>
         {(data) => (
           <>
-            <ul className="divide-y divide-osap-border rounded border border-osap-border">
-              {data.items.map((c) => (
-                <li key={c.id} className="px-3 py-2">
-                  <div className="flex items-center justify-between">
-                    <div className="flex min-w-0 items-center gap-2">
-                      <span className="truncate font-medium">{c.name}</span>
-                      {c.review_status && <ReviewBadge status={c.review_status} />}
+            <ul className="divide-y divide-osap-border overflow-hidden rounded-card border border-osap-border bg-osap-surface shadow-card">
+              {data.items.map((c) => {
+                const meta = [lifespan(c.birth_year, c.death_year), c.biography_nationality]
+                  .filter(Boolean)
+                  .join(" · ");
+                return (
+                <li key={c.id} className="px-4 py-3">
+                  <div className="flex items-center gap-4">
+                    <span
+                      aria-hidden="true"
+                      className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-osap-accent-soft font-display text-sm font-semibold text-osap-accent"
+                    >
+                      {initials(c.name)}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <Link
+                          to={`/composers/${encodeURIComponent(c.id)}`}
+                          className="truncate font-display text-base text-osap-ink transition-colors hover:text-osap-accent"
+                        >
+                          {c.name}
+                        </Link>
+                        {c.review_status && <ReviewBadge status={c.review_status} />}
+                      </div>
+                      {meta ? <p className="mt-0.5 text-xs text-osap-muted">{meta}</p> : null}
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-osap-muted">{c.works_count} {t("composers.works")}</span>
-                      <IconButton
-                        title={t("composers.viewWorks")}
-                        active={openWorks === c.id}
-                        onClick={() => toggleWorks(c.id)}
-                        path="M5 3h14v18l-7-4-7 4z"
-                      />
-                      <Link
-                        to={`/composers/${encodeURIComponent(c.id)}`}
-                        title={t("composers.viewDetail")}
-                        className="rounded p-1 text-osap-muted transition-colors hover:bg-osap-surface hover:text-osap-accent"
-                      >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M2.5 12S5.5 5.5 12 5.5 21.5 12 21.5 12 18.5 18.5 12 18.5 2.5 12 2.5 12z" />
-                          <circle cx="12" cy="12" r="3" />
-                        </svg>
-                      </Link>
-                    </div>
+                    <span className="shrink-0 text-xs text-osap-muted">
+                      {c.works_count} {t("composers.works")}
+                    </span>
+                    <IconButton
+                      title={t("composers.viewWorks")}
+                      active={openWorks === c.id}
+                      onClick={() => toggleWorks(c.id)}
+                      path="M5 3h14v18l-7-4-7 4z"
+                    />
+                    <Link
+                      to={`/composers/${encodeURIComponent(c.id)}`}
+                      title={t("composers.viewDetail")}
+                      className="rounded p-1 text-osap-muted transition-colors hover:text-osap-accent"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="m9 6 6 6-6 6" />
+                      </svg>
+                    </Link>
                   </div>
-                  {openWorks === c.id ? (
-                    <ComposerWorksInline composerName={c.name} />
-                  ) : null}
+                  {openWorks === c.id ? <ComposerWorksInline composerName={c.name} /> : null}
                 </li>
-              ))}
+                );
+              })}
             </ul>
-            <div className="flex items-center justify-between pt-2 text-sm">
+            <div className="flex items-center justify-between pt-3 text-sm">
               <button
                 disabled={offset === 0}
                 onClick={() => setOffset((o) => Math.max(0, o - LIMIT))}
-                className="rounded px-3 py-1 disabled:opacity-40"
+                className="rounded-md px-3 py-1 disabled:opacity-40"
               >
                 {t("pagination.previous")}
               </button>
@@ -126,7 +168,7 @@ export function ComposersPage() {
               <button
                 disabled={offset + LIMIT >= data.total}
                 onClick={() => setOffset((o) => o + LIMIT)}
-                className="rounded px-3 py-1 disabled:opacity-40"
+                className="rounded-md px-3 py-1 disabled:opacity-40"
               >
                 {t("pagination.next")}
               </button>
@@ -146,7 +188,7 @@ function IconButton({ title, onClick, path, active = false }: { title: string; o
       aria-label={title}
       onClick={onClick}
       className={`rounded p-1 transition-colors ${
-        active ? "bg-osap-accent-soft text-osap-accent" : "text-osap-muted hover:bg-osap-surface hover:text-osap-accent"
+        active ? "bg-osap-accent-soft text-osap-accent" : "text-osap-muted hover:bg-osap-accent-soft hover:text-osap-accent"
       }`}
     >
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -182,7 +224,7 @@ function ComposerWorksInline({ composerName }: { composerName: string }) {
 
   if (pending && pipelineWorks.length === 0) {
     return (
-      <div className="mt-2 rounded border border-osap-border bg-osap-surface p-3">
+      <div className="mt-2 rounded-md border border-osap-border bg-osap-bg p-3">
         <div className="flex items-center justify-between gap-2 text-sm">
           <span className="flex items-center gap-2 text-osap-muted">
             <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-osap-accent border-t-transparent" />
@@ -213,7 +255,7 @@ function ComposerWorksInline({ composerName }: { composerName: string }) {
     return <p className="py-2 text-sm text-osap-muted">{t("states.empty")}</p>;
   }
   return (
-    <div className="mt-2 rounded bg-osap-surface p-2">
+    <div className="mt-2 rounded-md bg-osap-bg p-2">
       <WorksListModule works={pipelineWorks} />
     </div>
   );
@@ -230,7 +272,7 @@ const REVIEW_STYLE: Record<string, string> = {
   correct: "bg-green-100 text-green-700",
   incorrect: "bg-red-100 text-red-700",
   reviewed: "bg-blue-100 text-blue-700",
-  not_reviewed: "bg-osap-surface text-osap-muted",
+  not_reviewed: "bg-osap-accent-soft text-osap-muted",
 };
 
 function ReviewBadge({ status }: { status: string }) {

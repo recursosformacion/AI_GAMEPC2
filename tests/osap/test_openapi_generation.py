@@ -192,8 +192,10 @@ def test_tags_grouped() -> None:
     assert tags == {
         "Admin",
         "Auth",
+        "Classifications",
         "Collaborators",
         "Composers",
+        "Epochs",
         "Jobs",
         "Knowledge",
         "Providers",

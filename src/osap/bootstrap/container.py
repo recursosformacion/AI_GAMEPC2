@@ -23,6 +23,9 @@ from src.osap.infrastructure.events import InMemoryEventBus
 from src.osap.infrastructure.jobs import InMemoryJobEngine
 from src.osap.infrastructure.merge import MergeEngine
 from src.osap.infrastructure.metrics import InMemoryMetricsCollector
+from src.osap.infrastructure.support.admin_recognitions_client import (
+    SupportAdminRecognitionsClient,
+)
 from src.osap.infrastructure.user_profile import InMemoryUserProfileStore
 from src.osap.ports.cache import ICache
 from src.osap.ports.catalog_provider import ICatalogProvider
@@ -71,6 +74,7 @@ class Container:
         self._storage_web_base: str | None = None
         self._op_store_config: dict[str, str] | None = None
         self._collaborators: ComposePublicCollaboratorsUseCase | None = None
+        self._support_admin_recognitions: SupportAdminRecognitionsClient | None = None
 
     def register_catalog_provider(self, provider: ICatalogProvider) -> None:
         self._catalog_providers.append(provider)
@@ -171,6 +175,14 @@ class Container:
         if self._collaborators is None:
             raise RuntimeError("Collaborators use case not wired")
         return self._collaborators
+
+    def set_support_admin_recognitions(self, client: SupportAdminRecognitionsClient) -> None:
+        self._support_admin_recognitions = client
+
+    def support_admin_recognitions(self) -> SupportAdminRecognitionsClient:
+        if self._support_admin_recognitions is None:
+            raise RuntimeError("Support admin recognitions client not wired")
+        return self._support_admin_recognitions
 
     def vote_store(self) -> IVoteStore:
         if self._vote_store is None:

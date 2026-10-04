@@ -4,12 +4,28 @@ import type { Language } from "../i18n/translations";
 const LANG_KEY = "osap.lang";
 const THEME_KEY = "osap.theme";
 
-function readLang(): Language {
-  const stored = localStorage.getItem(LANG_KEY);
-  if (stored === "es" || stored === "ca" || stored === "fr" || stored === "en" || stored === "de") {
-    return stored;
+const LANGUAGES: readonly Language[] = ["es", "ca", "fr", "en", "de"];
+
+function isLanguage(value: string | null | undefined): value is Language {
+  return value !== null && value !== undefined && (LANGUAGES as readonly string[]).includes(value);
+}
+
+// Si el usuario no ha elegido idioma, se usa el del navegador (primer idioma soportado);
+// si el navegador no pide ninguno de los soportados, se mantiene el idioma por defecto.
+function browserLang(): Language {
+  if (typeof navigator === "undefined") return "en";
+  const candidates = [navigator.language, ...(navigator.languages ?? [])];
+  for (const candidate of candidates) {
+    const primary = String(candidate).toLowerCase().split("-")[0];
+    if (isLanguage(primary)) return primary;
   }
   return "en";
+}
+
+function readLang(): Language {
+  const stored = localStorage.getItem(LANG_KEY);
+  if (isLanguage(stored)) return stored;
+  return browserLang();
 }
 
 function readDark(): boolean {

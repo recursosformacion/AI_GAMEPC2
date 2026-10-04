@@ -49,6 +49,17 @@ class AuthProxyClient:
     ) -> tuple[int, object]:
         return self._call_bearer("PATCH", f"/auth/admin/users/{user_id}", access_token, payload)
 
+    def admin_set_public_consent(
+        self, access_token: str, user_id: str, value: bool
+    ) -> tuple[int, object]:
+        """Autorización pública del nickname (propiedad de cuenta; operación auditada)."""
+        return self._call_bearer(
+            "PUT",
+            f"/auth/admin/users/{user_id}/public-consent",
+            access_token,
+            {"value": value},
+        )
+
     def admin_delete_user(self, access_token: str, user_id: str) -> tuple[int, object]:
         """Baja definitiva: osap-auth elimina/anonimiza la cuenta (irreversible)."""
         return self._call_bearer("DELETE", f"/auth/admin/users/{user_id}", access_token)

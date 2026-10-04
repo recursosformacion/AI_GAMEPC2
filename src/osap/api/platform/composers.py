@@ -81,6 +81,21 @@ class ComposersMixin(PlatformApiCore):
                     return list(finder(title, composer))
         return []
 
+    def list_epochs(self) -> list[dict[str, object]]:
+        return self.composers().list_epochs()
+
+    def list_genres(self) -> list[dict[str, object]]:
+        return self.composers().list_genres()
+
+    def list_instrument_categories(self) -> list[dict[str, object]]:
+        return self.composers().list_instrument_categories()
+
+    def list_instruments(self) -> list[dict[str, object]]:
+        return self.composers().list_instruments()
+
+    def list_ensembles(self) -> list[dict[str, object]]:
+        return self.composers().list_ensembles()
+
     def get_composer(self, person_id: str) -> dict[str, object] | None:
         return self.composers().get_composer(person_id)
 
@@ -222,6 +237,7 @@ class ComposersMixin(PlatformApiCore):
                     catalogue_name=str(row.get("catalogue_name") or ""),
                     creator=str(row.get("creator") or ""),
                     ordering_criterion=str(row.get("ordering_criterion") or ""),
+                    description=str(row.get("description") or ""),
                 )
             )
         return out

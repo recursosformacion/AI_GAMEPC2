@@ -9,7 +9,13 @@
 // Pages never call fetch/axios directly. Everything goes through this class.
 
 import type {
+  Catalogue,
   Collaborator,
+  Ensemble,
+  Epoch,
+  Genre,
+  Instrument,
+  InstrumentCategory,
   ComposerDetail,
   CorrectionRequestRead,
   ComposerList,
@@ -150,6 +156,36 @@ export class ApiClient {
     return this.get<Collaborator[]>(`/public/collaborators?project=${encodeURIComponent(project)}`);
   }
 
+  /** Épocas históricas (catálogo público; backend osap-storage). */
+  async getEpochs(): Promise<Epoch[]> {
+    return this.get<Epoch[]>("/epochs");
+  }
+
+  /** Géneros musicales (clasificación pública). */
+  async getGenres(): Promise<Genre[]> {
+    return this.get<Genre[]>("/genres");
+  }
+
+  /** Catálogos temáticos (Köchel, BWV…). Distinto de `/catalog` (Fuentes). */
+  async getCatalogues(): Promise<Catalogue[]> {
+    return this.get<Catalogue[]>("/catalogues");
+  }
+
+  /** Instrumentos y voces (la categoría se usa solo para agrupar en la UI). */
+  async getInstruments(): Promise<Instrument[]> {
+    return this.get<Instrument[]>("/instruments");
+  }
+
+  /** Categorías de instrumentos: uso interno de la UI para agrupar; no es una sección pública. */
+  async getInstrumentCategories(): Promise<InstrumentCategory[]> {
+    return this.get<InstrumentCategory[]>("/instrument-categories");
+  }
+
+  /** Ensembles y formaciones. */
+  async getEnsembles(): Promise<Ensemble[]> {
+    return this.get<Ensemble[]>("/ensembles");
+  }
+
   async getComposerWorks(personId: string, limit: number, offset: number): Promise<ComposerWorks> {
     const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
     return this.get<ComposerWorks>(`/composers/${encodeURIComponent(personId)}/works?${params.toString()}`);
@@ -281,6 +317,11 @@ export class ApiClient {
   async getStorageWebUrl(section?: string): Promise<{ url: string }> {
     const qs = section ? `?section=${encodeURIComponent(section)}` : "";
     return this.get<{ url: string }>(`/admin/storage-web${qs}`);
+  }
+
+  async getSupportWebUrl(section?: string): Promise<{ url: string }> {
+    const qs = section ? `?section=${encodeURIComponent(section)}` : "";
+    return this.get<{ url: string }>(`/admin/support-web${qs}`);
   }
 
   // --- cuotas de descarga OMR (admin) ---------------------------------------

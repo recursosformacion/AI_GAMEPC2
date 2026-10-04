@@ -1,8 +1,9 @@
 """Router público de colaboradores (fachada osap-api).
 
-`GET /api/v1/public/collaborators?project=…`: `osap-support` aporta los reconocimientos
-públicos (ACTIVE + consentimiento) y `osap-auth` el nombre visible. **Nunca** se expone el
-`user_id`, email, economía ni metadatos internos. Sin migración: solo composición.
+`GET /api/v1/public/collaborators?project=…`: `osap-support` aporta por M2M los
+reconocimientos ACTIVOS del proyecto y `osap-auth` el consentimiento de cuenta + nickname. Se
+publica solo con `nickname_public_consent = true`, mostrando el **nickname**. **Nunca** se
+expone el `user_id`, email, `name`, economía ni metadatos internos. Sin migración: composición.
 """
 
 from __future__ import annotations

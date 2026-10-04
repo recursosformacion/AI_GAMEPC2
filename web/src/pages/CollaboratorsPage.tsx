@@ -107,18 +107,18 @@ export function CollaboratorsPage() {
             emptyMessage={t("collaborators.empty")}
           >
             {(people) => (
-              <ul className="space-y-3">
+              <ul className="divide-y divide-osap-border rounded border border-osap-border bg-osap-surface">
                 {people.map((person, index) => (
                   <li
-                    key={`${person.name}-${index}`}
-                    className="rounded border border-osap-border bg-osap-surface p-4"
+                    key={`${person.nickname}-${index}`}
+                    className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-2"
                   >
-                    <p className="font-semibold">{person.name}</p>
-                    <div className="mt-2 flex flex-wrap gap-2">
+                    <span className="font-semibold">{person.nickname}</span>
+                    <span className="flex flex-wrap items-center gap-2">
                       {person.recognitions.map((rec) => (
-                        <Badge key={`${person.name}-${rec.type}`} type={rec.type} />
+                        <Badge key={`${person.nickname}-${rec.type}`} type={rec.type} />
                       ))}
-                    </div>
+                    </span>
                   </li>
                 ))}
               </ul>

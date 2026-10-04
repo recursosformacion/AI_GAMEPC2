@@ -71,6 +71,20 @@ class SystemMixin(PlatformApiCore):
                 url = f"{base}/admin/t/{name}?token={urllib.parse.quote(service_token)}"
         return url
 
+    def support_web(self, token: str | None, section: str | None = None) -> str:
+        """URL de la capa web de mantenimiento de osap-support (hoy: reconocimientos)."""
+        self._require_admin(token)
+        client = self._container.support_admin_recognitions()
+        service_token = client.admin_token()
+        routes = {
+            None: "/api/v1/admin/web/recognitions",
+            "recognitions": "/api/v1/admin/web/recognitions",
+        }
+        path = routes.get(section or "recognitions")
+        if path is None:
+            raise ValueError(f"sección no soportada: {section}")
+        return f"{client.base_url}{path}?token={urllib.parse.quote(service_token)}"
+
     def admin_overview(self, token: str | None) -> dict[str, object]:
         stats = self.composer_review_stats(token)
         suggestions = self._store.suggestion_counts()
@@ -114,6 +128,36 @@ class SystemMixin(PlatformApiCore):
             payload["status"] = status
         return self._auth_result(
             *self._container.auth_proxy().admin_update_user(bearer, user_id, payload)
+        )
+
+    def admin_user_set_public_consent(
+        self, token: str | None, user_id: str, value: bool
+    ) -> object:
+        self._require_admin(token)
+        bearer = token or ""
+        return self._auth_result(
+            *self._container.auth_proxy().admin_set_public_consent(bearer, user_id, bool(value))
+        )
+
+    def admin_user_recognitions(self, token: str | None, user_id: str) -> tuple[int, object]:
+        self._require_admin(token)
+        return self._container.support_admin_recognitions().list_for_user(user_id)
+
+    def admin_user_grant_recognition(
+        self, token: str | None, user_id: str, project: str, recognition_type: str,
+        reason: str | None = None,
+    ) -> tuple[int, object]:
+        self._require_admin(token)
+        return self._container.support_admin_recognitions().grant(
+            user_id=user_id, project=project, recognition_type=recognition_type, reason=reason
+        )
+
+    def admin_user_revoke_recognition(
+        self, token: str | None, recognition_id: int, reason: str | None = None
+    ) -> tuple[int, object]:
+        self._require_admin(token)
+        return self._container.support_admin_recognitions().revoke(
+            recognition_id=recognition_id, reason=reason
         )
 
     def admin_user_delete(self, token: str | None, user_id: str) -> object:

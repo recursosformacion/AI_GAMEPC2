@@ -12,6 +12,21 @@ import type { AdminUser } from "./AdminUsersPage";
 const ALL_ROLES = ["user", "moderator", "admin"];
 const STATUSES = ["active", "pending_verification", "disabled"];
 
+interface AdminRecognition {
+  id: number;
+  type: string;
+  status: string;
+}
+
+// Solo supporter NO se concede manualmente (deriva de una transacción económica); el resto
+// (contributor, voice, founder) los otorga el admin. Todos se pueden revocar si están activos.
+const RECOGNITION_TYPES = [
+  { type: "supporter", icon: "❤️", grantable: false },
+  { type: "contributor", icon: "🎼", grantable: true },
+  { type: "voice", icon: "📣", grantable: true },
+  { type: "founder", icon: "🏛️", grantable: true },
+] as const;
+
 export function AdminUserDetailPage() {
   const { t } = useI18n();
   const { userId = "" } = useParams<{ userId: string }>();
@@ -23,7 +38,18 @@ export function AdminUserDetailPage() {
   const [name, setName] = useState("");
   const [roles, setRoles] = useState<string[]>([]);
   const [status, setStatus] = useState("");
+  const [publicConsent, setPublicConsent] = useState(false);
+  const [savingConsent, setSavingConsent] = useState(false);
+  const [recognitions, setRecognitions] = useState<AdminRecognition[]>([]);
+  const [savingRec, setSavingRec] = useState(false);
   const user_id = userId;
+
+  const loadRecognitions = (id: string) => {
+    void apiClient
+      .get<AdminRecognition[]>(`/admin/users/${encodeURIComponent(id)}/recognitions`)
+      .then(setRecognitions)
+      .catch(() => setRecognitions([]));
+  };
 
   useEffect(() => {
     if (!user_id) return;
@@ -34,6 +60,8 @@ export function AdminUserDetailPage() {
         setName(data.name ?? "");
         setRoles(data.roles ?? []);
         setStatus(data.status ?? "");
+        setPublicConsent(Boolean(data.nickname_public_consent));
+        loadRecognitions(user_id);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "admin.error"));
   }, [user_id]);
@@ -55,6 +83,44 @@ export function AdminUserDetailPage() {
         setError(e instanceof Error ? e.message : "admin.error");
         setSaving(false);
       });
+  };
+
+  // Autorización pública del nickname: operación INDEPENDIENTE (auditada por separado).
+  const setConsent = (value: boolean) => {
+    if (!user_id) return;
+    setSavingConsent(true);
+    setError(null);
+    void apiClient
+      .put<AdminUser>(`/admin/users/${encodeURIComponent(user_id)}/public-consent`, { value })
+      .then((data) => {
+        setUser(data);
+        setPublicConsent(Boolean(data.nickname_public_consent));
+        setSavingConsent(false);
+      })
+      .catch((e) => {
+        setError(e instanceof Error ? e.message : "admin.error");
+        setSavingConsent(false);
+      });
+  };
+
+  const activeRecognition = (type: string) =>
+    recognitions.find((r) => r.type === type && r.status === "active");
+  // Conceder/revocar reconocimiento: operación INDEPENDIENTE (osap-support, auditada aparte).
+  const toggleRecognition = (type: string) => {
+    if (!user_id) return;
+    const active = activeRecognition(type);
+    setSavingRec(true);
+    setError(null);
+    const request = active
+      ? apiClient.post(`/admin/users/${encodeURIComponent(user_id)}/recognitions/${active.id}/revoke`, {})
+      : apiClient.post(`/admin/users/${encodeURIComponent(user_id)}/recognitions`, {
+          project: "omr",
+          type,
+        });
+    void request
+      .then(() => loadRecognitions(user_id))
+      .catch((e) => setError(e instanceof Error ? e.message : "admin.error"))
+      .finally(() => setSavingRec(false));
   };
 
   if (error) {
@@ -92,9 +158,13 @@ export function AdminUserDetailPage() {
       {!editing ? (
         <dl className="space-y-2 rounded border border-osap-border bg-osap-surface p-4">
           <Field label={t("adminUsers.name")}>{user.name ?? "—"}</Field>
+          <Field label={t("adminUsers.nickname")}>{user.nickname ?? "—"}</Field>
           <Field label={t("adminUsers.email")}>{user.email}</Field>
           <Field label={t("adminUsers.roles")}>{user.roles.join(", ")}</Field>
           <Field label={t("adminUsers.status")}>{user.status}</Field>
+          <Field label={t("adminUsers.publicTitle")}>
+            {publicConsent ? t("adminUsers.publicOn") : t("adminUsers.publicOff")}
+          </Field>
           <Field label={t("adminUsers.emailVerified")}>{String(user.email_verified)}</Field>
           <Field label={t("adminUsers.createdAt")}>{user.created_at ?? "—"}</Field>
           <Link to={`/admin/users/${encodeURIComponent(user.user_id)}?mode=edit`}>
@@ -110,6 +180,10 @@ export function AdminUserDetailPage() {
               onChange={(e) => setName(e.target.value)}
               className="rounded border border-osap-border bg-osap-bg px-3 py-2"
             />
+          </div>
+          <div className="grid gap-2">
+            <span className="text-sm font-medium">{t("adminUsers.nickname")}</span>
+            <p className="text-sm text-osap-muted">{user.nickname ?? "—"}</p>
           </div>
           <div className="grid gap-2">
             <span className="text-sm font-medium">{t("adminUsers.roles")}</span>
@@ -142,6 +216,18 @@ export function AdminUserDetailPage() {
               ))}
             </select>
           </div>
+          <div className="grid gap-2">
+            <span className="text-sm font-medium">{t("adminUsers.publicTitle")}</span>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={publicConsent}
+                disabled={savingConsent}
+                onChange={(e) => setConsent(e.target.checked)}
+              />
+              {t("adminUsers.publicOn")}
+            </label>
+          </div>
           {error && <p className="text-sm text-red-500">{error}</p>}
           <div className="flex gap-2">
             <Button onClick={save} disabled={saving}>
@@ -151,6 +237,36 @@ export function AdminUserDetailPage() {
           </div>
         </div>
       )}
+
+      <fieldset className="space-y-3 rounded border border-osap-border bg-osap-surface p-4">
+        <legend className="px-1 text-sm font-medium">{t("adminUsers.recognitions")}</legend>
+        <p className="text-xs text-osap-muted">
+          Conceder o revocar reconocimientos (osap-support). Solo supporter no se concede
+          manualmente (deriva de una transacción económica); el resto sí.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          {RECOGNITION_TYPES.map(({ type, icon, grantable }) => {
+            const active = Boolean(activeRecognition(type));
+            const disabled = savingRec || (!active && !grantable);
+            return (
+              <label
+                key={type}
+                className={`flex items-center gap-1 text-sm ${disabled ? "opacity-50" : ""}`}
+                title={!active && !grantable ? "Supporter no se concede manualmente (transacción económica)" : undefined}
+              >
+                <input
+                  type="checkbox"
+                  checked={active}
+                  disabled={disabled}
+                  onChange={() => toggleRecognition(type)}
+                />
+                <span aria-hidden="true">{icon}</span>
+                {type}
+              </label>
+            );
+          })}
+        </div>
+      </fieldset>
     </div>
   );
 }

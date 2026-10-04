@@ -5,9 +5,11 @@ import { Link } from "react-router-dom";
 import { Button } from "../components/Button";
 import { useI18n } from "../i18n/I18n";
 
+// Catálogo y Fuentes viven DENTRO de Explorar (no en el menú de primer nivel).
 const AREAS = [
   { to: "/discover", titleKey: "nav.discover", icon: "🧭" },
-  { to: "/catalog", titleKey: "nav.sources", icon: "📚" },
+  { to: "/catalog", titleKey: "nav.catalog", icon: "📚" },
+  { to: "/sources", titleKey: "nav.sources", icon: "🗂️" },
   { to: "/studio", titleKey: "nav.studio", icon: "🔍" },
 ] as const;
 
@@ -19,7 +21,7 @@ export function ExplorePage() {
         <h1 className="text-2xl font-semibold">{t("nav.explore")}</h1>
         <p className="mx-auto mt-2 max-w-xl text-sm text-osap-muted">{t("explore.intro")}</p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {AREAS.map((area) => (
           <Link
             key={area.to}

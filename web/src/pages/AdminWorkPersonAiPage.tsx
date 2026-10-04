@@ -198,7 +198,10 @@ export function AdminWorkPersonAiPage() {
       {!loading && items.length === 0 && <p className="text-sm text-osap-muted">Sin propuestas en este estado.</p>}
 
       {items.map((p) => (
-        <Card key={p.id} title={`Obra #${p.work_id} · propuesta ${p.id}`}>
+        <Card key={p.id} title={`${p.work_title ?? `Obra #${p.work_id}`} · propuesta ${p.id}`}>
+          {p.work_note ? (
+            <p className="mb-2 text-xs text-osap-muted">Comentario de la obra: {p.work_note}</p>
+          ) : null}
           <div className="flex flex-wrap items-center gap-2 text-xs">
             <span className={`rounded-full px-2 py-0.5 ${STATUS_CLASS[p.status] ?? "bg-slate-200"}`}>
               {STATUS_LABEL[p.status] ?? p.status}

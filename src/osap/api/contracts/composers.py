@@ -15,6 +15,7 @@ class ComposerSummaryResponse(_Frozen):
     visible: bool = True
     birth_year: str | None = None
     death_year: str | None = None
+    biography_nationality: str | None = None
     # Modelo nuevo (`persons` + `works_person_roles`): roles de la persona.
     roles: list[str] = []
 
@@ -84,6 +85,52 @@ class ComposerDetailResponse(_Frozen):
     biography_references: list[str] = []
 
 
+class EpochRead(_Frozen):
+    """Época histórica de la música (catálogo público)."""
+
+    id: int
+    title: str
+    year_start: int | None = None
+    year_end: int | None = None
+    description: str = ""
+
+
+class GenreRead(_Frozen):
+    """Género musical (macro-familia)."""
+
+    id: int
+    name: str
+    description: str = ""
+
+
+class InstrumentCategoryRead(_Frozen):
+    id: int
+    code: str
+    name: str
+    mb_type: str = ""
+    parent_id: int | None = None
+    sort: int = 0
+
+
+class InstrumentRead(_Frozen):
+    id: int
+    code: str
+    category_id: int
+    name_en: str
+    name_es: str
+    aliases: list[object] | None = None
+    imslp_codes: list[object] | None = None
+    clef: str | None = None
+    sort: int = 0
+
+
+class EnsembleRead(_Frozen):
+    id: int
+    code: str
+    name: str
+    description: str | None = None
+
+
 class ComposerWorkRefResponse(_Frozen):
     work_id: int
     title: str | None = None
@@ -112,6 +159,7 @@ class CatalogueRead(_Frozen):
     catalogue_name: str
     creator: str
     ordering_criterion: str
+    description: str = ""
 
 
 class ReviewComposerRequest(_Frozen):

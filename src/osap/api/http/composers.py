@@ -13,7 +13,12 @@ from src.osap.api.contracts import (
     ComposerResolveRequest,
     ComposerResolveResponse,
     ComposerWorksResponse,
+    EnsembleRead,
+    EpochRead,
     ErrorEnvelope,
+    GenreRead,
+    InstrumentCategoryRead,
+    InstrumentRead,
     SuccessEnvelope,
 )
 from src.osap.domain.votes import ForbiddenError, UnauthenticatedError
@@ -228,5 +233,91 @@ def build_composers_router(ctx: HttpContext) -> APIRouter:
             representations=reps,
         )
         return ctx.ok(_shared._composer_resolve_dto(decision))
+
+    @router.get(
+        "/api/v1/epochs",
+        tags=["Epochs"],
+        summary="List epochs",
+        description="Catálogo público de épocas históricas (id, título, años, descripción). "
+        "Backend: osap-storage.",
+        response_model=SuccessEnvelope[list[EpochRead]] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("Epochs", _shared._example([])),
+            503: _shared._SERVICE_UNAVAILABLE_503,
+        },
+    )
+    def list_epochs(response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            return ctx.ok(ctx.api.list_epochs())
+        except StorageComposerError:
+            return ctx.fail(503, response, "SERVICE_UNAVAILABLE", "Storage service is not configured")
+
+    @router.get(
+        "/api/v1/genres",
+        tags=["Classifications"],
+        summary="List genres",
+        description="Catálogo público de géneros musicales (macro-familia). Backend: osap-storage.",
+        response_model=SuccessEnvelope[list[GenreRead]] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("Genres", _shared._example([])),
+            503: _shared._SERVICE_UNAVAILABLE_503,
+        },
+    )
+    def list_genres(response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            return ctx.ok(ctx.api.list_genres())
+        except StorageComposerError:
+            return ctx.fail(503, response, "SERVICE_UNAVAILABLE", "Storage service is not configured")
+
+    @router.get(
+        "/api/v1/instrument-categories",
+        tags=["Classifications"],
+        summary="List instrument categories",
+        description="Categorías y subfamilias de instrumentos. Backend: osap-storage.",
+        response_model=SuccessEnvelope[list[InstrumentCategoryRead]] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("Instrument categories", _shared._example([])),
+            503: _shared._SERVICE_UNAVAILABLE_503,
+        },
+    )
+    def list_instrument_categories(response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            return ctx.ok(ctx.api.list_instrument_categories())
+        except StorageComposerError:
+            return ctx.fail(503, response, "SERVICE_UNAVAILABLE", "Storage service is not configured")
+
+    @router.get(
+        "/api/v1/instruments",
+        tags=["Classifications"],
+        summary="List instruments",
+        description="Instrumentos y voces (nombre en/es, alias, códigos IMSLP). Backend: osap-storage.",
+        response_model=SuccessEnvelope[list[InstrumentRead]] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("Instruments", _shared._example([])),
+            503: _shared._SERVICE_UNAVAILABLE_503,
+        },
+    )
+    def list_instruments(response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            return ctx.ok(ctx.api.list_instruments())
+        except StorageComposerError:
+            return ctx.fail(503, response, "SERVICE_UNAVAILABLE", "Storage service is not configured")
+
+    @router.get(
+        "/api/v1/ensembles",
+        tags=["Classifications"],
+        summary="List ensembles",
+        description="Ensembles y formaciones con su descripción. Backend: osap-storage.",
+        response_model=SuccessEnvelope[list[EnsembleRead]] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("Ensembles", _shared._example([])),
+            503: _shared._SERVICE_UNAVAILABLE_503,
+        },
+    )
+    def list_ensembles(response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            return ctx.ok(ctx.api.list_ensembles())
+        except StorageComposerError:
+            return ctx.fail(503, response, "SERVICE_UNAVAILABLE", "Storage service is not configured")
 
     return router

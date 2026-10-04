@@ -356,6 +356,28 @@ class StorageComposerClient:
             return [d for d in doc if isinstance(d, dict)]
         return []
 
+    def list_epochs(self) -> list[dict[str, object]]:
+        """Catálogo público de épocas históricas (storage `/api/v1/epochs`)."""
+        return self._get_list("/api/v1/epochs")
+
+    def list_genres(self) -> list[dict[str, object]]:
+        return self._get_list("/api/v1/genres")
+
+    def list_instrument_categories(self) -> list[dict[str, object]]:
+        return self._get_list("/api/v1/instrument-categories")
+
+    def list_instruments(self) -> list[dict[str, object]]:
+        return self._get_list("/api/v1/instruments")
+
+    def list_ensembles(self) -> list[dict[str, object]]:
+        return self._get_list("/api/v1/ensembles")
+
+    def _get_list(self, path: str) -> list[dict[str, object]]:
+        status, doc = self._call("GET", path, scope="storage:read", provider=self._token_provider)
+        if 200 <= status < 300 and isinstance(doc, list):
+            return [d for d in doc if isinstance(d, dict)]
+        return []
+
     def storage_web_admin_url(self) -> str:
         """URL de la capa web de administración de storage (CRUD), autenticada con token de servicio."""
         token = self.storage_admin_token()

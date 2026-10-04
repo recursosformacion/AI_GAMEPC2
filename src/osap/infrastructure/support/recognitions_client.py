@@ -1,13 +1,16 @@
-"""Cliente del listado público de reconocimientos por proyecto de osap-support.
+"""Cliente M2M del listado de reconocimientos activos por proyecto de osap-support.
 
-Consulta `GET /api/v1/public/projects/{project}/recognitions` (sin autenticación; surface
-pública de support). Un 404 se traduce a `PublicProjectNotFoundError`; un fallo de red o
-HTTP ≥ 400, a `CollaboratorsUnavailableError`.
+Consulta `GET /api/v1/m2m/recognitions?project=…` con un service token (`aud=osap-support`,
+scope `api:read`). Devuelve los reconocimientos ACTIVOS del proyecto agrupados por `user_id`,
+sin filtrar por `public` (fila deprecada): la visibilidad la decide el consentimiento de
+cuenta en osap-auth. Un 404 se traduce a `PublicProjectNotFoundError`; un fallo de red, de
+token o HTTP ≠ 200, a `CollaboratorsUnavailableError`.
 """
 
 from __future__ import annotations
 
 import urllib.parse
+from typing import TYPE_CHECKING
 
 import requests
 
@@ -16,21 +19,37 @@ from src.osap.application.collaborators import (
     PublicProjectNotFoundError,
 )
 
+if TYPE_CHECKING:
+    from src.osap.ports.service_token import IServiceTokenProvider
 
-class SupportPublicRecognitionsClient:
+_SUPPORT_SCOPE = ("api:read",)
+
+
+class SupportRecognitionsClient:
     def __init__(
-        self, *, base_url: str = "http://127.0.0.1:8300", timeout: int = 15
+        self,
+        *,
+        base_url: str = "http://127.0.0.1:8300",
+        token_provider: IServiceTokenProvider,
+        timeout: int = 15,
     ) -> None:
         self._base_url = base_url.rstrip("/")
+        self._token_provider = token_provider
         self._timeout = timeout
 
-    def public_project_recognitions(self, project: str) -> list[dict[str, object]]:
+    def active_project_recognitions(self, project: str) -> list[dict[str, object]]:
+        try:
+            token = self._token_provider.token(_SUPPORT_SCOPE)
+        except Exception as exc:  # noqa: BLE001 — sin token no se puede consultar
+            raise CollaboratorsUnavailableError(f"service token: {exc}") from exc
         url = (
-            f"{self._base_url}/api/v1/public/projects/"
-            f"{urllib.parse.quote(project)}/recognitions"
+            f"{self._base_url}/api/v1/m2m/recognitions?"
+            f"project={urllib.parse.quote(project)}"
         )
         try:
-            response = requests.get(url, timeout=self._timeout)
+            response = requests.get(
+                url, headers={"Authorization": f"Bearer {token}"}, timeout=self._timeout
+            )
         except requests.RequestException as exc:
             raise CollaboratorsUnavailableError(f"support inaccesible: {exc}") from exc
         if response.status_code == 404:

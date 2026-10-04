@@ -129,7 +129,7 @@ export function WorksListModule({
               >
                 <span>
                   <span className="text-osap-accent">{stars(w.score)}</span>{" "}
-                  <span className="font-medium">
+                  <span className="font-display">
                     {w.work.composer ? `${w.work.composer} — ` : ""}
                     {w.work.title}
                   </span>
@@ -178,7 +178,7 @@ export function WorksListModule({
               onClick={() => toggleWork(String(w.work_id))}
               className="flex w-full items-center justify-between rounded px-1 py-2 text-left text-sm hover:bg-osap-accent-soft"
             >
-              <span className="font-medium">{w.title}</span>
+              <span className="font-display">{w.title}</span>
               <span className="text-osap-muted">{openId === String(w.work_id) ? "▲" : "▼"}</span>
             </button>
             {openId === String(w.work_id) ? (

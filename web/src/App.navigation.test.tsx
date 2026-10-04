@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import App from "./App";
@@ -63,16 +63,27 @@ describe("Routing and navigation (V3.4)", () => {
     expect(screen.getByRole("heading", { name: /Administration — Providers/ })).toBeInTheDocument();
   });
 
-  it("shows the brand header, global search, semantic breadcrumb and footer", () => {
+  it("shows the brand sidebar, global search and footer", () => {
     renderAt("/jobs");
     expect(screen.getAllByText("OpenMusicRepository").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("search")).toBeInTheDocument();
-    expect(screen.getByRole("navigation", { name: /breadcrumb/ })).toBeInTheDocument();
+    // Línea del shell con la intensidad definida (token strong).
+    expect(screen.getByRole("banner").className).toContain("border-osap-border-strong");
     expect(screen.getAllByText(/powered by OSAP/).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "Home" }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "Explore" }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "Collaborators" }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "How it works" }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "Support OSAP" }).length).toBeGreaterThan(0);
+  });
+
+  it("agrupa las secciones de Clasificación en el sidebar", () => {
+    renderAt("/jobs");
+    fireEvent.click(screen.getByRole("button", { name: "Classification" }));
+    expect(screen.getByRole("link", { name: "Genres" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Catalogues" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Instruments" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ensembles" })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Epochs" })).toBeInTheDocument();
   });
 });

@@ -11,10 +11,12 @@ export interface AdminUser {
   user_id: string;
   email: string;
   name: string | null;
+  nickname?: string | null;
   roles: string[];
   email_verified: boolean;
   status: string;
   created_at?: string | null;
+  nickname_public_consent?: boolean;
 }
 
 export function AdminUsersPage() {

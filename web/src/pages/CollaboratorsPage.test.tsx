@@ -33,19 +33,19 @@ describe("CollaboratorsPage", () => {
   it("ready: muestra una entrada por persona con sus badges", async () => {
     vi.spyOn(apiClient, "getCollaborators").mockResolvedValue([
       {
-        name: "Ana",
+        nickname: "ana",
         recognitions: [
           { type: "supporter", granted_at: "2026-01-01" },
           { type: "contributor", granted_at: "2026-02-01" },
         ],
       },
-      { name: "Bob", recognitions: [{ type: "voice", granted_at: "2026-03-01" }] },
+      { nickname: "bob", recognitions: [{ type: "voice", granted_at: "2026-03-01" }] },
     ]);
 
     renderPage();
 
-    expect(await screen.findByText("Ana")).toBeTruthy();
-    expect(screen.getByText("Bob")).toBeTruthy();
+    expect(await screen.findByText("ana")).toBeTruthy();
+    expect(screen.getByText("bob")).toBeTruthy();
     expect(screen.getByText("Supporter")).toBeTruthy();
     expect(screen.getByText("Contributor")).toBeTruthy();
     expect(screen.getByText("Voice")).toBeTruthy();
