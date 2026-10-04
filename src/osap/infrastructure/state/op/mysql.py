@@ -497,6 +497,230 @@ class _MysqlStore(_MemoryStore):
         rows = self._run("SELECT COUNT(*) AS n FROM correction_requests WHERE status = 'pending'")
         return int(str(rows[0]["n"])) if rows else 0
 
+    # --- contributions (aportaciones) -----------------------------------------
+    # Tablas creadas por la migración preparada (script/migrate_contributions_schema.py),
+    # que NO se ejecuta desde aquí. Escrituras compuestas en una sola transacción.
+
+    def add_contribution(
+        self,
+        *,
+        actor_user_id: str,
+        operation: str,
+        target_kind: str,
+        target_id: str,
+        declared_source: str | None,
+        relations: list[dict[str, object]],
+        actor: str | None,
+    ) -> dict[str, object]:
+        conn = self._conn()
+        try:
+            conn.autocommit(False)
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO contributions (actor_user_id, operation, target_kind, target_id, "
+                    "declared_source, status) VALUES (%s,%s,%s,%s,%s,'draft')",
+                    (actor_user_id, operation, target_kind, target_id, declared_source),
+                )
+                cid = int(cur.lastrowid or 0)
+                for rel in relations:
+                    cur.execute(
+                        "INSERT INTO contribution_relations (contribution_id, relation_kind, "
+                        "relation_code, person_id, person_name, validation_status) "
+                        "VALUES (%s,%s,%s,%s,%s,'pending')",
+                        (
+                            cid,
+                            rel["relation_kind"],
+                            rel["relation_code"],
+                            rel.get("person_id"),
+                            rel.get("person_name"),
+                        ),
+                    )
+                cur.execute(
+                    "INSERT INTO contribution_events (contribution_id, event_type, to_status, actor) "
+                    "VALUES (%s,'created','draft',%s)",
+                    (cid, actor),
+                )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+        row = self.get_contribution(cid)
+        assert row is not None
+        return row
+
+    def get_contribution(self, contribution_id: int) -> dict[str, object] | None:
+        rows = self._run("SELECT * FROM contributions WHERE id = %s", (contribution_id,))
+        return rows[0] if rows else None
+
+    def list_contributions_by_actor(
+        self, actor_user_id: str, *, limit: int, offset: int
+    ) -> tuple[list[dict[str, object]], int]:
+        total_rows = self._run(
+            "SELECT COUNT(*) AS n FROM contributions WHERE actor_user_id = %s", (actor_user_id,)
+        )
+        total = int(str(total_rows[0]["n"])) if total_rows else 0
+        rows = self._run(
+            "SELECT * FROM contributions WHERE actor_user_id = %s ORDER BY id DESC LIMIT %s OFFSET %s",
+            (actor_user_id, limit, offset),
+        )
+        return rows, total
+
+    def list_contributions_for_review(
+        self, statuses: list[str], *, limit: int, offset: int
+    ) -> tuple[list[dict[str, object]], int]:
+        placeholders = ",".join(["%s"] * len(statuses))
+        total_rows = self._run(
+            f"SELECT COUNT(*) AS n FROM contributions WHERE status IN ({placeholders})",
+            tuple(statuses),
+        )
+        total = int(str(total_rows[0]["n"])) if total_rows else 0
+        rows = self._run(
+            f"SELECT * FROM contributions WHERE status IN ({placeholders}) ORDER BY id ASC "
+            "LIMIT %s OFFSET %s",
+            (*statuses, limit, offset),
+        )
+        return rows, total
+
+    def list_contribution_relations(self, contribution_id: int) -> list[dict[str, object]]:
+        return self._run(
+            "SELECT * FROM contribution_relations WHERE contribution_id = %s ORDER BY id",
+            (contribution_id,),
+        )
+
+    def list_contribution_artifacts(self, contribution_id: int) -> list[dict[str, object]]:
+        return self._run(
+            "SELECT * FROM contribution_artifacts WHERE contribution_id = %s ORDER BY id",
+            (contribution_id,),
+        )
+
+    def list_contribution_events(self, contribution_id: int) -> list[dict[str, object]]:
+        return self._run(
+            "SELECT * FROM contribution_events WHERE contribution_id = %s ORDER BY id",
+            (contribution_id,),
+        )
+
+    def contribution_artifact_exists(self, contribution_id: int, file_id: int) -> bool:
+        rows = self._run(
+            "SELECT id FROM contribution_artifacts WHERE contribution_id = %s AND file_id = %s LIMIT 1",
+            (contribution_id, file_id),
+        )
+        return bool(rows)
+
+    def add_contribution_artifact(
+        self, *, contribution_id: int, file_id: int, kind: str | None, actor: str | None
+    ) -> dict[str, object]:
+        conn = self._conn()
+        try:
+            conn.autocommit(False)
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO contribution_artifacts (contribution_id, file_id, kind) "
+                    "VALUES (%s,%s,%s)",
+                    (contribution_id, file_id, kind),
+                )
+                aid = int(cur.lastrowid or 0)
+                cur.execute(
+                    "INSERT INTO contribution_events (contribution_id, event_type, actor, detail_json) "
+                    "VALUES (%s,'artifact_added',%s,%s)",
+                    (contribution_id, actor, json.dumps({"file_id": file_id})),
+                )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+        rows = self._run("SELECT * FROM contribution_artifacts WHERE id = %s", (aid,))
+        assert rows
+        return rows[0]
+
+    def set_contribution_status(
+        self,
+        *,
+        contribution_id: int,
+        status: str,
+        reviewed_by: str | None,
+        review_note: str | None,
+        event_type: str,
+        actor: str | None,
+    ) -> dict[str, object] | None:
+        existing = self.get_contribution(contribution_id)
+        if existing is None:
+            return None
+        from_status = str(existing["status"])
+        conn = self._conn()
+        try:
+            conn.autocommit(False)
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE contributions SET status=%s, "
+                    "reviewed_by=COALESCE(%s, reviewed_by), review_note=COALESCE(%s, review_note), "
+                    "reviewed_at=CASE WHEN %s IS NULL THEN reviewed_at ELSE NOW(6) END "
+                    "WHERE id=%s",
+                    (status, reviewed_by, review_note, reviewed_by, contribution_id),
+                )
+                cur.execute(
+                    "INSERT INTO contribution_events "
+                    "(contribution_id, event_type, from_status, to_status, actor) "
+                    "VALUES (%s,%s,%s,%s,%s)",
+                    (contribution_id, event_type, from_status, status, actor),
+                )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+        return self.get_contribution(contribution_id)
+
+    def update_contribution_relation_validation(
+        self,
+        *,
+        contribution_id: int,
+        relation_id: int,
+        validation_status: str,
+        validated_by: str | None,
+        actor: str | None,
+        note: str | None,
+    ) -> dict[str, object] | None:
+        conn = self._conn()
+        try:
+            conn.autocommit(False)
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id FROM contribution_relations WHERE id = %s AND contribution_id = %s",
+                    (relation_id, contribution_id),
+                )
+                if cur.fetchone() is None:
+                    conn.rollback()
+                    return None
+                cur.execute(
+                    "UPDATE contribution_relations SET validation_status=%s, validated_by=%s, "
+                    "validated_at=NOW(6) WHERE id=%s",
+                    (validation_status, validated_by, relation_id),
+                )
+                cur.execute(
+                    "INSERT INTO contribution_events "
+                    "(contribution_id, event_type, relation_id, detail_json, actor) "
+                    "VALUES (%s,'relation_validated',%s,%s,%s)",
+                    (
+                        contribution_id,
+                        relation_id,
+                        json.dumps({"validation_status": validation_status, "note": note}),
+                        actor,
+                    ),
+                )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+        rows = self._run("SELECT * FROM contribution_relations WHERE id = %s", (relation_id,))
+        return rows[0] if rows else None
+
     def get_work_selection(self, work_id: str) -> dict[str, object] | None:
         rows = self._run("SELECT * FROM work_selections WHERE work_id = %s", (work_id,))
         return rows[0] if rows else None

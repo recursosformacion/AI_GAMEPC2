@@ -23,6 +23,15 @@ class MemoryStore:
         self._work_selections: dict[str, dict[str, object]] = {}
         self._providers: list[dict[str, object]] = []
         self._config: dict[str, str] = {}
+        # Aportaciones (contributions): tabla(s) de la migración preparada.
+        self._contributions: dict[int, dict[str, object]] = {}
+        self._contribution_relations: list[dict[str, object]] = []
+        self._contribution_events: list[dict[str, object]] = []
+        self._contribution_artifacts: list[dict[str, object]] = []
+        self._contrib_seq = 0
+        self._contrib_rel_seq = 0
+        self._contrib_evt_seq = 0
+        self._contrib_art_seq = 0
 
     def list_suggestions(self) -> list[dict[str, object]]:
         return list(self._suggestions)
@@ -223,3 +232,189 @@ class MemoryStore:
         }
         self._work_selections[work_id] = row
         return row
+
+    # --- contributions (aportaciones) -----------------------------------------
+
+    def _append_event(
+        self,
+        contribution_id: int,
+        event_type: str,
+        from_status: str | None,
+        to_status: str | None,
+        relation_id: int | None,
+        detail_json: str | None,
+        actor: str | None,
+    ) -> dict[str, object]:
+        self._contrib_evt_seq += 1
+        row: dict[str, object] = {
+            "id": self._contrib_evt_seq,
+            "contribution_id": int(contribution_id),
+            "event_type": event_type,
+            "from_status": from_status,
+            "to_status": to_status,
+            "relation_id": relation_id,
+            "detail_json": detail_json,
+            "actor": actor,
+            "created_at": now(),
+        }
+        self._contribution_events.append(row)
+        return row
+
+    def add_contribution(
+        self,
+        *,
+        actor_user_id: str,
+        operation: str,
+        target_kind: str,
+        target_id: str,
+        declared_source: str | None,
+        relations: list[dict[str, object]],
+        actor: str | None,
+    ) -> dict[str, object]:
+        self._contrib_seq += 1
+        cid = self._contrib_seq
+        ts = now()
+        row: dict[str, object] = {
+            "id": cid,
+            "actor_user_id": actor_user_id,
+            "operation": operation,
+            "target_kind": target_kind,
+            "target_id": target_id,
+            "declared_source": declared_source,
+            "status": "draft",
+            "reviewed_by": None,
+            "reviewed_at": None,
+            "review_note": None,
+            "created_at": ts,
+            "updated_at": ts,
+        }
+        self._contributions[cid] = row
+        for rel in relations:
+            self._contrib_rel_seq += 1
+            self._contribution_relations.append(
+                {
+                    "id": self._contrib_rel_seq,
+                    "contribution_id": cid,
+                    "relation_kind": rel["relation_kind"],
+                    "relation_code": rel["relation_code"],
+                    "person_id": rel.get("person_id"),
+                    "person_name": rel.get("person_name"),
+                    "validation_status": "pending",
+                    "validated_by": None,
+                    "validated_at": None,
+                    "materialized": 0,
+                    "created_at": ts,
+                    "updated_at": ts,
+                }
+            )
+        self._append_event(cid, "created", None, "draft", None, None, actor)
+        return row
+
+    def get_contribution(self, contribution_id: int) -> dict[str, object] | None:
+        return self._contributions.get(int(contribution_id))
+
+    def list_contributions_by_actor(
+        self, actor_user_id: str, *, limit: int, offset: int
+    ) -> tuple[list[dict[str, object]], int]:
+        rows = [r for r in self._contributions.values() if r["actor_user_id"] == actor_user_id]
+        rows.sort(key=lambda r: int(str(r["id"])), reverse=True)
+        return rows[offset : offset + limit], len(rows)
+
+    def list_contributions_for_review(
+        self, statuses: list[str], *, limit: int, offset: int
+    ) -> tuple[list[dict[str, object]], int]:
+        wanted = set(statuses)
+        rows = [r for r in self._contributions.values() if r["status"] in wanted]
+        rows.sort(key=lambda r: int(str(r["id"])))
+        return rows[offset : offset + limit], len(rows)
+
+    def list_contribution_relations(self, contribution_id: int) -> list[dict[str, object]]:
+        cid = int(contribution_id)
+        return [r for r in self._contribution_relations if r["contribution_id"] == cid]
+
+    def list_contribution_artifacts(self, contribution_id: int) -> list[dict[str, object]]:
+        cid = int(contribution_id)
+        return [r for r in self._contribution_artifacts if r["contribution_id"] == cid]
+
+    def list_contribution_events(self, contribution_id: int) -> list[dict[str, object]]:
+        cid = int(contribution_id)
+        return [r for r in self._contribution_events if r["contribution_id"] == cid]
+
+    def contribution_artifact_exists(self, contribution_id: int, file_id: int) -> bool:
+        cid, fid = int(contribution_id), int(file_id)
+        return any(r["contribution_id"] == cid and r["file_id"] == fid for r in self._contribution_artifacts)
+
+    def add_contribution_artifact(
+        self, *, contribution_id: int, file_id: int, kind: str | None, actor: str | None
+    ) -> dict[str, object]:
+        self._contrib_art_seq += 1
+        row: dict[str, object] = {
+            "id": self._contrib_art_seq,
+            "contribution_id": int(contribution_id),
+            "file_id": int(file_id),
+            "kind": kind,
+            "created_at": now(),
+        }
+        self._contribution_artifacts.append(row)
+        self._append_event(
+            int(contribution_id),
+            "artifact_added",
+            None,
+            None,
+            None,
+            json.dumps({"file_id": int(file_id)}),
+            actor,
+        )
+        return row
+
+    def set_contribution_status(
+        self,
+        *,
+        contribution_id: int,
+        status: str,
+        reviewed_by: str | None,
+        review_note: str | None,
+        event_type: str,
+        actor: str | None,
+    ) -> dict[str, object] | None:
+        row = self._contributions.get(int(contribution_id))
+        if row is None:
+            return None
+        from_status = str(row["status"])
+        row["status"] = status
+        row["updated_at"] = now()
+        if reviewed_by is not None:
+            row["reviewed_by"] = reviewed_by
+            row["reviewed_at"] = now()
+        if review_note is not None:
+            row["review_note"] = review_note
+        self._append_event(int(contribution_id), event_type, from_status, status, None, None, actor)
+        return row
+
+    def update_contribution_relation_validation(
+        self,
+        *,
+        contribution_id: int,
+        relation_id: int,
+        validation_status: str,
+        validated_by: str | None,
+        actor: str | None,
+        note: str | None,
+    ) -> dict[str, object] | None:
+        cid, rid = int(contribution_id), int(relation_id)
+        for rel in self._contribution_relations:
+            if rel["id"] == rid and rel["contribution_id"] == cid:
+                rel["validation_status"] = validation_status
+                rel["validated_by"] = validated_by
+                rel["validated_at"] = now()
+                self._append_event(
+                    cid,
+                    "relation_validated",
+                    None,
+                    None,
+                    rid,
+                    json.dumps({"validation_status": validation_status, "note": note}),
+                    actor,
+                )
+                return rel
+        return None

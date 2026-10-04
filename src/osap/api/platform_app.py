@@ -18,6 +18,7 @@ from src.osap.api.http.auth import build_auth_router
 from src.osap.api.http.collaborators import build_collaborators_router
 from src.osap.api.http.composers import build_composers_router
 from src.osap.api.http.context import HttpContext
+from src.osap.api.http.contributions import build_contributions_router
 from src.osap.api.http.jobs import build_jobs_router
 from src.osap.api.http.knowledge import build_knowledge_router
 from src.osap.api.http.omr import build_omr_router
@@ -145,6 +146,7 @@ def create_platform_app(
     app.include_router(build_support_router(ctx))
     app.include_router(build_auth_router(ctx))
     app.include_router(build_collaborators_router(ctx))
+    app.include_router(build_contributions_router(ctx))
 
 
 

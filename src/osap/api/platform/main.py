@@ -12,6 +12,7 @@ from src.osap.api.platform._support import (
 )
 from src.osap.api.platform.analytics import AnalyticsMixin
 from src.osap.api.platform.composers import ComposersMixin
+from src.osap.api.platform.contributions import ContributionsMixin
 from src.osap.api.platform.core import PlatformApiCore
 from src.osap.api.platform.corrections import CorrectionsMixin
 from src.osap.api.platform.funnel import FunnelMixin
@@ -66,6 +67,7 @@ class PlatformApi(
     ProvidersMixin,
     SourcesMixin,
     CorrectionsMixin,
+    ContributionsMixin,
     KnowledgeMixin,
     SystemMixin,
     JobsMixin,
