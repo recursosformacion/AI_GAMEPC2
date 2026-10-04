@@ -15,8 +15,9 @@ from src.osap.api.contracts import (
     ContributionRelationRead,
 )
 from src.osap.api.platform.core import PlatformApiCore
-from src.osap.application.contributions import ContributionService
+from src.osap.application.contributions import ContributionError, ContributionService
 from src.osap.domain.votes import UnauthenticatedError
+from src.osap.infrastructure.storage.contribution_uploads import StorageContributionError
 
 
 class ContributionsMixin(PlatformApiCore):
@@ -71,6 +72,42 @@ class ContributionsMixin(PlatformApiCore):
             is_admin=False,
         )
         return self._contribution_read(row)
+
+    def upload_contribution(
+        self,
+        token: str | None,
+        contribution_id: int,
+        name: str,
+        mime_type: str | None,
+        data: bytes,
+    ) -> ContributionRead:
+        """Sube bytes a storage y los adjunta como artifact (no público)."""
+        actor = self._require_user(token)
+        service = self._contribution_service()
+        row = service.get(actor_user_id=actor, contribution_id=contribution_id, is_admin=False)
+        if row is None:
+            raise ContributionError(404, "NOT_FOUND", "Aportación no encontrada")
+        if str(row["status"]) not in ("draft", "submitted"):
+            raise ContributionError(409, "INVALID_STATE", "No se puede subir en este estado")
+        representation_id = row.get("target_id")
+        if not representation_id:
+            raise ContributionError(422, "TARGET_REQUIRED", "Falta la representación destino")
+        client = self._container.storage_contributions()
+        if client.representation_work_id(str(representation_id)) is None:
+            raise ContributionError(404, "REPRESENTATION_NOT_FOUND", "La representación no existe")
+        try:
+            uploaded = client.upload_file(name=name, mime_type=mime_type, data=data)
+        except StorageContributionError as exc:
+            raise ContributionError(502, "STORAGE_UNAVAILABLE", "No se pudo subir a storage") from exc
+        file_id = int(str(uploaded["id"]))
+        updated = service.attach_artifact(
+            actor_user_id=actor,
+            contribution_id=contribution_id,
+            file_id=file_id,
+            kind=None,
+            is_admin=False,
+        )
+        return self._contribution_read(updated)
 
     def submit_contribution(self, token: str | None, contribution_id: int) -> ContributionRead:
         actor = self._require_user(token)
@@ -157,13 +194,19 @@ class ContributionsMixin(PlatformApiCore):
         return str(user_id)
 
     def _representation_exists(self, representation_id: str) -> bool:
-        """Comprobación de existencia de la representación.
+        """Comprueba la representación real en storage (`GET /api/admin/representations/{id}`).
 
-        Best-effort: en este bloque no se consulta storage (la resolución real
-        representación→work_id llega con la materialización). Devuelve True para no
-        bloquear la creación; el test/inyección puede sustituirlo.
+        Best-effort ante fallo de storage (no bloquea la creación si no se puede consultar);
+        devuelve `False` solo cuando storage responde explícitamente que no existe.
         """
-        return True
+        try:
+            client = self._container.storage_contributions()
+        except RuntimeError:
+            return True
+        try:
+            return client.representation_work_id(str(representation_id)) is not None
+        except StorageContributionError:
+            return True
 
     def _contribution_read(self, row: dict[str, object]) -> ContributionRead:
         cid = int(str(row["id"]))

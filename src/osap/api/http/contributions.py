@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from fastapi import APIRouter, Header, Query, Response
+from fastapi import APIRouter, Header, Query, Request, Response
 
 from src.osap.api.contracts import (
     ContributionArtifactRequest,
@@ -130,6 +130,41 @@ def build_contributions_router(ctx: HttpContext) -> APIRouter:
             updated = ctx.api.add_contribution_artifact(
                 authorization, contribution_id, payload.file_id, payload.kind
             )
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Login required")
+        except ContributionError as exc:
+            return ctx.fail(exc.status, response, exc.code, exc.message)
+        return ctx.ok(updated)
+
+    @router.post(
+        "/api/v1/contributions/{contribution_id}/upload",
+        tags=["Support"],
+        summary="Subir un fichero y adjuntarlo a la aportación",
+        description=(
+            "Recibe el contenido por el body y los metadatos por query (`name`, `mime_type`). "
+            "API lo reenvía a storage (`POST /api/v1/files/upload`) y registra el artifact. "
+            "El fichero queda **no público**."
+        ),
+        response_model=SuccessEnvelope[ContributionRead] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("Contribution", _shared._example({})),
+            401: _shared._UNAUTHORIZED_401,
+            **_shared._standard_errors(403, 404, 409, 422, 502),
+        },
+    )
+    async def upload_contribution(
+        contribution_id: int,
+        request: Request,
+        response: Response,
+        name: str = Query(..., min_length=1),
+        mime_type: str | None = Query(default=None),
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        data = await request.body()
+        if not data:
+            return ctx.fail(422, response, "EMPTY_UPLOAD", "El contenido está vacío")
+        try:
+            updated = ctx.api.upload_contribution(authorization, contribution_id, name, mime_type, data)
         except UnauthenticatedError:
             return ctx.fail(401, response, "UNAUTHORIZED", "Login required")
         except ContributionError as exc:

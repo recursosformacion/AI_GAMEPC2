@@ -56,6 +56,7 @@ from src.osap.infrastructure.resolvers.stub_resolvers import CPDLResolver, Music
 from src.osap.infrastructure.resolvers.wikidata_resolver import WikidataIdentityResolver
 from src.osap.infrastructure.resolvers.work_match import WorkComposerMatcher
 from src.osap.infrastructure.state.op_store import build_op_store
+from src.osap.infrastructure.storage.contribution_uploads import StorageContributionClient
 from src.osap.infrastructure.storage.storage_composer_client import StorageComposerClient
 from src.osap.infrastructure.storage.work_store import StorageWorkStore
 from src.osap.infrastructure.support.admin_recognitions_client import (
@@ -452,6 +453,19 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     )
     composers_service = ComposersService(composer_client, authenticator, read_only=storage_read_only)
     container.set_composers(composers_service)
+
+    # Aportaciones: resolución representación→work_id (storage:admin) y upload (storage:write).
+    container.set_storage_contributions(
+        StorageContributionClient(
+            base_url=storage_base,
+            write_token_provider=service_token_provider,
+            admin_token_provider=ClientCredentialsServiceTokenProvider(
+                client_id=config.admin_client_id or "osap-composer-admin-service",
+                client_secret=config.admin_client_secret or "",
+                token_url=auth_token_url,
+            ),
+        )
+    )
 
     # Consumir user.deleted (osap-auth): anonimiza votos y conserva el agregado.
     def _on_user_deleted(event: Event) -> None:

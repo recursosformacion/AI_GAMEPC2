@@ -2,15 +2,23 @@
 
 from __future__ import annotations
 
+import io
+import urllib.error
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
-from src.osap.api.contracts import ContributionRead
+from src.osap.api.contracts import ContributionArtifactRead, ContributionRead
 from src.osap.application.contributions import ContributionError, ContributionService
 from src.osap.domain.votes import ForbiddenError, UnauthenticatedError
+from src.osap.infrastructure.auth.service_token_provider import StaticServiceTokenProvider
 from src.osap.infrastructure.state.op_store import _MemoryStore
+from src.osap.infrastructure.storage import contribution_uploads as cu
+from src.osap.infrastructure.storage.contribution_uploads import (
+    StorageContributionClient,
+    StorageContributionError,
+)
 
 
 def _service() -> ContributionService:
@@ -277,3 +285,120 @@ class TestContributionEndpoints:
         with TestClient(platform_app.create_platform_app()) as client:
             resp = client.get("/api/v1/admin/contributions")
         assert resp.status_code == 403
+
+
+class _Resp:
+    def __init__(self, status: int, payload: bytes) -> None:
+        self.status = status
+        self._payload = payload
+
+    def read(self) -> bytes:
+        return self._payload
+
+    def __enter__(self) -> _Resp:
+        return self
+
+    def __exit__(self, *a: Any) -> bool:
+        return False
+
+
+class TestStorageContributionClient:
+    def test_representation_work_id(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        seen: dict[str, Any] = {}
+
+        def fake_urlopen(req: Any, timeout: int | None = None) -> _Resp:
+            seen["url"] = req.full_url
+            seen["auth"] = req.get_header("Authorization")
+            return _Resp(200, b'{"work_id": 123, "representation_id": 9}')
+
+        monkeypatch.setattr(cu.urllib.request, "urlopen", fake_urlopen)
+        client = StorageContributionClient(
+            base_url="http://storage",
+            admin_token_provider=StaticServiceTokenProvider("adm"),
+            write_token_provider=StaticServiceTokenProvider("wr"),
+        )
+        assert client.representation_work_id("9") == 123
+        assert str(seen["url"]).endswith("/api/admin/representations/9")
+        assert seen["auth"] == "Bearer adm"
+
+    def test_representation_missing_returns_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        def fake_urlopen(req: Any, timeout: int | None = None) -> _Resp:
+            raise urllib.error.HTTPError(req.full_url, 404, "nf", {}, io.BytesIO(b"{}"))
+
+        monkeypatch.setattr(cu.urllib.request, "urlopen", fake_urlopen)
+        client = StorageContributionClient(
+            base_url="http://storage", admin_token_provider=StaticServiceTokenProvider("adm")
+        )
+        assert client.representation_work_id("9") is None
+
+    def test_upload_forwards_bytes_and_parses(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        seen: dict[str, Any] = {}
+
+        def fake_urlopen(req: Any, timeout: int | None = None) -> _Resp:
+            seen["url"] = req.full_url
+            seen["data"] = req.data
+            seen["auth"] = req.get_header("Authorization")
+            return _Resp(201, b'{"id": 55, "sha256": "abc"}')
+
+        monkeypatch.setattr(cu.urllib.request, "urlopen", fake_urlopen)
+        client = StorageContributionClient(
+            base_url="http://storage", write_token_provider=StaticServiceTokenProvider("wr")
+        )
+        doc = client.upload_file(name="a.musicxml", mime_type="application/xml", data=b"<score/>")
+        assert doc["id"] == 55
+        assert seen["data"] == b"<score/>"
+        assert "/api/v1/files/upload?" in str(seen["url"])
+        assert seen["auth"] == "Bearer wr"
+
+    def test_upload_error_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        def fake_urlopen(req: Any, timeout: int | None = None) -> _Resp:
+            raise urllib.error.HTTPError(req.full_url, 502, "bad", {}, io.BytesIO(b"{}"))
+
+        monkeypatch.setattr(cu.urllib.request, "urlopen", fake_urlopen)
+        client = StorageContributionClient(
+            base_url="http://storage", write_token_provider=StaticServiceTokenProvider("wr")
+        )
+        with pytest.raises(StorageContributionError):
+            client.upload_file(name="a", mime_type=None, data=b"x")
+
+
+class TestUploadEndpoint:
+    def test_upload_ok(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from src.osap.api import platform_app
+        from src.osap.api.platform import PlatformApi
+
+        def fake(
+            self: Any, token: Any, contribution_id: int, name: str, mime_type: Any, data: bytes
+        ) -> ContributionRead:
+            return ContributionRead(
+                id=contribution_id, actor_user_id="u-1", operation="add_resource",
+                target_kind="representation", target_id="rep-1", declared_source=None, status="draft",
+                reviewed_by=None, reviewed_at=None, review_note=None, created_at="t", updated_at="t",
+                relations=[], artifacts=[ContributionArtifactRead(id=1, file_id=55, kind=None)],
+            )
+
+        monkeypatch.setattr(PlatformApi, "upload_contribution", fake)
+        with TestClient(platform_app.create_platform_app()) as client:
+            resp = client.post("/api/v1/contributions/1/upload?name=a.musicxml", content=b"<score/>")
+        assert resp.status_code == 200
+        assert resp.json()["data"]["artifacts"][0]["file_id"] == 55
+
+    def test_upload_storage_error_502(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from src.osap.api import platform_app
+        from src.osap.api.platform import PlatformApi
+
+        def fake(self: Any, *a: Any, **kw: Any) -> Any:
+            raise ContributionError(502, "STORAGE_UNAVAILABLE", "no")
+
+        monkeypatch.setattr(PlatformApi, "upload_contribution", fake)
+        with TestClient(platform_app.create_platform_app()) as client:
+            resp = client.post("/api/v1/contributions/1/upload?name=a", content=b"x")
+        assert resp.status_code == 502
+
+    def test_upload_empty_422(self) -> None:
+        from src.osap.api import platform_app
+
+        with TestClient(platform_app.create_platform_app()) as client:
+            resp = client.post("/api/v1/contributions/1/upload?name=a", content=b"")
+        assert resp.status_code == 422
+        assert resp.json()["error"]["code"] == "EMPTY_UPLOAD"
