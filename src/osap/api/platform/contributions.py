@@ -104,7 +104,7 @@ class ContributionsMixin(PlatformApiCore):
             actor_user_id=actor,
             contribution_id=contribution_id,
             file_id=file_id,
-            kind=None,
+            kind=self._resource_type(name, mime_type),
             is_admin=False,
         )
         return self._contribution_read(updated)
@@ -148,7 +148,16 @@ class ContributionsMixin(PlatformApiCore):
     ) -> ContributionRead | None:
         self._require_admin(token)
         reviewer = self._reviewer(token)
-        row = self._contribution_service().review(
+        service = self._contribution_service()
+        if action == "accept":
+            current = service.get(
+                actor_user_id="", contribution_id=contribution_id, is_admin=True
+            )
+            if current is None:
+                return None
+            # Materializa PRIMERO; si storage falla, la aportación NO pasa a accepted.
+            self._materialize(contribution_id, current, reviewer)
+        row = service.review(
             contribution_id=contribution_id, action=action, reviewer=reviewer, note=message
         )
         return self._contribution_read(row) if row else None
@@ -192,6 +201,67 @@ class ContributionsMixin(PlatformApiCore):
         if not user_id:
             raise UnauthenticatedError("Login required")
         return str(user_id)
+
+    @staticmethod
+    def _resource_type(name: str, mime_type: str | None) -> str:
+        """Tipo de recurso de catálogo a partir del nombre/mime (para la materialización)."""
+        lowered = (name or "").lower()
+        if lowered.endswith(".mxl"):
+            return "MXL"
+        if lowered.endswith((".musicxml", ".xml")):
+            return "MusicXML"
+        if lowered.endswith(".pdf") or mime_type == "application/pdf":
+            return "PDF"
+        if lowered.endswith((".mid", ".midi")):
+            return "MIDI"
+        if lowered.endswith(".mp3"):
+            return "MP3"
+        if mime_type == "application/vnd.recordare.musicxml+xml":
+            return "MusicXML"
+        return "score"
+
+    def _materialize(
+        self, contribution_id: int, row: dict[str, object], reviewer: str
+    ) -> None:
+        """Crea el/los `works_resources` en storage (aceptación). Idempotente por evento."""
+        representation_id = str(row.get("target_id") or "")
+        client = self._container.storage_contributions()
+        try:
+            work_id = client.representation_work_id(representation_id)
+        except StorageContributionError as exc:
+            raise ContributionError(
+                502, "STORAGE_UNAVAILABLE", "No se pudo resolver la representación"
+            ) from exc
+        if work_id is None:
+            raise ContributionError(404, "REPRESENTATION_NOT_FOUND", "La representación no existe")
+        artifacts = list(self._store.list_contribution_artifacts(contribution_id))
+        if not artifacts:
+            raise ContributionError(422, "ARTIFACT_REQUIRED", "No hay fichero que materializar")
+        service = self._contribution_service()
+        done = service.materialized_file_ids(contribution_id)
+        for artifact in artifacts:
+            file_id = int(str(artifact["file_id"]))
+            if file_id in done:
+                continue
+            try:
+                created = client.create_resource(
+                    work_id=work_id,
+                    representation_id=int(representation_id),
+                    resource_type=str(artifact.get("kind") or "score"),
+                    name=str(row.get("declared_source") or f"Contribution {contribution_id}"),
+                    status="stored",
+                    file_id=file_id,
+                )
+            except StorageContributionError as exc:
+                raise ContributionError(
+                    502, "STORAGE_UNAVAILABLE", "No se pudo materializar el recurso"
+                ) from exc
+            service.record_materialization(
+                contribution_id=contribution_id,
+                file_id=file_id,
+                resource_id=int(str(created["id"])),
+                actor=reviewer,
+            )
 
     def _representation_exists(self, representation_id: str) -> bool:
         """Comprueba la representación real en storage (`GET /api/admin/representations/{id}`).

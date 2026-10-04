@@ -601,6 +601,29 @@ class _MysqlStore(_MemoryStore):
             (contribution_id,),
         )
 
+    def add_contribution_event(
+        self,
+        *,
+        contribution_id: int,
+        event_type: str,
+        from_status: str | None = None,
+        to_status: str | None = None,
+        relation_id: int | None = None,
+        detail_json: str | None = None,
+        actor: str | None = None,
+    ) -> dict[str, object]:
+        self._run(
+            "INSERT INTO contribution_events (contribution_id, event_type, from_status, to_status, "
+            "relation_id, detail_json, actor) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+            (contribution_id, event_type, from_status, to_status, relation_id, detail_json, actor),
+        )
+        rows = self._run(
+            "SELECT * FROM contribution_events WHERE contribution_id = %s ORDER BY id DESC LIMIT 1",
+            (contribution_id,),
+        )
+        assert rows
+        return rows[0]
+
     def contribution_artifact_exists(self, contribution_id: int, file_id: int) -> bool:
         rows = self._run(
             "SELECT id FROM contribution_artifacts WHERE contribution_id = %s AND file_id = %s LIMIT 1",

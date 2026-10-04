@@ -221,6 +221,16 @@ class TestContributionService:
         assert total == 3 and len(rows) == 2
 
 
+    def test_record_materialization_event(self) -> None:
+        service, store = _store_service()
+        row = _create(service)
+        cid = int(str(row["id"]))
+        service.record_materialization(contribution_id=cid, file_id=7, resource_id=99, actor="admin")
+        events = [e["event_type"] for e in store.list_contribution_events(cid)]
+        assert events == ["created", "materialized"]
+        assert service.materialized_file_ids(cid) == {7}
+
+
 class TestContributionEndpoints:
     def test_crear_requiere_login_401(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from src.osap.api import platform_app
@@ -362,6 +372,29 @@ class TestStorageContributionClient:
             client.upload_file(name="a", mime_type=None, data=b"x")
 
 
+    def test_create_resource_posts_payload(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        seen: dict[str, Any] = {}
+
+        def fake_urlopen(req: Any, timeout: int | None = None) -> _Resp:
+            seen["url"] = req.full_url
+            seen["data"] = req.data
+            seen["auth"] = req.get_header("Authorization")
+            return _Resp(201, b'{"id": 77, "work_id": 321}')
+
+        monkeypatch.setattr(cu.urllib.request, "urlopen", fake_urlopen)
+        client = StorageContributionClient(
+            base_url="http://storage", admin_token_provider=StaticServiceTokenProvider("adm")
+        )
+        doc = client.create_resource(
+            work_id=321, representation_id=9, resource_type="MusicXML", name="a", status="stored", file_id=55
+        )
+        assert doc["id"] == 77
+        assert str(seen["url"]).endswith("/api/admin/resources")
+        assert seen["auth"] == "Bearer adm"
+        assert b'"file_id": 55' in seen["data"]
+        assert b'"representation_id": 9' in seen["data"]
+
+
 class TestUploadEndpoint:
     def test_upload_ok(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from src.osap.api import platform_app
@@ -402,3 +435,57 @@ class TestUploadEndpoint:
             resp = client.post("/api/v1/contributions/1/upload?name=a", content=b"")
         assert resp.status_code == 422
         assert resp.json()["error"]["code"] == "EMPTY_UPLOAD"
+
+
+class TestMaterialize:
+    def test_materialize_creates_resource_and_is_idempotent(self) -> None:
+        from types import SimpleNamespace
+
+        from src.osap.api.platform.contributions import ContributionsMixin
+
+        store = _MemoryStore()
+        service = ContributionService(store)
+        row = service.create(
+            actor_user_id="u-1",
+            operation="add_resource",
+            target_kind="representation",
+            target_id="9",
+            declared_source=None,
+            relations=[],
+            representation_exists=lambda _r: True,
+        )
+        cid = int(str(row["id"]))
+        service.attach_artifact(
+            actor_user_id="u-1", contribution_id=cid, file_id=55, kind="MusicXML", is_admin=False
+        )
+
+        class FakeClient:
+            def __init__(self) -> None:
+                self.created = 0
+                self.last: dict[str, Any] = {}
+
+            def representation_work_id(self, representation_id: str) -> int:
+                return 321
+
+            def create_resource(self, **kwargs: Any) -> dict[str, int]:
+                self.created += 1
+                self.last = kwargs
+                return {"id": 77}
+
+        client = FakeClient()
+        fake_self = SimpleNamespace(
+            _container=SimpleNamespace(storage_contributions=lambda: client),
+            _store=store,
+            _contribution_service=lambda: service,
+        )
+        ContributionsMixin._materialize(fake_self, cid, store.get_contribution(cid), "admin")
+        # Idempotente: un segundo intento no vuelve a crear el recurso.
+        ContributionsMixin._materialize(fake_self, cid, store.get_contribution(cid), "admin")
+
+        assert client.created == 1
+        assert client.last["work_id"] == 321
+        assert client.last["representation_id"] == 9
+        assert client.last["file_id"] == 55
+        assert client.last["status"] == "stored"
+        assert client.last["resource_type"] == "MusicXML"
+        assert service.materialized_file_ids(cid) == {55}

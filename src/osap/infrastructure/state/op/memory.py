@@ -340,6 +340,21 @@ class MemoryStore:
         cid = int(contribution_id)
         return [r for r in self._contribution_events if r["contribution_id"] == cid]
 
+    def add_contribution_event(
+        self,
+        *,
+        contribution_id: int,
+        event_type: str,
+        from_status: str | None = None,
+        to_status: str | None = None,
+        relation_id: int | None = None,
+        detail_json: str | None = None,
+        actor: str | None = None,
+    ) -> dict[str, object]:
+        return self._append_event(
+            int(contribution_id), event_type, from_status, to_status, relation_id, detail_json, actor
+        )
+
     def contribution_artifact_exists(self, contribution_id: int, file_id: int) -> bool:
         cid, fid = int(contribution_id), int(file_id)
         return any(r["contribution_id"] == cid and r["file_id"] == fid for r in self._contribution_artifacts)

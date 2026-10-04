@@ -13,6 +13,7 @@ implementa las cuatro tablas definidas por la migración preparada (no ejecutada
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 OPERATIONS = frozenset({"create_work", "add_representation", "add_resource"})
@@ -231,6 +232,33 @@ class ContributionService:
             note=note or None,
         )
         return dict(result) if result is not None else None
+
+    # --- materialización (registro) -----------------------------------------
+
+    def record_materialization(
+        self, *, contribution_id: int, file_id: int, resource_id: int, actor: str
+    ) -> None:
+        """Registra (append-only) que un artifact se materializó como recurso de catálogo."""
+        self._store.add_contribution_event(
+            contribution_id=contribution_id,
+            event_type="materialized",
+            detail_json=json.dumps({"file_id": file_id, "resource_id": resource_id}),
+            actor=actor,
+        )
+
+    def materialized_file_ids(self, contribution_id: int) -> set[int]:
+        """`file_id`s ya materializados (idempotencia ante reintentos)."""
+        result: set[int] = set()
+        for event in self._store.list_contribution_events(contribution_id):
+            if str(event.get("event_type")) != "materialized":
+                continue
+            try:
+                detail = json.loads(str(event.get("detail_json") or "{}"))
+            except ValueError:
+                continue
+            if isinstance(detail, dict) and detail.get("file_id") is not None:
+                result.add(int(detail["file_id"]))
+        return result
 
     # --- helpers ------------------------------------------------------------
 
