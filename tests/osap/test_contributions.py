@@ -65,7 +65,7 @@ class TestContributionService:
         with pytest.raises(ContributionError) as exc:
             service.create(
                 actor_user_id="u-1",
-                operation="create_work",
+                operation="delete_work",
                 target_kind="work",
                 target_id="w-1",
                 declared_source=None,
@@ -73,6 +73,41 @@ class TestContributionService:
                 representation_exists=lambda _r: True,
             )
         assert exc.value.code == "UNSUPPORTED_OPERATION"
+
+    def test_create_work_exige_payload_y_sin_target(self) -> None:
+        service = _service()
+        with pytest.raises(ContributionError) as exc:
+            service.create(
+                actor_user_id="u-1", operation="create_work", target_kind="work",
+                target_id=None, declared_source=None, relations=[],
+                representation_exists=lambda _r: True, payload={"title": "T"},
+            )
+        assert exc.value.code == "PAYLOAD_REQUIRED"
+        row = service.create(
+            actor_user_id="u-1", operation="create_work", target_kind="work",
+            target_id=None, declared_source=None, relations=[],
+            representation_exists=lambda _r: True,
+            payload={"title": "T", "origin": "user", "type": "edition"},
+        )
+        assert row["operation"] == "create_work" and row["target_id"] is None
+
+    def test_add_representation_valida_obra_y_target(self) -> None:
+        service = _service()
+        with pytest.raises(ContributionError) as exc:
+            service.create(
+                actor_user_id="u-1", operation="add_representation", target_kind="work",
+                target_id="999", declared_source=None, relations=[],
+                representation_exists=lambda _r: True, work_exists=lambda w: w == "5",
+                payload={"origin": "user", "type": "edition"},
+            )
+        assert exc.value.code == "WORK_NOT_FOUND"
+        row = service.create(
+            actor_user_id="u-1", operation="add_representation", target_kind="work",
+            target_id="5", declared_source=None, relations=[],
+            representation_exists=lambda _r: True, work_exists=lambda w: w == "5",
+            payload={"origin": "user", "type": "edition"},
+        )
+        assert row["target_kind"] == "work" and row["target_id"] == "5"
 
     def test_target_obligatorio(self) -> None:
         service = _service()
@@ -475,10 +510,19 @@ class TestMaterialize:
                 return {"id": 77}
 
         client = FakeClient()
+        import types as _types
+
         fake_self = SimpleNamespace(
             _container=SimpleNamespace(storage_contributions=lambda: client),
             _store=store,
             _contribution_service=lambda: service,
+            _load_payload=ContributionsMixin._load_payload,
+        )
+        fake_self._create_resources = _types.MethodType(
+            ContributionsMixin._create_resources, fake_self
+        )
+        fake_self._create_representation = _types.MethodType(
+            ContributionsMixin._create_representation, fake_self
         )
         ContributionsMixin._materialize(fake_self, cid, store.get_contribution(cid), "admin")
         # Idempotente: un segundo intento no vuelve a crear el recurso.

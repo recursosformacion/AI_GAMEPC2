@@ -99,6 +99,66 @@ class StorageContributionClient:
             raise StorageContributionError(f"storage create_resource HTTP {status_code}")
         return doc
 
+    def work_exists(self, work_id: str) -> bool:
+        wid = urllib.parse.quote(str(work_id), safe="")
+        status, _doc = self._request(
+            "GET", f"/api/admin/works/{wid}", None, "storage:admin", self._admin_token_provider
+        )
+        if status == 404:
+            return False
+        if 200 <= status < 300:
+            return True
+        raise StorageContributionError(f"storage work HTTP {status}")
+
+    def create_work(
+        self,
+        *,
+        title: str,
+        origin: str,
+        origin_id: str | None = None,
+        license: str | None = None,
+        song_name: str | None = None,
+        attribution_type: str | None = None,
+    ) -> int:
+        payload: dict[str, object] = {"title": title, "origin": origin}
+        for key, value in (
+            ("origin_id", origin_id),
+            ("license", license),
+            ("song_name", song_name),
+            ("attribution_type", attribution_type),
+        ):
+            if value:
+                payload[key] = value
+        status, doc = self._request(
+            "POST", "/api/admin/works", json.dumps(payload).encode(), "storage:admin",
+            self._admin_token_provider, content_type="application/json",
+        )
+        if not (200 <= status < 300) or not isinstance(doc, dict) or doc.get("id") is None:
+            raise StorageContributionError(f"storage create_work HTTP {status}")
+        return int(str(doc["id"]))
+
+    def create_representation(
+        self,
+        *,
+        works_id: int,
+        origin: str,
+        rep_type: str,
+        license: str | None = None,
+        source_name: str | None = None,
+        origin_id: str | None = None,
+    ) -> int:
+        payload: dict[str, object] = {"works_id": works_id, "origin": origin, "type": rep_type}
+        for key, value in (("license", license), ("source_name", source_name), ("origin_id", origin_id)):
+            if value:
+                payload[key] = value
+        status, doc = self._request(
+            "POST", "/api/admin/representations", json.dumps(payload).encode(), "storage:admin",
+            self._admin_token_provider, content_type="application/json",
+        )
+        if not (200 <= status < 300) or not isinstance(doc, dict) or doc.get("id") is None:
+            raise StorageContributionError(f"storage create_representation HTTP {status}")
+        return int(str(doc["id"]))
+
     def upload_file(self, *, name: str, mime_type: str | None, data: bytes) -> dict[str, object]:
         """Sube bytes a storage (no público) y devuelve el `File` (id, sha256, …)."""
         query: dict[str, str] = {"name": name}

@@ -6,6 +6,7 @@ operativo. El `actor_user_id` procede siempre de la identidad autenticada (nunca
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from src.osap.api.contracts import (
@@ -31,6 +32,7 @@ class ContributionsMixin(PlatformApiCore):
         target_id: str | None,
         declared_source: str | None,
         relations: list[dict[str, Any]],
+        payload: dict[str, Any] | None = None,
     ) -> ContributionRead:
         actor = self._require_user(token)
         row = self._contribution_service().create(
@@ -41,6 +43,8 @@ class ContributionsMixin(PlatformApiCore):
             declared_source=declared_source,
             relations=relations,
             representation_exists=self._representation_exists,
+            work_exists=self._work_exists,
+            payload=payload,
         )
         return self._contribution_read(row)
 
@@ -223,17 +227,66 @@ class ContributionsMixin(PlatformApiCore):
     def _materialize(
         self, contribution_id: int, row: dict[str, object], reviewer: str
     ) -> None:
-        """Crea el/los `works_resources` en storage (aceptación). Idempotente por evento."""
-        representation_id = str(row.get("target_id") or "")
+        """Materializa la aportación al aceptar, según su operación. Idempotente por evento."""
+        operation = str(row.get("operation"))
+        payload = self._load_payload(row.get("payload_json"))
         client = self._container.storage_contributions()
         try:
-            work_id = client.representation_work_id(representation_id)
+            if operation == "add_resource":
+                rep_raw = str(row.get("target_id") or "")
+                work_id = client.representation_work_id(rep_raw)
+                if work_id is None:
+                    raise ContributionError(
+                        404, "REPRESENTATION_NOT_FOUND", "La representación no existe"
+                    )
+                self._create_resources(
+                    client, contribution_id, work_id, int(rep_raw), reviewer
+                )
+            elif operation == "add_representation":
+                work_id = int(str(row.get("target_id")))
+                representation_id = self._create_representation(client, work_id, payload)
+                self._create_resources(
+                    client, contribution_id, work_id, representation_id, reviewer
+                )
+            elif operation == "create_work":
+                work_id = client.create_work(
+                    title=str(payload.get("title") or ""),
+                    origin=str(payload.get("origin") or ""),
+                    license=payload.get("license"),
+                    song_name=payload.get("song_name"),
+                )
+                representation_id = self._create_representation(client, work_id, payload)
+                self._create_resources(
+                    client, contribution_id, work_id, representation_id, reviewer
+                )
+            else:
+                raise ContributionError(422, "UNSUPPORTED_OPERATION", "Operación no soportada")
         except StorageContributionError as exc:
             raise ContributionError(
-                502, "STORAGE_UNAVAILABLE", "No se pudo resolver la representación"
+                502, "STORAGE_UNAVAILABLE", "No se pudo materializar en storage"
             ) from exc
-        if work_id is None:
-            raise ContributionError(404, "REPRESENTATION_NOT_FOUND", "La representación no existe")
+
+    def _create_representation(
+        self, client: Any, work_id: int, payload: dict[str, Any]
+    ) -> int:
+        created = client.create_representation(
+            works_id=work_id,
+            origin=str(payload.get("origin") or ""),
+            rep_type=str(payload.get("type") or ""),
+            license=payload.get("license"),
+            source_name=payload.get("source_name"),
+            origin_id=payload.get("origin_id"),
+        )
+        return int(str(created))
+
+    def _create_resources(
+        self,
+        client: Any,
+        contribution_id: int,
+        work_id: int,
+        representation_id: int,
+        reviewer: str,
+    ) -> None:
         artifacts = list(self._store.list_contribution_artifacts(contribution_id))
         if not artifacts:
             raise ContributionError(422, "ARTIFACT_REQUIRED", "No hay fichero que materializar")
@@ -243,19 +296,14 @@ class ContributionsMixin(PlatformApiCore):
             file_id = int(str(artifact["file_id"]))
             if file_id in done:
                 continue
-            try:
-                created = client.create_resource(
-                    work_id=work_id,
-                    representation_id=int(representation_id),
-                    resource_type=str(artifact.get("kind") or "score"),
-                    name=str(row.get("declared_source") or f"Contribution {contribution_id}"),
-                    status="stored",
-                    file_id=file_id,
-                )
-            except StorageContributionError as exc:
-                raise ContributionError(
-                    502, "STORAGE_UNAVAILABLE", "No se pudo materializar el recurso"
-                ) from exc
+            created = client.create_resource(
+                work_id=work_id,
+                representation_id=representation_id,
+                resource_type=str(artifact.get("kind") or "score"),
+                name=f"Contribution {contribution_id}",
+                status="stored",
+                file_id=file_id,
+            )
             service.record_materialization(
                 contribution_id=contribution_id,
                 file_id=file_id,
@@ -263,6 +311,14 @@ class ContributionsMixin(PlatformApiCore):
                 work_id=work_id,
                 actor=reviewer,
             )
+
+    @staticmethod
+    def _load_payload(raw: object) -> dict[str, Any]:
+        try:
+            data = json.loads(str(raw or "{}"))
+        except ValueError:
+            return {}
+        return data if isinstance(data, dict) else {}
 
     def _representation_exists(self, representation_id: str) -> bool:
         """Comprueba la representación real en storage (`GET /api/admin/representations/{id}`).
@@ -276,6 +332,17 @@ class ContributionsMixin(PlatformApiCore):
             return True
         try:
             return client.representation_work_id(str(representation_id)) is not None
+        except StorageContributionError:
+            return True
+
+    def _work_exists(self, work_id: str) -> bool:
+        """Comprueba la obra real en storage (`GET /api/admin/works/{id}`), best-effort."""
+        try:
+            client = self._container.storage_contributions()
+        except RuntimeError:
+            return True
+        try:
+            return client.work_exists(str(work_id))
         except StorageContributionError:
             return True
 

@@ -266,8 +266,9 @@ class MemoryStore:
         actor_user_id: str,
         operation: str,
         target_kind: str,
-        target_id: str,
+        target_id: str | None,
         declared_source: str | None,
+        payload_json: str | None = None,
         relations: list[dict[str, object]],
         actor: str | None,
     ) -> dict[str, object]:
@@ -281,6 +282,7 @@ class MemoryStore:
             "target_kind": target_kind,
             "target_id": target_id,
             "declared_source": declared_source,
+            "payload_json": payload_json,
             "status": "draft",
             "reviewed_by": None,
             "reviewed_at": None,

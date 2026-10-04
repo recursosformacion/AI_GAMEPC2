@@ -53,6 +53,8 @@ _DDL: list[str] = [
         COMMENT 'id en osap-storage. Para add_resource = representation_id. El id de fichero NO va aqui (ver contribution_artifacts)',
       declared_source VARCHAR(512)    DEFAULT NULL
         COMMENT 'fuente declarada por el usuario',
+      payload_json    LONGTEXT        DEFAULT NULL
+        COMMENT 'metadatos declarados (create_work/add_representation): title/origin/type/license/source_name',
       status          VARCHAR(16)     NOT NULL DEFAULT 'draft'
         COMMENT 'draft|submitted|in_review|accepted|rejected|withdrawn',
       reviewed_by     VARCHAR(128)    DEFAULT NULL,
@@ -191,6 +193,21 @@ def main() -> int:
         for stmt in _DDL:
             with conn.cursor() as cur:
                 cur.execute(stmt)
+
+        # ALTER idempotente: `payload_json` (tablas creadas antes de esta columna).
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT COUNT(*) AS n FROM information_schema.columns "
+                "WHERE table_schema = DATABASE() AND table_name = 'contributions' "
+                "AND column_name = 'payload_json'"
+            )
+            row = cur.fetchone()
+            if row is not None and int(str(row[0])) == 0:
+                cur.execute(
+                    "ALTER TABLE contributions ADD COLUMN payload_json LONGTEXT DEFAULT NULL "
+                    "AFTER declared_source"
+                )
+                print("ALTER: contributions.payload_json añadida")
 
         after = _existing_tables(conn)
         missing = [t for t in _TABLES if t not in after]

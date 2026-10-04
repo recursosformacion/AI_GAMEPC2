@@ -507,8 +507,9 @@ class _MysqlStore(_MemoryStore):
         actor_user_id: str,
         operation: str,
         target_kind: str,
-        target_id: str,
+        target_id: str | None,
         declared_source: str | None,
+        payload_json: str | None = None,
         relations: list[dict[str, object]],
         actor: str | None,
     ) -> dict[str, object]:
@@ -518,8 +519,8 @@ class _MysqlStore(_MemoryStore):
             with conn.cursor() as cur:
                 cur.execute(
                     "INSERT INTO contributions (actor_user_id, operation, target_kind, target_id, "
-                    "declared_source, status) VALUES (%s,%s,%s,%s,%s,'draft')",
-                    (actor_user_id, operation, target_kind, target_id, declared_source),
+                    "declared_source, payload_json, status) VALUES (%s,%s,%s,%s,%s,%s,'draft')",
+                    (actor_user_id, operation, target_kind, target_id, declared_source, payload_json),
                 )
                 cid = int(cur.lastrowid or 0)
                 for rel in relations:

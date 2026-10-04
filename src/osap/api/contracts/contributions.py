@@ -26,6 +26,7 @@ class ContributionCreateRequest(_Frozen):
     target_kind: str
     target_id: str | None = None
     declared_source: str | None = None
+    payload: dict[str, object] = {}
     relations: list[ContributionRelationRequest] = []
 
 

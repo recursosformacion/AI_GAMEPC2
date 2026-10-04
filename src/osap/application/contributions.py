@@ -38,8 +38,14 @@ _TRANSITIONS: dict[str, dict[str, str]] = {
 _WITHDRAWABLE = frozenset({"draft", "submitted", "in_review", "accepted"})
 _ARTIFACT_EDITABLE = frozenset({"draft", "submitted"})
 
-# Operaciones que este bloque soporta (el resto queda explícitamente no soportado).
-SUPPORTED_OPERATIONS = frozenset({"add_resource"})
+# Operaciones soportadas (create_work / add_representation / add_resource).
+SUPPORTED_OPERATIONS = frozenset({"create_work", "add_representation", "add_resource"})
+
+# Campos obligatorios del `payload` por operación (metadatos declarados).
+REQUIRED_PAYLOAD: dict[str, tuple[str, ...]] = {
+    "create_work": ("title", "origin", "type"),
+    "add_representation": ("origin", "type"),
+}
 
 
 class ContributionError(Exception):
@@ -68,32 +74,61 @@ class ContributionService:
         declared_source: str | None,
         relations: list[dict[str, Any]] | None,
         representation_exists: Any,
+        work_exists: Any = None,
+        payload: dict[str, Any] | None = None,
     ) -> dict[str, object]:
         if operation not in SUPPORTED_OPERATIONS:
-            raise ContributionError(
-                422, "UNSUPPORTED_OPERATION", "Operación no soportada en este bloque"
-            )
+            raise ContributionError(422, "UNSUPPORTED_OPERATION", "Operación no soportada")
         if operation not in OPERATIONS or target_kind not in TARGET_KINDS:
             raise ContributionError(422, "INVALID_OPERATION", "Operación o destino inválidos")
+
+        data = dict(payload or {})
         if operation == "add_resource" and target_kind != "representation":
             raise ContributionError(
                 422, "INVALID_TARGET", "add_resource requiere target_kind=representation"
             )
-        if not target_id or not str(target_id).strip():
+        if operation == "add_representation" and target_kind != "work":
+            raise ContributionError(
+                422, "INVALID_TARGET", "add_representation requiere target_kind=work"
+            )
+        if operation == "create_work" and target_kind != "work":
+            raise ContributionError(422, "INVALID_TARGET", "create_work requiere target_kind=work")
+        if operation == "create_work" and target_id:
+            raise ContributionError(
+                422, "INVALID_TARGET", "create_work no admite target_id (obra nueva)"
+            )
+        for field in REQUIRED_PAYLOAD.get(operation, ()):
+            if not str(data.get(field) or "").strip():
+                raise ContributionError(422, "PAYLOAD_REQUIRED", f"{operation}: falta '{field}'")
+
+        if operation != "create_work" and (not target_id or not str(target_id).strip()):
             raise ContributionError(422, "TARGET_REQUIRED", "target_id es obligatorio")
-        if representation_exists is not None and not representation_exists(str(target_id)):
+        if (
+            operation == "add_resource"
+            and representation_exists is not None
+            and not representation_exists(str(target_id))
+        ):
             raise ContributionError(404, "REPRESENTATION_NOT_FOUND", "La representación no existe")
+        if (
+            operation == "add_representation"
+            and work_exists is not None
+            and not work_exists(str(target_id))
+        ):
+            raise ContributionError(404, "WORK_NOT_FOUND", "La obra no existe")
 
         clean_relations = [self._validate_relation(r) for r in (relations or [])]
-        return dict(self._store.add_contribution(
-            actor_user_id=actor_user_id,
-            operation=operation,
-            target_kind=target_kind,
-            target_id=str(target_id),
-            declared_source=declared_source,
-            relations=clean_relations,
-            actor=actor_user_id,
-        ))
+        return dict(
+            self._store.add_contribution(
+                actor_user_id=actor_user_id,
+                operation=operation,
+                target_kind=target_kind,
+                target_id=str(target_id) if target_id else None,
+                declared_source=declared_source,
+                payload_json=json.dumps(data) if data else None,
+                relations=clean_relations,
+                actor=actor_user_id,
+            )
+        )
 
     def _validate_relation(self, relation: dict[str, Any]) -> dict[str, Any]:
         kind = str(relation.get("relation_kind") or "")

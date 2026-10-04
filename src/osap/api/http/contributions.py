@@ -59,6 +59,7 @@ def build_contributions_router(ctx: HttpContext) -> APIRouter:
                 payload.target_id,
                 payload.declared_source,
                 [r.model_dump() for r in payload.relations],
+                payload.payload,
             )
         except UnauthenticatedError:
             return ctx.fail(401, response, "UNAUTHORIZED", "Login required")
