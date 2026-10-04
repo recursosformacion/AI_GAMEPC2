@@ -101,6 +101,38 @@ class MemoryStore:
         ]
         return {"count": count, "bytes": bytes_total, "providers": providers}
 
+    def list_user_downloads(self, user_id: str, limit: int = 50) -> list[dict[str, object]]:
+        agg: dict[tuple[str, str, str, str], dict[str, int]] = {}
+        for (day, uid, provider, work, fmt), row in self._downloads.items():
+            if uid != user_id:
+                continue
+            bucket = agg.setdefault((day, provider, work, fmt), {"quantity": 0, "bytes": 0})
+            bucket["quantity"] += row["quantity"]
+            bucket["bytes"] += row["bytes"]
+        items = [
+            {"day": day, "provider": provider, "work_id": work, "format": fmt,
+             "quantity": data["quantity"], "bytes": data["bytes"]}
+            for (day, provider, work, fmt), data in agg.items()
+        ]
+        items.sort(key=lambda x: (str(x["day"]), int(str(x["quantity"]))), reverse=True)
+        return items[:limit]
+
+    def downloads_for_works(self, work_ids: list[str]) -> dict[str, object]:
+        wanted = set(work_ids)
+        total = 0
+        bytes_total = 0
+        by_work: dict[str, int] = {}
+        for (_day, _uid, _p, work, _fmt), row in self._downloads.items():
+            if work in wanted:
+                total += row["quantity"]
+                bytes_total += row["bytes"]
+                by_work[work] = by_work.get(work, 0) + row["quantity"]
+        works = [
+            {"work_id": work, "downloads": count, "bytes": 0}
+            for work, count in sorted(by_work.items(), key=lambda kv: -kv[1])
+        ]
+        return {"downloads": total, "bytes": bytes_total, "works": works}
+
     def usage_overview(self, from_day: str, to_day: str) -> dict[str, int]:
         searches_total = 0
         searches_with = 0

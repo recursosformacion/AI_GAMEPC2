@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import logging
+from typing import Any
 
 from src.osap.api.platform.core import PlatformApiCore
 from src.osap.infrastructure.state.analytics.memory import today
@@ -95,3 +97,99 @@ class AnalyticsMixin(PlatformApiCore):
             },
             "downloads": downloads,
         }
+
+    def activity_me(
+        self, token: str | None, from_day: str | None, to_day: str | None
+    ) -> dict[str, object] | None:
+        """Panel personal de actividad («Mi Actividad»).
+
+        Compone, sin métricas nuevas: descargas/cuota (`analytics_me`), aportaciones propias
+        (`contributions`), pendientes, descargas detalladas e impacto (uso de las obras de las
+        aportaciones materializadas). `None` si no hay usuario autenticado.
+        """
+        principal = self.current_user(token)
+        user_id = getattr(principal, "user_id", None)
+        if not user_id:
+            return None
+        base = self.analytics_me(token, from_day, to_day)
+        if base is None:
+            return None
+        uid = str(user_id)
+        rows, total = self._store.list_contributions_by_actor(uid, limit=100, offset=0)
+        contribs = [self._contribution_brief(r) for r in rows]
+        pending = [c for c in contribs if str(c["status"]) in ("draft", "submitted", "in_review")]
+        try:
+            self._analytics.flush()
+        except Exception:  # noqa: BLE001
+            _LOGGER.warning("No se pudo volcar la analítica antes de leer", exc_info=True)
+        downloads = base.get("downloads")
+        downloads = downloads if isinstance(downloads, dict) else {}
+        summary = {
+            "downloads": int(str(downloads.get("count", 0))),
+            "bytes": int(str(downloads.get("bytes", 0))),
+            "contributions_total": int(total),
+            "contributions_accepted": sum(1 for c in contribs if c["status"] == "accepted"),
+            "contributions_pending": len(pending),
+            "works": len(
+                {
+                    str(c["target_id"])
+                    for c in contribs
+                    if c["status"] == "accepted" and c["target_id"]
+                }
+            ),
+        }
+        return {
+            "user_id": uid,
+            "period": base["period"],
+            "access": base["access"],
+            "quota": base["quota"],
+            "summary": summary,
+            "my_downloads": self._analytics_store.list_user_downloads(uid, limit=50),
+            "my_contributions": contribs,
+            "pending": pending,
+            "impact": self._impact(rows),
+            "recent": self._recent(rows),
+        }
+
+    @staticmethod
+    def _contribution_brief(row: dict[str, object]) -> dict[str, object]:
+        return {
+            "id": int(str(row["id"])),
+            "operation": str(row["operation"]),
+            "target_kind": str(row["target_kind"]),
+            "target_id": str(row["target_id"]) if row.get("target_id") else None,
+            "status": str(row["status"]),
+            "created_at": str(row["created_at"]),
+            "updated_at": str(row["updated_at"]),
+        }
+
+    def _impact(self, rows: list[dict[str, object]]) -> dict[str, object]:
+        work_ids: set[str] = set()
+        for row in rows:
+            cid = int(str(row["id"]))
+            for event in self._store.list_contribution_events(cid):
+                if str(event.get("event_type")) != "materialized":
+                    continue
+                try:
+                    detail = json.loads(str(event.get("detail_json") or "{}"))
+                except ValueError:
+                    continue
+                if isinstance(detail, dict) and detail.get("work_id") is not None:
+                    work_ids.add(str(detail["work_id"]))
+        return self._analytics_store.downloads_for_works(sorted(work_ids))
+
+    def _recent(self, rows: list[dict[str, object]], limit: int = 20) -> list[dict[str, Any]]:
+        items: list[dict[str, Any]] = []
+        for row in rows:
+            cid = int(str(row["id"]))
+            for event in self._store.list_contribution_events(cid):
+                items.append(
+                    {
+                        "at": str(event.get("created_at")),
+                        "kind": f"contribution:{event.get('event_type')}",
+                        "contribution_id": cid,
+                        "status": str(event.get("to_status") or ""),
+                    }
+                )
+        items.sort(key=lambda item: str(item["at"]), reverse=True)
+        return items[:limit]

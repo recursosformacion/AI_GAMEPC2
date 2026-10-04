@@ -190,6 +190,51 @@ class _MysqlStore(_MemoryStore):
             "providers": providers,
         }
 
+    def list_user_downloads(self, user_id: str, limit: int = 50) -> list[dict[str, object]]:
+        """Detalle de descargas del propio usuario (agrupado por día/proveedor/obra/formato)."""
+        rows = self._run(
+            "SELECT day, provider, work_id, format, SUM(quantity) AS quantity, SUM(bytes) AS bytes "
+            "FROM analytics_downloads WHERE user_id=%s "
+            "GROUP BY day, provider, work_id, format ORDER BY day DESC, quantity DESC LIMIT %s",
+            (user_id, limit),
+        )
+        return [
+            {
+                "day": str(row["day"]),
+                "provider": str(row["provider"]),
+                "work_id": str(row["work_id"]),
+                "format": str(row["format"]),
+                "quantity": _as_int(row["quantity"]),
+                "bytes": _as_int(row["bytes"]),
+            }
+            for row in rows
+        ]
+
+    def downloads_for_works(self, work_ids: list[str]) -> dict[str, object]:
+        """Uso (descargas) generado por las obras indicadas — base del «impacto»."""
+        if not work_ids:
+            return {"downloads": 0, "bytes": 0, "works": []}
+        placeholders = ",".join(["%s"] * len(work_ids))
+        rows = self._run(
+            f"SELECT work_id, SUM(quantity) AS quantity, SUM(bytes) AS bytes "
+            f"FROM analytics_downloads WHERE work_id IN ({placeholders}) "
+            "GROUP BY work_id ORDER BY quantity DESC",
+            tuple(work_ids),
+        )
+        works = [
+            {
+                "work_id": str(row["work_id"]),
+                "downloads": _as_int(row["quantity"]),
+                "bytes": _as_int(row["bytes"]),
+            }
+            for row in rows
+        ]
+        return {
+            "downloads": sum(_as_int(w["downloads"]) for w in works),
+            "bytes": sum(_as_int(w["bytes"]) for w in works),
+            "works": works,
+        }
+
     def usage_overview(self, from_day: str, to_day: str) -> dict[str, int]:
         search_rows = self._run(
             """

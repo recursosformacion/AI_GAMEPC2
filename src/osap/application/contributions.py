@@ -237,13 +237,15 @@ class ContributionService:
     # --- materialización (registro) -----------------------------------------
 
     def record_materialization(
-        self, *, contribution_id: int, file_id: int, resource_id: int, actor: str
+        self, *, contribution_id: int, file_id: int, resource_id: int, work_id: int, actor: str
     ) -> None:
         """Registra (append-only) que un artifact se materializó como recurso de catálogo."""
         self._store.add_contribution_event(
             contribution_id=contribution_id,
             event_type="materialized",
-            detail_json=json.dumps({"file_id": file_id, "resource_id": resource_id}),
+            detail_json=json.dumps(
+                {"file_id": file_id, "resource_id": resource_id, "work_id": work_id}
+            ),
             actor=actor,
         )
 

@@ -78,6 +78,34 @@ class AnalyticsMeResponse(_Frozen):
     downloads: AnalyticsMeDownloads
 
 
+class ActivityMeSummary(_Frozen):
+    downloads: int = 0
+    bytes: int = 0
+    contributions_total: int = 0
+    contributions_accepted: int = 0
+    contributions_pending: int = 0
+    works: int = 0
+
+
+class ActivityMeResponse(_Frozen):
+    """Panel personal «Mi Actividad» (`/api/v1/activity/me`).
+
+    Compone datos ya existentes del propio usuario: cuota/descargas, aportaciones, pendientes,
+    descargas detalladas, impacto y actividad reciente. No expone datos de otros usuarios.
+    """
+
+    user_id: str
+    period: AnalyticsMePeriod
+    access: AnalyticsMeAccess
+    quota: AnalyticsMeQuota
+    summary: ActivityMeSummary
+    my_downloads: list[dict[str, object]] = Field(default_factory=list)
+    my_contributions: list[dict[str, object]] = Field(default_factory=list)
+    pending: list[dict[str, object]] = Field(default_factory=list)
+    impact: dict[str, object] = Field(default_factory=dict)
+    recent: list[dict[str, object]] = Field(default_factory=list)
+
+
 class FunnelMetricsPeriod(_Frozen):
     from_day: str
     to_day: str

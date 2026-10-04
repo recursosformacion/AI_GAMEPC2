@@ -669,6 +669,60 @@ export interface AnalyticsMe {
   downloads: AnalyticsMeDownloads;
 }
 
+// Mi Actividad (panel personal). Compone datos propios: cuota/descargas, aportaciones,
+// pendientes, descargas detalladas, impacto y actividad reciente.
+export interface ActivityContribution {
+  id: number;
+  operation: string;
+  target_kind: string;
+  target_id?: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ActivityDownloadRow {
+  day: string;
+  provider: string;
+  work_id: string;
+  format: string;
+  quantity: number;
+  bytes: number;
+}
+
+export interface ActivityRecentItem {
+  at: string;
+  kind: string;
+  contribution_id: number;
+  status: string;
+}
+
+export interface ActivityImpactWork {
+  work_id: string;
+  downloads: number;
+  bytes: number;
+}
+
+export interface ActivityMe {
+  user_id: string;
+  period: AnalyticsMePeriod;
+  access: AnalyticsMeAccess;
+  quota: AnalyticsMeQuota;
+  summary: {
+    downloads: number;
+    bytes: number;
+    contributions_total: number;
+    contributions_accepted: number;
+    contributions_pending: number;
+    works: number;
+  };
+  my_downloads: ActivityDownloadRow[];
+  my_contributions: ActivityContribution[];
+  pending: ActivityContribution[];
+  impact: { downloads: number; bytes: number; works: ActivityImpactWork[] };
+  recent: ActivityRecentItem[];
+}
+
 export interface FunnelMetricsPeriod {
   from_day: string;
   to_day: string;

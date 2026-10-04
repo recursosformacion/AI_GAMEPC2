@@ -39,6 +39,7 @@ import type {
   RegisterResult,
   VerifyEmailResult,
   VotesOverview,
+  ActivityMe,
   AnalyticsMe,
   FunnelMetrics,
   WorkDetail,
@@ -403,6 +404,15 @@ export class ApiClient {
     if (to) params.set("to_day", to);
     const qs = params.toString();
     return this.get<AnalyticsMe>(`/analytics/me${qs ? `?${qs}` : ""}`);
+  }
+
+  /** Mi Actividad: panel personal (aportaciones, descargas, impacto). */
+  async getActivityMe(from?: string, to?: string): Promise<ActivityMe> {
+    const params = new URLSearchParams();
+    if (from) params.set("from_day", from);
+    if (to) params.set("to_day", to);
+    const qs = params.toString();
+    return this.get<ActivityMe>(`/activity/me${qs ? `?${qs}` : ""}`);
   }
 
   /** Métricas del funnel S0–S4 (solo admin). */

@@ -225,7 +225,9 @@ class TestContributionService:
         service, store = _store_service()
         row = _create(service)
         cid = int(str(row["id"]))
-        service.record_materialization(contribution_id=cid, file_id=7, resource_id=99, actor="admin")
+        service.record_materialization(
+            contribution_id=cid, file_id=7, resource_id=99, work_id=5, actor="admin"
+        )
         events = [e["event_type"] for e in store.list_contribution_events(cid)]
         assert events == ["created", "materialized"]
         assert service.materialized_file_ids(cid) == {7}

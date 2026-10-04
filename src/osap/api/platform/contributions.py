@@ -260,6 +260,7 @@ class ContributionsMixin(PlatformApiCore):
                 contribution_id=contribution_id,
                 file_id=file_id,
                 resource_id=int(str(created["id"])),
+                work_id=work_id,
                 actor=reviewer,
             )
 
