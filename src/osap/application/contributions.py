@@ -129,11 +129,12 @@ class ContributionService:
             raise ContributionError(422, "INVALID_FILE_ID", "file_id inválido")
         if self._store.contribution_artifact_exists(contribution_id, file_id):
             raise ContributionError(409, "ARTIFACT_DUPLICATE", "Ese fichero ya está adjunto")
-        return dict(
-            self._store.add_contribution_artifact(
-                contribution_id=contribution_id, file_id=file_id, kind=kind, actor=actor_user_id
-            )
+        self._store.add_contribution_artifact(
+            contribution_id=contribution_id, file_id=file_id, kind=kind, actor=actor_user_id
         )
+        result = self._store.get_contribution(contribution_id)
+        assert result is not None
+        return dict(result)
 
     # --- envío y retirada ---------------------------------------------------
 

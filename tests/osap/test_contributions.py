@@ -319,7 +319,7 @@ class TestStorageContributionClient:
         def fake_urlopen(req: Any, timeout: int | None = None) -> _Resp:
             seen["url"] = req.full_url
             seen["auth"] = req.get_header("Authorization")
-            return _Resp(200, b'{"work_id": 123, "representation_id": 9}')
+            return _Resp(200, b'{"works_id": 123, "representation_id": 9}')
 
         monkeypatch.setattr(cu.urllib.request, "urlopen", fake_urlopen)
         client = StorageContributionClient(

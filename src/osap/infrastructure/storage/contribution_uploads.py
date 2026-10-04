@@ -57,7 +57,10 @@ class StorageContributionClient:
             return None
         if not (200 <= status < 300) or not isinstance(doc, dict):
             raise StorageContributionError(f"storage representación HTTP {status}")
-        work_id = doc.get("work_id")
+        # El detalle de representación expone `works_id` (fallback `work_id`).
+        work_id = doc.get("works_id")
+        if work_id is None:
+            work_id = doc.get("work_id")
         return int(work_id) if work_id is not None else None
 
     def create_resource(
