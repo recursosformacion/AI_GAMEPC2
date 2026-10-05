@@ -39,8 +39,30 @@ _DEFAULT_PERSONS_PAGE_SIZE = 500
 _MAX_PERSONS_PAGE_SIZE = 500
 _FILE_CACHE_TTL = 3600
 _INDEX_CACHE_TTL = 600
-_NAME_RE = re.compile(r"^(works|persons)-(\d{1,6})\.xml$")
+_NAME_RE = re.compile(r"^(works|persons|static)-(\d{1,6})\.xml$")
 _LASTMOD_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
+
+# Landings públicas indexables de la SPA (menú de contenido). Se excluyen las rutas
+# internas que nginx marca `noindex` (studio/composer/activity/admin/viewer/resolution/
+# candidates/jobs/knowledge/providers/oidc/corrections). Las páginas de entidad
+# (/obra, /compositor) van en sus propios sub-sitemaps.
+_STATIC_PATHS: tuple[str, ...] = (
+    "/",
+    "/discover",
+    "/explore",
+    "/composers",
+    "/epochs",
+    "/genres",
+    "/catalogues",
+    "/instruments",
+    "/ensembles",
+    "/catalog",
+    "/sources",
+    "/support",
+    "/collaborators",
+    "/about",
+    "/about/how-it-works",
+)
 
 _CACHE: dict[str, tuple[float, str]] = {}
 
@@ -88,6 +110,8 @@ def _sitemap_index(ctx: HttpContext) -> str:
     persons_pages = math.ceil(ctx.api.sitemap_persons_total() / persons_size)
     refs = [f"{base}/sitemaps/works-{page}.xml" for page in range(1, works_pages + 1)]
     refs += [f"{base}/sitemaps/persons-{page}.xml" for page in range(1, persons_pages + 1)]
+    if _STATIC_PATHS:
+        refs.append(f"{base}/sitemaps/static-1.xml")
     return render_sitemap_index(refs)
 
 
@@ -123,6 +147,14 @@ def _persons_urlset(ctx: HttpContext, page: int) -> str:
     return render_sitemap_urlset(urls)
 
 
+def _static_urlset(_ctx: HttpContext, page: int) -> str:
+    if page != 1:
+        return render_sitemap_urlset([])
+    base = public_base_url()
+    urls: list[tuple[str, str | None]] = [(f"{base}{path}", None) for path in _STATIC_PATHS]
+    return render_sitemap_urlset(urls)
+
+
 def build_sitemap_router(ctx: HttpContext) -> APIRouter:
     router: APIRouter = APIRouter()
 
@@ -144,7 +176,9 @@ def build_sitemap_router(ctx: HttpContext) -> APIRouter:
         def build() -> str:
             if kind == "works":
                 return _works_urlset(ctx, page)
-            return _persons_urlset(ctx, page)
+            if kind == "persons":
+                return _persons_urlset(ctx, page)
+            return _static_urlset(ctx, page)
 
         body = _cached(key, _FILE_CACHE_TTL, build)
         # Una página fuera de rango no produce <url>: no debe cachearse como vacía válida.

@@ -65,6 +65,22 @@ def test_sitemap_index_referencia_las_paginas(client: TestClient) -> None:
     assert "<sitemapindex" in resp.text
     assert f"<loc>{_BASE}/sitemaps/works-1.xml</loc>" in resp.text
     assert f"<loc>{_BASE}/sitemaps/persons-1.xml</loc>" in resp.text
+    assert f"<loc>{_BASE}/sitemaps/static-1.xml</loc>" in resp.text
+
+
+def test_sitemap_static_landings(client: TestClient) -> None:
+    resp = client.get("/sitemaps/static-1.xml")
+    assert resp.status_code == 200
+    assert "<urlset" in resp.text
+    assert f"<loc>{_BASE}/</loc>" in resp.text
+    assert f"<loc>{_BASE}/discover</loc>" in resp.text
+    assert f"<loc>{_BASE}/composers</loc>" in resp.text
+    assert f"<loc>{_BASE}/collaborators</loc>" in resp.text
+    assert f"<loc>{_BASE}/about/how-it-works</loc>" in resp.text
+    # Internas: nunca en el sitemap.
+    assert "/admin" not in resp.text
+    assert "/activity" not in resp.text
+    assert client.get("/sitemaps/static-2.xml").status_code == 404
 
 
 def test_sitemap_works_urls_canonicas_y_lastmod(client: TestClient) -> None:
