@@ -79,6 +79,21 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.0.0 (A)** — entrega coordinada con **esquema destructivo** y modelo de aportaciones.
+  - **osap-storage**: migración **021** → `DROP COLUMN persons.persons_biography_updated_at`
+    (redundante; la biografía se refleja en `persons_updated_at`). Canonicalización del voicing
+    CPDL (`canonical_code`) y depuración de personas/roles (material de auditoría en `_externo/`).
+  - **osap-api**: migración de **aportaciones** (`contributions`, `contribution_relations`,
+    `contribution_events`, `contribution_artifacts`, con `payload_json`); operaciones reales
+    `create_work`, `add_representation` y `add_resource` (con materialización en storage) y
+    «Mi actividad».
+  - **osap-auth**: **0009** onboarding + aceptación legal versionada (nickname, ToS, privacidad)
+    y **0010** consentimiento público de nickname; M2M de usuarios públicos.
+  - **osap-support**: M2M por proyecto, mantenimiento web propio y reglas de concesión de
+    reconocimientos.
+  - Incluye en el conjunto la capa SEO pública + sitemap (4.3.0).
+  - Punto de control previo: tag `v4.2.2` + rama de mantenimiento `release/4.x` (línea anterior).
+  - Alcance: los cuatro programas. Evidencia de verificación en Prod: al cierre.
 - **4.3.0 (B)** — capa pública SEO: `osap-api` sirve HTML server-rendered de `/compositor/{id}/{slug}`
   y `/obra/{id}/{slug}` (title/description/canonical, `<h1>`, JSON-LD `MusicComposition`/`Person`/
   `BreadcrumbList`, enlaces internos y 301 al canónico; 404 HTML `noindex`), **sitemap dinámico**
