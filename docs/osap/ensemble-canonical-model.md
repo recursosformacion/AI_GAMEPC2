@@ -160,6 +160,23 @@ representation -> representations_ensemble_code -> ensembles.ensembles_code (id_
   obra CPDL agrega varias). La población por-edición se hará en la importación.
 - Migración `023_representations_ensemble_code.sql`.
 
+## 5.b Validación final en Dev (Bloque 4) — cerrado
+
+`scripts/validate_ensembles_model.py` (solo lectura) sobre Dev:
+
+| comprobación | resultado |
+|---|---|
+| códigos no idempotentes | **0** |
+| `work_ensembles` huérfanos | **0** |
+| alias huérfanos / que no resuelven a su canónico | **0 / 0** |
+| `representations_ensemble_code` huérfanos | **0** |
+| `ensemble_voices` inconsistentes | **0** (358 exactas + 535 agregadas `\|`/solistas) |
+| `voice_signature` inconsistentes (NULL con voces / no-NULL sin voces) | **0 / 0** |
+| expresiones originales no cubiertas (1374) | **0** |
+
+Filas canónicas 914 · aliases 1085 · canónicos con alias 692 · grupos colapsados 127.
+`works_resources` queda **fuera de alcance** (preexistente; Bloque 3 no lo toca). Bloques 1–4 cerrados.
+
 ## 6. Uso inmediato
 
 1. **Entender `ensembles`** (auditoría read-only): aplicar la función a las 1374 filas,
