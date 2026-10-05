@@ -135,19 +135,30 @@ Reglas explícitas (no se rellenan los campos «a ciegas» desde `id_canonico`):
 
 ## 5. Qué debe guardar una `representation`
 
-`representations` describe una forma concreta de una obra (edición/arreglo). Debe poder
-**reconstruirse la formación** sin releer texto libre, así que almacena el id canónico:
+Cadena de **autoridad** (una sola fuente de verdad):
 
-- `representations.ensemble_code VARCHAR(64) NULL` — `id_canonico` (o `NULL` si no vocal).
-  Indexado (`idx_representations_ensemble_code`).
-- Opcional (denormalización para el índice/búsqueda): `voice_signature VARCHAR(64) NULL` con
-  la firma de frecuencias (p. ej. `S2A2T2B2`), derivable de `voice_counts`.
-- **Origen del valor**: en el import, el campo de formación de cada proveedor (CPDL `voicing`,
-  PDMX, etc.) pasa por `canonical_ensemble(...)`; nunca se guarda el texto crudo como id.
-- Reconstrucción completa de una `representation`: `ensemble_code` (id) → fila `ensembles` →
-  `ensemble_voices` (voces + cantidades) → descripción/nombre. Si `ensemble_code` es un id
-  especial (`UNISON`, `CHILDREN`, `INVALID_OR_INSTRUMENTAL`…), la fila `ensembles`
-  correspondiente describe el caso.
+```
+representation -> representations_ensemble_code -> ensembles.ensembles_code (id_canonico)
+                -> ensemble_voices
+```
+
+- `representations.representations_ensemble_code VARCHAR(64) NULL` — `id_canonico` (o `NULL`
+  si no vocal/ambigua). Indexado (`idx_representations_ensemble_code`). Nombre según la
+  convención `representations_*` de la tabla.
+- `representations.representations_voice_signature VARCHAR(64) NULL` — **dato derivado** para
+  búsqueda (firma de frecuencias, p. ej. `S2A2T2B2`). **No es fuente de verdad**: se calcula
+  desde `ensemble_code` → `ensembles` → `ensemble_voices`. `NULL` cuando no es `VOICES`.
+- **Origen del valor (importación)**: se aplica `canonical_ensemble()` a los campos de formación
+  de la representación (el `voicing` del proveedor), **no** se copia un código antiguo
+  (`application/services/representation_ensembles.py`: `derive_from_terms`). El importador CPDL
+  canonicaliza además los códigos de `ensembles` para no reintroducir no-canónicos.
+- **Reconstrucción**: `ensemble_code` → `ensembles` → `ensemble_voices` (voces + cantidades) →
+  nombre/descripción. Si es un id especial (`UNISON`, `CHILDREN`, `INVALID_OR_INSTRUMENTAL`…),
+  la fila `ensembles` describe el caso.
+- **Estado en Dev (Bloque 3)**: 19.978/81.987 representaciones con formación (solo obras con una
+  única formación); 62.009 quedan `NULL` porque el voicing por-edición no está almacenado (una
+  obra CPDL agrega varias). La población por-edición se hará en la importación.
+- Migración `023_representations_ensemble_code.sql`.
 
 ## 6. Uso inmediato
 
@@ -158,9 +169,8 @@ Reglas explícitas (no se rellenan los campos «a ciegas» desde `id_canonico`):
    firma, filtra por `ensemble_code`/`voice_signature` y se combina con la intención de
    compositor/obra ya existente.
 
-## 7. Decisiones abiertas
+## 7. Decisiones cerradas
 
-- **Profundidad del alfabeto**: se adopta S/MZ/A/CT/T/BAR/B (la de `osap_normalize`). Alternativa
-  colapsada (S/A/T/B/C) de `_externo` si se quiere un id más corto; perdería MZ≠A y BAR≠B.
-- **Alias**: tabla `ensembles_aliases` vs reutilizar `ensembles_name`/descripción.
-- **Denormalización** de `voice_signature` en `representations` (rendimiento) vs calcular al vuelo.
+- **Alfabeto**: S/MZ/A/CT/T/BAR/B (conserva MZ≠A y BAR≠B).
+- **Alias**: tabla `ensembles_aliases`.
+- **`voice_signature`**: denormalizado en `representations` pero **derivado** (no fuente de verdad).
