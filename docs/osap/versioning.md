@@ -79,6 +79,18 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.1.0 (B)** — modelo canónico de formaciones vocales (`osap-storage`) y contexto de formación
+  en representaciones.
+  - `canonical_ensemble()`: función única (alfabeto S/MZ/A/CT/T/BAR/B, **idempotente por punto
+    fijo**) reutilizable por importación y búsqueda; catálogo `ensembles` materializado
+    (`ensembles_code = id_canonico`) + `ensembles_aliases` (1085) preservando los 1374 códigos
+    originales; `ensemble_voices` reconstruido.
+  - `representations.representations_ensemble_code` + `representations_voice_signature`
+    (firma **derivada**, no fuente de verdad) y derivación por `canonical_ensemble` en la
+    importación CPDL.
+  - Migraciones **aditivas** `022_ensembles_aliases.sql` y `023_representations_ensemble_code.sql`.
+  - Alcance: `osap-storage` (principal) + versión del conjunto. Evidencia Dev: validación con
+    **0 discrepancias**; suite storage 517; validación Prod al cierre.
 - **5.0.0 (A)** — entrega coordinada con **esquema destructivo** y modelo de aportaciones.
   - **osap-storage**: migración **021** → `DROP COLUMN persons.persons_biography_updated_at`
     (redundante; la biografía se refleja en `persons_updated_at`). Canonicalización del voicing
