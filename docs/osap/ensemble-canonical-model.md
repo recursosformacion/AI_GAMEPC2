@@ -39,7 +39,9 @@ canonical_ensemble(text: str) -> CanonicalEnsemble
 | `notes` | `tuple[str, ...]` | Traza de reglas aplicadas (auditable). |
 
 - **Determinismo**: mismo texto → mismo id. **Idempotencia**: `canonical_ensemble(id)` devuelve
-  el mismo `id_canonico`.
+  el mismo `id_canonico`. La función **itera hasta un punto fijo** del id: la tokenización
+  greedy podía producir ids no estables (`AATBARB → AATBAR`, `SMZ → MZ`), así que
+  `canonical_ensemble(x).id_canonico` es siempre punto fijo.
 
 ## 3. Especificación de `id_canonico`
 
@@ -123,9 +125,13 @@ Reglas explícitas (no se rellenan los campos «a ciegas» desde `id_canonico`):
 - **`ensembles_aliases`**: una fila por cada `ensembles_code` actual cuyo valor ≠ su id canónico
   (`raw_code` UNIQUE → `ensembles_id`). Antes de borrar los no canónicos se **repunta
   `work_ensembles`** a la fila canónica (evitando duplicados por PK `(works_id, ensembles_id)`).
-- Planificador read-only: `scripts/materialize_ensembles_canonical.py` (invariantes: nº de
-  canónicos, aliases, grupos con alias, `uq_ensembles_code`, sin originales perdidos, sin alias
-  huérfanos, `ensemble_voices` reconstruible).
+- Planificador: `scripts/materialize_ensembles_canonical.py` (dry-run por defecto; `--apply`
+  ejecuta en una transacción y verifica). Invariantes: nº de canónicos, aliases, grupos con
+  alias, `uq_ensembles_code`, sin originales perdidos, sin alias huérfanos, `ensemble_voices`
+  reconstruible, **todo `ensembles_code` es punto fijo**.
+- **Aplicado en Dev** (tras fijar el punto fijo): 1374 → **914** filas canónicas, **1085**
+  aliases, **127** grupos con alias; `work_ensembles` repuntado (0 huérfanos), `ensemble_voices`
+  reconstruido (3053 filas). Migración `022_ensembles_aliases.sql`.
 
 ## 5. Qué debe guardar una `representation`
 
