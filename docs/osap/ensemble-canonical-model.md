@@ -99,6 +99,34 @@ el infijo `_SOLO_` y en ids especiales (`UNISON_FEMALE`).
 Así, «entender `ensembles`» = (1) canonicalizar cada fila, (2) agrupar por id, (3) fusionar los
 alias en su fila canónica y registrar los que difieran.
 
+## 4.b Construcción en la materialización (Bloque 2)
+
+Reglas explícitas (no se rellenan los campos «a ciegas» desde `id_canonico`):
+
+- **`ensemble_voices`** — se reconstruye desde la interpretación canónica del **código
+  canónico** (`canonical_ensemble(id_canonico)`, idempotente):
+  - `kind=VOICES` → descomposición de `voice_counts` (**agregado de todos los bloques**;
+    incluye solistas) en el orden S, MZ, A, CT, T, BAR, B, mapeada a `voices` (`S→Soprano`,
+    `MZ→Mezzo-soprano`, `A→Contralto`, `CT→Countertenor`, `T→Tenor`, `BAR→Baritone`, `B→Bass`).
+  - `UNISON[_MOD]` → `Voice×1`; `TREBLE` → `Treble×1`; `DESCANT` → `Soprano×1`.
+  - `CHILDREN`, roles (`CANTOR`, `FAMILY_CHOIR`…), `SOLI_GROUP`, `INSTRUMENTAL_*` y los
+    centinelas → **sin filas** (la semántica va en el código/descripción; no se inventa formación).
+  - La estructura multi-coro (bloques) vive en `id_canonico` (`|`); `ensemble_voices` es el agregado.
+- **`name`** — se conserva el nombre existente de la fila cuyo `ensembles_code == id_canonico`
+  **si es coherente** (no vacío y distinto del propio código); en caso contrario se genera
+  (familia + nº de voces + bloques; etiqueta para especiales/centinelas).
+- **`description`** — se conserva la de la fila canónica existente si no está vacía; si no, la
+  descripción reconstruida por `canonical_ensemble`.
+- **No canónicos sin formación** (`UNSPECIFIED`, `UNKNOWN`, `INVALID_OR_INSTRUMENTAL`): cada uno
+  es **una fila** con ese código, sin `ensemble_voices`; su clasificación es recuperable por el
+  código y por la lista de alias (`ensembles_aliases`).
+- **`ensembles_aliases`**: una fila por cada `ensembles_code` actual cuyo valor ≠ su id canónico
+  (`raw_code` UNIQUE → `ensembles_id`). Antes de borrar los no canónicos se **repunta
+  `work_ensembles`** a la fila canónica (evitando duplicados por PK `(works_id, ensembles_id)`).
+- Planificador read-only: `scripts/materialize_ensembles_canonical.py` (invariantes: nº de
+  canónicos, aliases, grupos con alias, `uq_ensembles_code`, sin originales perdidos, sin alias
+  huérfanos, `ensemble_voices` reconstruible).
+
 ## 5. Qué debe guardar una `representation`
 
 `representations` describe una forma concreta de una obra (edición/arreglo). Debe poder
