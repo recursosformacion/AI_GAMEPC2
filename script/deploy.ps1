@@ -18,7 +18,8 @@
 param(
     [string]$HostAlias = "RemoteIA",
     [string]$BackendDir = "~/openmusicrepository.com/osap-api",
-    [string]$SpaDir = "~/openmusicrepository.com/app"
+    [string]$SpaDir = "~/openmusicrepository.com/app",
+    [switch]$WithConfig
 )
 
 $ErrorActionPreference = "Stop"
@@ -40,7 +41,7 @@ Write-Host "== [2/6] Empaquetando backend y SPA ==" -ForegroundColor Cyan
 Push-Location $root
 tar -czf (Join-Path $tmp "backend.tar.gz") `
     --exclude="__pycache__" --exclude="*.pyc" `
-    src providers resources lexicon pyproject.toml
+    src providers resources lexicon script pyproject.toml
 if ($LASTEXITCODE -ne 0) { Fail "tar backend falló" }
 tar -czf (Join-Path $tmp "dist.tar.gz") --exclude=*maintenance.flag --exclude=*maintenance.token -C (Join-Path $root "web\dist") .
 if ($LASTEXITCODE -ne 0) { Fail "tar dist falló" }
@@ -50,16 +51,22 @@ Write-Host "== [3/6] Subiendo al servidor ==" -ForegroundColor Cyan
 ssh -o BatchMode=yes $HostAlias "mkdir -p ~/deploy_tmp"
 scp -o BatchMode=yes (Join-Path $tmp "backend.tar.gz") (Join-Path $tmp "dist.tar.gz") "$($HostAlias):~/deploy_tmp/"
 if ($LASTEXITCODE -ne 0) { Fail "scp falló" }
-# Config de producción: imagen local osap.production.toml -> osap.toml en el servidor.
-scp -o BatchMode=yes (Join-Path $root "osap.production.toml") "$($HostAlias):~/deploy_tmp/osap.production.toml"
-if ($LASTEXITCODE -ne 0) { Fail "scp config falló" }
+# Config de producción: SOLO con -WithConfig (evita pisar osap.toml del servidor).
+if ($WithConfig) {
+    $lf = Join-Path $tmp "osap.production.lf.toml"
+    ([IO.File]::ReadAllText((Join-Path $root "osap.production.toml"))) -replace "`r`n", "`n" | Set-Content -LiteralPath $lf -NoNewline -Encoding utf8
+    scp -o BatchMode=yes $lf "$($HostAlias):~/deploy_tmp/osap.production.toml"
+    if ($LASTEXITCODE -ne 0) { Fail "scp config falló" }
+} else {
+    Write-Host "   (config no se despliega; usa -WithConfig para subir osap.production.toml)"
+}
 # Vhost nginx versionado (incluye modo mantenimiento, ADR-0037).
 scp -o BatchMode=yes (Join-Path $root "deploy\app.openmusicrepository.com.conf") "$($HostAlias):~/deploy_tmp/app.conf"
 if ($LASTEXITCODE -ne 0) { Fail "scp vhost falló" }
 
 Write-Host "== [4/6] Extrayendo en el servidor y reiniciando ==" -ForegroundColor Cyan
-$remoteCmd = "set -e; cd $BackendDir && tar -xzf ~/deploy_tmp/backend.tar.gz && " +
-    "cp -f ~/deploy_tmp/osap.production.toml $BackendDir/osap.toml && " +
+$configStep = if ($WithConfig) { "cp -f ~/deploy_tmp/osap.production.toml $BackendDir/osap.toml && " } else { "test -f $BackendDir/osap.toml && " }
+$remoteCmd = "set -e; $configStep cd $BackendDir && tar -xzf ~/deploy_tmp/backend.tar.gz && " +
     ".venv/bin/pip install --quiet PyMySQL requests Jinja2 PyJWT cryptography && " +
     "cd $SpaDir && rm -rf assets index.html && tar -xzf ~/deploy_tmp/dist.tar.gz && " +
     "sudo cp ~/deploy_tmp/app.conf /etc/nginx/sites-enabled/app.openmusicrepository.com.conf && " +

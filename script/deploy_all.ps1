@@ -11,7 +11,8 @@ param(
     [string]$HostAlias = "RemoteIA",
     [string]$IosapRoot = "D:\Proyectos\AI_OSAP",
     [string]$RemoteRoot = "/home/ocw/openmusicrepository.com",
-    [switch]$SkipBuild
+    [switch]$SkipBuild,
+    [switch]$WithConfig
 )
 
 $ErrorActionPreference = "Stop"
@@ -68,14 +69,20 @@ foreach ($r in $repos) { scp -o BatchMode=yes (Join-Path $tmp "$($r.Name).tar.gz
 scp -o BatchMode=yes (Join-Path $tmp "dist.tar.gz") "$($HostAlias):/home/ocw/deploy_tmp/"
 scp -o BatchMode=yes (Join-Path $tmp "storage-admin-dist.tar.gz") "$($HostAlias):/home/ocw/deploy_tmp/"
 scp -o BatchMode=yes (Join-Path $tmp "auth-web-dist.tar.gz") "$($HostAlias):/home/ocw/deploy_tmp/"
-scp -o BatchMode=yes (Join-Path $apiRoot "osap.production.toml") "$($HostAlias):/home/ocw/deploy_tmp/osap.production.toml"
-if ($LASTEXITCODE -ne 0) { Fail "scp falló" }
+if ($WithConfig) {
+    $lf = Join-Path $tmp "osap.production.lf.toml"
+    ([IO.File]::ReadAllText((Join-Path $apiRoot "osap.production.toml"))) -replace "`r`n", "`n" | Set-Content -LiteralPath $lf -NoNewline -Encoding utf8
+    scp -o BatchMode=yes $lf "$($HostAlias):/home/ocw/deploy_tmp/osap.production.toml"
+    if ($LASTEXITCODE -ne 0) { Fail "scp falló" }
+} else {
+    Write-Host "   (config no se despliega; usa -WithConfig para subir osap.production.toml)"
+}
 
 Write-Host "== [4/4] Extrayendo y reiniciando ==" -ForegroundColor Cyan
 $extract = (($repos | ForEach-Object { "tar -xzf /home/ocw/deploy_tmp/$($_.Name).tar.gz -C $RemoteRoot;" }) -join " ")
 $restart = (($repos | ForEach-Object { "sudo systemctl restart $($_.Service);" }) -join " ")
-$cmd = "set -e; $extract " +
-    "cp -f /home/ocw/deploy_tmp/osap.production.toml $RemoteRoot/osap-api/osap.toml; " +
+$configStep = if ($WithConfig) { "cp -f /home/ocw/deploy_tmp/osap.production.toml $RemoteRoot/osap-api/osap.toml; " } else { "test -f $RemoteRoot/osap-api/osap.toml; " }
+$cmd = "set -e; $extract $configStep" +
     "rm -rf $RemoteRoot/app/assets $RemoteRoot/app/index.html; " +
     "tar -xzf /home/ocw/deploy_tmp/dist.tar.gz -C $RemoteRoot/app; " +
     "mkdir -p $RemoteRoot/osap-storage/frontend/dist; rm -rf $RemoteRoot/osap-storage/frontend/dist/*; " +
@@ -94,4 +101,8 @@ foreach ($u in "https://app.openmusicrepository.com/api/v1/system/health",
     try { $r = Invoke-WebRequest -Uri $u -TimeoutSec 20 -SkipHttpErrorCheck -UseBasicParsing; Write-Host "  $u -> $($r.StatusCode)" }
     catch { Write-Host "  $u -> DOWN" -ForegroundColor Red }
 }
+Write-Host "== Smoke test auth/M2M ==" -ForegroundColor Cyan
+& (Join-Path $PSScriptRoot "verify-auth-m2m.ps1") -HostAlias $HostAlias
+if ($LASTEXITCODE -ne 0) { Write-Host "Smoke test auth/M2M FALLO" -ForegroundColor Red; exit 1 }
+
 Write-Host "Deploy de programas completado." -ForegroundColor Green

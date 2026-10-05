@@ -226,11 +226,12 @@ python scripts/test_authority_coverage.py [--db BD] [--limit 100] [--from-id 0]
 | `trace_candidate_missing_5.py` | Investigar los `candidate_missing` supervivientes (19,130,112,108,18). |
 | `validation_report.py` | Validación de compositor → `resolved` seguro (FASE 5.8). |
 | `works_resolve_experiment.py` | Experimento v1 de `/works/resolve` (250 obras). |
-| `deploy.ps1` | Deploy de OSAP a producción (frontend + backend + reinicio). Instala en el venv de producción las dependencias que no vienen en la imagen base (`PyMySQL`, `requests`, `Jinja2`). |
+| `deploy.ps1` | Deploy de OSAP a producción (frontend + backend + reinicio). Instala en el venv de producción las dependencias que no vienen en la imagen base (`PyMySQL`, `requests`, `Jinja2`). Incluye `script/`. El despliegue de `osap.production.toml` es **opt-in** con `-WithConfig` (por defecto NO pisa el `osap.toml` del servidor; exige que ya exista). |
+| `verify-auth-m2m.ps1` | **Smoke test de auth/M2M post-deploy**: obtiene service token por scope/audiencia (`storage:read`, `api:read`+`osap-support`, `auth:read_public_names`+`osap-auth`) y llama a cada dependencia (auth M2M por URL pública, support M2M interna y la fachada de colaboradores end-to-end). Sale ≠ 0 si algo falla. Se invoca al final de `deploy_all.ps1`. |
 | `check-versions.ps1` | Verifica que los cuatro `pyproject.toml` (`osap-api`/`auth`/`storage`/`support`) y `osap-api/web/package.json` comparten la misma versión A.B.C; `-Expected X.Y.Z` exige un número. Read-only; falla si hay divergencia (regla de versionado en `docs/osap/versioning.md`). |
 | `predeploy_backup.ps1` | **Copia de seguridad antes de subir** (host `RemoteIA`): crea `/home/ocw/backups/<fecha>/` con dump comprimido de las 4 BBDD (`osap_api/auth/storage/support`) y tar de los 5 programas (`app`, `osap-api/auth/storage/support`, sin `.venv`). Punto de rollback. |
 | `reconcile_membership.py` | **Reconciliador de membresía (fase 4.2)**: consulta el M2M de osap-support y materializa/retira el override donor (1000/día) con la vigencia exacta, emitiendo eventos del funnel. Idempotente; si support no responde NO retira la promoción. `--user-id` (repetible) o candidatos desde BD; `--apply` para escribir (por defecto dry-run). `--support-audience` (por defecto `osap-support`) fija la audiencia del service token M2M que valida osap-support. En producción lo ejecuta `osap-reconcile-membership.timer` cada 15 min (units en `deploy/osap-reconcile-membership.{service,timer}` + `deploy/osap-reconcile.env.example`). Ejecutar con `PYTHONPATH=<osap-api>`. |
-| `deploy_all.ps1` | Construye y sube la SPA, el **admin de osap-storage** y la **web de osap-auth**, más el código de los 4 backends (`osap-api/auth/storage/support`, incluyendo `script/` de osap-api) a `RemoteIA`, y reinicia los servicios; **no toca las BBDD**. |
+| `deploy_all.ps1` | Construye y sube la SPA, el **admin de osap-storage** y la **web de osap-auth**, más el código de los 4 backends (`osap-api/auth/storage/support`, incluyendo `script/` de osap-api) a `RemoteIA`, y reinicia los servicios; **no toca las BBDD**. `-WithConfig` sube `osap.production.toml` (por defecto **no**). Termina con `verify-auth-m2m.ps1`. |
 | `sync_db_down.ps1` | **Sincroniza la BD operativa de osap-api desde el VPS a desarrollo** (solo lectura): exporta de `osap_api` (excepto `app_config`) y restaura en la BD local `osap-api`. Permite que las pruebas locales trabajen con el índice real + storage/auth reales (`dev_mode=1`). Uso: `powershell -File script/sync_db_down.ps1`. |
 | `pre_dbadmin_tunnel.ps1` | Túnel SSH para administración de BD. |
 | `migrate_contributions_schema.py` | **Prepara (NO ejecuta por defecto) el esquema de aportaciones** en la DB `osap-api`: crea idempotentemente `contributions`, `contribution_relations`, `contribution_events` y `contribution_artifacts`. FKs solo intra-api; `file_id`/`person_id` opacos sin FK cross-service; sin `representation_id` (impacto en migración aparte). `--dry-run` imprime el plan sin tocar la BD. Uso: `PYTHONPATH=<osap-api> python script/migrate_contributions_schema.py --dry-run`. Ver `docs/osap/contributions-migration.md`. |
@@ -336,7 +337,12 @@ PYTHONPATH=<osap-api> python reseed_providers.py
     vez por despliegue. El arranque de la app **ya no migra** (`_init` solo crea tablas).
   - `rebuild_index.py` — **procedimiento oficial de reindexado**: `--full` (vacía las tablas
     derivadas y reindexa) o incremental (upsert); limpia huérfanos de voicing. No toca el
-    esquema. Añadir ficheros = relanzar este job.
+    esquema. Añadir ficheros = relanzar este job. Propaga credenciales y nombres de BD a
+    `index_works.py` (`--host/--user/--password/--database` + `--db-api`/`--db-omr`). En
+    producción se ejecuta con el usuario dedicado `osap_indexer` (SELECT en `osap_storage`,
+    DML en `osap_api`, DROP acotado a las 3 tablas del índice); secreto en
+    `/etc/openmusicrepository/osap-index.env` (600). Ej.:
+    `rebuild_index.py --providers cpdl --host 127.0.0.1 --user osap_indexer --password … --database osap_api --db-api osap_api --db-omr osap_storage`.
 - **Resolución a persona / cierre de identidad**: `resolve_index_composers.py` resuelve
   `index_works.person_id`/`composer_name` a la persona canónica del Maestro (autoridad
   `persons`, sin variantes de orden). `finalize_index_identity.py` hace **resolución +
