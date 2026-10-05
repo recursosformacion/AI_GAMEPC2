@@ -93,7 +93,11 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
     reconocimientos.
   - Incluye en el conjunto la capa SEO pública + sitemap (4.3.0).
   - Punto de control previo: tag `v4.2.2` + rama de mantenimiento `release/4.x` (línea anterior).
-  - Alcance: los cuatro programas. Evidencia de verificación en Prod: al cierre.
+  - Alcance: los cuatro programas. Evidencia: tests `osap-api` 816 (ruff+mypy limpios), `osap-auth`
+    158, `osap-support` 193, `osap-storage` 477 (47 skipped); en Prod, migraciones `0009`/`0010`
+    (auth) y `021` (storage) aplicadas, tablas de aportaciones creadas; los cuatro servicios
+    `active` con health `ok`; rutas nuevas publicadas y `401` sin sesión; `app` 200 con
+    mantenimiento OFF.
 - **4.3.0 (B)** — capa pública SEO: `osap-api` sirve HTML server-rendered de `/compositor/{id}/{slug}`
   y `/obra/{id}/{slug}` (title/description/canonical, `<h1>`, JSON-LD `MusicComposition`/`Person`/
   `BreadcrumbList`, enlaces internos y 301 al canónico; 404 HTML `noindex`), **sitemap dinámico**
