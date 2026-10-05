@@ -16,6 +16,7 @@ from src.osap.application.reconcile_membership import (
     MembershipSnapshot,
     SupportUnavailableError,
 )
+from src.osap.infrastructure.http.browser_headers import browser_headers
 
 if TYPE_CHECKING:
     from src.osap.ports.service_token import IServiceTokenProvider
@@ -47,7 +48,9 @@ class SupportMembershipClient:
         url = f"{self._base_url}/api/v1/m2m/membership?user_id={urllib.parse.quote(user_id)}"
         try:
             response = requests.get(
-                url, headers={"Authorization": f"Bearer {token}"}, timeout=self._timeout
+                url,
+                headers=browser_headers({"Authorization": f"Bearer {token}"}),
+                timeout=self._timeout,
             )
         except requests.RequestException as exc:
             raise SupportUnavailableError(f"support inaccesible: {exc}") from exc

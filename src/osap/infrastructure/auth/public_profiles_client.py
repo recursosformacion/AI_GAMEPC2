@@ -18,6 +18,7 @@ from src.osap.application.collaborators import (
     PublicProfile,
     PublicUser,
 )
+from src.osap.infrastructure.http.browser_headers import browser_headers
 
 if TYPE_CHECKING:
     from src.osap.ports.service_token import IServiceTokenProvider
@@ -49,7 +50,9 @@ class PublicProfilesClient:
         url = f"{self._base_url}/auth/m2m/public-users"
         try:
             response = requests.get(
-                url, headers={"Authorization": f"Bearer {token}"}, timeout=self._timeout
+                url,
+                headers=browser_headers({"Authorization": f"Bearer {token}"}),
+                timeout=self._timeout,
             )
         except requests.RequestException as exc:
             raise CollaboratorsUnavailableError(f"auth inaccesible: {exc}") from exc
@@ -87,7 +90,9 @@ class PublicProfilesClient:
         url = f"{self._base_url}/auth/m2m/users?ids={query}"
         try:
             response = requests.get(
-                url, headers={"Authorization": f"Bearer {token}"}, timeout=self._timeout
+                url,
+                headers=browser_headers({"Authorization": f"Bearer {token}"}),
+                timeout=self._timeout,
             )
         except requests.RequestException as exc:
             raise CollaboratorsUnavailableError(f"auth inaccesible: {exc}") from exc
