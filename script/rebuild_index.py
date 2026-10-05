@@ -36,6 +36,8 @@ def main() -> int:
     ap.add_argument("--user", default="osap2027")
     ap.add_argument("--password", default="2027osapdb")
     ap.add_argument("--database", default="osap-api")
+    ap.add_argument("--db-omr", default="osap-storage", help="BD de osap-storage (lectura)")
+    ap.add_argument("--db-api", default="osap-api", help="BD de osap-api (índice)")
     args = ap.parse_args()
 
     conn = pymysql.connect(host=args.host, user=args.user, password=args.password,
@@ -49,7 +51,12 @@ def main() -> int:
 
     env = {**os.environ, "PYTHONPATH": str(ROOT)}
     cmd = [sys.executable, str(ROOT / "script" / "index_works.py"),
-           "--providers", args.providers]
+           "--providers", args.providers,
+           "--db-host", args.host,
+           "--db-user", args.user,
+           "--db-password", args.password,
+           "--db-api", args.db_api,
+           "--db-omr", args.db_omr]
     print("indexando:", args.providers)
     rc = subprocess.call(cmd, cwd=str(ROOT), env=env)
     if rc != 0:
