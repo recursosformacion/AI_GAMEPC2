@@ -61,7 +61,7 @@ TTBARB    ->  "TTBARB"
 
 ```
 id      := segment ("|" segment)*        # multi-coro/secciones (| separa bloques)
-segment := voices | special | "INVALID_OR_INSTRUMENTAL" | "UNKNOWN"
+segment := voices | special | "INVALID_OR_INSTRUMENTAL" | "UNKNOWN" | "UNSPECIFIED"
 voices  := letters-with-counts  |  voice "_SOLO_" voice   # coro con solista
 special := "UNISON" ["_FEMALE"|"_MALE"|"_MIXED"] | "CHILDREN" | "TREBLE"
          | "DESCANT" | "INSTRUMENTAL_" sfx | ROLE
@@ -72,9 +72,16 @@ el infijo `_SOLO_` y en ids especiales (`UNISON_FEMALE`).
 
 - Un modificador de ejecución (`SOLO`, `SOLI`, `DIVISI`, `A CAPPELLA`, `RIPIENI`…) **no** crea
   voz; solo `_SOLO_` cuando hay una voz de solista identificable.
-- Si no hay ninguna voz identificable → `INVALID_OR_INSTRUMENTAL` (notación instrumental) o
-  `UNKNOWN` (texto sin firma vocal). Nunca se descarta por «ser letras»: una cadena de voces
-  válida siempre se reconoce.
+- **Letra suelta = voz solo con evidencia contextual** (otra voz en el bloque, un calificador
+  tipo SOLO/VERSE/DIVISI, un conector, o que el resto del texto sea funcional). Sin evidencia
+  no se interpreta: `A GLÄUBIGE SEELE`, `T EVANGELISTA` o `B JESUS` no son formaciones.
+- Si no hay voz identificable:
+  - `INVALID_OR_INSTRUMENTAL` — notación instrumental/no vocal.
+  - `UNKNOWN` — **material vocal no interpretable** (p. ej. BAR/BARB pegados: `TBARBARB`,
+    `ATBARBARB`). No se inventa una segmentación «válida».
+  - `UNSPECIFIED` — el texto **no da** formación concreta (`MIXED`, `DIV`, `VOICE`, `PARTSONG`…);
+    categoría distinta de `UNKNOWN`.
+  Nunca se descarta por «ser letras»: una cadena de voces válida siempre se reconoce.
 - La descripción (§2) se deriva del id de forma determinista, para no depender de textos libres.
 
 ## 4. Qué debe representar una fila de `ensembles`
