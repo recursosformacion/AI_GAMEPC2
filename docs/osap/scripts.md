@@ -381,8 +381,10 @@ PYTHONPATH=<osap-api> python reseed_providers.py
   procesos de los servicios locales (por puerto 8000/8001/8200/8300 y por command line) y
   los vuelve a arrancar en segundo plano esperando su healthcheck; se autoeleva (UAC).
   Con `-NoWait` arranca y **devuelve el control** sin esperar healthchecks (los lanzadores
-  lo usan para no colgarse). No toca Apache (osap-app). Logs en
-  `%LOCALAPPDATA%\osap-dev\logs`. Lanzador de escritorio: `OSAP-Dev-Restart.cmd`.
+  lo usan para no colgarse). Con `-Build` recompila además la SPA (`tsc --noEmit` +
+  `vite build` → regenera `web/dist`, que sirve Apache) antes de reiniciar. No toca Apache
+  (osap-app). Logs en `%LOCALAPPDATA%\osap-dev\logs`. Lanzador de escritorio:
+  `OSAP-Dev-Restart.cmd`.
 - **Comprobar dev sin reiniciar**: `check-dev.ps1` (no bloquea) muestra, en segundos, puerto/PID y
   healthcheck de 8000/8001/8200/8300, la SPA `osap-app`, las últimas líneas de `restart.last.log`
   (con hora por fase) y los errores de cada servicio. Úsalo para saber si algo está caído/colgado.

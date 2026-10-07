@@ -59,6 +59,8 @@ cd web
 node node_modules/vite/bin/vite.js build    # genera web/dist
 ```
 
+- Atajo: `pwsh script/restart-dev.ps1 -Build` recompila la SPA (tsc + vite) y reinicia los
+  servicios de una vez (evita olvidar el rebuild tras editar `web/src`).
 - `web/dist` es lo que sirve Apache. **No** usar `npm run dev` ni `pnpm dev`.
 - Apache sirve `web/dist` en tiempo real: tras el build basta **recargar `http://osap-app`**
   (con cache limpia / Ctrl+F5), **no** hay que reiniciar Apache por cambios de frontend.

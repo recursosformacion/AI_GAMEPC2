@@ -12,12 +12,15 @@
 #                                            # de otra sesión/administrador)
 #   pwsh script/restart-dev.ps1 -NoElevate   # sin pedir UAC (puede no poder matar todo)
 #   pwsh script/restart-dev.ps1 -SkipKill    # solo arrancar (no mata)
+#   pwsh script/restart-dev.ps1 -Build       # además, recompila la SPA (tsc + vite build)
+#                                            # -> regenera web/dist (lo que sirve Apache)
 
 [CmdletBinding()]
 param(
     [switch]$NoElevate,
     [switch]$SkipKill,
     [switch]$NoWait,
+    [switch]$Build,
     [int]$TimeoutSeconds = 120
 )
 
@@ -55,6 +58,7 @@ if (-not (Test-Admin) -and -not $NoElevate) {
     $relaunch = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-NoExit", "-File", "`"$PSCommandPath`"", "-NoElevate")
     if ($SkipKill) { $relaunch += "-SkipKill" }
     if ($NoWait) { $relaunch += "-NoWait" }
+    if ($Build) { $relaunch += "-Build" }
     Start-Process -FilePath "pwsh" -Verb RunAs -ArgumentList $relaunch
     exit 0
 }
@@ -113,11 +117,28 @@ function Wait-Health([string]$Url, [int]$Timeout) {
     return $null
 }
 
+function Build-Spa {
+    $web = Join-Path (Split-Path $PSScriptRoot -Parent) "web"
+    Write-Status "[1/4] Recompilando SPA (tsc + vite build)..."
+    Push-Location $web
+    try {
+        & ".\node_modules\.bin\tsc.cmd" --noEmit
+        if ($LASTEXITCODE -ne 0) { throw "tsc --noEmit falló (corrige los tipos antes de rebuildar)" }
+        & node "node_modules/vite/bin/vite.js" build
+        if ($LASTEXITCODE -ne 0) { throw "vite build falló" }
+        Write-Status "  web/dist regenerado (Apache lo sirve al instante; recarga con Ctrl+F5)"
+    } finally {
+        Pop-Location
+    }
+}
+
 Write-Status "=== OSAP dev restart ==="
+
+if ($Build) { Build-Spa } else { Write-Host "[1/4] Build omitido (usa -Build para recompilar web/dist)" -ForegroundColor DarkGray }
 
 $busyNames = @()
 if (-not $SkipKill) {
-    Write-Status "[1/3] Matando servicios OSAP..."
+    Write-Status "[2/4] Matando servicios OSAP..."
     Stop-OsapProcesses
     foreach ($service in $services) {
         for ($i = 0; $i -lt 30; $i++) {
@@ -132,12 +153,12 @@ if (-not $SkipKill) {
         Write-Host "  Ejecuta como administrador para poder matarlos." -ForegroundColor Yellow
     }
 } else {
-    Write-Host "[1/3] Kill omitido (-SkipKill)" -ForegroundColor DarkGray
+    Write-Host "[2/4] Kill omitido (-SkipKill)" -ForegroundColor DarkGray
 }
 
 $logDir = $LogDir
 
-Write-Status "[2/3] Arrancando servicios..."
+Write-Status "[3/4] Arrancando servicios..."
 $started = @()
 foreach ($service in $services) {
     if ($busyNames -contains $service.Name) {
@@ -162,7 +183,7 @@ foreach ($service in $services) {
     }
 }
 
-Write-Status "[3/3] Esperando healthchecks..."
+Write-Status "[4/4] Esperando healthchecks..."
 $failed = @($busyNames)
 if ($NoWait) {
     Write-Host "  (-NoWait: no se espera; comprueba los logs)" -ForegroundColor DarkGray
