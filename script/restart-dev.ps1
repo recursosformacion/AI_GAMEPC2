@@ -186,7 +186,15 @@ foreach ($service in $services) {
 Write-Status "[4/4] Esperando healthchecks..."
 $failed = @($busyNames)
 if ($NoWait) {
-    Write-Host "  (-NoWait: no se espera; comprueba los logs)" -ForegroundColor DarkGray
+    Write-Host "  (-NoWait: no se esperan todos, pero SÍ osap-api, backend del proxy Apache)" -ForegroundColor DarkGray
+    # Aunque no se esperen todos los healthchecks, osap-api es el que proxya Apache: si
+    # devolvemos antes de que escuche, la web da 503 unos segundos. Se espera siempre.
+    if ($started | Where-Object { $_.Name -eq "osap-api" }) {
+        Write-Status "  esperando osap-api (backend del proxy Apache)..."
+        $apiCode = Wait-Health "http://127.0.0.1:8001/api/v1/system/health" $TimeoutSeconds
+        if ($apiCode) { Write-Status "  OK  osap-api ($apiCode)" }
+        else { Write-Status "  FALLO osap-api (ver $logDir\osap-api.err.log)" }
+    }
     $startedNames = @($started | ForEach-Object { $_.Name })
     Write-Host ""
     Write-Host "Arrancados en segundo plano: $($startedNames -join ', ')" -ForegroundColor Cyan
