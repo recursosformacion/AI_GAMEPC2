@@ -40,7 +40,7 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
         data = ctx.api.seo_work(canonical) if canonical is not None else None
         if data is None:
             return _html(render_not_found(), status_code=404)
-        slug = work_canonical_slug(str(data.get("title") or ""), str(data.get("composer") or "") or None)
+        slug = work_canonical_slug(str(data.get("title") or ""))
         return RedirectResponse(url=f"/obra/{canonical}/{slug}", status_code=301)
 
     @router.get("/obra/{work_id}/{slug}", include_in_schema=False)
@@ -49,7 +49,7 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
         data = ctx.api.seo_work(canonical) if canonical is not None else None
         if data is None:
             return _html(render_not_found(), status_code=404)
-        expected = work_canonical_slug(str(data.get("title") or ""), str(data.get("composer") or "") or None)
+        expected = work_canonical_slug(str(data.get("title") or ""))
         if slug != expected:
             return RedirectResponse(url=f"/obra/{canonical}/{expected}", status_code=301)
         related: list[dict[str, object]] = []

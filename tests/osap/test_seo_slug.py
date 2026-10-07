@@ -35,13 +35,14 @@ def test_work_y_person_slug_tienen_fallback_estable() -> None:
     assert person_slug("") == "compositor"
 
 
-def test_work_canonical_slug_incluye_compositor() -> None:
-    assert (
-        work_canonical_slug("Ave verum corpus", "Wolfgang Amadeus Mozart")
-        == "ave-verum-corpus-wolfgang-amadeus-mozart"
+def test_work_canonical_slug_usa_solo_titulo() -> None:
+    # El compositor NO se concatena (los títulos CPDL ya lo incluyen: evita el duplicado
+    # `-martin-luther-martin-luther` y el churn de URLs que generaba 301).
+    assert work_canonical_slug("The mouth of fools doth God confess - Martin Luther") == (
+        "the-mouth-of-fools-doth-god-confess-martin-luther"
     )
-    assert work_canonical_slug("Anónimo", None) == "anonimo"
-    assert work_canonical_slug("Réquiem", "") == "requiem"
+    assert work_canonical_slug("Ave verum corpus") == "ave-verum-corpus"
+    assert work_canonical_slug("") == "obra"
 
 
 def test_normalize_work_id_acepta_index_y_numerico() -> None:

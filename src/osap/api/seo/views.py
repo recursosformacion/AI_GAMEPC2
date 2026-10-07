@@ -139,7 +139,7 @@ def build_work_view(data: dict[str, object], related: list[dict[str, object]]) -
     work_id = str(data.get("work_id") or "")
     title = str(data.get("title") or "").strip() or "Obra"
     composer = _str_or_none(data.get("composer"))
-    slug = work_canonical_slug(title, composer)
+    slug = work_canonical_slug(title)
     composer_id = _str_or_none(data.get("composer_id"))
     catalogue = _str_or_none(data.get("catalogue"))
     year = _int_or_none(data.get("year"))
@@ -170,7 +170,7 @@ def build_work_view(data: dict[str, object], related: list[dict[str, object]]) -
         related_links.append(
             WorkLink(
                 work_id=str(item.get("work_id") or ""),
-                slug=work_canonical_slug(item_title, composer),
+                slug=work_canonical_slug(item_title),
                 title=item_title,
                 catalogue=_str_or_none(item.get("catalogue")),
             )
@@ -257,7 +257,7 @@ def build_person_view(detail: dict[str, object], works: dict[str, object]) -> Pe
             work_links.append(
                 WorkLink(
                     work_id=str(item.get("work_id") or ""),
-                    slug=work_canonical_slug(item_title, name),
+                    slug=work_canonical_slug(item_title),
                     title=item_title,
                     catalogue=_str_or_none(item.get("catalogue")),
                 )

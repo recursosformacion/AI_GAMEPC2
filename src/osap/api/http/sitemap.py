@@ -124,10 +124,9 @@ def _works_urlset(ctx: HttpContext, page: int) -> str:
         title = str(row.get("title") or "")
         if not work_id or not title:
             continue
-        composer = str(row.get("composer") or "") or None
         urls.append(
             (
-                canonical_work_url(work_id, work_canonical_slug(title, composer)),
+                canonical_work_url(work_id, work_canonical_slug(title)),
                 _lastmod(row.get("updated_at")),
             )
         )

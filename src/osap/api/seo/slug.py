@@ -50,14 +50,15 @@ def work_slug(title: str) -> str:
     return slugify(title) or "obra"
 
 
-def work_canonical_slug(title: str, composer: str | None = None) -> str:
-    """Slug canónico de obra: título + compositor (si se conoce).
+def work_canonical_slug(title: str) -> str:
+    """Slug canónico de obra: **solo el título** (estable).
 
-    Incluye el nombre del compositor para dar contexto en la URL; la identidad sigue
-    siendo el `work_id`, así que un cambio de slug solo provoca un 301.
+    No se concatena el compositor: los títulos CPDL ya suelen incluir al autor
+    ("... - Martin Luther"), así que añadirlo producía duplicados
+    (`-martin-luther-martin-luther`) y, al cambiar el título, un slug nuevo → 301.
+    Con el título solo, el enlace permanente es estable; la identidad viaja en el `work_id`.
     """
-    combined = " ".join(part for part in (title or "", composer or "") if part)
-    return work_slug(combined)
+    return work_slug(title)
 
 
 def person_slug(name: str) -> str:
