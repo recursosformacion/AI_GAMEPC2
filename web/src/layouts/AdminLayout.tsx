@@ -141,7 +141,7 @@ export function AdminLayout(): ReactNode {
 
   if (!isAdmin) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-osap-bg text-osap-ink">
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 osap-score-bg text-osap-ink">
         <p className="text-sm text-osap-muted">{t("admin.accessDenied")}</p>
         <Link to="/" className="text-sm text-osap-accent hover:underline">
           {t("nav.home")}
@@ -158,7 +158,7 @@ export function AdminLayout(): ReactNode {
           end={item.end}
           title={item.title}
           className={({ isActive }) =>
-            `block rounded px-3 py-1.5 text-sm ${
+            `block rounded px-3 py-1.5 text-sm font-bold ${
               isActive
                 ? "bg-osap-accent text-white"
                 : "text-osap-muted hover:bg-osap-border hover:text-osap-ink"
@@ -178,7 +178,7 @@ export function AdminLayout(): ReactNode {
             : openStorage(item.storage ?? "multimantenimiento")
         }
         title={item.title}
-        className="block w-full rounded px-3 py-1.5 text-left text-sm text-osap-muted hover:bg-osap-border hover:text-osap-ink"
+        className="block w-full rounded px-3 py-1.5 text-left text-sm font-bold text-osap-muted hover:bg-osap-border hover:text-osap-ink"
       >
         {label(item)}
       </button>
@@ -186,8 +186,8 @@ export function AdminLayout(): ReactNode {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden bg-osap-bg text-osap-ink">
-      <aside className="flex w-64 shrink-0 flex-col border-r border-osap-border bg-osap-surface">
+    <div className="osap-score-bg flex h-screen overflow-hidden text-osap-ink">
+      <aside className="flex w-64 shrink-0 flex-col border-r border-osap-border bg-osap-bg">
         <div className="flex items-center justify-between border-b border-osap-border px-4 py-3">
           <span className="text-base font-bold text-osap-accent">{t("admin.title")}</span>
           <Link to="/" className="text-xs text-osap-muted hover:text-osap-accent">

@@ -36,6 +36,7 @@ export function AdminUserDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
+  const [nickname, setNickname] = useState("");
   const [roles, setRoles] = useState<string[]>([]);
   const [status, setStatus] = useState("");
   const [publicConsent, setPublicConsent] = useState(false);
@@ -58,6 +59,7 @@ export function AdminUserDetailPage() {
       .then((data) => {
         setUser(data);
         setName(data.name ?? "");
+        setNickname(data.nickname ?? "");
         setRoles(data.roles ?? []);
         setStatus(data.status ?? "");
         setPublicConsent(Boolean(data.nickname_public_consent));
@@ -73,6 +75,7 @@ export function AdminUserDetailPage() {
     void apiClient
       .patch(`/admin/users/${encodeURIComponent(user_id)}`, {
         name: name || null,
+        nickname: nickname.trim() || null,
         roles,
         status,
       })
@@ -182,8 +185,16 @@ export function AdminUserDetailPage() {
             />
           </div>
           <div className="grid gap-2">
-            <span className="text-sm font-medium">{t("adminUsers.nickname")}</span>
-            <p className="text-sm text-osap-muted">{user.nickname ?? "—"}</p>
+            <label className="text-sm font-medium" htmlFor="admin-nickname">
+              {t("adminUsers.nickname")}
+            </label>
+            <input
+              id="admin-nickname"
+              value={nickname}
+              onChange={(e) => setNickname(e.target.value)}
+              placeholder="3–30, empieza por letra"
+              className="rounded border border-osap-border bg-osap-bg px-3 py-2"
+            />
           </div>
           <div className="grid gap-2">
             <span className="text-sm font-medium">{t("adminUsers.roles")}</span>

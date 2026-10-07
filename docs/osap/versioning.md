@@ -79,6 +79,14 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.1.1 (C)** — `osap-api` **en solitario** (decisión explícita: es cambio de SPA/admin, no se
+  comparte con el resto de programas).
+  - Diseño público: fondo de partitura en el área derecha con **`--bg` en `header`/`main`/`footer`**,
+    tesela **tenue** (capa translúcida del color base), menú de admin con fondo `--bg`.
+  - Listado de compositores: **filtro de revisión solo para admin**, `review_status` fuera de la
+    vista pública, y **`nacionalidad · birth–death`**.
+  - Admin: **edición de `nickname`** de usuario.
+  - Alcance: `osap-api`. Evidencia: suite osap-api 817, ruff/mypy limpios; smoke en Prod.
 - **5.1.0 (B)** — modelo canónico de formaciones vocales (`osap-storage`) y contexto de formación
   en representaciones.
   - `canonical_ensemble()`: función única (alfabeto S/MZ/A/CT/T/BAR/B, **idempotente por punto

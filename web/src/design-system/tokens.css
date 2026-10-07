@@ -10,7 +10,7 @@ html {
 
 
 @theme {
-  --color-osap-bg: #faf9f7;
+  --color-osap-bg: #f3e2c7;
   --color-osap-surface: #ffffff;
   --color-osap-ink: #1c1c1e;
   --color-osap-muted: #6b7280;
@@ -31,6 +31,12 @@ html {
   --shadow-card: 0 1px 2px rgb(28 28 30 / 0.04), 0 8px 24px rgb(28 28 30 / 0.06);
 }
 
+/* Textura de partitura: tile SVG muy tenue (5 líneas + notas) para las superficies.
+   Es decorativo; se recolorea por tema y se desactiva en print / forced-colors. */
+:root {
+  --osap-score-tile: url("/partituraEntera.png");
+}
+
 /* Dark mode: part of the Design System (tokens). */
 :root[data-theme="dark"] {
   color-scheme: dark;
@@ -46,6 +52,7 @@ html {
   --color-osap-border-strong: #4c4959; /* líneas del shell (dark) */
   --color-osap-danger: #f87171;
   --color-osap-success: #34d399;
+  --osap-score-tile: url("/partituraEntera.png");
 }
 
 /* Fondo y tipografía base. El fondo del diseño cubre también el área del navegador
@@ -60,5 +67,47 @@ html {
     font-family: var(--font-display);
     font-weight: 400; /* Libre Caslon Display solo tiene 400; evita negrita sintética */
     letter-spacing: 0;
+  }
+}
+
+/* Fondo de la app con partitura. Se aplica a un contenedor de la app (no a body)
+   para evitar el destello a pantalla completa antes de que monte React. */
+.osap-score-bg {
+  background-color: var(--color-osap-bg);
+  /* Capa translúcida del color base sobre la tesela para bajar su intensidad.
+     Sube el 60% -> partitura más tenue; bájalo -> más visible. */
+  background-image:
+    linear-gradient(
+      color-mix(in srgb, var(--color-osap-bg) 60%, transparent),
+      color-mix(in srgb, var(--color-osap-bg) 60%, transparent)
+    ),
+    var(--osap-score-tile);
+  background-repeat: repeat;
+  background-position: 0 0;
+}
+
+/* Cabecera, contenido y pie: solo color base, SIN imagen (la partitura viene del fondo). */
+header,
+main,
+footer {
+  background-color: var(--color-osap-bg);
+}
+
+/* Superficies translúcidas para que se vea la partitura del fondo. */
+[class~="bg-osap-surface"] {
+  background-color: color-mix(in srgb, var(--color-osap-surface) 80%, transparent);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+@media print {
+  [class~="bg-osap-surface"] {
+    background-image: none;
+  }
+}
+
+@media (forced-colors: active) {
+  [class~="bg-osap-surface"] {
+    background-image: none;
   }
 }

@@ -4,6 +4,7 @@ import { Envelope } from "../components/Envelope";
 import { WorksListModule, groupWorks } from "../components/WorksListModule";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
+import { useAuth } from "../state/auth";
 import { useComposers } from "../state/composers";
 import { useSearches } from "../state/searches";
 
@@ -37,6 +38,7 @@ function lifespan(birth?: string | null, death?: string | null): string {
 export function ComposersPage() {
   const { t } = useI18n();
   const { list, loading, error, q, setQuery, fetchList, review, setReview } = useComposers();
+  const isAdmin = useAuth((s) => s.isAdmin());
   const [input, setInput] = useState(q);
   const [offset, setOffset] = useState(0);
   const [openWorks, setOpenWorks] = useState<string | null>(null);
@@ -83,24 +85,26 @@ export function ComposersPage() {
             {t("search")}
           </button>
         </div>
-        <div className="flex items-center gap-2 text-sm">
-          <label htmlFor="review-filter" className="text-xs text-osap-muted">
-            {t("composers.reviewFilter")}:
-          </label>
-          <select
-            id="review-filter"
-            value={review ?? ""}
-            onChange={(e) => onReviewChange(e.target.value)}
-            className="rounded-md border border-osap-border bg-osap-surface px-2 py-2 text-sm"
-          >
-            <option value="">{t("composers.reviewAll")}</option>
-            {REVIEW_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>
-                {t(o.key)}
-              </option>
-            ))}
-          </select>
-        </div>
+        {isAdmin && (
+          <div className="flex items-center gap-2 text-sm">
+            <label htmlFor="review-filter" className="text-xs text-osap-muted">
+              {t("composers.reviewFilter")}:
+            </label>
+            <select
+              id="review-filter"
+              value={review ?? ""}
+              onChange={(e) => onReviewChange(e.target.value)}
+              className="rounded-md border border-osap-border bg-osap-surface px-2 py-2 text-sm"
+            >
+              <option value="">{t("composers.reviewAll")}</option>
+              {REVIEW_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>
+                  {t(o.key)}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <Envelope loading={loading} error={error} data={list} emptyMessage={t("states.empty")}>
@@ -108,7 +112,7 @@ export function ComposersPage() {
           <>
             <ul className="divide-y divide-osap-border overflow-hidden rounded-card border border-osap-border bg-osap-surface shadow-card">
               {data.items.map((c) => {
-                const meta = [lifespan(c.birth_year, c.death_year), c.biography_nationality]
+                const meta = [c.biography_nationality, lifespan(c.birth_year, c.death_year)]
                   .filter(Boolean)
                   .join(" · ");
                 return (
@@ -128,7 +132,6 @@ export function ComposersPage() {
                         >
                           {c.name}
                         </Link>
-                        {c.review_status && <ReviewBadge status={c.review_status} />}
                       </div>
                       {meta ? <p className="mt-0.5 text-xs text-osap-muted">{meta}</p> : null}
                     </div>
@@ -261,27 +264,4 @@ function ComposerWorksInline({ composerName }: { composerName: string }) {
   );
 }
 
-const REVIEW_LABEL: Record<string, TKey> = {
-  correct: "composers.reviewCorrect",
-  incorrect: "composers.reviewIncorrect",
-  reviewed: "composers.reviewReviewed",
-  not_reviewed: "composers.reviewNotReviewed",
-};
 
-const REVIEW_STYLE: Record<string, string> = {
-  correct: "bg-green-100 text-green-700",
-  incorrect: "bg-red-100 text-red-700",
-  reviewed: "bg-blue-100 text-blue-700",
-  not_reviewed: "bg-osap-accent-soft text-osap-muted",
-};
-
-function ReviewBadge({ status }: { status: string }) {
-  const { t } = useI18n();
-  const labelKey = REVIEW_LABEL[status] ?? "composers.reviewNotReviewed";
-  const style = REVIEW_STYLE[status] ?? REVIEW_STYLE.not_reviewed;
-  return (
-    <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-medium ${style}`}>
-      {t(labelKey)}
-    </span>
-  );
-}

@@ -179,8 +179,8 @@ function NavGroup({ entry, onNavigate }: { entry: NavGroupItem; onNavigate: () =
         type="button"
         onClick={() => setOpen((value) => !value)}
         aria-expanded={open}
-        className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm ${
-          childActive ? "font-medium text-osap-accent" : "text-osap-ink hover:bg-osap-accent-soft/60"
+        className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-sm font-bold ${
+          childActive ? "text-osap-accent" : "text-osap-ink hover:bg-osap-accent-soft/60"
         }`}
       >
         <Icon name={entry.icon} />
@@ -249,9 +249,9 @@ function SidebarSection({
                 end={entry.to === "/"}
                 onClick={onNavigate}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 rounded-md px-3 py-2 text-sm ${
+                  `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-bold ${
                     isActive
-                      ? "bg-osap-accent-soft font-medium text-osap-accent"
+                      ? "bg-osap-accent-soft text-osap-accent"
                       : "text-osap-ink hover:bg-osap-accent-soft/60"
                   }`
                 }
@@ -277,7 +277,7 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
         aria-hidden="true"
       />
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-osap-border-strong bg-osap-surface transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-osap-border-strong transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -311,7 +311,7 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
                 <NavLink
                   to={item.to}
                   onClick={onClose}
-                  className="flex items-center gap-3 rounded-md px-3 py-2 text-sm text-osap-ink hover:bg-osap-accent-soft/60"
+                  className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-bold text-osap-ink hover:bg-osap-accent-soft/60"
                 >
                   <Icon name={item.icon} />
                   {t(item.key)}
@@ -341,7 +341,7 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
   };
 
   return (
-    <header className="sticky top-0 z-20 border-b border-osap-border-strong bg-osap-surface/90 backdrop-blur">
+    <header className="sticky top-0 z-20 border-b border-osap-border-strong">
       <div className="flex items-center gap-3 px-4 py-3 lg:px-6">
         <button
           type="button"
@@ -493,13 +493,13 @@ export function Layout(): ReactNode {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-osap-bg text-osap-ink">
+    <div className="min-h-screen text-osap-ink">
       <StorageBanner />
       <div className="flex min-h-screen">
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="osap-score-bg flex min-w-0 flex-1 flex-col">
           <TopBar onMenu={() => setSidebarOpen(true)} />
-          <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
+          <main className="mx-auto my-4 w-full max-w-5xl flex-1 px-4 py-6 sm:my-6 sm:px-6 lg:px-8">
             <Outlet />
           </main>
           <Footer />

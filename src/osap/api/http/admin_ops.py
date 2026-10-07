@@ -324,7 +324,7 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         "/api/v1/admin/users/{user_id}",
         tags=["Admin"],
         summary="Update OSAP user (admin)",
-        description="Edita nombre, roles y/o estado. Exige role=admin.",
+        description="Edita nombre, nickname, roles y/o estado. Exige role=admin.",
         response_model=SuccessEnvelope[object] | ErrorEnvelope,
         responses={
             200: _shared._resp("User", _shared._example({})),
@@ -344,6 +344,7 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
                 authorization,
                 user_id,
                 name=cast("str | None", payload.get("name")),
+                nickname=cast("str | None", payload.get("nickname")),
                 roles=cast("list[str] | None", payload.get("roles")),
                 status=cast("str | None", payload.get("status")),
             )
