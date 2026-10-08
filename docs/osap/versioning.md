@@ -91,6 +91,11 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 - **5.1.1 (C) — `osap-support`**: al **re-conceder** un reconocimiento revocado (p. ej. FOUNDER)
   se **reactiva la misma fila** (`uq user+project+type`) en vez de dar `RecognitionConflictError`;
   `grant_recognition.py`.
+- **5.1.2 (C) — `osap-auth`**: **gate legal/onboarding en el flujo de autorización OIDC**: no se
+  emite el `code` sin onboarding (`OnboardingRequiredError` en `CompleteAuthorizationUseCase`);
+  `/auth/authorize/complete` → `409 onboarding_required` (el login embebido va al onboarding y
+  reanuda); el callback **social** sin onboarding redirige al onboarding con los tokens en el
+  fragmento + contexto OIDC. Incluye la **edición de `nickname`** en el admin de usuarios.
 - **5.1.1 (C) — `osap-auth`**: **aviso por email** al usuario cuando el admin le asigna el `nickname`
   (best-effort); incluye el soporte de `nickname` en el update admin.
 - **5.1.1 (C)** — `osap-api` **en solitario** (decisión explícita: es cambio de SPA/admin, no se
