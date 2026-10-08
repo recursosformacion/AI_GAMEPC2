@@ -79,6 +79,11 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.1.1 (C) — `osap-support`**: al **re-conceder** un reconocimiento revocado (p. ej. FOUNDER)
+  se **reactiva la misma fila** (`uq user+project+type`) en vez de dar `RecognitionConflictError`;
+  `grant_recognition.py`.
+- **5.1.1 (C) — `osap-auth`**: **aviso por email** al usuario cuando el admin le asigna el `nickname`
+  (best-effort); incluye el soporte de `nickname` en el update admin.
 - **5.1.1 (C)** — `osap-api` **en solitario** (decisión explícita: es cambio de SPA/admin, no se
   comparte con el resto de programas).
   - Diseño público: fondo de partitura en el área derecha con **`--bg` en `header`/`main`/`footer`**,
