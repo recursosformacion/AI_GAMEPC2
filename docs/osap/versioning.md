@@ -79,6 +79,9 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.1.2 (C) — `osap-storage`**: `PopulateComposers` crea personas **ocultas** (`visible=0`;
+  un compositor sin obras no debe ser público) y `create()` respeta `visible`. Fix de datos:
+  1602 personas `active` sin obras pasadas a `visible=0` (Dev y Prod).
 - **5.1.2 (C) — `osap-api`**: el enlace del admin de **reconocimientos** usa la base pública
   `support_web_base` (`https://support.openmusicrepository.com/support-api`) en vez de la interna
   `127.0.0.1:8300` (que el navegador no alcanza). Vhost de support habilitado en Prod.
