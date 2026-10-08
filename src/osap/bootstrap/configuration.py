@@ -57,6 +57,7 @@ class Configuration:
     osap_api_db_name: str | None = None
     dev_auth_bypass: bool = False
     storage_web_base: str | None = None
+    support_web_base: str | None = None
     storage_base_url: str | None = None
     auth_token_url: str | None = None
     auth_base_url: str | None = None
@@ -106,7 +107,8 @@ _CONFIG_FIELDS: dict[str, tuple[str, Any]] = {
     "oidc_audience": ("OSAP_OIDC_AUDIENCE", str),
     "oidc_token_issuer": ("OSAP_OIDC_TOKEN_ISSUER", str),
     "dev_auth_bypass": ("OSAP_DEV_AUTH_BYPASS", bool),
-    "storage_web_base": ("OSAP_STORAGE_WEB_BASE", str),
+        "storage_web_base": ("OSAP_STORAGE_WEB_BASE", str),
+        "support_web_base": ("OSAP_SUPPORT_WEB_BASE", str),
     "storage_base_url": ("OSAP_STORAGE_BASE_URL", str),
     "auth_token_url": ("OSAP_AUTH_TOKEN_URL", str),
     "auth_base_url": ("OSAP_AUTH_BASE_URL", str),
@@ -135,7 +137,8 @@ _TOML_SECTIONS: dict[str, tuple[str, str]] = {
     "oidc_audience": ("oidc", "audience"),
     "oidc_token_issuer": ("oidc", "token_issuer"),
     "dev_auth_bypass": ("osap", "dev_auth_bypass"),
-    "storage_web_base": ("osap", "storage_web_base"),
+        "storage_web_base": ("osap", "storage_web_base"),
+        "support_web_base": ("osap", "support_web_base"),
     "storage_base_url": ("osap", "storage_base_url"),
     "auth_token_url": ("osap", "auth_token_url"),
     "auth_base_url": ("osap", "auth_base_url"),

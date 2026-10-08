@@ -75,6 +75,7 @@ class Container:
         self._storage_read_only: bool = False
         self._dev_auth_bypass: bool = False
         self._storage_web_base: str | None = None
+        self._support_web_base: str | None = None
         self._op_store_config: dict[str, str] | None = None
         self._collaborators: ComposePublicCollaboratorsUseCase | None = None
         self._support_admin_recognitions: SupportAdminRecognitionsClient | None = None
@@ -157,6 +158,12 @@ class Container:
 
     def storage_web_base(self) -> str | None:
         return self._storage_web_base
+
+    def set_support_web_base(self, base: str | None) -> None:
+        self._support_web_base = base
+
+    def support_web_base(self) -> str | None:
+        return self._support_web_base
 
     def storage_info(self) -> tuple[str, bool]:
         return self._storage_target or "unknown", self._storage_read_only

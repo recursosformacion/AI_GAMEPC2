@@ -79,6 +79,12 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.1.2 (C) — `osap-api`**: el enlace del admin de **reconocimientos** usa la base pública
+  `support_web_base` (`https://support.openmusicrepository.com/support-api`) en vez de la interna
+  `127.0.0.1:8300` (que el navegador no alcanza). Vhost de support habilitado en Prod.
+- **5.1.1 (C) — `osap-storage`**: `count()` de personas/compositores ya no genera SQL inválido
+  cuando `include_all`+`visible=all` sin filtros (`WHERE` vacío → `1=1`). Arreglaba el 500 del
+  "Maestro personas" del admin.
 - **5.1.1 (C) — `osap-support`**: al **re-conceder** un reconocimiento revocado (p. ej. FOUNDER)
   se **reactiva la misma fila** (`uq user+project+type`) en vez de dar `RecognitionConflictError`;
   `grant_recognition.py`.

@@ -83,7 +83,10 @@ class SystemMixin(PlatformApiCore):
         path = routes.get(section or "recognitions")
         if path is None:
             raise ValueError(f"sección no soportada: {section}")
-        return f"{client.base_url}{path}?token={urllib.parse.quote(service_token)}"
+        # `client.base_url` es interno (127.0.0.1:8300); el enlace lo abre el NAVEGADOR, así que
+        # debe usar la base pública (p. ej. https://support.openmusicrepository.com/support-api).
+        base = (self._container.support_web_base() or client.base_url).rstrip("/")
+        return f"{base}{path}?token={urllib.parse.quote(service_token)}"
 
     def admin_overview(self, token: str | None) -> dict[str, object]:
         stats = self.composer_review_stats(token)
