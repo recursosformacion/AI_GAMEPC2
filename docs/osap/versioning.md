@@ -79,6 +79,9 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.1.3 (C) — `osap-api`**: sustituye la etiqueta **Google Tag Manager** (`GTM-WR6VXCFD`) por
+  **GA4 gtag.js** (`G-8QXVPF8VP0`); los eventos del SPA (`page_view`, `search`) se envían con
+  `gtag('event', …)`.
 - **5.1.2 (C) — `osap-storage`**: `PopulateComposers` crea personas **ocultas** (`visible=0`;
   un compositor sin obras no debe ser público) y `create()` respeta `visible`. Fix de datos:
   1602 personas `active` sin obras pasadas a `visible=0` (Dev y Prod).

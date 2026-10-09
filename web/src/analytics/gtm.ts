@@ -1,14 +1,20 @@
-// Envío de eventos a Google Tag Manager (SPA): GTM no recibe "comunicados" por sí solo en
-// una SPA porque no hay recargas de página; hay que empujar eventos a `dataLayer`.
+// Envío de eventos a Google Analytics 4 (gtag.js) desde una SPA: como no hay recargas de
+// página, cada cambio de ruta empuja un `page_view`. Si `gtag` no está disponible (p. ej. en
+// tests), se cae al `dataLayer` "clásico".
 
 declare global {
   interface Window {
     dataLayer?: Record<string, unknown>[];
+    gtag?: (...args: unknown[]) => void;
   }
 }
 
 export function pushEvent(event: string, params: Record<string, unknown> = {}): void {
   if (typeof window === "undefined") return;
+  if (typeof window.gtag === "function") {
+    window.gtag("event", event, params);
+    return;
+  }
   window.dataLayer = window.dataLayer ?? [];
   window.dataLayer.push({ event, ...params });
 }
