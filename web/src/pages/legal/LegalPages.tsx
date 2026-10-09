@@ -34,8 +34,8 @@ export function LegalNoticePage() {
           <a className="text-osap-accent hover:underline" href="mailto:admin@openmusicrepository.com">
             admin@openmusicrepository.com
           </a>
-          . NIF: <Pending>(dato fiscal del titular)</Pending>. Actividad: gestión y explotación del
-          sitio <strong>OpenMusicRepository (OSAP)</strong>, catálogo musical en línea.
+          . NIF: <strong>38474364X</strong>. Actividad: gestión y explotación del sitio{" "}
+          <strong>OpenMusicRepository (OSAP)</strong>, catálogo musical en línea.
         </p>
       </section>
       <section>
@@ -135,8 +135,7 @@ export function PrivacyPolicyPage() {
         <h2 className="font-semibold">1. Responsable del tratamiento</h2>
         <p>
           Miguel Garcia Garcia, C/ Nou, 35, 08458 Sant Pere de Vilamajor, Barcelona, España. NIF:{" "}
-          <Pending>(dato fiscal del titular)</Pending>. Contacto para privacidad:
-          admin@openmusicrepository.com.
+          <strong>38474364X</strong>. Contacto para privacidad: admin@openmusicrepository.com.
         </p>
       </section>
       <section>

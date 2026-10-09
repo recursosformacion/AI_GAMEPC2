@@ -79,6 +79,8 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.1.7 (C) — `osap-api`**: Aviso legal y Política de privacidad con el **NIF del titular**
+  (`38474364X`).
 - **5.1.6 (C) — `osap-api`**: **documentos legales** (Aviso legal `/aviso-legal`, Privacidad
   `/privacidad`, Cookies `/cookies`) con enlaces en el pie, y **gestor de consentimiento de
   cookies** (aceptar todas / rechazar no necesarias / configurar, persistencia local y enlace
