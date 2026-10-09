@@ -89,6 +89,10 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 - **5.1.3 (C) — `osap-api`**: sustituye la etiqueta **Google Tag Manager** (`GTM-WR6VXCFD`) por
   **GA4 gtag.js** (`G-8QXVPF8VP0`); los eventos del SPA (`page_view`, `search`) se envían con
   `gtag('event', …)`.
+- **5.1.4 (C) — `osap-storage`**: mantenimiento de `works` (admin HTML `/admin/works`) —
+  **quita `person_id`** del formulario, `attribution_type` como **select** (ANONIMA/TRADICIONAL/
+  POPULAR/ATRIBUIDA), y **géneros/instrumentos** como **multi-select** contra sus catálogos
+  (nunca CSV); se añade editor de **`works_person_roles`** (compositor/artista y roles).
 - **5.1.3 (C) — `osap-storage`**: aceptar una propuesta de **atribución IA** es **idempotente**
   si la relación `(obra,persona,rol)` ya existe (antes el `INSERT IGNORE` con rowcount 0 hacía
   rollback y la propuesta quedaba pendiente → parecía que "Aceptar" no hacía nada).
