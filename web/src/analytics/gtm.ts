@@ -1,16 +1,18 @@
-// Envío de eventos a Google Analytics 4 (gtag.js) desde una SPA: como no hay recargas de
-// página, cada cambio de ruta empuja un `page_view`. Si `gtag` no está disponible (p. ej. en
-// tests), se cae al `dataLayer` "clásico".
+// Eventos de medición de la SPA. **Solo se envían si hay consentimiento de analítica.**
+// Si `gtag` no está disponible (sin consentimiento, o en tests) no se envía nada.
+
+import { analyticsGranted } from "../consent/consent";
 
 declare global {
   interface Window {
-    dataLayer?: Record<string, unknown>[];
+    dataLayer?: unknown[];
     gtag?: (...args: unknown[]) => void;
   }
 }
 
 export function pushEvent(event: string, params: Record<string, unknown> = {}): void {
   if (typeof window === "undefined") return;
+  if (!analyticsGranted()) return;
   if (typeof window.gtag === "function") {
     window.gtag("event", event, params);
     return;

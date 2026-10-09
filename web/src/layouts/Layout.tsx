@@ -1,7 +1,9 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { initAnalytics } from "../analytics/ga";
 import { trackPageView } from "../analytics/gtm";
+import { CookieConsent, openCookiePreferences } from "../consent/CookieConsent";
 import { DarkModeToggle } from "../components/DarkModeToggle";
 import { GlobalSearch } from "../components/GlobalSearch";
 import { LanguageSelect } from "../components/LanguageSelect";
@@ -454,6 +456,26 @@ export function Footer() {
       <Link to="/support" className="text-osap-accent hover:underline">
         {t("nav.support")}
       </Link>
+      {" · "}
+      <Link to="/aviso-legal" className="text-osap-accent hover:underline">
+        Aviso legal
+      </Link>
+      {" · "}
+      <Link to="/privacidad" className="text-osap-accent hover:underline">
+        Privacidad
+      </Link>
+      {" · "}
+      <Link to="/cookies" className="text-osap-accent hover:underline">
+        Cookies
+      </Link>
+      {" · "}
+      <button
+        type="button"
+        onClick={() => openCookiePreferences()}
+        className="text-osap-accent hover:underline"
+      >
+        Configurar cookies
+      </button>
     </footer>
   );
 }
@@ -483,7 +505,11 @@ export function Layout(): ReactNode {
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // GTM en SPA: cada cambio de ruta debe enviar un page_view a dataLayer.
+  // Carga GA solo si el usuario ya consintió la analítica (nunca antes).
+  useEffect(() => {
+    initAnalytics();
+  }, []);
+  // SPA: cada cambio de ruta envía un page_view (solo con consentimiento).
   useEffect(() => {
     trackPageView(location.pathname);
   }, [location.pathname]);
@@ -505,6 +531,7 @@ export function Layout(): ReactNode {
           <Footer />
         </div>
       </div>
+      <CookieConsent />
     </div>
   );
 }

@@ -79,6 +79,13 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.1.6 (C) — `osap-api`**: **documentos legales** (Aviso legal `/aviso-legal`, Privacidad
+  `/privacidad`, Cookies `/cookies`) con enlaces en el pie, y **gestor de consentimiento de
+  cookies** (aceptar todas / rechazar no necesarias / configurar, persistencia local y enlace
+  permanente «Configurar cookies»). **Google Analytics ya no se carga sin consentimiento**
+  (gtag.js se inyecta dinámicamente; `send_page_view:false` para evitar duplicados).
+- **5.1.4 (C) — `osap-auth`**: `terms_url`/`privacy_url` por defecto apuntan a los documentos
+  legales de la app (`/aviso-legal`, `/privacidad`).
 - **5.1.5 (C) — `osap-api`**: admin de usuarios — listado con **estado on/off**, acciones con
   **iconos** (ver/editar/reconocimientos/baja) y columnas **rol más alto** + **visibilidad**;
   se retira la entrada de menú **"Reconocimientos"** (la gestión ya vive en la ficha del usuario).

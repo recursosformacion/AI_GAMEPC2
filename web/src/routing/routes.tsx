@@ -38,6 +38,7 @@ import { SearchStudioPage } from "../pages/SearchStudioPage";
 import { SourceCatalogPage } from "../pages/SourceCatalogPage";
 import { SourcesPage } from "../pages/SourcesPage";
 import { SupportOsapPage } from "../pages/SupportOsapPage";import { CorrectionsPage } from "../pages/CorrectionsPage";import { WorkResolutionPage } from "../pages/WorkResolutionPage";
+import { CookiePolicyPage, LegalNoticePage, PrivacyPolicyPage } from "../pages/legal/LegalPages";
 
 // Routing is independent of navigation: navigation is a consequence of these routes.
 export function AppRoutes() {
@@ -64,6 +65,9 @@ export function AppRoutes() {
         <Route path="/composers/:personId" element={<ComposerDetailPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/about/how-it-works" element={<HowItWorksPage />} />
+        <Route path="/aviso-legal" element={<LegalNoticePage />} />
+        <Route path="/privacidad" element={<PrivacyPolicyPage />} />
+        <Route path="/cookies" element={<CookiePolicyPage />} />
         <Route path="/viewer" element={<ViewerPage />} />
         <Route path="/collaborators" element={<CollaboratorsPage />} />
         <Route path="/candidates" element={<CandidatesPage />} />
