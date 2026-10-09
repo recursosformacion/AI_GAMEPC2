@@ -60,6 +60,17 @@ class AuthProxyClient:
             {"value": value},
         )
 
+    def admin_notify_recognition(
+        self, access_token: str, user_id: str, recognition_type: str, action: str, project: str
+    ) -> tuple[int, object]:
+        """Pide a osap-auth el aviso por email de un cambio de reconocimiento (best-effort)."""
+        return self._call_bearer(
+            "POST",
+            f"/auth/admin/users/{user_id}/recognition-notification",
+            access_token,
+            {"recognition_type": recognition_type, "action": action, "project": project},
+        )
+
     def admin_delete_user(self, access_token: str, user_id: str) -> tuple[int, object]:
         """Baja definitiva: osap-auth elimina/anonimiza la cuenta (irreversible)."""
         return self._call_bearer("DELETE", f"/auth/admin/users/{user_id}", access_token)

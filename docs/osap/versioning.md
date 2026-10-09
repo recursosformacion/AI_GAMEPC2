@@ -79,6 +79,10 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.1.4 (C) — `osap-api`**: al **conceder/revocar un reconocimiento**, osap-api notifica a
+  osap-auth (best-effort) para que envíe el email al usuario; la ruta de revoke pasa `user_id`.
+- **5.1.3 (C) — `osap-auth`**: aviso por email al usuario cuando el admin le concede/retira un
+  reconocimiento (`POST /auth/admin/users/{id}/recognition-notification`).
 - **5.1.3 (C) — `osap-api`**: sustituye la etiqueta **Google Tag Manager** (`GTM-WR6VXCFD`) por
   **GA4 gtag.js** (`G-8QXVPF8VP0`); los eventos del SPA (`page_view`, `search`) se envían con
   `gtag('event', …)`.

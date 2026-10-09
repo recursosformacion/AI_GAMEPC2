@@ -1,5 +1,6 @@
 """PlatformApi: mixin de system/admin/auth (F5.4)."""
 
+import contextlib
 import json
 import re
 import secrets
@@ -154,17 +155,54 @@ class SystemMixin(PlatformApiCore):
         reason: str | None = None,
     ) -> tuple[int, object]:
         self._require_admin(token)
-        return self._container.support_admin_recognitions().grant(
+        status, doc = self._container.support_admin_recognitions().grant(
             user_id=user_id, project=project, recognition_type=recognition_type, reason=reason
         )
+        if 200 <= status < 300:
+            self._notify_recognition(token, user_id, recognition_type, "granted", project)
+        return status, doc
 
     def admin_user_revoke_recognition(
-        self, token: str | None, recognition_id: int, reason: str | None = None
+        self, token: str | None, user_id: str, recognition_id: int, reason: str | None = None
     ) -> tuple[int, object]:
         self._require_admin(token)
-        return self._container.support_admin_recognitions().revoke(
+        recognition_type, project = self._recognition_meta(user_id, recognition_id)
+        status, doc = self._container.support_admin_recognitions().revoke(
             recognition_id=recognition_id, reason=reason
         )
+        if 200 <= status < 300:
+            self._notify_recognition(
+                token, user_id, recognition_type or "reconocimiento", "revoked", project or "omr"
+            )
+        return status, doc
+
+    def _recognition_meta(self, user_id: str, recognition_id: int) -> tuple[str | None, str | None]:
+        """(tipo, proyecto) del reconocimiento, para el aviso de revocación (best-effort)."""
+        try:
+            status, doc = self._container.support_admin_recognitions().list_for_user(user_id)
+            if not (200 <= status < 300):
+                return None, None
+            items = doc.get("items") if isinstance(doc, dict) else doc
+            if not isinstance(items, list):
+                return None, None
+            for item in items:
+                if isinstance(item, dict) and int(item.get("id") or 0) == int(recognition_id):
+                    return (
+                        str(item.get("type") or item.get("recognition_type") or "") or None,
+                        str(item.get("project") or "omr"),
+                    )
+        except Exception:  # noqa: BLE001 — el aviso es best-effort
+            return None, None
+        return None, None
+
+    def _notify_recognition(
+        self, token: str | None, user_id: str, recognition_type: str, action: str, project: str
+    ) -> None:
+        # El aviso no debe romper la operación admin.
+        with contextlib.suppress(Exception):
+            self._container.auth_proxy().admin_notify_recognition(
+                token or "", user_id, recognition_type, action, project
+            )
 
     def admin_user_delete(self, token: str | None, user_id: str) -> object:
         """Baja definitiva: osap-auth elimina/anonimiza la cuenta (irreversible)."""

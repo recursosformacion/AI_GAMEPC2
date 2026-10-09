@@ -469,7 +469,9 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            status, doc = ctx.api.admin_user_revoke_recognition(authorization, recognition_id)
+            status, doc = ctx.api.admin_user_revoke_recognition(
+                authorization, user_id, recognition_id
+            )
         except UnauthenticatedError:
             return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
         except ForbiddenError:
