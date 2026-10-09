@@ -55,10 +55,6 @@ const SECTIONS: AdminSection[] = [
     ],
   },
   {
-    caption: "Mantenimiento support",
-    items: [{ support: "recognitions", label: "Reconocimientos" }],
-  },
-  {
     caption: "Mantenimiento storage",
     items: [
       {

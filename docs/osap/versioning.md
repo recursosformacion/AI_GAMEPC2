@@ -79,6 +79,9 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.1.5 (C) — `osap-api`**: admin de usuarios — listado con **estado on/off**, acciones con
+  **iconos** (ver/editar/reconocimientos/baja) y columnas **rol más alto** + **visibilidad**;
+  se retira la entrada de menú **"Reconocimientos"** (la gestión ya vive en la ficha del usuario).
 - **5.1.4 (C) — `osap-api`**: al **conceder/revocar un reconocimiento**, osap-api notifica a
   osap-auth (best-effort) para que envíe el email al usuario; la ruta de revoke pasa `user_id`.
 - **5.1.3 (C) — `osap-auth`**: aviso por email al usuario cuando el admin le concede/retira un
