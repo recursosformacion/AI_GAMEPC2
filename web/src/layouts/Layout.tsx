@@ -279,7 +279,7 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
         aria-hidden="true"
       />
       <aside
-        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-osap-border-strong transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-40 flex w-64 flex-col transition-transform lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -302,7 +302,11 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
             </span>
           </Link>
         </div>
-        <nav aria-label={t("nav.sectionContent")} className="flex-1 overflow-y-auto px-3 pb-4">
+        <nav
+          aria-label={t("nav.sectionContent")}
+          className="flex-1 overflow-y-auto px-3 pb-4"
+          style={{ borderRight: "thin solid darkgray" }}
+        >
           <SidebarSection title={t("nav.sectionContent")} entries={CONTENT_ENTRIES} onNavigate={onClose} />
           <SidebarSection title={t("nav.sectionYourSpace")} entries={SPACE_NAV} onNavigate={onClose} />
         </nav>
@@ -343,7 +347,7 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
   };
 
   return (
-    <header className="sticky top-0 z-20 border-b border-osap-border-strong">
+    <header className="sticky top-0 z-20" style={{ borderBottom: "thin solid darkgray" }}>
       <div className="flex items-center gap-3 px-4 py-3 lg:px-6">
         <button
           type="button"
@@ -443,7 +447,7 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
 export function Footer() {
   const { t } = useI18n();
   return (
-    <footer className="border-t border-osap-border py-4 text-center text-xs text-osap-muted">
+    <footer className="py-4 text-center text-xs text-osap-muted" style={{ borderTop: "thin solid darkgray" }}>
       {t("app.name")} · {t("app.subtitle")} — {t("app.poweredBy")} ·{" "}
       <Link to="/about/how-it-works" className="text-osap-accent hover:underline">
         {t("nav.howItWorks")}
@@ -525,7 +529,10 @@ export function Layout(): ReactNode {
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
         <div className="osap-score-bg flex min-w-0 flex-1 flex-col">
           <TopBar onMenu={() => setSidebarOpen(true)} />
-          <main className="mx-auto my-4 w-full max-w-5xl flex-1 px-4 py-6 sm:my-6 sm:px-6 lg:px-8">
+          <main
+            className="mx-auto my-4 w-full max-w-5xl flex-1 px-4 py-6 sm:my-6 sm:px-6 lg:px-8"
+            style={{ border: "thin solid darkgray" }}
+          >
             <Outlet />
           </main>
           <Footer />

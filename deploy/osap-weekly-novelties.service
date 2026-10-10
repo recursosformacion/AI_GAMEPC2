@@ -1,0 +1,26 @@
+# OSAP API — rutina semanal de novedades (IMSLP + CPDL → reindexado → IndexNow).
+# Copiar a /etc/systemd/system/osap-weekly-novelties.service. Lo lanza el timer
+# `osap-weekly-novelties.timer` (semanal) o a mano:
+#   sudo systemctl start osap-weekly-novelties.service
+#
+# Corre como `ocw` (mínimo privilegio, como el reconciliador). Lee las credenciales del
+# índice de un env PROPIO legible por ocw: /etc/openmusicrepository/osap-weekly-novelties.env
+# (plantilla: deploy/osap-weekly-novelties.env.example). NO reutiliza el env root:600 del
+# índice para no tener que correr como root.
+
+[Unit]
+Description=OSAP weekly novelties (IMSLP/CPDL metadata + reindex + IndexNow)
+After=network.target mysql.service osap-storage.service osap-api.service
+Wants=osap-api.service osap-storage.service
+
+[Service]
+Type=oneshot
+User=ocw
+Group=ocw
+WorkingDirectory=/home/ocw/openmusicrepository.com/osap-api
+Environment=PYTHONPATH=/home/ocw/openmusicrepository.com/osap-api
+EnvironmentFile=/etc/openmusicrepository/osap-weekly-novelties.env
+ExecStart=/home/ocw/openmusicrepository.com/osap-api/.venv/bin/python script/weekly_novelties.py --apply
+
+[Install]
+WantedBy=multi-user.target

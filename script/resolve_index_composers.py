@@ -41,10 +41,12 @@ def main() -> int:
     ap.add_argument("--db-host", default="127.0.0.1")
     ap.add_argument("--db-user", default="osap2027")
     ap.add_argument("--db-password", default="2027osapdb")
+    ap.add_argument("--db-omr", default="osap-storage", help="BD de osap-storage (autoridad)")
+    ap.add_argument("--db-api", default="osap-api", help="BD del índice de osap-api")
     args = ap.parse_args()
 
     st = pymysql.connect(host=args.db_host, user=args.db_user, password=args.db_password,
-                         database="osap-storage", charset="utf8mb4",
+                         database=args.db_omr, charset="utf8mb4",
                          cursorclass=pymysql.cursors.DictCursor)
     with st, st.cursor() as cur:
         cur.execute("SELECT persons_id, persons_name FROM persons WHERE persons_status='active'")
@@ -84,7 +86,7 @@ def main() -> int:
         id_to_canon[pid] = c
 
     api = pymysql.connect(host=args.db_host, user=args.db_user, password=args.db_password,
-                          database="osap-api", charset="utf8mb4",
+                          database=args.db_api, charset="utf8mb4",
                           cursorclass=pymysql.cursors.DictCursor)
     changed = resolved = unresolved = 0
     samples: list[tuple] = []

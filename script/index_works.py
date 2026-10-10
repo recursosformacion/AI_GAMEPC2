@@ -188,6 +188,16 @@ def _shares_significant_token(a: str, b: str, composer: str | None = None) -> bo
     return bool(_significant_tokens(a, composer) & _significant_tokens(b, composer))
 
 
+def _title_numbers(title: str) -> set[str]:
+    """Números del título (p. ej. «RBV 13» -> {"13"}). Distinguen obras de una serie.
+
+    Extracción directa de dígitos: `title_key` descarta los números de catálogo, así que sin
+    esto «10 Children's Pieces, RBV 11» y «…, RBV 13» colapsan en la misma obra y sus reps
+    (URLs de IMSLP) acaban duplicadas.
+    """
+    return set(re.findall(r"\d+", str(title or "")))
+
+
 def _tokens_subset_sets(a: set[str], b: set[str]) -> bool:
     """Versión sobre conjuntos ya normalizados (evita recalcular `title_key`)."""
     if not a or not b:
@@ -206,6 +216,9 @@ def _tokens_subset(a: str, b: str, composer: str | None = None) -> bool:
     ta, tb = _significant_tokens(a, composer), _significant_tokens(b, composer)
     if not ta or not tb:
         return False
+    na, nb = _title_numbers(a), _title_numbers(b)
+    if na and nb and na != nb:
+        return False  # difieren en el número de serie/index → son obras distintas
     small, big = (ta, tb) if len(ta) <= len(tb) else (tb, ta)
     return len(small) >= 2 and small <= big
 

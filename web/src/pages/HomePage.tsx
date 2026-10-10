@@ -4,6 +4,7 @@ import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { useI18n } from "../i18n/I18n";
 import { searchAndGo } from "../state/navigation";
+import { useRecentWorks } from "../state/recentWorks";
 import { useSources } from "../state/repositorySources";
 
 function hint(query: string): string | null {
@@ -22,10 +23,12 @@ export function HomePage() {
   const [title, setTitle] = useState("");
   const [catalogue, setCatalogue] = useState("");
   const { list, loadList } = useSources();
+  const { list: recent, load: loadRecent } = useRecentWorks();
 
   useEffect(() => {
     void loadList();
-  }, [loadList]);
+    void loadRecent();
+  }, [loadList, loadRecent]);
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -161,7 +164,21 @@ export function HomePage() {
           <p className="text-sm text-osap-muted">{t("home.mostAccessedEmpty")}</p>
         </Card>
         <Card title={t("home.recentlyAdded")}>
-          <p className="text-sm text-osap-muted">{t("home.recentlyAddedEmpty")}</p>
+          {(recent.data ?? []).length === 0 ? (
+            <p className="text-sm text-osap-muted">{t("home.recentlyAddedEmpty")}</p>
+          ) : (
+            <ul className="space-y-1">
+              {(recent.data ?? []).map((work) => (
+                <li key={work.work_id} className="text-sm">
+                  {/* /obra lo sirve el backend (SEO), no la SPA: navegación completa. */}
+                  <a href={work.path} className="text-osap-accent hover:underline">
+                    {work.title}
+                  </a>
+                  {work.composer ? <span className="text-osap-muted"> — {work.composer}</span> : null}
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
         <Card title={t("home.sourcesAvailable")}>
           {wiredSources.length === 0 ? (

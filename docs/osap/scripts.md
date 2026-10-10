@@ -26,6 +26,19 @@ ficheros, licencia). El voicing se escribe como **formación vocal**: `ensembles
 Uso: `python scripts/import_cpdl_works.py --dir G:\cpdl_chunks` (o `--files`, `--dry-run`).
 
 
+### import_imslp_works.py
+Materializa obras de **IMSLP** (Worklist API) como **metadatos** en `works`
+(`works_origin='IMSLP'`, `works_origin_id`=pageid estable) con `works_title`,
+`works_catalogue` (`icatno`) y `works_source_url` = **permalink** a la ficha de IMSLP
+(enlace a la fuente; **no** se descargan ni alojan ficheros). Escribe también
+`works_person_import` (composer, source `imslp`, sin resolver). **Idempotente e
+incremental** (omite las ya presentes por `works_origin_id`), apto para timer semanal.
+Requiere la migración `024_works_source_url.sql`. Uso (desde la raíz del repo, en el venv de
+storage; se lanza como módulo porque importa `infrastructure`):
+`python -m scripts.import_imslp_works --limit 50` (dry-run) o `--apply`; en Prod
+`--db osap_storage`. Solo en local con certificado caducado: `--no-imslp-verify-ssl`.
+
+
 ### analyze_works_content.py
 Barrido offline (sin R2) del contenido de los `.mxl` de `G:\osap-storage`: calcula el
 `sha256`+tamaño reales y los **guarda en `files`** (vía `storage_locations`), valida el
@@ -56,7 +69,7 @@ Uso: `python scripts/analyze_works_content.py --only-missing --root G:\osap-stor
 | `apply_review_decisions.py` | **Aplicador de Fase 6** (`plan` → `apply` → `revert`) de `review_decisions` al catálogo. `plan` (por defecto, **dry-run**): plan por obra y diff contra `works_person_roles` (add/no-op/bloqueadas), sin escribir. `apply --batch <lote> --decided-by <quien>`: escribe **una transacción por obra** (`works_person_roles` + `work_attribution_audit` ligada a `review_decision_key`/`batch`, y `works.works_attr_type` en decisiones `attribution`); idempotente (no reaplica un lote vivo). `revert --batch <lote>`: deshace **exactamente** lo que hizo ese apply (borra solo las relaciones que creó y que siguen igual; restaura el estado previo de las atribuciones desde `before_json`) y marca `reverted_at`. Resuelve `person_key` por ancla (`persons_identity`) o por `import_person_parse`; las claves `name:` con varias fichas quedan **bloqueadas** (no se fuerzan). Requiere la migración **020**. |
 | `populate_persons_from_import.py` | Da de alta los compositores PDMX de `works_person_import` que no casan con nadie: limpia ruido/mojibake, agrupa por forma normalizada del nombre y crea persona + alias. `--roles` (def. `composer`), `--dry-run`. |
 | `merge_duplicate_persons.py` | Fusiona personas duplicadas por **clave limpia de nombre** (sin acentos ni sufijos de ruido, ≥2 tokens), **no** por anclas de identidad; registra en `persons_merge_history`. `--like`, `--dry-run`. |
-| `cleanup_person_duplicates.py` | Limpieza dirigida por **apellido exacto** (no subcadena): valida cada variante contra un keeper fiable y sólo fusiona los duplicados mal formados (AUTO); multi-autor y personas distintas quedan en REVIEW. Mueve a alias y repunta `works_person_roles`/`persons_aliases`/`persons_identity`/`persons_evidence`/`cpdl_edition_persons`/`representation_persons`. `--like`, `--plan-out`, `--apply` (por defecto dry-run). |
+| `cleanup_person_duplicates.py` | Limpieza dirigida por **apellido exacto** (no subcadena): valida cada variante contra un keeper fiable y sólo fusiona los duplicados mal formados (AUTO); multi-autor y personas distintas quedan en REVIEW. Mueve a alias y repunta `works_person_roles`/`persons_aliases`/`persons_identity`/`persons_evidence`/`representation_persons`. `--like`, `--plan-out`, `--apply` (por defecto dry-run). |
 | `review_persons_ai.py` | Revisión de personas con **IA (Gemini)**: `--generate` envía lotes de nombres con esquema JSON (`is_person`, `action` keep/correct/merge/split/not_person/traditional, años, nacionalidad, ficha) y guarda la respuesta; `--apply` la ejecuta sobre `persons`/`works` (rename+alias, merge, split multi-compositor, tradicional/desconocido) con umbral de confianza, backups e historial. Requiere `GEMINI_API_KEY`. Modelo por defecto `gemini-flash-latest` con reintentos (429/503). |
 | `normalize_identity_names.py` | Recalcula `persons_identity.identity_name_norm` con la clave sin acentos (iniciales + apellido), la que usan los enlazadores. Sustituye `normalize_authority_names.py` (**retirado**). |
 | `mark_anonymous_attr.py` | Marca en **`works`** (no en `persons`) las obras sin rol 1 cuyo título/nota declara anonimato/tradición: `works_attr_type` (TRADICIONAL/ANONIMA/POPULAR/DESCONOCIDO). `--apply` (por defecto dry-run). |
@@ -347,6 +360,39 @@ PYTHONPATH=<osap-api> python reseed_providers.py
     DML en `osap_api`, DROP acotado a las 3 tablas del índice); secreto en
     `/etc/openmusicrepository/osap-index.env` (600). Ej.:
     `rebuild_index.py --providers cpdl --host 127.0.0.1 --user osap_indexer --password … --database osap_api --db-api osap_api --db-omr osap_storage`.
+    Con `--indexnow` ejecuta además el aviso a IndexNow (ver más abajo) al terminar.
+  - `indexnow.py` — **paso final del reindexado**: notifica a IndexNow (Bing, Yandex,
+    Seznam, Naver…; **no** Google) las URLs de obra con `updated_at` en los últimos N días,
+    construidas con el **mismo slug canónico que el sitemap** (`work_canonical_slug`). Envía
+    en lotes de 10.000 y es **best-effort** (un fallo no aborta el reindex). La clave y su
+    fichero de verificación deben existir: `web/public/<clave>.txt` se sirve en
+    `{base}/<clave>.txt` (clave por defecto `osap-indexnow-2026`; `--base`/`--key` o
+    `OSAP_PUBLIC_BASE_URL`/`INDEXNOW_KEY`). Uso:
+    `python script/indexnow.py --days 7 --limit 10000`.
+  - `weekly_novelties.py` — **rutina semanal** en 3 fases (`--phases`, por defecto todas):
+    **import** (IMSLP `import_imslp_works` y CPDL `import_cpdl_works` si `--cpdl-dir`, con
+    guarda `--cpdl-min-files`: el import CPDL borra y reinserta el corpus), **normalize**
+    (pipeline determinista en osap-storage: `fix_html_entities`, `normalize_ensembles`,
+    `populate_ensemble_voices`, `fill_language_names`, `map_cpdl_genres` si hay export, y la
+    resolución de personas `parse_import_persons`→`resolve_persons`→`link_*`→
+    `populate_persons_from_import`→limpieza de nombres→`merge_duplicate_persons`→
+    `mark_pseudo_persons`; `map_instrumentation` queda fuera porque depende de la BD legacy
+    `osap-storage_v1`) y **index** (`rebuild_index.py` + `finalize_index_identity` —que resuelve
+    y fusiona en un paso; **`resolve_index_composers` no se usa** porque reescribir `person_id`
+    antes de fusionar viola `uq_idx_title_composer`— y, al final, `indexnow.py`).
+    Best-effort; cada paso corre en su directorio/venv (storage u osap-api). **`--apply`
+    controla toda la escritura**; sin él (dry-run) nada escribe y se omiten reindex e IndexNow.
+    Se lanza con el timer `osap-weekly-novelties.timer`
+    (`deploy/osap-weekly-novelties.{service,timer}`; el service corre como `ocw` y lee
+    `/etc/openmusicrepository/osap-weekly-novelties.env`, plantilla
+    `deploy/osap-weekly-novelties.env.example`). Uso: `python script/weekly_novelties.py --apply`;
+    para reconciliar sin reimportar: `--apply --phases normalize,index --skip-reindex`.
+  - `fix_imslp_rep_dupes.py` — quita representaciones IMSLP **duplicadas** (misma URL en varias
+    obras, por el antiguo anclaje por título): conserva la rep en la obra cuyo título casa con
+    la página de la URL y borra las demás (nunca deja una obra sin URL). Dry-run por defecto.
+  - `reconcile_imslp_reps.py` — reconcilia reps IMSLP **mal asignadas por número/Op.** (la URL
+    apunta a otra obra): compara los números de la página con los del título y **reasigna** a la
+    obra correcta (o borra si no existe / si colisiona). Dry-run por defecto; no toca CPDL.
 - **Resolución a persona / cierre de identidad**: `resolve_index_composers.py` resuelve
   `index_works.person_id`/`composer_name` a la persona canónica del Maestro (autoridad
   `persons`, sin variantes de orden). `finalize_index_identity.py` hace **resolución +

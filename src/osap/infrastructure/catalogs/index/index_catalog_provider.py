@@ -490,6 +490,47 @@ class IndexCatalogProvider(ICatalogProvider):
             for row in rows
         ]
 
+    def list_recent_works(self, limit: int) -> list[dict[str, object]]:
+        """Obras más recientes del índice (`updated_at` DESC) — alimenta la portada.
+
+        `updated_at` se reescribe con `NOW()` en cada upsert del reindexado, así que refleja
+        las incorporaciones/actualizaciones más recientes de todas las fuentes (CPDL, OMR,
+        IMSLP…). El desempate por `id` DESC hace el orden determinista.
+        """
+        conn = None
+        try:
+            conn = pymysql.connect(
+                host=self._host,
+                user=self._user,
+                password=self._password,
+                database=self._database,
+                charset="utf8mb4",
+                cursorclass=DictCursor,
+                autocommit=True,
+            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, title, composer_name, updated_at FROM index_works "
+                    "ORDER BY updated_at DESC, id DESC LIMIT %s",
+                    (limit,),
+                )
+                rows = cur.fetchall()
+        except pymysql.err.OperationalError as exc:
+            logger.warning("index provider: MySQL no disponible al listar novedades (%s)", exc)
+            return []
+        finally:
+            if conn is not None:
+                conn.close()
+        return [
+            {
+                "work_id": f"index-{int(str(row.get('id') or 0))}",
+                "title": str(row.get("title") or ""),
+                "composer": str(row.get("composer_name") or "") or None,
+                "updated_at": str(row.get("updated_at") or "") or None,
+            }
+            for row in rows
+        ]
+
     def representations_for_title(
         self, title: str, composer: str | None = None
     ) -> list[dict[str, object]]:

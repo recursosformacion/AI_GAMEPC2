@@ -120,7 +120,8 @@ class _MysqlStore(_MemoryStore):
                 KEY idx_idx_composer (person_id),
                 KEY idx_idx_composer_name (composer_name),
                 KEY idx_idx_catalogue (catalogue_key),
-                KEY idx_idx_title (title_key)
+                KEY idx_idx_title (title_key),
+                KEY idx_idx_updated_at (updated_at, id)
             ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
             """
         )
@@ -328,6 +329,17 @@ class _MysqlStore(_MemoryStore):
         )
         if not composer_name_index:
             self._run("CREATE INDEX idx_idx_composer_name ON index_works (composer_name)")
+
+        # La portada lista las novedades por `updated_at` DESC: sin índice MySQL ordena toda
+        # la tabla (filesort de ~350k filas) en cada carga. Índice compuesto (updated_at, id)
+        # que sirve tanto el ORDER BY como el desempate.
+        recent_index = self._run(
+            "SELECT index_name FROM information_schema.statistics "
+            "WHERE table_schema = DATABASE() AND table_name = 'index_works' "
+            "AND index_name = 'idx_idx_updated_at'"
+        )
+        if not recent_index:
+            self._run("CREATE INDEX idx_idx_updated_at ON index_works (updated_at, id)")
 
         # Colaciones: unificar la BD a `utf8mb4_unicode_ci`. Con `utf8mb4_general_ci` en una
         # tabla, cualquier JOIN/compare con otra tabla de colación distinta falla (error 1267);

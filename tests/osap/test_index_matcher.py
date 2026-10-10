@@ -44,3 +44,17 @@ def test_anclaje_legitimo_mozart_sigue_funcionando() -> None:
 
 def test_sin_compositor_no_cambia_el_comportamiento_de_titulos_propios() -> None:
     assert _tokens_subset("Ave Verum Corpus", "Ave Verum Corpus a 4") is True
+
+
+def test_numeros_de_serie_distintos_no_se_unen() -> None:
+    """«RBV 11» y «RBV 13» difieren solo en el número: no deben unirse (URLs duplicadas)."""
+    a = "10 Children's Pieces, RBV 11"
+    b = "10 Children's Pieces, RBV 13"
+    assert _tokens_subset(a, b, "RSB") is False
+
+
+def test_mismos_numeros_siguen_uniendo_ediciones() -> None:
+    """Mismos números (aunque cambie el sufijo descriptivo) → se siguen uniendo."""
+    a = "10 Children's Pieces, RBV 11"
+    b = "10 Children's Pieces, RBV 11 (arr. B)"
+    assert _tokens_subset(a, b, "RSB") is True

@@ -1,0 +1,18 @@
+# OSAP API — timer semanal de novedades (IMSLP/CPDL → reindex → IndexNow).
+# Copiar a /etc/systemd/system/osap-weekly-novelties.timer y:
+#   sudo systemctl daemon-reload && sudo systemctl enable --now osap-weekly-novelties.timer
+#
+# Cadencia: semanal (lunes 04:30). NO usa `Persistent=true` a propósito: el primer paso es un
+# reindexado completo y un catch-up al habilitar podría dispararlo en horario arbitrario. Si
+# se quiere recuperar ejecuciones perdidas, activar `Persistent=true` tras una primera
+# ejecución controlada (sudo systemctl start osap-weekly-novelties.service).
+
+[Unit]
+Description=Run OSAP weekly novelties every Monday
+
+[Timer]
+OnCalendar=Mon 04:30
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

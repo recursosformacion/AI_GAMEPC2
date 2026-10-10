@@ -69,6 +69,21 @@ def build_works_router(ctx: HttpContext) -> APIRouter:
     router: APIRouter = APIRouter()
 
     @router.get(
+        "/api/v1/works/recent",
+        tags=["Works"],
+        summary="Recently added/updated works",
+        description="Obras incorporadas o actualizadas más recientemente en el índice local "
+        "(alimenta la portada). `limit` acotado a 24.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("Recent works", _shared._example({"items": []})),
+            **_shared._standard_errors(),
+        },
+    )
+    def recent_works(response: Response, limit: int = 8) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return ctx.ok({"items": ctx.api.recent_works(max(1, min(limit, 24)))})
+
+    @router.get(
         "/api/v1/works/{work_id}",
         tags=["Composers"],
         summary="Work detail (inspection)",

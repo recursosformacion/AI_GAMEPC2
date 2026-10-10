@@ -31,9 +31,9 @@ def name_key(name: str | None) -> frozenset[str]:
     return frozenset(t for t in cleaned.split() if t)
 
 
-def build_canonical_map(host: str, user: str, password: str) -> tuple[dict, dict]:
+def build_canonical_map(host: str, user: str, password: str, db_omr: str = "osap-storage") -> tuple[dict, dict]:
     """(clave_nombre -> (id,nombre)) y (person_id -> canónico)."""
-    st = pymysql.connect(host=host, user=user, password=password, database="osap-storage",
+    st = pymysql.connect(host=host, user=user, password=password, database=db_omr,
                          charset="utf8mb4", cursorclass=pymysql.cursors.DictCursor)
     with st, st.cursor() as cur:
         cur.execute("SELECT persons_id, persons_name FROM persons WHERE persons_status='active'")
@@ -82,11 +82,13 @@ def main() -> int:
     ap.add_argument("--db-host", default="127.0.0.1")
     ap.add_argument("--db-user", default="osap2027")
     ap.add_argument("--db-password", default="2027osapdb")
+    ap.add_argument("--db-omr", default="osap-storage", help="BD de osap-storage (autoridad)")
+    ap.add_argument("--db-api", default="osap-api", help="BD del índice de osap-api")
     args = ap.parse_args()
 
-    best, id_to_canon = build_canonical_map(args.db_host, args.db_user, args.db_password)
+    best, id_to_canon = build_canonical_map(args.db_host, args.db_user, args.db_password, args.db_omr)
     api = pymysql.connect(host=args.db_host, user=args.db_user, password=args.db_password,
-                          database="osap-api", charset="utf8mb4",
+                          database=args.db_api, charset="utf8mb4",
                           cursorclass=pymysql.cursors.DictCursor)
     with api.cursor() as cur:
         cur.execute(

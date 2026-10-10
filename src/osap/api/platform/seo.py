@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import cast
 
 from src.osap.api.platform.core import PlatformApiCore
+from src.osap.api.seo.slug import work_canonical_slug
 from src.osap.infrastructure.storage.storage_composer_client import StorageComposerError
 
 
@@ -57,6 +58,41 @@ class SeoMixin(PlatformApiCore):
         except Exception:  # noqa: BLE001 — la capa SEO nunca debe tumbar la app
             return None
         return None
+
+    # --- novedades (portada) -------------------------------------------------
+
+    def recent_works(self, limit: int) -> list[dict[str, object]]:
+        """Obras incorporadas/actualizadas más recientemente, con su ruta pública.
+
+        Lee el índice local (rápido, determinista) y devuelve la ruta canónica
+        `/obra/{work_id}/{slug}` para que la portada enlace sin recomputar el slug en el cliente.
+        """
+        provider = self._index_provider()
+        if provider is None:
+            return []
+        lister = getattr(provider, "list_recent_works", None)
+        if not callable(lister):
+            return []
+        data = lister(limit)
+        if not isinstance(data, list):
+            return []
+        items: list[dict[str, object]] = []
+        for row in data:
+            if not isinstance(row, dict):
+                continue
+            work_id = str(row.get("work_id") or "")
+            title = str(row.get("title") or "")
+            if not work_id or not title:
+                continue
+            items.append(
+                {
+                    "work_id": work_id,
+                    "title": title,
+                    "composer": row.get("composer"),
+                    "path": f"/obra/{work_id}/{work_canonical_slug(title)}",
+                }
+            )
+        return items
 
     # --- sitemap dinámico (Fase 3) -------------------------------------------
 

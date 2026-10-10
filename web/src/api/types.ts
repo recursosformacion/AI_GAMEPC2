@@ -820,3 +820,16 @@ export interface WorkAiProposalResult {
   proposal: WorkAiProposal;
   reused: boolean;
 }
+
+/** Obra reciente para la portada ("últimas novedades"). `path` ya es la ruta canónica. */
+export interface RecentWork {
+  work_id: string;
+  title: string;
+  composer?: string | null;
+  path: string;
+}
+
+export interface RecentWorkList {
+  items: RecentWork[];
+}
+

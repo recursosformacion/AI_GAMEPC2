@@ -6,6 +6,8 @@ No toca el esquema (eso es `migrate_index_schema.py`); solo datos derivados.
 - `--full`: vacía `index_works`/`index_representations`/`index_work_voicings` y reindexa.
 - Sin `--full` (incremental): upsert idempotente, no borra nada.
 - Al final limpia huérfanos de `index_work_voicings`.
+- `--indexnow`: tras reindexar, notifica a IndexNow las obras recientes (paso final del
+  reindexado; best-effort, no aborta el job). Ver `script/indexnow.py`.
 
 Un rebuild es reproducible: el índice se deriva de los proveedores + la autoridad
 (`persons` en osap-storage). Añadir ficheros = relanzar este job (o el incremental).
@@ -38,6 +40,13 @@ def main() -> int:
     ap.add_argument("--database", default="osap-api")
     ap.add_argument("--db-omr", default="osap-storage", help="BD de osap-storage (lectura)")
     ap.add_argument("--db-api", default="osap-api", help="BD de osap-api (índice)")
+    ap.add_argument("--indexnow", action="store_true",
+                    help="tras reindexar, notifica a IndexNow las obras recientes (best-effort)")
+    ap.add_argument("--indexnow-days", type=int, default=7, help="ventana de recencia de IndexNow")
+    ap.add_argument("--indexnow-base", default=os.environ.get("OSAP_PUBLIC_BASE_URL", ""),
+                    help="base pública para IndexNow (por defecto OSAP_PUBLIC_BASE_URL)")
+    ap.add_argument("--indexnow-key", default=os.environ.get("INDEXNOW_KEY", ""),
+                    help="clave de IndexNow (por defecto INDEXNOW_KEY)")
     args = ap.parse_args()
 
     conn = pymysql.connect(host=args.host, user=args.user, password=args.password,
@@ -72,6 +81,20 @@ def main() -> int:
         print("huérfanos de voicing limpiados:", cur.rowcount)
     conn.close()
     print("reindexado completado")
+
+    if args.indexnow:
+        cmd = [sys.executable, str(ROOT / "script" / "indexnow.py"),
+               "--days", str(args.indexnow_days),
+               "--host", args.host, "--user", args.user,
+               "--password", args.password, "--database", args.database]
+        if args.indexnow_base:
+            cmd += ["--base", args.indexnow_base]
+        if args.indexnow_key:
+            cmd += ["--key", args.indexnow_key]
+        rc = subprocess.call(cmd, cwd=str(ROOT), env=env)
+        if rc != 0:
+            print("indexnow.py falló (best-effort); código", rc)
+
     return 0
 
 

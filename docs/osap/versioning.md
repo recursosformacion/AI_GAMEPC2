@@ -79,6 +79,29 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.2.0 (B)** — novedades, identidad del índice, firma de correos y **eliminación del tronco
+  legacy CPDL**.
+  - `osap-api`: **IndexNow** como paso del reindexado (`seo/indexnow.py`, `script/indexnow.py`,
+    `rebuild_index.py --indexnow`, clave `web/public/osap-indexnow-2026.txt`); endpoint
+    **`GET /api/v1/works/recent`** y portada «últimas novedades»; **rutina semanal**
+    `script/weekly_novelties.py` (import → normalize → index → IndexNow) + units systemd;
+    **guard de números** en el matcher del índice (`_tokens_subset`) y reconciliadores IMSLP
+    (`fix_imslp_rep_dupes.py`, `reconcile_imslp_reps.py`); `resolve_index_composers`/
+    `finalize_index_identity` parametrizados por BD (`--db-omr`/`--db-api`).
+  - `osap-storage`: import de metadatos IMSLP (`scripts/import_imslp_works.py`, migración
+    **`024_works_source_url.sql`**); normalización/identidad de personas en la rutina;
+    **DROP** de `cpdl_editions`/`cpdl_edition_files`/`cpdl_edition_persons` (espejo legacy de
+    `representations`/`works_resources`) y **retirada de su superficie** en el CRUD admin.
+  - `osap-auth`: **firma común de los correos** con la base de la plataforma (`site_base_url`),
+    sustituyendo el dominio técnico de auth.
+  - Documentación: `docs/osap/scripts.md` actualizado.
+  - Evidencia: suites **api 839 / auth 166 / storage 522** OK; `ruff`/`mypy` limpios; smoke en
+    Prod (health ok, IndexNow 200, `/works/recent` 200, obra SEO 200); backups de datos en
+    `/home/ocw/backups/`. **B**: la eliminación de `cpdl_editions*` es de tablas **legacy sin
+    dependencias** (espejo ya sustituido; su única superficie, el CRUD admin, era de datos
+    muertos) → cambio **compatible**.
+  - Alcance: `osap-api` + `osap-storage` + `osap-auth` (+ versión del conjunto en `osap-support`).
+
 - **5.1.8 (C) — `osap-api`**: completa los documentos legales — transferencias (Cloudflare/Google
   acogidos al EU-U.S. DPF; OVH/Raiola en el EEE), criterios de conservación, cookies necesarias
   (**verificado: OSAP no establece cookies propias**) y duraciones de GA4 (`_ga` y

@@ -49,6 +49,7 @@ import type {
   WorkAiProposalResult,
   WorkAiProposalStatus,
   WorkAiReviewAction,
+  RecentWorkList,
 } from "./types";
 import { ApiError } from "./errors";
 
@@ -150,6 +151,11 @@ export class ApiClient {
 
   async getWork(workId: string): Promise<WorkDetail> {
     return this.get<WorkDetail>(`/works/${encodeURIComponent(workId)}`);
+  }
+
+  /** Obras incorporadas/actualizadas recientemente (alimenta la portada). */
+  async getRecentWorks(limit = 8): Promise<RecentWorkList> {
+    return this.get<RecentWorkList>(`/works/recent?limit=${limit}`);
   }
 
   /** Colaboradores públicos de un proyecto (fachada osap-api → support + auth). */
