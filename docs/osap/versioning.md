@@ -79,6 +79,16 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.3.0 (B)** — **protección de acceso** a los servicios técnicos (`auth`, `support`,
+  `storage`): sus vhosts solo aceptan peticiones **desde la app** (referer/origin
+  `openmusicrepository.com`) o **del propio servidor** (M2M, vía `CF-Connecting-IP`/IP interna);
+  el resto (acceso directo/externo) recibe **403**. Exentos: `/.well-known` (ACME/discovery),
+  callbacks OAuth y el login vía app. Vhosts versionados en `deploy/`.
+  - Evidencia: `auth`/`storage` directo → **403**; con Referer de app → **200**; discovery OIDC
+    → **200**; authorize con referer app → responde la app (400 por faltar parámetros);
+    M2M `app→storage` (`/api/v1/composers`, health) → **200**; app → **200**.
+  - Alcance: `osap-auth` + `osap-support` + `osap-storage` (+ versión del conjunto en `osap-api`).
+
 - **5.2.0 (B)** — novedades, identidad del índice, firma de correos y **eliminación del tronco
   legacy CPDL**.
   - `osap-api`: **IndexNow** como paso del reindexado (`seo/indexnow.py`, `script/indexnow.py`,
