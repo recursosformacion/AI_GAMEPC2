@@ -79,6 +79,16 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.4.0 (B)** — **SEO técnico**: datos estructurados site-wide (`Organization` + `WebSite`,
+  junto a los `MusicComposition`/`Person`/`BreadcrumbList` ya existentes en las páginas de
+  entidad), **hreflang** (`?lang=` + `x-default`), **robots.txt** con bloqueo de rutas internas
+  (crawl budget) y **Core Web Vitals** (preload del fondo LCP + **code-splitting por ruta**;
+  bundle inicial ~457 kB vs >600 kB).
+  - Evidencia: `robots.txt` con Disallows; JSON-LD `Organization`/`WebSite` en `/` y en las
+    páginas de entidad; `hreflang` es/x-default en `/obra`; frontend **129 tests** OK; build sin
+    warning de chunks.
+  - Alcance: `osap-api` (+ versión del conjunto).
+
 - **5.3.0 (B)** — **protección de acceso** a los servicios técnicos (`auth`, `support`,
   `storage`): sus vhosts solo aceptan peticiones **desde la app** (referer/origin
   `openmusicrepository.com`) o **del propio servidor** (M2M, vía `CF-Connecting-IP`/IP interna);

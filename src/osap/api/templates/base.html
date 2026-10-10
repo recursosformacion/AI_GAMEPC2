@@ -7,7 +7,12 @@
     <meta name="description" content="{% block description %}{% endblock %}" />
     <meta name="robots" content="{% block robots %}index, follow{% endblock %}" />
     {% block canonical %}<link rel="canonical" href="{{ canonical_url }}" />{% endblock %}
+    <link rel="alternate" hreflang="es" href="{{ canonical_url }}" />
+    <link rel="alternate" hreflang="x-default" href="{{ canonical_url }}" />
     {% block json_ld %}{% endblock %}
+    <script type="application/ld+json">
+      {"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://app.openmusicrepository.com/#org","name":"OpenMusicRepository","alternateName":"OSAP","url":"https://app.openmusicrepository.com/","logo":"https://app.openmusicrepository.com/android-chrome-192x192.png"},{"@type":"WebSite","@id":"https://app.openmusicrepository.com/#website","name":"OpenMusicRepository","url":"https://app.openmusicrepository.com/","inLanguage":["es","ca","fr","en","de"],"publisher":{"@id":"https://app.openmusicrepository.com/#org"}}]}
+    </script>
     <style>
       :root { color-scheme: light dark; }
       * { box-sizing: border-box; }

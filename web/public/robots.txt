@@ -1,4 +1,18 @@
 User-agent: *
 Allow: /
 
+# Rutas internas / herramientas sin valor SEO: no deben consumir crawl budget.
+Disallow: /studio
+Disallow: /composer
+Disallow: /activity
+Disallow: /admin
+Disallow: /viewer
+Disallow: /resolution
+Disallow: /candidates
+Disallow: /jobs
+Disallow: /knowledge
+Disallow: /providers
+Disallow: /oidc
+Disallow: /corrections
+
 Sitemap: https://app.openmusicrepository.com/sitemap.xml

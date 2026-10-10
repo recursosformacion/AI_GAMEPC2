@@ -23,6 +23,16 @@ function browserLang(): Language {
 }
 
 function readLang(): Language {
+  // ?lang= (hreflang) tiene prioridad y se persiste.
+  try {
+    const fromUrl = new URLSearchParams(window.location.search).get("lang");
+    if (isLanguage(fromUrl)) {
+      localStorage.setItem(LANG_KEY, fromUrl);
+      return fromUrl;
+    }
+  } catch {
+    // sin acceso a window/URL: se ignora
+  }
   const stored = localStorage.getItem(LANG_KEY);
   if (isLanguage(stored)) return stored;
   return browserLang();

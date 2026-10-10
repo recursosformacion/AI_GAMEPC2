@@ -10,11 +10,47 @@
       href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Libre+Caslon+Display&display=swap"
       rel="stylesheet"
     />
+    <!-- Fondo de partitura: es el elemento LCP de la portada; se preloadea. -->
+    <link rel="preload" as="image" href="/partituraEntera.png" fetchpriority="high" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <meta name="theme-color" content="#7c3aed" />
     <title>OSAP — OpenMusicRepository</title>
+    <!-- Idioma desde ?lang= (para hreflang); si no, lo fija la app (navegador/localStorage). -->
+    <script>
+      (function () {
+        try {
+          var l = new URLSearchParams(location.search).get("lang");
+          if (l && ["es", "ca", "fr", "en", "de"].indexOf(l) !== -1) {
+            document.documentElement.lang = l;
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "Organization",
+            "@id": "https://app.openmusicrepository.com/#org",
+            "name": "OpenMusicRepository",
+            "alternateName": "OSAP",
+            "url": "https://app.openmusicrepository.com/",
+            "logo": "https://app.openmusicrepository.com/android-chrome-192x192.png"
+          },
+          {
+            "@type": "WebSite",
+            "@id": "https://app.openmusicrepository.com/#website",
+            "name": "OpenMusicRepository",
+            "url": "https://app.openmusicrepository.com/",
+            "inLanguage": ["es", "ca", "fr", "en", "de"],
+            "publisher": { "@id": "https://app.openmusicrepository.com/#org" }
+          }
+        ]
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

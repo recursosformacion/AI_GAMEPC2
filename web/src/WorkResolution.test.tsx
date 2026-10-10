@@ -36,9 +36,10 @@ describe("Work Resolution (V3.4)", () => {
     useSearches.setState({ data: fixture, loading: false, error: null });
   });
 
-  it("shows the resolved work (overview) and representations grouped by provider", () => {
+  it("shows the resolved work (overview) and representations grouped by provider", async () => {
     renderResolution();
-    expect(screen.getByText(/Ave Verum Corpus/)).toBeInTheDocument();
+    // La página es lazy (code-splitting): se espera a que cargue el chunk.
+    expect(await screen.findByText(/Ave Verum Corpus/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Representations" }));
     expect(screen.getByText("imslp")).toBeInTheDocument();
     expect(screen.getByText("openscore")).toBeInTheDocument();
@@ -46,15 +47,17 @@ describe("Work Resolution (V3.4)", () => {
     expect(screen.getAllByText(/musicxml/).length).toBeGreaterThan(0);
   });
 
-  it("shows evidence in the Evidence tab", () => {
+  it("shows evidence in the Evidence tab", async () => {
     renderResolution();
+    expect(await screen.findByText(/Ave Verum Corpus/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Evidence" }));
     expect(screen.getByText("Matched title")).toBeInTheDocument();
     expect(screen.getByText("Mozart")).toBeInTheDocument();
   });
 
-  it("offers actions for the resolution workspace", () => {
+  it("offers actions for the resolution workspace", async () => {
     renderResolution();
+    expect(await screen.findByText(/Ave Verum Corpus/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Representations" }));
     expect(screen.getAllByText("Download").length).toBeGreaterThan(0);
     expect(screen.getAllByText("View").length).toBeGreaterThan(0);

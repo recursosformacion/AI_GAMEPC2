@@ -91,7 +91,11 @@ function isNoindex(pathname: string, search: string): boolean {
   );
   // Cualquier URL con parámetros es un estado de navegación, no contenido canónico:
   // se excluye de indexación (p. ej. /support?mode=register, /corrections?kind=…).
-  const isQuery = search.trim() !== "";
+  // Excepción: `?lang=` (variantes hreflang), que sí son indexables.
+  const params = new URLSearchParams(search);
+  params.delete("lang");
+  const hasOtherParams = Array.from(params.keys()).length > 0;
+  const isQuery = search.trim() !== "" && hasOtherParams;
   return matchesSegment || isQuery;
 }
 

@@ -33,42 +33,43 @@ describe("Routing and navigation (V3.4)", () => {
     expect(screen.getByLabelText("search")).toBeInTheDocument();
   });
 
-  it("renders Explore (container) at /explore", () => {
+  it("renders Explore (container) at /explore", async () => {
     renderAt("/explore");
-    expect(screen.getByRole("heading", { name: "Explore" })).toBeInTheDocument();
+    // Las páginas son lazy (code-splitting): se espera a que cargue el chunk.
+    expect(await screen.findByRole("heading", { name: "Explore" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Discover" })).toBeInTheDocument();
   });
 
-  it("renders Discover at /discover", () => {
+  it("renders Discover at /discover", async () => {
     stubFetch();
     renderAt("/discover");
-    expect(screen.getByRole("heading", { name: "Discover" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Discover" })).toBeInTheDocument();
   });
 
-  it("renders Jobs page at /jobs", () => {
+  it("renders Jobs page at /jobs", async () => {
     stubFetch();
     renderAt("/jobs");
-    expect(screen.getByRole("heading", { name: "Jobs" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Jobs" })).toBeInTheDocument();
   });
 
-  it("redirects /knowledge to /knowledge/observations (Observed aliases)", () => {
+  it("redirects /knowledge to /knowledge/observations (Observed aliases)", async () => {
     stubFetch();
     renderAt("/knowledge/observations");
-    expect(screen.getByRole("heading", { name: "Observed aliases" })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: "Observed aliases" })).toBeInTheDocument();
   });
 
-  it("renders Providers under Administration at /providers", () => {
+  it("renders Providers under Administration at /providers", async () => {
     stubFetch();
     renderAt("/providers");
-    expect(screen.getByRole("heading", { name: /Administration — Providers/ })).toBeInTheDocument();
+    expect(await screen.findByRole("heading", { name: /Administration — Providers/ })).toBeInTheDocument();
   });
 
-  it("shows the brand sidebar, global search and footer", () => {
+  it("shows the brand sidebar, global search and footer", async () => {
     renderAt("/jobs");
     expect(screen.getAllByText("OpenMusicRepository").length).toBeGreaterThan(0);
     expect(screen.getByLabelText("search")).toBeInTheDocument();
-    // Línea del shell con la intensidad definida (token strong).
-    expect(screen.getByRole("banner").className).toContain("border-osap-border-strong");
+    // La línea del shell: borde inferior del header (darkgray, thin, inline).
+    expect(screen.getByRole("banner").style.borderBottom).toContain("darkgray");
     expect(screen.getAllByText(/powered by OSAP/).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "Home" }).length).toBeGreaterThan(0);
     expect(screen.getAllByRole("link", { name: "Explore" }).length).toBeGreaterThan(0);
@@ -77,9 +78,9 @@ describe("Routing and navigation (V3.4)", () => {
     expect(screen.getAllByRole("link", { name: "Support OSAP" }).length).toBeGreaterThan(0);
   });
 
-  it("agrupa las secciones de Clasificación en el sidebar", () => {
+  it("agrupa las secciones de Clasificación en el sidebar", async () => {
     renderAt("/jobs");
-    fireEvent.click(screen.getByRole("button", { name: "Classification" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Classification" }));
     expect(screen.getByRole("link", { name: "Genres" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Catalogues" })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Instruments" })).toBeInTheDocument();
