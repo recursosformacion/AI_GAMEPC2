@@ -79,6 +79,10 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.1.8 (C) — `osap-api`**: completa los documentos legales — transferencias (Cloudflare/Google
+  acogidos al EU-U.S. DPF; OVH/Raiola en el EEE), criterios de conservación, cookies necesarias
+  (**verificado: OSAP no establece cookies propias**) y duraciones de GA4 (`_ga` y
+  `_ga_<ID>` = 2 años).
 - **5.1.7 (C) — `osap-api`**: Aviso legal y Política de privacidad con el **NIF del titular**
   (`38474364X`).
 - **5.1.6 (C) — `osap-api`**: **documentos legales** (Aviso legal `/aviso-legal`, Privacidad

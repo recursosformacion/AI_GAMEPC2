@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 
-export const LEGAL_UPDATED = "2026-10-09";
+export const LEGAL_UPDATED = "2026-10-10";
 
 function LegalPage({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -12,14 +12,6 @@ function LegalPage({ title, children }: { title: string; children: ReactNode }) 
       <p className="text-xs text-osap-muted">Última actualización: {LEGAL_UPDATED}</p>
       <div className="space-y-4">{children}</div>
     </article>
-  );
-}
-
-function Pending({ children }: { children: ReactNode }) {
-  return (
-    <mark className="rounded bg-amber-100 px-1 text-amber-900 [PENDIENTE DE CONFIRMAR]">
-      [PENDIENTE DE CONFIRMAR] {children}
-    </mark>
   );
 }
 
@@ -199,16 +191,21 @@ export function PrivacyPolicyPage() {
       <section>
         <h2 className="font-semibold">6. Transferencias internacionales</h2>
         <p>
-          Algunos proveedores pueden tratar datos fuera del EEE (p. ej. Google).
-          <Pending>garantías aplicables (SCC/DPF) y proveedores concretos con transferencia</Pending>.
+          <strong>Raiola Networks</strong> (España) y <strong>OVH</strong> (UE) están en el EEE.{" "}
+          <strong>Cloudflare, Inc.</strong> y <strong>Google LLC</strong> (EEUU) están acogidos al{" "}
+          <strong>EU-U.S. Data Privacy Framework</strong> (y su extensión UK/Suiza), marco de
+          adecuación que ampara la transferencia; en su defecto se aplicarían cláusulas
+          contractuales tipo.
         </p>
       </section>
       <section>
         <h2 className="font-semibold">7. Conservación</h2>
         <p>
-          Los datos de cuenta se conservan mientras la cuenta esté activa y, tras la baja, durante
-          los plazos legalmente exigibles.{" "}
-          <Pending>plazos concretos de conservación por tratamiento</Pending>.
+          Criterios de conservación: los datos de cuenta, mientras la cuenta está activa y, tras la
+          baja, durante los plazos de prescripción (3–5 años); los registros de aceptación
+          versionada, mientras dure la relación y 5 años para su acreditación; los registros
+          técnicos de seguridad, 1 año; y la analítica (Google Analytics), según la retención
+          configurada (hasta 14 meses de datos de eventos y hasta 2 años las cookies de medición).
         </p>
       </section>
       <section>
@@ -245,8 +242,12 @@ export function CookiePolicyPage() {
       <section>
         <h2 className="font-semibold">2. Cookies necesarias</h2>
         <p>
-          Imprescindibles para el funcionamiento y la seguridad. No se usan con fines de analítica.
-          <Pending>cookies estrictamente necesarias concretas y su proveedor (p. ej. seguridad de Cloudflare)</Pending>.
+          Imprescindibles para el funcionamiento y la seguridad; no se usan con fines de analítica.
+          Verificado en producción: <strong>OSAP no establece cookies propias</strong> (usa
+          almacenamiento local para el token de sesión, el idioma y las preferencias). Cloudflare
+          (DNS/seguridad) tampoco establece cookies en la configuración actual; podrían aparecer
+          cookies estrictamente necesarias de seguridad (p. ej. <code>__cf_bm</code>) solo ante un
+          reto de seguridad, no en la operación normal.
         </p>
       </section>
       <section>
@@ -259,9 +260,9 @@ export function CookiePolicyPage() {
       <section>
         <h2 className="font-semibold">4. Analítica (solo con consentimiento)</h2>
         <p>
-          Google Analytics 4 (Google). Cookies: <code>_ga</code> y <code>_ga_8QXVPF8VP0</code>,
-          finalidad de medición de uso, solo tras aceptar la categoría «analítica». Duración por
-          defecto de GA4: <Pending>duraciones configuradas</Pending>.
+          Google Analytics 4 (Google LLC). Cookies: <code>_ga</code> (2 años) y{" "}
+          <code>_ga_8QXVPF8VP0</code> (2 años), duración por defecto de GA4 (configurable de 0 a 25
+          meses); finalidad de medición de uso, solo tras aceptar la categoría «analítica».
         </p>
       </section>
       <section>
