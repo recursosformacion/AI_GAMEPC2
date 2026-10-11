@@ -79,7 +79,6 @@ export function AdminAmigosGroupPage() {
 
   const [group, setGroup] = useState<AmigosGroup | null>(null);
   const [members, setMembers] = useState<AmigosMember[]>([]);
-  const [pending, setPending] = useState<AmigosArticle[]>([]);
   const [articles, setArticles] = useState<AmigosArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
@@ -150,13 +149,11 @@ export function AdminAmigosGroupPage() {
           }
         }
       }
-      const [memberList, pendingList, articleList] = await Promise.all([
+      const [memberList, articleList] = await Promise.all([
         apiClient.getAmigosMembers(groupId),
-        apiClient.getAmigosPending(groupId),
         apiClient.getAmigosGroupArticlesAdmin(groupId),
       ]);
       setMembers(memberList.items);
-      setPending(pendingList.items);
       setArticles(articleList.items);
       try {
         setUsers(await apiClient.get<DirectoryUser[]>("/admin/users"));
@@ -258,6 +255,20 @@ export function AdminAmigosGroupPage() {
   const sendBack = (articleId: string) =>
     guard(async () => {
       await apiClient.returnAmigosArticle(articleId);
+      await load();
+    });
+
+  const withdrawPost = (article: AmigosArticle) => {
+    if (!window.confirm(t("friends.confirmBaja"))) return;
+    void guard(async () => {
+      await apiClient.withdrawAmigosArticle(article.id);
+      await load();
+    });
+  };
+
+  const publishPost = (articleId: string) =>
+    guard(async () => {
+      await apiClient.publishAmigosArticle(articleId);
       await load();
     });
 
@@ -558,36 +569,6 @@ export function AdminAmigosGroupPage() {
         </Card>
       ) : null}
 
-      <Card title={t("friends.pendingTitle")}>
-        {pending.length === 0 ? (
-          <p className="text-sm text-osap-muted">{t("friends.articlesEmpty")}</p>
-        ) : (
-          <ul className="divide-y divide-osap-border">
-            {pending.map((a) => (
-              <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                <span className="min-w-0 truncate text-sm">{a.title}</span>
-                <span className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => void approve(a.id)}
-                    className="rounded bg-green-600 px-3 py-1 text-xs text-white"
-                  >
-                    {t("friends.approve")}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => void sendBack(a.id)}
-                    className="rounded border border-osap-border px-3 py-1 text-xs"
-                  >
-                    {t("friends.return")}
-                  </button>
-                </span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </Card>
-
       <Card title={t("friends.members")}>
         {viewMode ? null : (
           <div className="flex flex-wrap gap-2">
@@ -677,7 +658,7 @@ export function AdminAmigosGroupPage() {
             {articles.map((a) => (
               <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                 <span className="min-w-0 truncate text-sm">{a.title}</span>
-                <span className="flex items-center gap-2 text-xs">
+                <span className="flex flex-wrap items-center gap-2 text-xs">
                   <span className="text-osap-muted">{a.event_date}</span>
                   <span className="rounded bg-osap-accent-soft px-2 py-0.5">
                     {t(STATUS_KEY[a.status] ?? "friends.status.draft")}
@@ -688,6 +669,42 @@ export function AdminAmigosGroupPage() {
                   >
                     {t("friends.edit")}
                   </Link>
+                  {a.status === "pending" ? (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => void approve(a.id)}
+                        className="rounded bg-green-600 px-2 py-0.5 text-white"
+                      >
+                        {t("friends.approve")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => void sendBack(a.id)}
+                        className="rounded border border-osap-border px-2 py-0.5"
+                      >
+                        {t("friends.return")}
+                      </button>
+                    </>
+                  ) : null}
+                  {a.status === "draft" ? (
+                    <button
+                      type="button"
+                      onClick={() => void publishPost(a.id)}
+                      className="rounded border border-osap-border px-2 py-0.5 text-emerald-600"
+                    >
+                      {t("friends.publish")}
+                    </button>
+                  ) : null}
+                  {a.status === "published" ? (
+                    <button
+                      type="button"
+                      onClick={() => withdrawPost(a)}
+                      className="rounded border border-osap-border px-2 py-0.5 text-osap-danger"
+                    >
+                      {t("friends.deactivate")}
+                    </button>
+                  ) : null}
                 </span>
               </li>
             ))}

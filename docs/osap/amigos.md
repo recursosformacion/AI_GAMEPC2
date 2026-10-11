@@ -54,6 +54,16 @@ opcional a una persona identificada (osap-storage); `director_label` es solo un 
 respaldo para cuando no exista persona enlazada. El estado del grupo admite `dissolved`
 (desactivar/disolver **no** borra artículos, membresías ni la ficha).
 
+## Dónde vive cada cosa (BD vs. ficheros)
+
+- **Datos** (grupos, membresías, artículos, ficha de coral, enlaces, y el registro de subidas):
+  BD **`osap-api`** (tablas `amigos_*`).
+- **Imágenes** (logo, portada, fotos): ficheros en **osap-storage**. Se suben con
+  `POST /api/v1/amigos/uploads` (osap-api valida y reenvía a storage con su *service token*) y se
+  sirven con `GET /api/v1/amigos/media/{file_id}` (inline, solo si el `file_id` está registrado).
+  La tabla local `amigos_uploads` guarda únicamente `file_id` + metadatos, para poder servirlos
+  **sin exponer** ficheros ajenos de storage.
+
 ## Permisos (aplicados en el servidor, nunca en el frontend)
 
 - **Visitante**: lee artículos publicados y páginas públicas.

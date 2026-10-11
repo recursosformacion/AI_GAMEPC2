@@ -33,6 +33,7 @@ export function AmigosEditorPage() {
   const user = useAuth((s) => s.user);
 
   const [groups, setGroups] = useState<AmigosMyGroup[]>([]);
+  const [editGroup, setEditGroup] = useState<{ id: string; name: string } | null>(null);
   const [groupId, setGroupId] = useState("");
   const [title, setTitle] = useState("");
   const [eventDate, setEventDate] = useState("");
@@ -61,6 +62,7 @@ export function AmigosEditorPage() {
         if (articleId !== undefined) {
           const article = await apiClient.getAmigosArticle(articleId);
           setGroupId(article.group_id);
+          setEditGroup({ id: article.group_id, name: article.group_name ?? article.group_id });
           setTitle(article.title);
           setEventDate(article.event_date);
           setSummary(article.summary ?? "");
@@ -211,7 +213,7 @@ export function AmigosEditorPage() {
     return <p className="text-sm text-osap-muted">{t("states.loading")}</p>;
   }
 
-  if (groups.length === 0) {
+  if (groups.length === 0 && editGroup === null) {
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-semibold">{t("friends.newArticle")}</h1>
@@ -246,6 +248,9 @@ export function AmigosEditorPage() {
               {g.group.name} — {g.role === "admin" ? t("friends.roleAdmin") : t("friends.roleCollaborator")}
             </option>
           ))}
+          {editGroup !== null && !groups.some((g) => g.group.id === editGroup.id) ? (
+            <option value={editGroup.id}>{editGroup.name}</option>
+          ) : null}
         </select>
       </Card>
 
