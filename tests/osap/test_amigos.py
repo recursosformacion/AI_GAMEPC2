@@ -475,6 +475,38 @@ class TestGroupProfile:
         assert exc.value.code == "INVALID_EMAIL"
 
 
+class TestUploads:
+    def test_autorizacion_y_validacion(self) -> None:
+        service, _store, group = _service()
+        gid = str(group["id"])
+        with pytest.raises(AmigosError) as exc:
+            service.authorize_upload(group_id=gid, actor_user_id="u1", is_global_admin=False)
+        assert exc.value.status == 403
+        service.authorize_upload(group_id=gid, actor_user_id=_ADMIN, is_global_admin=True)
+        assert service.validate_upload(
+            name="logo.png", mime_type="image/png", size_bytes=10
+        ) == ("logo.png", "image/png")
+        for mime, size, code in (
+            ("text/plain", 10, "INVALID_IMAGE_TYPE"),
+            ("image/png", 0, "EMPTY_UPLOAD"),
+            ("image/png", 10**9, "IMAGE_TOO_LARGE"),
+        ):
+            with pytest.raises(AmigosError) as exc:
+                service.validate_upload(name="x", mime_type=mime, size_bytes=size)
+            assert exc.value.code == code
+
+    def test_registro_y_lectura(self) -> None:
+        service, _store, group = _service()
+        gid = str(group["id"])
+        service.record_upload(
+            group_id=gid, file_id=42, mime_type="image/png", size_bytes=123,
+            actor_user_id=_ADMIN,
+        )
+        rec = service.get_upload(42)
+        assert rec is not None and rec["mime_type"] == "image/png" and rec["group_id"] == gid
+        assert service.get_upload(999999) is None
+
+
 class TestValidation:
     def test_fecha_de_evento_imposible_rechazada(self) -> None:
         service, _store, group = _service()
@@ -545,6 +577,34 @@ class TestEndpoints:
                 json={"title": "T", "event_date": "2026-01-01", "body": "x"},
             )
         assert resp.status_code == 401
+
+    def test_upload_requiere_login_401(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from src.osap.api import platform_app
+        from src.osap.api.platform import PlatformApi
+        from src.osap.domain.votes import UnauthenticatedError
+
+        def fake(self: Any, *a: Any, **kw: Any) -> Any:
+            raise UnauthenticatedError("login required")
+
+        monkeypatch.setattr(PlatformApi, "amigos_upload", fake)
+        with TestClient(platform_app.create_platform_app()) as client:
+            resp = client.post(
+                "/api/v1/amigos/uploads?group_id=g&name=x.png&mime_type=image/png",
+                content=b"123",
+            )
+        assert resp.status_code == 401
+
+    def test_media_desconocida_404(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from src.osap.api import platform_app
+        from src.osap.api.platform import PlatformApi
+
+        def fake(self: Any, file_id: int) -> Any:
+            return None
+
+        monkeypatch.setattr(PlatformApi, "amigos_media", fake)
+        with TestClient(platform_app.create_platform_app()) as client:
+            resp = client.get("/api/v1/amigos/media/999999")
+        assert resp.status_code == 404
 
     def test_sin_autorizacion_403(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from src.osap.api import platform_app

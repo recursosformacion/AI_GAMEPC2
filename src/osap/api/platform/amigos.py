@@ -26,6 +26,7 @@ from src.osap.api.contracts import (
     AmigosMemberRead,
 )
 from src.osap.api.platform.core import PlatformApiCore
+from src.osap.api.seo.views import public_base_url
 from src.osap.application.amigos import AmigosError, AmigosService
 from src.osap.domain.votes import ForbiddenError, UnauthenticatedError
 
@@ -305,6 +306,45 @@ class AmigosMixin(PlatformApiCore):
             user_id=user_id,
         )
         return self._amigos_member_read(row)
+
+    # --- imágenes (osap-storage) --------------------------------------------
+
+    def amigos_upload(
+        self, token: str | None, group_id: str, name: str, mime_type: str | None, data: bytes
+    ) -> dict[str, object]:
+        actor = self._amigos_user(token)
+        service = self._amigos_service()
+        service.authorize_upload(
+            group_id=group_id,
+            actor_user_id=actor,
+            is_global_admin=self._amigos_is_global_admin(token),
+        )
+        clean_name, mime = service.validate_upload(
+            name=name, mime_type=mime_type, size_bytes=len(data)
+        )
+        try:
+            uploaded = self._container.storage_contributions().upload_file(
+                name=clean_name, mime_type=mime, data=data
+            )
+        except Exception as exc:  # noqa: BLE001 — storage caído
+            raise AmigosError(502, "STORAGE_UNAVAILABLE", "Almacenamiento no disponible") from exc
+        file_id = int(str(uploaded["id"]))
+        service.record_upload(
+            group_id=group_id,
+            file_id=file_id,
+            mime_type=mime,
+            size_bytes=len(data),
+            actor_user_id=actor,
+        )
+        return {"id": file_id, "url": f"{public_base_url()}/api/v1/amigos/media/{file_id}"}
+
+    def amigos_media(self, file_id: int) -> tuple[str, bytes] | None:
+        if self._amigos_service().get_upload(file_id) is None:
+            return None
+        try:
+            return self._container.storage_contributions().fetch_file(file_id)
+        except Exception as exc:  # noqa: BLE001 — storage caído
+            raise AmigosError(502, "STORAGE_UNAVAILABLE", "Almacenamiento no disponible") from exc
 
     def amigos_list_members(self, token: str | None, group_id: str) -> AmigosMemberListRead:
         actor = self._amigos_user(token)

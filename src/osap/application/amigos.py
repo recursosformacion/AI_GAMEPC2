@@ -27,6 +27,8 @@ from src.osap.domain.amigos import (
     GROUP_KINDS,
     GROUP_LINK_KINDS,
     GROUP_STATUSES,
+    IMAGE_MIME_TYPES,
+    MAX_IMAGE_BYTES,
     MEDIA_KINDS,
     MEMBER_ROLES,
 )
@@ -381,6 +383,59 @@ class AmigosService:
         data["languages"] = [str(a["value"]) for a in attrs if a.get("facet") == "language"]
         data["places"] = [str(a["value"]) for a in attrs if a.get("facet") == "place"]
         return data
+
+    # --- imágenes subidas (osap-storage) ------------------------------------
+
+    def authorize_upload(self, *, group_id: str, actor_user_id: str, is_global_admin: bool) -> None:
+        if self._store.get_amigos_group(group_id) is None:
+            raise AmigosError(404, "GROUP_NOT_FOUND", "Grupo no encontrado")
+        if not is_global_admin:
+            self._require_can_contribute(group_id, actor_user_id, is_global_admin)
+
+    def validate_upload(
+        self, *, name: str | None, mime_type: str | None, size_bytes: int
+    ) -> tuple[str, str]:
+        clean_name = (name or "").strip() or "imagen"
+        mime = (mime_type or "").strip().lower()
+        if mime not in IMAGE_MIME_TYPES:
+            raise AmigosError(
+                422, "INVALID_IMAGE_TYPE",
+                "Solo se admiten imágenes (jpg, png, webp, gif, avif)",
+            )
+        if size_bytes <= 0:
+            raise AmigosError(422, "EMPTY_UPLOAD", "El fichero está vacío")
+        if size_bytes > MAX_IMAGE_BYTES:
+            raise AmigosError(422, "IMAGE_TOO_LARGE", "La imagen supera el máximo (5 MB)")
+        return clean_name, mime
+
+    def record_upload(
+        self,
+        *,
+        group_id: str,
+        file_id: int,
+        mime_type: str,
+        size_bytes: int,
+        actor_user_id: str,
+    ) -> dict[str, object]:
+        row = self._store.add_amigos_upload(
+            file_id=file_id,
+            group_id=group_id,
+            mime_type=mime_type,
+            size_bytes=size_bytes,
+            created_by=actor_user_id,
+        )
+        self._store.add_amigos_event(
+            group_id=group_id,
+            article_id=None,
+            event_type="image_uploaded",
+            actor=actor_user_id,
+            detail_json=_json({"file_id": file_id}),
+        )
+        return dict(row)
+
+    def get_upload(self, file_id: int) -> dict[str, object] | None:
+        row = self._store.get_amigos_upload(file_id)
+        return dict(row) if row is not None else None
 
     # --- artículos: alta y edición ------------------------------------------
 

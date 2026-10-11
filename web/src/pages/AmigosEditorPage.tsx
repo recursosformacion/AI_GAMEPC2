@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { AmigosMediaInput, AmigosMyGroup } from "../api/types";
+import { AmigosImageField } from "../components/AmigosImageField";
 import { Card } from "../components/Card";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
@@ -185,6 +186,15 @@ export function AmigosEditorPage() {
   const updateMedia = (index: number, patch: Partial<MediaRow>) =>
     setMedia((rows) => rows.map((row, i) => (i === index ? { ...row, ...patch } : row)));
 
+  const uploadPhoto = async (index: number, file: File) => {
+    try {
+      const res = await apiClient.uploadAmigosImage(groupId, file);
+      updateMedia(index, { url: res.url });
+    } catch {
+      setError(t("friends.errorSaving"));
+    }
+  };
+
   const removeMedia = (index: number) =>
     setMedia((rows) => rows.filter((_, i) => i !== index));
 
@@ -262,13 +272,15 @@ export function AmigosEditorPage() {
           rows={2}
           className="w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
         />
-        <label className="mt-3 block text-xs text-osap-muted">{t("friends.coverField")}</label>
-        <input
-          value={coverUrl}
-          onChange={(e) => setCoverUrl(e.target.value)}
-          placeholder="https://…"
-          className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
-        />
+        <div className="mt-3">
+          <AmigosImageField
+            groupId={groupId}
+            label={t("friends.coverField")}
+            value={coverUrl}
+            onChange={setCoverUrl}
+            disabled={groupId === ""}
+          />
+        </div>
       </Card>
 
       <Card title={t("friends.bodyField")}>
@@ -303,12 +315,29 @@ export function AmigosEditorPage() {
               <p className="text-xs font-semibold text-osap-muted">
                 {row.kind === "video" ? t("friends.videoUrl") : t("friends.photoUrl")}
               </p>
-              <input
-                value={row.url}
-                onChange={(e) => updateMedia(index, { url: e.target.value })}
-                placeholder="https://…"
-                className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-1.5 text-sm"
-              />
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <input
+                  value={row.url}
+                  onChange={(e) => updateMedia(index, { url: e.target.value })}
+                  placeholder="https://…"
+                  className="min-w-48 flex-1 rounded-md border border-osap-border bg-osap-surface px-3 py-1.5 text-sm"
+                />
+                {row.kind === "photo" ? (
+                  <label className="cursor-pointer rounded-md border border-osap-border px-3 py-1.5 text-sm hover:border-osap-accent">
+                    {t("friends.upload")}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) void uploadPhoto(index, file);
+                        e.target.value = "";
+                      }}
+                    />
+                  </label>
+                ) : null}
+              </div>
               <div className="mt-2 flex flex-wrap gap-2">
                 <input
                   value={row.caption}

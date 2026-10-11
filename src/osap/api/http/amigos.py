@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from fastapi import APIRouter, Header, Query, Response
+from fastapi import APIRouter, Header, Query, Request, Response
 
 from src.osap.api.contracts import (
     AmigosArticleCreateRequest,
@@ -112,6 +112,25 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         return _call(ctx, response, run)
 
     @router.get(
+        "/api/v1/amigos/media/{file_id}",
+        tags=["Friends"],
+        include_in_schema=False,
+    )
+    def amigos_media(file_id: int) -> Response:
+        try:
+            result = ctx.api.amigos_media(file_id)
+        except AmigosError as exc:
+            return Response(status_code=exc.status)
+        if result is None:
+            return Response(status_code=404)
+        mime, data = result
+        return Response(
+            content=data,
+            media_type=mime,
+            headers={"Content-Disposition": "inline", "Cache-Control": "public, max-age=86400"},
+        )
+
+    @router.get(
         "/api/v1/amigos/articles/{article_id}",
         tags=["Friends"],
         summary="Artículo (público si está publicado; autor/admin si no)",
@@ -162,6 +181,29 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         response: Response, authorization: str | None = Header(default=None)
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(ctx, response, lambda: ctx.api.amigos_my_groups(authorization))
+
+    @router.post(
+        "/api/v1/amigos/uploads",
+        tags=["Friends"],
+        summary="Subir una imagen (logo/portada/foto): la reenvía a storage y devuelve su URL",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, **_shared._standard_errors(403, 404, 422, 502)},
+    )
+    async def upload_image(
+        request: Request,
+        response: Response,
+        group_id: str = Query(..., min_length=1),
+        name: str = Query(..., min_length=1),
+        mime_type: str | None = Query(default=None),
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        data = await request.body()
+        if not data:
+            return ctx.fail(422, response, "EMPTY_UPLOAD", "El fichero está vacío")
+        return _call(
+            ctx, response,
+            lambda: ctx.api.amigos_upload(authorization, group_id, name, mime_type, data),
+        )
 
     @router.post(
         "/api/v1/amigos/groups/{group_id}/articles",

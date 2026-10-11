@@ -386,6 +386,21 @@ class _MysqlStore(_MemoryStore):
             ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
             """
         )
+        # Imágenes subidas (ficheros en osap-storage): registro para servirlos de forma segura.
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS amigos_uploads (
+                file_id BIGINT UNSIGNED NOT NULL,
+                group_id CHAR(32) NOT NULL,
+                mime_type VARCHAR(64),
+                size_bytes BIGINT UNSIGNED,
+                created_by CHAR(36),
+                created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                PRIMARY KEY (file_id),
+                KEY idx_amigos_upload_group (group_id)
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+            """
+        )
         # Columnas comunes añadidas a grupos ya existentes (idempotente).
         self._ensure_column("amigos_groups", "website", "VARCHAR(1024) NULL")
         self._ensure_column("amigos_groups", "email", "VARCHAR(254) NULL")
@@ -1115,6 +1130,32 @@ class _MysqlStore(_MemoryStore):
             "SELECT * FROM amigos_group_links WHERE group_id = %s ORDER BY position, id",
             (group_id,),
         )
+
+    # --- «Los amigos»: imágenes subidas (MySQL) ------------------------------
+
+    def add_amigos_upload(
+        self,
+        *,
+        file_id: int,
+        group_id: str,
+        mime_type: str | None,
+        size_bytes: int | None,
+        created_by: str | None,
+    ) -> dict[str, object]:
+        self._run(
+            "INSERT INTO amigos_uploads (file_id, group_id, mime_type, size_bytes, created_by) "
+            "VALUES (%s,%s,%s,%s,%s) "
+            "ON DUPLICATE KEY UPDATE group_id = VALUES(group_id), mime_type = VALUES(mime_type), "
+            "size_bytes = VALUES(size_bytes)",
+            (int(file_id), group_id, mime_type, size_bytes, created_by),
+        )
+        row = self.get_amigos_upload(file_id)
+        assert row is not None
+        return row
+
+    def get_amigos_upload(self, file_id: int) -> dict[str, object] | None:
+        rows = self._run("SELECT * FROM amigos_uploads WHERE file_id = %s", (int(file_id),))
+        return rows[0] if rows else None
 
     # --- «Los amigos»: membresias (MySQL) ------------------------------------
 

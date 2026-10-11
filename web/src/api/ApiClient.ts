@@ -112,6 +112,35 @@ export class ApiClient {
     );
   }
 
+  /** Sube una imagen de «Los amigos» (logo/portada/foto) y devuelve su URL pública. */
+  async uploadAmigosImage(groupId: string, file: File): Promise<{ id: number; url: string }> {
+    const doFetch = this.fetcher ?? globalThis.fetch.bind(globalThis);
+    const params = new URLSearchParams({
+      group_id: groupId,
+      name: file.name,
+      mime_type: file.type,
+    });
+    const headers: Record<string, string> = { "Content-Type": "application/octet-stream" };
+    const token = this.auth.getToken() ?? this.token;
+    if (token !== null) headers["Authorization"] = `Bearer ${token}`;
+    const response = await doFetch(`${this.baseUrl}/amigos/uploads?${params.toString()}`, {
+      method: "POST",
+      headers,
+      body: file,
+    });
+    let parsed: Envelope<{ id: number; url: string }> | null = null;
+    try {
+      parsed = (await response.json()) as Envelope<{ id: number; url: string }>;
+    } catch {
+      parsed = null;
+    }
+    if (parsed !== null && parsed.success === true) return parsed.data;
+    if (parsed !== null && "error" in parsed && parsed.error) {
+      throw new ApiError(parsed.error.code, parsed.error.message, parsed.error.details);
+    }
+    throw new ApiError("INVALID_RESPONSE", `Upload failed (HTTP ${response.status})`);
+  }
+
   async get<T>(path: string): Promise<T> {
     return this.request<T>("GET", path);
   }

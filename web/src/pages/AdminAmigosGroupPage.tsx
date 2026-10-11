@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { AmigosArticle, AmigosGroup, AmigosGroupLink, AmigosMember } from "../api/types";
+import { AmigosImageField } from "../components/AmigosImageField";
 import { Card } from "../components/Card";
 import { Spinner } from "../components/Spinner";
 import { useI18n } from "../i18n/I18n";
@@ -286,13 +287,7 @@ export function AdminAmigosGroupPage() {
             placeholder={t("friends.groupName")}
             className="rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm disabled:opacity-60"
           />
-          <input
-            value={imageUrl}
-            disabled={viewMode}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder={t("friends.imageUrl")}
-            className="rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm disabled:opacity-60"
-          />
+          <AmigosImageField groupId={groupId} label={t("friends.imageUrl")} value={imageUrl} onChange={setImageUrl} disabled={viewMode} />
           <input
             value={description}
             disabled={viewMode}
@@ -314,13 +309,9 @@ export function AdminAmigosGroupPage() {
             placeholder={t("friends.publicEmail")}
             className="rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm disabled:opacity-60"
           />
-          <input
-            value={logoUrl}
-            disabled={viewMode}
-            onChange={(e) => setLogoUrl(e.target.value)}
-            placeholder={t("friends.logo")}
-            className="rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm disabled:opacity-60 sm:col-span-2"
-          />
+          <div className="sm:col-span-2">
+            <AmigosImageField groupId={groupId} label={t("friends.logo")} value={logoUrl} onChange={setLogoUrl} disabled={viewMode} />
+          </div>
           <div className="sm:col-span-2">
             <p className="text-xs text-osap-muted">{t("friends.socialLinks")}</p>
             {groupLinks.map((link, i) => (

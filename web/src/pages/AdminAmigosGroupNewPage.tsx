@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { AmigosGroupLink } from "../api/types";
@@ -18,6 +18,8 @@ export function AdminAmigosGroupNewPage() {
   const [website, setWebsite] = useState("");
   const [email, setEmail] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const logoInputRef = useRef<HTMLInputElement>(null);
   const [groupLinks, setGroupLinks] = useState<AmigosGroupLink[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -41,6 +43,10 @@ export function AdminAmigosGroupNewPage() {
         logo_url: logoUrl.trim() || null,
         links: groupLinks.filter((l) => l.url.trim() !== ""),
       });
+      if (logoFile) {
+        const uploaded = await apiClient.uploadAmigosImage(group.id, logoFile);
+        await apiClient.updateAmigosGroup(group.id, { logo_url: uploaded.url });
+      }
       navigate(`/admin/amigos/${encodeURIComponent(group.id)}?mode=edit`);
     } catch {
       setError(t("friends.errorSaving"));
@@ -126,15 +132,34 @@ export function AdminAmigosGroupNewPage() {
               className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
             />
           </label>
-          <label className="text-xs text-osap-muted sm:col-span-2">
-            {t("friends.logo")}
-            <input
-              value={logoUrl}
-              onChange={(e) => setLogoUrl(e.target.value)}
-              placeholder="https://…"
-              className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
-            />
-          </label>
+          <div className="text-xs text-osap-muted sm:col-span-2">
+            <span>{t("friends.logo")}</span>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <input
+                value={logoUrl}
+                onChange={(e) => setLogoUrl(e.target.value)}
+                placeholder="https://…"
+                className="min-w-48 flex-1 rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
+              />
+              <input
+                ref={logoInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  setLogoFile(e.target.files?.[0] ?? null);
+                  e.target.value = "";
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => logoInputRef.current?.click()}
+                className="rounded-md border border-osap-border px-3 py-2 text-sm"
+              >
+                {logoFile ? logoFile.name : t("friends.upload")}
+              </button>
+            </div>
+          </div>
           <div className="sm:col-span-2">
             <p className="text-xs text-osap-muted">{t("friends.socialLinks")}</p>
             {groupLinks.map((link, i) => (

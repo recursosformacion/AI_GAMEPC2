@@ -47,6 +47,8 @@ class MemoryStore:
         # Enlaces comunes del grupo (web/social): relación normalizada por tipo.
         self._amigos_group_links: list[dict[str, object]] = []
         self._amigos_group_link_seq = 0
+        # Imágenes subidas (los ficheros viven en osap-storage; aquí su registro para servir).
+        self._amigos_uploads: dict[int, dict[str, object]] = {}
 
     def list_suggestions(self) -> list[dict[str, object]]:
         return list(self._suggestions)
@@ -545,6 +547,32 @@ class MemoryStore:
         rows = [dict(x) for x in self._amigos_group_links if x["group_id"] == group_id]
         rows.sort(key=lambda x: int(str(x.get("position") or 0)))
         return rows
+
+    # --- «Los amigos»: imágenes subidas --------------------------------------
+
+    def add_amigos_upload(
+        self,
+        *,
+        file_id: int,
+        group_id: str,
+        mime_type: str | None,
+        size_bytes: int | None,
+        created_by: str | None,
+    ) -> dict[str, object]:
+        row: dict[str, object] = {
+            "file_id": int(file_id),
+            "group_id": group_id,
+            "mime_type": mime_type,
+            "size_bytes": size_bytes,
+            "created_by": created_by,
+            "created_at": now(),
+        }
+        self._amigos_uploads[int(file_id)] = row
+        return dict(row)
+
+    def get_amigos_upload(self, file_id: int) -> dict[str, object] | None:
+        row = self._amigos_uploads.get(int(file_id))
+        return dict(row) if row is not None else None
 
     # --- «Los amigos»: membresías --------------------------------------------
 

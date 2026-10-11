@@ -35,6 +35,7 @@ _TABLES: list[str] = [
     "amigos_coral_details",
     "amigos_coral_attributes",
     "amigos_group_links",
+    "amigos_uploads",
 ]
 
 # Columnas comunes añadidas a tablas ya existentes (idempotente, comprobando
@@ -199,6 +200,18 @@ _DDL: list[str] = [
       KEY idx_amigos_group_link (group_id, position),
       CONSTRAINT fk_amigos_group_link_group FOREIGN KEY (group_id)
         REFERENCES amigos_groups (id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS amigos_uploads (
+      file_id    BIGINT UNSIGNED NOT NULL,
+      group_id   CHAR(32)        NOT NULL,
+      mime_type  VARCHAR(64),
+      size_bytes BIGINT UNSIGNED,
+      created_by CHAR(36),
+      created_at DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+      PRIMARY KEY (file_id),
+      KEY idx_amigos_upload_group (group_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """,
 ]

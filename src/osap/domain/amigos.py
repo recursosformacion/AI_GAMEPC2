@@ -55,3 +55,11 @@ FORMATION_TYPES = frozenset(
 #   place      — lugares de actuación habituales
 CORAL_ATTRIBUTE_FACETS = frozenset({"repertoire", "language", "place"})
 
+# --- Subida de imágenes (recursos de «Los amigos») ------------------------------
+
+# Solo imágenes; el contenido se guarda en osap-storage y se sirve desde osap-api.
+IMAGE_MIME_TYPES = frozenset(
+    {"image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"}
+)
+MAX_IMAGE_BYTES = 5 * 1024 * 1024
+
