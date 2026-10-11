@@ -55,6 +55,13 @@ const SECTIONS: AdminSection[] = [
     ],
   },
   {
+    caption: "Los amigos",
+    items: [
+      { to: "/admin/amigos", key: "friends.adminGrupos" },
+      { to: "/admin/amigos/corales", key: "nav.corales" },
+    ],
+  },
+  {
     caption: "Mantenimiento storage",
     items: [
       {

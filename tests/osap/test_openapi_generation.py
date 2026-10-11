@@ -196,6 +196,7 @@ def test_tags_grouped() -> None:
         "Collaborators",
         "Composers",
         "Epochs",
+        "Friends",
         "Jobs",
         "Knowledge",
         "Providers",

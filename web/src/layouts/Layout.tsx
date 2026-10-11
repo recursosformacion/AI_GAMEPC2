@@ -28,7 +28,9 @@ type IconName =
   | "clock"
   | "mail"
   | "info"
-  | "support";
+  | "support"
+  | "friends"
+  | "article";
 
 const ICON_PATHS: Record<IconName, ReactNode> = {
   search: (
@@ -96,6 +98,20 @@ const ICON_PATHS: Record<IconName, ReactNode> = {
       <path d="m4 7 8 6 8-6" />
     </>
   ),
+  friends: (
+    <>
+      <circle cx="9" cy="8" r="3.2" />
+      <path d="M2.5 20c0-3.3 2.9-5 6.5-5s6.5 1.7 6.5 5" />
+      <path d="M17 8.2a3 3 0 0 1 0 5.6M22 20c0-2.4-1.4-4-3.5-4.6" />
+    </>
+  ),
+  article: (
+    <>
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3v5h5" />
+      <path d="M9 13h6M9 17h4" />
+    </>
+  ),
 };
 
 function Icon({ name }: { name: IconName }) {
@@ -158,6 +174,14 @@ const CONTENT_ENTRIES: readonly NavEntry[] = [
 ];
 
 const SPACE_NAV: readonly NavItem[] = [{ to: "/activity", key: "nav.activity", icon: "activity" }];
+
+// «Los amigos»: grupo de menú propio (como «Tu espacio»), con la jerarquía
+// Los amigos → Corales. Los artículos viven dentro de cada grupo, no en el menú.
+const FRIENDS_NAV: readonly NavItem[] = [
+  { to: "/amigos", key: "nav.friends", icon: "friends" },
+  { to: "/amigos/corales", key: "nav.corales", icon: "people" },
+  { to: "/amigos/mis-articulos", key: "nav.myArticles", icon: "article" },
+];
 
 // Fondo del sidebar: exactamente dos entradas, como el diseño.
 const BOTTOM_NAV: readonly NavItem[] = [
@@ -309,6 +333,7 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
         >
           <SidebarSection title={t("nav.sectionContent")} entries={CONTENT_ENTRIES} onNavigate={onClose} />
           <SidebarSection title={t("nav.sectionYourSpace")} entries={SPACE_NAV} onNavigate={onClose} />
+          <SidebarSection title={t("nav.sectionFriends")} entries={FRIENDS_NAV} onNavigate={onClose} />
         </nav>
         <div className="border-t border-osap-border-strong px-3 py-3">
           <ul className="space-y-0.5">

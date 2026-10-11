@@ -8,6 +8,13 @@ import { HomePage } from "../pages/HomePage";
 // La portada (HomePage) y los layouts van eager (primer render).
 const AboutPage = lazy(() => import("../pages/AboutPage").then((m) => ({ default: m.AboutPage })));
 const ActivityPage = lazy(() => import("../pages/ActivityPage").then((m) => ({ default: m.ActivityPage })));
+const AdminAmigosGroupsPage = lazy(() => import("../pages/AdminAmigosGroupsPage").then((m) => ({ default: m.AdminAmigosGroupsPage })));
+const AdminAmigosGroupNewPage = lazy(() => import("../pages/AdminAmigosGroupNewPage").then((m) => ({ default: m.AdminAmigosGroupNewPage })));
+const AdminAmigosGroupPage = lazy(() => import("../pages/AdminAmigosGroupPage").then((m) => ({ default: m.AdminAmigosGroupPage })));
+const AmigosEditorPage = lazy(() => import("../pages/AmigosEditorPage").then((m) => ({ default: m.AmigosEditorPage })));
+const AmigosGroupsPage = lazy(() => import("../pages/AmigosGroupsPage").then((m) => ({ default: m.AmigosGroupsPage })));
+const AmigosMyArticlesPage = lazy(() => import("../pages/AmigosMyArticlesPage").then((m) => ({ default: m.AmigosMyArticlesPage })));
+const AmigosPage = lazy(() => import("../pages/AmigosPage").then((m) => ({ default: m.AmigosPage })));
 const AdminComposerDetailPage = lazy(() => import("../pages/AdminComposerDetailPage").then((m) => ({ default: m.AdminComposerDetailPage })));
 const AdminComposersPage = lazy(() => import("../pages/AdminComposersPage").then((m) => ({ default: m.AdminComposersPage })));
 const AdminSourceSuggestionsPage = lazy(() => import("../pages/AdminSourceSuggestionsPage").then((m) => ({ default: m.AdminSourceSuggestionsPage })));
@@ -62,6 +69,11 @@ export function AppRoutes() {
           <Route path="/oidc/callback" element={<AuthCallbackPage />} />
           <Route path="/discover" element={<DiscoverPage />} />
           <Route path="/support" element={<SupportOsapPage />} />
+          <Route path="/amigos" element={<AmigosPage />} />
+          <Route path="/amigos/corales" element={<AmigosGroupsPage />} />
+          <Route path="/amigos/mis-articulos" element={<AmigosMyArticlesPage />} />
+          <Route path="/amigos/editor" element={<AmigosEditorPage />} />
+          <Route path="/amigos/editor/:articleId" element={<AmigosEditorPage />} />
           <Route path="/corrections" element={<CorrectionsPage />} />
           <Route path="/catalog" element={<SourceCatalogPage />} />
           <Route path="/sources" element={<SourcesPage />} />
@@ -106,6 +118,10 @@ export function AppRoutes() {
           <Route path="/admin/funnel" element={<AdminFunnelPage />} />
           <Route path="/admin/corrections" element={<AdminCorrectionsPage />} />
           <Route path="/admin/work-person-ai" element={<AdminWorkPersonAiPage />} />
+          <Route path="/admin/amigos" element={<AdminAmigosGroupsPage />} />
+          <Route path="/admin/amigos/corales" element={<AdminAmigosGroupsPage kind="coral" />} />
+          <Route path="/admin/amigos/nuevo" element={<AdminAmigosGroupNewPage />} />
+          <Route path="/admin/amigos/:groupId" element={<AdminAmigosGroupPage />} />
         </Route>
       </Routes>
     </Suspense>

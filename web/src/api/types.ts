@@ -833,3 +833,156 @@ export interface RecentWorkList {
   items: RecentWork[];
 }
 
+// --- «Los amigos» (grupos, artículos y recursos) -----------------------------
+
+export type AmigosGroupKind = "coral";
+export type AmigosGroupStatus = "active" | "inactive";
+export type AmigosEditorialMode = "direct" | "moderated";
+export type AmigosMemberRole = "admin" | "collaborator";
+export type AmigosMemberStatus = "active" | "revoked";
+export type AmigosArticleStatus = "draft" | "pending" | "published" | "withdrawn";
+export type AmigosMediaKind = "video" | "photo";
+
+export interface AmigosGroupLink {
+  kind: "facebook" | "instagram" | "other" | string;
+  url: string;
+  label?: string | null;
+}
+
+export interface AmigosGroup {
+  id: string;
+  slug: string;
+  name: string;
+  kind: AmigosGroupKind | string;
+  description?: string | null;
+  image_url?: string | null;
+  website?: string | null;
+  email?: string | null;
+  logo_url?: string | null;
+  links?: AmigosGroupLink[];
+  status: AmigosGroupStatus | string;
+  editorial_mode: AmigosEditorialMode | string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AmigosMedia {
+  kind: AmigosMediaKind | string;
+  url: string;
+  provider?: string | null;
+  video_id?: string | null;
+  caption?: string | null;
+  credit?: string | null;
+  position?: number;
+}
+
+export interface AmigosMediaInput {
+  kind: AmigosMediaKind;
+  url: string;
+  caption?: string | null;
+  credit?: string | null;
+}
+
+export interface AmigosArticle {
+  id: string;
+  group_id: string;
+  group_slug?: string | null;
+  group_name?: string | null;
+  title: string;
+  slug: string;
+  event_date: string;
+  summary?: string | null;
+  body: string;
+  cover_url?: string | null;
+  author_user_id: string;
+  status: AmigosArticleStatus | string;
+  published_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  media: AmigosMedia[];
+}
+
+export interface AmigosArticleList {
+  items: AmigosArticle[];
+  total: number;
+}
+
+export interface AmigosMember {
+  group_id: string;
+  user_id: string;
+  role: AmigosMemberRole | string;
+  status: AmigosMemberStatus | string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AmigosMemberList {
+  items: AmigosMember[];
+  total: number;
+}
+
+/** Grupo con el rol del usuario autenticado (para el editor de artículos). */
+export interface AmigosMyGroup {
+  group: AmigosGroup;
+  role: AmigosMemberRole | string;
+}
+
+export interface AmigosArticleCreateInput {
+  title: string;
+  event_date: string;
+  body: string;
+  summary?: string | null;
+  cover_url?: string | null;
+  media?: AmigosMediaInput[];
+  action: "draft" | "publish";
+}
+
+export interface AmigosArticleUpdateInput {
+  title?: string;
+  event_date?: string;
+  body?: string;
+  summary?: string | null;
+  cover_url?: string | null;
+  media?: AmigosMediaInput[];
+}
+
+export type AmigosFormationType =
+  | "mixed"
+  | "equal_voices"
+  | "children"
+  | "youth"
+  | "male"
+  | "female"
+  | "other";
+
+/** Ficha estructurada propia del tipo de grupo «coral» (especialización de un grupo). */
+export interface AmigosCoralDetails {
+  group_id: string;
+  kind?: string;
+  foundation_date?: string | null;
+  dissolution_date?: string | null;
+  locality?: string | null;
+  region?: string | null;
+  country_code?: string | null;
+  venue?: string | null;
+  formation_type?: AmigosFormationType | string | null;
+  member_count?: number | null;
+  website?: string | null;
+  public_email?: string | null;
+  director_person_id?: string | null;
+  director_label?: string | null;
+  linked_entity?: string | null;
+  repertoire: string[];
+  languages: string[];
+  places: string[];
+}
+
+export type AmigosCoralDetailsInput = Partial<
+  Omit<AmigosCoralDetails, "group_id" | "kind" | "repertoire" | "languages" | "places">
+> & {
+  repertoire?: string[];
+  languages?: string[];
+  places?: string[];
+};
+
+

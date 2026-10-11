@@ -9,6 +9,17 @@
 // Pages never call fetch/axios directly. Everything goes through this class.
 
 import type {
+  AmigosArticle,
+  AmigosArticleCreateInput,
+  AmigosArticleList,
+  AmigosArticleUpdateInput,
+  AmigosCoralDetails,
+  AmigosCoralDetailsInput,
+  AmigosGroup,
+  AmigosGroupLink,
+  AmigosMember,
+  AmigosMemberList,
+  AmigosMyGroup,
   Catalogue,
   Collaborator,
   Ensemble,
@@ -161,6 +172,170 @@ export class ApiClient {
   /** Colaboradores públicos de un proyecto (fachada osap-api → support + auth). */
   async getCollaborators(project = "omr"): Promise<Collaborator[]> {
     return this.get<Collaborator[]>(`/public/collaborators?project=${encodeURIComponent(project)}`);
+  }
+
+  // --- «Los amigos» ---------------------------------------------------------
+
+  /** Grupos públicos (o todos, incluidos inactivos, si se indica y hay permiso). */
+  async getAmigosGroups(includeInactive = false, kind?: string): Promise<AmigosGroup[]> {
+    const params = new URLSearchParams();
+    if (includeInactive) params.set("include_inactive", "true");
+    if (kind !== undefined && kind !== "") params.set("kind", kind);
+    const qs = params.toString();
+    return this.get<AmigosGroup[]>(`/amigos/groups${qs === "" ? "" : `?${qs}`}`);
+  }
+
+  async getAmigosGroupArticles(
+    groupId: string,
+    limit = 100,
+    offset = 0,
+  ): Promise<AmigosArticleList> {
+    return this.get<AmigosArticleList>(
+      `/amigos/groups/${encodeURIComponent(groupId)}/articles?limit=${limit}&offset=${offset}`,
+    );
+  }
+
+  async getAmigosArticle(articleId: string): Promise<AmigosArticle> {
+    return this.get<AmigosArticle>(`/amigos/articles/${encodeURIComponent(articleId)}`);
+  }
+
+  /** Grupos en los que puedo colaborar (con mi rol). Requiere sesión. */
+  async getAmigosMyGroups(): Promise<AmigosMyGroup[]> {
+    return this.get<AmigosMyGroup[]>("/amigos/my/groups");
+  }
+
+  async getAmigosMyArticles(limit = 100, offset = 0): Promise<AmigosArticleList> {
+    return this.get<AmigosArticleList>(`/amigos/my?limit=${limit}&offset=${offset}`);
+  }
+
+  async createAmigosArticle(
+    groupId: string,
+    input: AmigosArticleCreateInput,
+  ): Promise<AmigosArticle> {
+    return this.post<AmigosArticle>(
+      `/amigos/groups/${encodeURIComponent(groupId)}/articles`,
+      input,
+    );
+  }
+
+  async updateAmigosArticle(
+    articleId: string,
+    input: AmigosArticleUpdateInput,
+  ): Promise<AmigosArticle> {
+    return this.patch<AmigosArticle>(`/amigos/articles/${encodeURIComponent(articleId)}`, input);
+  }
+
+  async submitAmigosArticle(articleId: string): Promise<AmigosArticle> {
+    return this.post<AmigosArticle>(`/amigos/articles/${encodeURIComponent(articleId)}/submit`);
+  }
+
+  async publishAmigosArticle(articleId: string): Promise<AmigosArticle> {
+    return this.post<AmigosArticle>(`/amigos/articles/${encodeURIComponent(articleId)}/publish`);
+  }
+
+  async withdrawAmigosArticle(articleId: string): Promise<AmigosArticle> {
+    return this.post<AmigosArticle>(`/amigos/articles/${encodeURIComponent(articleId)}/withdraw`);
+  }
+
+  // --- «Los amigos» (administración de grupos y moderación) -----------------
+
+  async createAmigosGroup(input: {
+    name: string;
+    kind?: string;
+    slug?: string | null;
+    description?: string | null;
+    image_url?: string | null;
+    editorial_mode?: string;
+    website?: string | null;
+    email?: string | null;
+    logo_url?: string | null;
+    links?: AmigosGroupLink[];
+  }): Promise<AmigosGroup> {
+    return this.post<AmigosGroup>("/admin/amigos/groups", input);
+  }
+
+  async updateAmigosGroup(
+    groupId: string,
+    input: {
+      name?: string;
+      description?: string | null;
+      image_url?: string | null;
+      editorial_mode?: string;
+      status?: string;
+      website?: string | null;
+      email?: string | null;
+      logo_url?: string | null;
+      links?: AmigosGroupLink[];
+    },
+  ): Promise<AmigosGroup> {
+    return this.patch<AmigosGroup>(`/admin/amigos/groups/${encodeURIComponent(groupId)}`, input);
+  }
+
+  async getAmigosMembers(groupId: string): Promise<AmigosMemberList> {
+    return this.get<AmigosMemberList>(
+      `/admin/amigos/groups/${encodeURIComponent(groupId)}/members`,
+    );
+  }
+
+  async grantAmigosMember(
+    groupId: string,
+    userId: string,
+    role: "admin" | "collaborator" = "collaborator",
+  ): Promise<AmigosMember> {
+    return this.post<AmigosMember>(`/admin/amigos/groups/${encodeURIComponent(groupId)}/members`, {
+      user_id: userId,
+      role,
+    });
+  }
+
+  async revokeAmigosMember(groupId: string, userId: string): Promise<AmigosMember> {
+    return this.delete<AmigosMember>(
+      `/admin/amigos/groups/${encodeURIComponent(groupId)}/members/${encodeURIComponent(userId)}`,
+    );
+  }
+
+  /** Ficha estructurada de un coral (datos propios del tipo de grupo). */
+  async getAmigosCoralDetails(groupId: string): Promise<AmigosCoralDetails> {
+    return this.get<AmigosCoralDetails>(
+      `/amigos/groups/${encodeURIComponent(groupId)}/coral`,
+    );
+  }
+
+  async updateAmigosCoralDetails(
+    groupId: string,
+    input: AmigosCoralDetailsInput,
+  ): Promise<AmigosCoralDetails> {
+    return this.put<AmigosCoralDetails>(
+      `/admin/amigos/groups/${encodeURIComponent(groupId)}/coral`,
+      input,
+    );
+  }
+
+  async getAmigosGroupArticlesAdmin(
+    groupId: string,
+    limit = 200,
+    offset = 0,
+  ): Promise<AmigosArticleList> {
+    return this.get<AmigosArticleList>(
+      `/admin/amigos/groups/${encodeURIComponent(groupId)}/articles?limit=${limit}&offset=${offset}`,
+    );
+  }
+
+  async getAmigosPending(groupId?: string): Promise<AmigosArticleList> {
+    const qs = groupId ? `?group_id=${encodeURIComponent(groupId)}` : "";
+    return this.get<AmigosArticleList>(`/admin/amigos/pending${qs}`);
+  }
+
+  async approveAmigosArticle(articleId: string): Promise<AmigosArticle> {
+    return this.post<AmigosArticle>(
+      `/admin/amigos/articles/${encodeURIComponent(articleId)}/approve`,
+    );
+  }
+
+  async returnAmigosArticle(articleId: string, note = ""): Promise<AmigosArticle> {
+    return this.post<AmigosArticle>(
+      `/admin/amigos/articles/${encodeURIComponent(articleId)}/return?note=${encodeURIComponent(note)}`,
+    );
   }
 
   /** Épocas históricas (catálogo público; backend osap-storage). */

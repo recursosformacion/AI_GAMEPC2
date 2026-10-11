@@ -128,7 +128,7 @@ export function ComposersPage() {
                       <div className="flex items-center gap-2">
                         <Link
                           to={`/composers/${encodeURIComponent(c.id)}`}
-                          className="truncate font-display text-base text-osap-ink transition-colors hover:text-osap-accent"
+                          className="truncate font-display text-lg font-semibold tracking-tight text-osap-ink transition-colors hover:text-osap-accent"
                         >
                           {c.name}
                         </Link>

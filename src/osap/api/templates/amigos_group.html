@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block title %}{{ view.name }} — Los amigos | OpenMusicRepository{% endblock %}
+{% block description %}{{ view.description_meta }}{% endblock %}
+{% block social %}
+<meta property="og:type" content="website" />
+<meta property="og:title" content="{{ view.name }}" />
+<meta property="og:description" content="{{ view.description_meta }}" />
+<meta property="og:url" content="{{ view.canonical_url }}" />
+<meta property="og:site_name" content="OpenMusicRepository" />
+{% if view.logo_url or view.image_url %}<meta property="og:image" content="{{ view.logo_url or view.image_url }}" />{% endif %}
+<meta name="twitter:card" content="{% if view.logo_url or view.image_url %}summary_large_image{% else %}summary{% endif %}" />
+<meta name="twitter:title" content="{{ view.name }}" />
+<meta name="twitter:description" content="{{ view.description_meta }}" />
+{% endblock %}
+{% block json_ld %}<script type="application/ld+json">{{ view.json_ld | safe }}</script>{% endblock %}
+{% block content %}
+<nav class="crumbs" aria-label="breadcrumb">
+  <a href="/">Inicio</a> › <a href="/amigos">Los amigos</a> › <span>{{ view.name }}</span>
+</nav>
+
+{# Caja compacta: lo esencial del grupo, para dejar el resto de la pantalla a los artículos. #}
+<section class="card coral-head">
+  {% if view.logo_url %}<img class="logo" src="{{ view.logo_url }}" alt="{{ view.name }}" />
+  {% elif view.image_url %}<img class="logo" src="{{ view.image_url }}" alt="{{ view.name }}" />{% endif %}
+  <div style="min-width:14rem;flex:1">
+    <h1>{{ view.name }}</h1>
+    <div class="badges">
+      {% if view.coral and view.coral.dissolution_date %}<span class="badge">Disuelto</span>{% endif %}
+      {% if view.coral and view.coral.locality %}<span class="badge">{{ view.coral.locality }}</span>{% endif %}
+      {% if view.coral and view.coral.country_code %}<span class="badge">{{ view.coral.country_code }}</span>{% endif %}
+    </div>
+    {% if view.description %}<p class="muted" style="margin-top:0">{{ view.description }}</p>{% endif %}
+    <div class="coral-quick">
+      {% if view.coral and view.coral.formation_type %}<span>{{ view.coral.formation_type }}</span>{% endif %}
+      {% if view.coral and view.coral.member_count %}<span>{{ view.coral.member_count }} integrantes</span>{% endif %}
+      {% if view.coral and view.coral.director_label %}<span>{{ view.coral.director_label }}</span>{% endif %}
+      {% if view.coral and view.coral.linked_entity %}<span>{{ view.coral.linked_entity }}</span>{% endif %}
+    </div>
+    {% if view.website or view.email or view.links %}
+    <div class="coral-actions">
+      {% if view.website %}<a class="btn" href="{{ view.website }}" rel="nofollow noopener">Web</a>{% endif %}
+      {% if view.email %}<a class="btn" href="mailto:{{ view.email }}">Email</a>{% endif %}
+      {% for link in view.links %}<a class="btn" href="{{ link.url }}" rel="nofollow noopener">{{ link.label or link.kind }}</a>{% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</section>
+
+{% if view.coral and view.coral.has_data %}
+<details class="card more">
+  <summary>Ficha completa</summary>
+  <h2 style="margin-top:0.6rem">Ficha</h2>
+  <dl class="detail">
+    {% if view.coral.formation_type %}<dt>Tipo de formación</dt><dd>{{ view.coral.formation_type }}</dd>{% endif %}
+    {% if view.coral.foundation_date %}<dt>Fundación</dt><dd>{{ view.coral.foundation_date }}</dd>{% endif %}
+    {% if view.coral.dissolution_date %}<dt>Disolución</dt><dd>{{ view.coral.dissolution_date }}</dd>{% endif %}
+    {% if view.coral.locality %}<dt>Localidad</dt><dd>{{ view.coral.locality }}</dd>{% endif %}
+    {% if view.coral.region %}<dt>Región</dt><dd>{{ view.coral.region }}</dd>{% endif %}
+    {% if view.coral.country_code %}<dt>País</dt><dd>{{ view.coral.country_code }}</dd>{% endif %}
+    {% if view.coral.venue %}<dt>Sede habitual</dt><dd>{{ view.coral.venue }}</dd>{% endif %}
+    {% if view.coral.member_count %}<dt>Integrantes</dt><dd>{{ view.coral.member_count }}</dd>{% endif %}
+    {% if view.coral.director_label %}<dt>Dirección musical</dt><dd>{{ view.coral.director_label }}</dd>{% endif %}
+    {% if view.coral.linked_entity %}<dt>Entidad vinculada</dt><dd>{{ view.coral.linked_entity }}</dd>{% endif %}
+    {% if view.coral.repertoire %}<dt>Repertorio</dt><dd>{{ view.coral.repertoire | join(", ") }}</dd>{% endif %}
+    {% if view.coral.languages %}<dt>Idiomas</dt><dd>{{ view.coral.languages | join(", ") }}</dd>{% endif %}
+    {% if view.coral.places %}<dt>Lugares de actuación</dt><dd>{{ view.coral.places | join(", ") }}</dd>{% endif %}
+    {% if view.coral.website %}<dt>Web</dt><dd><a href="{{ view.coral.website }}" rel="nofollow noopener">{{ view.coral.website }}</a></dd>{% endif %}
+    {% if view.coral.public_email %}<dt>Correo</dt><dd><a href="mailto:{{ view.coral.public_email }}">{{ view.coral.public_email }}</a></dd>{% endif %}
+  </dl>
+</details>
+{% endif %}
+
+<h2>Publicaciones</h2>
+{% if view.articles %}
+<ul class="works">
+  {% for article in view.articles %}
+  <li>
+    <a href="/amigos/articulo/{{ article.article_id }}/{{ article.slug }}">{{ article.title }}</a>
+    <span class="cat">{{ article.event_date }}</span>
+    {% if article.summary %}<div class="muted">{{ article.summary }}</div>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="muted">Todavía no hay publicaciones de este grupo.</p>
+{% endif %}
+
+<p class="cta"><a class="btn" href="/amigos">← Ver todos los grupos</a></p>
+{% endblock %}

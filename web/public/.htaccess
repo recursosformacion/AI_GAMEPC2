@@ -24,6 +24,11 @@ RewriteEngine On
 # Va antes del modo mantenimiento: estas páginas públicas siguen accesibles.
 RewriteRule ^(obra|compositor)/(.*)$ http://127.0.0.1:8001/$1/$2 [P,QSA,L]
 
+# «Los amigos»: la página pública de cada grupo y de cada artículo las sirve osap-api
+# (HTML server-rendered con metadatos sociales). Los índices /amigos y /amigos/corales
+# siguen siendo la SPA.
+RewriteRule ^(amigos/corales/[^/]+(/.*)?|amigos/articulo/.*)$ http://127.0.0.1:8001/$1 [P,QSA,L]
+
 # Sitemaps dinámicos (osap-api): índice y páginas de obras/personas.
 RewriteRule ^sitemap\.xml$ http://127.0.0.1:8001/sitemap.xml [P,QSA,L]
 RewriteRule ^sitemaps/(.*)$ http://127.0.0.1:8001/sitemaps/$1 [P,QSA,L]

@@ -13,6 +13,7 @@ from fastapi import FastAPI
 
 from src.osap.api.http.admin import build_admin_router
 from src.osap.api.http.admin_ops import build_admin_ops_router
+from src.osap.api.http.amigos import build_amigos_router
 from src.osap.api.http.analytics import build_analytics_router
 from src.osap.api.http.auth import build_auth_router
 from src.osap.api.http.collaborators import build_collaborators_router
@@ -147,6 +148,7 @@ def create_platform_app(
     app.include_router(build_auth_router(ctx))
     app.include_router(build_collaborators_router(ctx))
     app.include_router(build_contributions_router(ctx))
+    app.include_router(build_amigos_router(ctx))
 
 
 

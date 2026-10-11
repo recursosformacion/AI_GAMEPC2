@@ -79,6 +79,21 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.5.0 (B)** — **«Los amigos»** (sección nueva): grupos de agrupaciones musicales con
+  categoría/tipo (`coral` hoy, aditivo), **membresías y permisos por grupo**, artículos con flujo
+  editorial (borrador/pendiente/publicado/retirado y **publicación directa o moderada por
+  grupo**), recursos (vídeo YouTube + foto), **especialización por tipo** (`amigos_coral_details`:
+  formación, lugares de actuación, repertorio, idiomas…), **campos comunes de grupo** (web, email,
+  logo, redes) y **mantenimiento en Admin → «Los amigos»** (listado con búsqueda/orden por columna
+  y acciones ver/editar/baja + alta y miembros). Páginas públicas **SSR** de coral y artículo
+  (metadatos `og`/`twitter` + sitemap) con URL estable, rediseñadas con el Design System de la app.
+  - Incluye además, ya aplicados: corrección de los *gates* nginx de `osap-auth`/`osap-storage`
+    (5.3.0) y el **alta de obras** del panel de `osap-storage`.
+  - Evidencia: `pytest tests/osap/test_amigos.py` (**39**); circuito integrado en Dev 16/16;
+    `ruff`+`mypy` limpios; `check-versions` 5.5.0 OK; migración aditiva
+    (`script/migrate_amigos_schema.py`, dry-run) en la BD `osap-api`.
+  - Alcance: `osap-api` + `osap-auth` + `osap-storage` (+ versión del conjunto).
+
 - **5.4.0 (B)** — **SEO técnico**: datos estructurados site-wide (`Organization` + `WebSite`,
   junto a los `MusicComposition`/`Person`/`BreadcrumbList` ya existentes en las páginas de
   entidad), **hreflang** (`?lang=` + `x-default`), **robots.txt** con bloqueo de rutas internas

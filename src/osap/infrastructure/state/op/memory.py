@@ -32,6 +32,21 @@ class MemoryStore:
         self._contrib_rel_seq = 0
         self._contrib_evt_seq = 0
         self._contrib_art_seq = 0
+        # «Los amigos»: grupos, membresías, artículos, recursos y auditoría.
+        self._amigos_groups: dict[str, dict[str, object]] = {}
+        self._amigos_members: dict[tuple[str, str], dict[str, object]] = {}
+        self._amigos_articles: dict[str, dict[str, object]] = {}
+        self._amigos_media: list[dict[str, object]] = []
+        self._amigos_events: list[dict[str, object]] = []
+        self._amigos_media_seq = 0
+        self._amigos_evt_seq = 0
+        # Especialización por tipo: ficha de coral (1:1 con el grupo) + facetas multivalor.
+        self._amigos_coral_details: dict[str, dict[str, object]] = {}
+        self._amigos_coral_attrs: list[dict[str, object]] = []
+        self._amigos_coral_attr_seq = 0
+        # Enlaces comunes del grupo (web/social): relación normalizada por tipo.
+        self._amigos_group_links: list[dict[str, object]] = []
+        self._amigos_group_link_seq = 0
 
     def list_suggestions(self) -> list[dict[str, object]]:
         return list(self._suggestions)
@@ -435,3 +450,358 @@ class MemoryStore:
                 )
                 return rel
         return None
+
+    # --- «Los amigos»: grupos ------------------------------------------------
+
+    def add_amigos_group(
+        self,
+        *,
+        group_id: str,
+        slug: str,
+        name: str,
+        kind: str,
+        description: str | None,
+        image_url: str | None,
+        editorial_mode: str,
+        created_by: str | None,
+        website: str | None = None,
+        email: str | None = None,
+        logo_url: str | None = None,
+    ) -> dict[str, object]:
+        ts = now()
+        row: dict[str, object] = {
+            "id": group_id,
+            "slug": slug,
+            "name": name,
+            "kind": kind,
+            "description": description,
+            "image_url": image_url,
+            "website": website,
+            "email": email,
+            "logo_url": logo_url,
+            "status": "active",
+            "editorial_mode": editorial_mode,
+            "created_by": created_by,
+            "created_at": ts,
+            "updated_at": ts,
+        }
+        self._amigos_groups[group_id] = row
+        return row
+
+    def get_amigos_group(self, group_id: str) -> dict[str, object] | None:
+        row = self._amigos_groups.get(group_id)
+        return dict(row) if row is not None else None
+
+    def get_amigos_group_by_slug(self, slug: str) -> dict[str, object] | None:
+        for row in self._amigos_groups.values():
+            if row["slug"] == slug:
+                return dict(row)
+        return None
+
+    def list_amigos_groups(
+        self, *, active_only: bool = True, kind: str | None = None
+    ) -> list[dict[str, object]]:
+        rows = [
+            dict(r)
+            for r in self._amigos_groups.values()
+            if (not active_only or str(r.get("status")) == "active")
+            and (kind is None or str(r.get("kind")) == kind)
+        ]
+        rows.sort(key=lambda r: str(r.get("name") or "").lower())
+        return rows
+
+    def update_amigos_group(self, group_id: str, **changes: object) -> dict[str, object] | None:
+        row = self._amigos_groups.get(group_id)
+        if row is None:
+            return None
+        allowed = {"name", "description", "image_url", "editorial_mode", "status",
+                    "website", "email", "logo_url"}
+        for key, value in changes.items():
+            if key in allowed:
+                row[key] = value
+        row["updated_at"] = now()
+        return dict(row)
+
+    # --- «Los amigos»: enlaces comunes del grupo (web/social) ----------------
+
+    def replace_amigos_group_links(self, group_id: str, items: list[dict[str, object]]) -> None:
+        self._amigos_group_links = [
+            x for x in self._amigos_group_links if x["group_id"] != group_id
+        ]
+        for item in items:
+            self._amigos_group_link_seq += 1
+            self._amigos_group_links.append(
+                {
+                    "id": self._amigos_group_link_seq,
+                    "group_id": group_id,
+                    "kind": item.get("kind"),
+                    "label": item.get("label"),
+                    "url": item.get("url"),
+                    "position": int(str(item.get("position") or 0)),
+                }
+            )
+
+    def list_amigos_group_links(self, group_id: str) -> list[dict[str, object]]:
+        rows = [dict(x) for x in self._amigos_group_links if x["group_id"] == group_id]
+        rows.sort(key=lambda x: int(str(x.get("position") or 0)))
+        return rows
+
+    # --- «Los amigos»: membresías --------------------------------------------
+
+    def set_amigos_member(
+        self, *, group_id: str, user_id: str, role: str, status: str, granted_by: str | None
+    ) -> dict[str, object]:
+        key = (group_id, user_id)
+        existing = self._amigos_members.get(key)
+        ts = now()
+        if existing is not None:
+            existing.update({"role": role, "status": status, "granted_by": granted_by, "updated_at": ts})
+            return dict(existing)
+        row: dict[str, object] = {
+            "group_id": group_id,
+            "user_id": user_id,
+            "role": role,
+            "status": status,
+            "granted_by": granted_by,
+            "created_at": ts,
+            "updated_at": ts,
+        }
+        self._amigos_members[key] = row
+        return dict(row)
+
+    def get_amigos_member(self, group_id: str, user_id: str) -> dict[str, object] | None:
+        row = self._amigos_members.get((group_id, user_id))
+        return dict(row) if row is not None else None
+
+    def list_amigos_members(self, group_id: str) -> list[dict[str, object]]:
+        rows = [dict(r) for r in self._amigos_members.values() if r["group_id"] == group_id]
+        rows.sort(key=lambda r: (str(r.get("role")), str(r.get("user_id"))))
+        return rows
+
+    def list_amigos_memberships_by_user(self, user_id: str) -> list[dict[str, object]]:
+        return [dict(r) for r in self._amigos_members.values() if r["user_id"] == user_id]
+
+    # --- «Los amigos»: ficha de coral (especialización por tipo) -------------
+
+    def get_amigos_coral_details(self, group_id: str) -> dict[str, object] | None:
+        row = self._amigos_coral_details.get(group_id)
+        return dict(row) if row is not None else None
+
+    def upsert_amigos_coral_details(self, group_id: str, **fields: object) -> dict[str, object]:
+        allowed = {
+            "foundation_date", "dissolution_date", "locality", "region", "country_code",
+            "venue", "formation_type", "member_count", "website", "public_email",
+            "director_person_id", "director_label", "linked_entity",
+        }
+        ts = now()
+        existing = self._amigos_coral_details.get(group_id)
+        if existing is None:
+            row: dict[str, object] = {"group_id": group_id, "created_at": ts, "updated_at": ts}
+            for key in allowed:
+                row[key] = None
+            self._amigos_coral_details[group_id] = row
+            existing = row
+        for key, value in fields.items():
+            if key in allowed:
+                existing[key] = value
+        existing["updated_at"] = ts
+        return dict(existing)
+
+    def replace_amigos_coral_attributes(
+        self, group_id: str, items: list[dict[str, object]]
+    ) -> None:
+        self._amigos_coral_attrs = [a for a in self._amigos_coral_attrs if a["group_id"] != group_id]
+        for item in items:
+            self._amigos_coral_attr_seq += 1
+            self._amigos_coral_attrs.append(
+                {
+                    "id": self._amigos_coral_attr_seq,
+                    "group_id": group_id,
+                    "facet": item.get("facet"),
+                    "value": item.get("value"),
+                    "position": int(str(item.get("position") or 0)),
+                    "created_at": now(),
+                }
+            )
+
+    def list_amigos_coral_attributes(self, group_id: str) -> list[dict[str, object]]:
+        rows = [dict(a) for a in self._amigos_coral_attrs if a["group_id"] == group_id]
+        rows.sort(key=lambda a: (str(a.get("facet")), int(str(a.get("position") or 0))))
+        return rows
+
+    # --- «Los amigos»: artículos ---------------------------------------------
+
+    def create_amigos_article(
+        self,
+        *,
+        article_id: str,
+        group_id: str,
+        title: str,
+        slug: str,
+        event_date: str,
+        summary: str | None,
+        body: str,
+        cover_url: str | None,
+        author_user_id: str,
+        status: str,
+    ) -> dict[str, object]:
+        ts = now()
+        row: dict[str, object] = {
+            "id": article_id,
+            "group_id": group_id,
+            "title": title,
+            "slug": slug,
+            "event_date": event_date,
+            "summary": summary,
+            "body": body,
+            "cover_url": cover_url,
+            "author_user_id": author_user_id,
+            "status": status,
+            "published_at": None,
+            "reviewed_by": None,
+            "reviewed_at": None,
+            "review_note": None,
+            "created_at": ts,
+            "updated_at": ts,
+        }
+        self._amigos_articles[article_id] = row
+        return row
+
+    def get_amigos_article(self, article_id: str) -> dict[str, object] | None:
+        row = self._amigos_articles.get(article_id)
+        return dict(row) if row is not None else None
+
+    def get_amigos_article_by_slug(self, group_id: str, slug: str) -> dict[str, object] | None:
+        for row in self._amigos_articles.values():
+            if row["group_id"] == group_id and row["slug"] == slug:
+                return dict(row)
+        return None
+
+    def update_amigos_article(self, article_id: str, **changes: object) -> dict[str, object] | None:
+        row = self._amigos_articles.get(article_id)
+        if row is None:
+            return None
+        allowed = {"title", "event_date", "summary", "body", "cover_url", "slug"}
+        for key, value in changes.items():
+            if key in allowed:
+                row[key] = value
+        row["updated_at"] = now()
+        return dict(row)
+
+    def set_amigos_article_status(
+        self,
+        *,
+        article_id: str,
+        status: str,
+        reviewed_by: str | None,
+        review_note: str | None,
+        published_at: str | None,
+    ) -> dict[str, object] | None:
+        row = self._amigos_articles.get(article_id)
+        if row is None:
+            return None
+        row["status"] = status
+        row["review_note"] = review_note
+        if reviewed_by is not None:
+            row["reviewed_by"] = reviewed_by
+            row["reviewed_at"] = now()
+        row["published_at"] = published_at
+        row["updated_at"] = now()
+        return dict(row)
+
+    def list_amigos_articles(
+        self,
+        *,
+        group_id: str | None,
+        group_ids: list[str] | None = None,
+        statuses: list[str] | None,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[dict[str, object]], int]:
+        wanted = set(statuses) if statuses is not None else None
+        allowed_groups = set(group_ids) if group_ids is not None else None
+        rows = [
+            dict(r)
+            for r in self._amigos_articles.values()
+            if (group_id is None or r["group_id"] == group_id)
+            and (allowed_groups is None or str(r["group_id"]) in allowed_groups)
+            and (wanted is None or str(r["status"]) in wanted)
+        ]
+        # Orden: fecha del evento DESC (más reciente primero), desempate por creación.
+        rows.sort(key=lambda r: (str(r.get("event_date") or ""), str(r.get("created_at") or "")), reverse=True)
+        return rows[offset : offset + limit], len(rows)
+
+    def list_amigos_articles_by_author(
+        self, author_user_id: str, *, limit: int, offset: int
+    ) -> tuple[list[dict[str, object]], int]:
+        rows = [
+            dict(r) for r in self._amigos_articles.values() if r["author_user_id"] == author_user_id
+        ]
+        rows.sort(key=lambda r: str(r.get("created_at") or ""), reverse=True)
+        return rows[offset : offset + limit], len(rows)
+
+    # --- «Los amigos»: recursos audiovisuales --------------------------------
+
+    def replace_amigos_media(self, article_id: str, items: list[dict[str, object]]) -> None:
+        self._amigos_media = [m for m in self._amigos_media if m["article_id"] != article_id]
+        for item in items:
+            self._amigos_media_seq += 1
+            self._amigos_media.append(
+                {
+                    "id": self._amigos_media_seq,
+                    "article_id": article_id,
+                    "kind": item.get("kind"),
+                    "url": item.get("url"),
+                    "provider": item.get("provider"),
+                    "video_id": item.get("video_id"),
+                    "caption": item.get("caption"),
+                    "credit": item.get("credit"),
+                    "position": int(str(item.get("position") or 0)),
+                    "created_at": now(),
+                }
+            )
+
+    def list_amigos_media(self, article_id: str) -> list[dict[str, object]]:
+        rows = [dict(m) for m in self._amigos_media if m["article_id"] == article_id]
+        rows.sort(key=lambda m: int(str(m.get("position") or 0)))
+        return rows
+
+    # --- «Los amigos»: auditoría ---------------------------------------------
+
+    def add_amigos_event(
+        self,
+        *,
+        group_id: str | None,
+        article_id: str | None,
+        event_type: str,
+        actor: str | None,
+        from_status: str | None = None,
+        to_status: str | None = None,
+        detail_json: str | None = None,
+    ) -> dict[str, object]:
+        self._amigos_evt_seq += 1
+        row: dict[str, object] = {
+            "id": self._amigos_evt_seq,
+            "group_id": group_id,
+            "article_id": article_id,
+            "event_type": event_type,
+            "actor": actor,
+            "from_status": from_status,
+            "to_status": to_status,
+            "detail_json": detail_json,
+            "created_at": now(),
+        }
+        self._amigos_events.append(row)
+        return row
+
+    def list_amigos_events(
+        self, *, group_id: str | None, article_id: str | None
+    ) -> list[dict[str, object]]:
+        rows = [
+            dict(e)
+            for e in self._amigos_events
+            if (group_id is None or e["group_id"] == group_id)
+            and (article_id is None or e["article_id"] == article_id)
+        ]
+        rows.sort(key=lambda e: int(str(e.get("id") or 0)))
+        return rows

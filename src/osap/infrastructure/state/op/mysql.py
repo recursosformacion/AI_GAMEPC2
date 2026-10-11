@@ -209,6 +209,196 @@ class _MysqlStore(_MemoryStore):
             ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
             """
         )
+        self._init_amigos()
+
+    def _init_amigos(self) -> None:
+        """Tablas de «Los amigos» (grupos, membresias, articulos, recursos, auditoria).
+
+        `CREATE TABLE IF NOT EXISTS` (idempotente, aditivo). La migracion dedicada
+        `script/migrate_amigos_schema.py` permite dry-run y verificacion previa.
+        """
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS amigos_groups (
+                id CHAR(32) PRIMARY KEY,
+                slug VARCHAR(96) NOT NULL,
+                name VARCHAR(255) NOT NULL,
+                kind VARCHAR(32) NOT NULL DEFAULT 'coral',
+                description TEXT,
+                image_url VARCHAR(1024),
+                website VARCHAR(1024),
+                email VARCHAR(254),
+                logo_url VARCHAR(1024),
+                status VARCHAR(16) NOT NULL DEFAULT 'active',
+                editorial_mode VARCHAR(16) NOT NULL DEFAULT 'moderated',
+                created_by CHAR(36),
+                created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+                    ON UPDATE CURRENT_TIMESTAMP(6),
+                UNIQUE KEY uq_amigos_group_slug (slug)
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+            """
+        )
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS amigos_members (
+                group_id CHAR(32) NOT NULL,
+                user_id CHAR(36) NOT NULL,
+                role VARCHAR(16) NOT NULL DEFAULT 'collaborator',
+                status VARCHAR(16) NOT NULL DEFAULT 'active',
+                granted_by CHAR(36),
+                created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+                    ON UPDATE CURRENT_TIMESTAMP(6),
+                PRIMARY KEY (group_id, user_id),
+                KEY idx_amigos_member_user (user_id),
+                CONSTRAINT fk_amigos_member_group FOREIGN KEY (group_id)
+                    REFERENCES amigos_groups (id) ON DELETE RESTRICT
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+            """
+        )
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS amigos_articles (
+                id CHAR(32) PRIMARY KEY,
+                group_id CHAR(32) NOT NULL,
+                title VARCHAR(512) NOT NULL,
+                slug VARCHAR(200) NOT NULL,
+                event_date DATE NOT NULL,
+                summary TEXT,
+                body LONGTEXT,
+                cover_url VARCHAR(1024),
+                author_user_id CHAR(36) NOT NULL,
+                status VARCHAR(16) NOT NULL DEFAULT 'draft',
+                published_at DATETIME(6),
+                reviewed_by CHAR(36),
+                reviewed_at DATETIME(6),
+                review_note VARCHAR(512),
+                created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+                    ON UPDATE CURRENT_TIMESTAMP(6),
+                UNIQUE KEY uq_amigos_article_slug (group_id, slug),
+                KEY idx_amigos_article_status (status),
+                KEY idx_amigos_article_author (author_user_id),
+                KEY idx_amigos_article_event (group_id, event_date),
+                CONSTRAINT fk_amigos_article_group FOREIGN KEY (group_id)
+                    REFERENCES amigos_groups (id) ON DELETE RESTRICT
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+            """
+        )
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS amigos_media (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                article_id CHAR(32) NOT NULL,
+                kind VARCHAR(16) NOT NULL,
+                url VARCHAR(1024) NOT NULL,
+                provider VARCHAR(32),
+                video_id VARCHAR(64),
+                caption VARCHAR(512),
+                credit VARCHAR(512),
+                position INT NOT NULL DEFAULT 0,
+                created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                PRIMARY KEY (id),
+                KEY idx_amigos_media_article (article_id, position),
+                CONSTRAINT fk_amigos_media_article FOREIGN KEY (article_id)
+                    REFERENCES amigos_articles (id) ON DELETE CASCADE
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+            """
+        )
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS amigos_events (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                group_id CHAR(32),
+                article_id CHAR(32),
+                event_type VARCHAR(48) NOT NULL,
+                actor CHAR(36),
+                from_status VARCHAR(16),
+                to_status VARCHAR(16),
+                detail_json LONGTEXT,
+                created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                PRIMARY KEY (id),
+                KEY idx_amigos_event_group (group_id, created_at),
+                KEY idx_amigos_event_article (article_id, created_at)
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+            """
+        )
+        # Especialización por tipo de grupo: ficha de coral (1:1) + facetas multivalor.
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS amigos_coral_details (
+                group_id CHAR(32) NOT NULL,
+                foundation_date DATE,
+                dissolution_date DATE,
+                locality VARCHAR(160),
+                region VARCHAR(160),
+                country_code CHAR(2),
+                venue VARCHAR(255),
+                formation_type VARCHAR(48),
+                member_count INT,
+                website VARCHAR(1024),
+                public_email VARCHAR(254),
+                director_person_id VARCHAR(64),
+                director_label VARCHAR(255),
+                linked_entity VARCHAR(255),
+                created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+                    ON UPDATE CURRENT_TIMESTAMP(6),
+                PRIMARY KEY (group_id),
+                CONSTRAINT fk_amigos_coral_group FOREIGN KEY (group_id)
+                    REFERENCES amigos_groups (id) ON DELETE CASCADE
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+            """
+        )
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS amigos_coral_attributes (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                group_id CHAR(32) NOT NULL,
+                facet VARCHAR(32) NOT NULL COMMENT 'repertoire|language',
+                value VARCHAR(120) NOT NULL,
+                position INT NOT NULL DEFAULT 0,
+                created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_amigos_coral_attr (group_id, facet, value),
+                KEY idx_amigos_coral_attr (group_id, facet, position),
+                CONSTRAINT fk_amigos_coral_attr_group FOREIGN KEY (group_id)
+                    REFERENCES amigos_coral_details (group_id) ON DELETE CASCADE
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+            """
+        )
+        # Enlaces comunes del grupo (web/social): relación normalizada por tipo.
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS amigos_group_links (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                group_id CHAR(32) NOT NULL,
+                kind VARCHAR(32) NOT NULL COMMENT 'facebook|instagram|other',
+                label VARCHAR(64),
+                url VARCHAR(1024) NOT NULL,
+                position INT NOT NULL DEFAULT 0,
+                created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                PRIMARY KEY (id),
+                KEY idx_amigos_group_link (group_id, position),
+                CONSTRAINT fk_amigos_group_link_group FOREIGN KEY (group_id)
+                    REFERENCES amigos_groups (id) ON DELETE CASCADE
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+            """
+        )
+        # Columnas comunes añadidas a grupos ya existentes (idempotente).
+        self._ensure_column("amigos_groups", "website", "VARCHAR(1024) NULL")
+        self._ensure_column("amigos_groups", "email", "VARCHAR(254) NULL")
+        self._ensure_column("amigos_groups", "logo_url", "VARCHAR(1024) NULL")
+
+    def _ensure_column(self, table: str, column: str, ddl: str) -> None:
+        rows = self._run(
+            "SELECT COUNT(*) AS n FROM information_schema.COLUMNS "
+            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND COLUMN_NAME = %s",
+            (table, column),
+        )
+        if rows and int(str(rows[0]["n"])) == 0:
+            self._run(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
 
     def _migrate(self) -> None:
         """Migraciones idempotentes sobre tablas ya existentes.
@@ -835,6 +1025,368 @@ class _MysqlStore(_MemoryStore):
             "INSERT INTO app_config (`key`, value, updated_at) VALUES (%s, %s, %s) "
             "ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = VALUES(updated_at)",
             (key, value, _now()),
+        )
+
+    # --- «Los amigos»: grupos (MySQL) ----------------------------------------
+
+    def add_amigos_group(
+        self,
+        *,
+        group_id: str,
+        slug: str,
+        name: str,
+        kind: str,
+        description: str | None,
+        image_url: str | None,
+        editorial_mode: str,
+        created_by: str | None,
+        website: str | None = None,
+        email: str | None = None,
+        logo_url: str | None = None,
+    ) -> dict[str, object]:
+        self._run(
+            "INSERT INTO amigos_groups (id, slug, name, kind, description, image_url, "
+            "website, email, logo_url, status, editorial_mode, created_by) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,'active',%s,%s)",
+            (group_id, slug, name, kind, description, image_url, website, email, logo_url,
+             editorial_mode, created_by),
+        )
+        row = self.get_amigos_group(group_id)
+        assert row is not None
+        return row
+
+    def get_amigos_group(self, group_id: str) -> dict[str, object] | None:
+        rows = self._run("SELECT * FROM amigos_groups WHERE id = %s", (group_id,))
+        return rows[0] if rows else None
+
+    def get_amigos_group_by_slug(self, slug: str) -> dict[str, object] | None:
+        rows = self._run("SELECT * FROM amigos_groups WHERE slug = %s", (slug,))
+        return rows[0] if rows else None
+
+    def list_amigos_groups(
+        self, *, active_only: bool = True, kind: str | None = None
+    ) -> list[dict[str, object]]:
+        clauses: list[str] = []
+        args: list[object] = []
+        if active_only:
+            clauses.append("status = 'active'")
+        if kind is not None:
+            clauses.append("kind = %s")
+            args.append(kind)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        return self._run(f"SELECT * FROM amigos_groups {where} ORDER BY name", tuple(args))
+
+    def update_amigos_group(self, group_id: str, **changes: object) -> dict[str, object] | None:
+        allowed = {"name", "description", "image_url", "editorial_mode", "status",
+                   "website", "email", "logo_url"}
+        fields = [k for k in changes if k in allowed]
+        if fields:
+            assignments = ", ".join(f"{k} = %s" for k in fields)
+            self._run(
+                f"UPDATE amigos_groups SET {assignments} WHERE id = %s",
+                (*[changes[k] for k in fields], group_id),
+            )
+        return self.get_amigos_group(group_id)
+
+    # --- «Los amigos»: enlaces del grupo (MySQL) -----------------------------
+
+    def replace_amigos_group_links(self, group_id: str, items: list[dict[str, object]]) -> None:
+        conn = self._conn()
+        try:
+            conn.autocommit(False)
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM amigos_group_links WHERE group_id = %s", (group_id,))
+                for item in items:
+                    cur.execute(
+                        "INSERT INTO amigos_group_links (group_id, kind, label, url, position) "
+                        "VALUES (%s,%s,%s,%s,%s)",
+                        (group_id, item.get("kind"), item.get("label"), item.get("url"),
+                         int(str(item.get("position") or 0))),
+                    )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def list_amigos_group_links(self, group_id: str) -> list[dict[str, object]]:
+        return self._run(
+            "SELECT * FROM amigos_group_links WHERE group_id = %s ORDER BY position, id",
+            (group_id,),
+        )
+
+    # --- «Los amigos»: membresias (MySQL) ------------------------------------
+
+    def set_amigos_member(
+        self, *, group_id: str, user_id: str, role: str, status: str, granted_by: str | None
+    ) -> dict[str, object]:
+        self._run(
+            "INSERT INTO amigos_members (group_id, user_id, role, status, granted_by) "
+            "VALUES (%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE role = VALUES(role), "
+            "status = VALUES(status), granted_by = VALUES(granted_by)",
+            (group_id, user_id, role, status, granted_by),
+        )
+        row = self.get_amigos_member(group_id, user_id)
+        assert row is not None
+        return row
+
+    def get_amigos_member(self, group_id: str, user_id: str) -> dict[str, object] | None:
+        rows = self._run(
+            "SELECT * FROM amigos_members WHERE group_id = %s AND user_id = %s", (group_id, user_id)
+        )
+        return rows[0] if rows else None
+
+    def list_amigos_members(self, group_id: str) -> list[dict[str, object]]:
+        return self._run(
+            "SELECT * FROM amigos_members WHERE group_id = %s ORDER BY role, user_id", (group_id,)
+        )
+
+    def list_amigos_memberships_by_user(self, user_id: str) -> list[dict[str, object]]:
+        return self._run("SELECT * FROM amigos_members WHERE user_id = %s", (user_id,))
+
+    # --- «Los amigos»: articulos (MySQL) -------------------------------------
+
+    def create_amigos_article(
+        self,
+        *,
+        article_id: str,
+        group_id: str,
+        title: str,
+        slug: str,
+        event_date: str,
+        summary: str | None,
+        body: str,
+        cover_url: str | None,
+        author_user_id: str,
+        status: str,
+    ) -> dict[str, object]:
+        self._run(
+            "INSERT INTO amigos_articles (id, group_id, title, slug, event_date, summary, "
+            "body, cover_url, author_user_id, status) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            (article_id, group_id, title, slug, event_date, summary, body, cover_url,
+             author_user_id, status),
+        )
+        row = self.get_amigos_article(article_id)
+        assert row is not None
+        return row
+
+    def get_amigos_article(self, article_id: str) -> dict[str, object] | None:
+        rows = self._run("SELECT * FROM amigos_articles WHERE id = %s", (article_id,))
+        return rows[0] if rows else None
+
+    def get_amigos_article_by_slug(self, group_id: str, slug: str) -> dict[str, object] | None:
+        rows = self._run(
+            "SELECT * FROM amigos_articles WHERE group_id = %s AND slug = %s", (group_id, slug)
+        )
+        return rows[0] if rows else None
+
+    def update_amigos_article(self, article_id: str, **changes: object) -> dict[str, object] | None:
+        allowed = {"title", "event_date", "summary", "body", "cover_url", "slug"}
+        fields = [k for k in changes if k in allowed]
+        if fields:
+            assignments = ", ".join(f"{k} = %s" for k in fields)
+            self._run(
+                f"UPDATE amigos_articles SET {assignments} WHERE id = %s",
+                (*[changes[k] for k in fields], article_id),
+            )
+        return self.get_amigos_article(article_id)
+
+    def set_amigos_article_status(
+        self,
+        *,
+        article_id: str,
+        status: str,
+        reviewed_by: str | None,
+        review_note: str | None,
+        published_at: str | None,
+    ) -> dict[str, object] | None:
+        self._run(
+            "UPDATE amigos_articles SET status = %s, review_note = %s, "
+            "reviewed_by = COALESCE(%s, reviewed_by), "
+            "reviewed_at = CASE WHEN %s IS NULL THEN reviewed_at ELSE NOW(6) END, "
+            "published_at = %s WHERE id = %s",
+            (status, review_note, reviewed_by, reviewed_by, published_at, article_id),
+        )
+        return self.get_amigos_article(article_id)
+
+    def list_amigos_articles(
+        self,
+        *,
+        group_id: str | None,
+        group_ids: list[str] | None = None,
+        statuses: list[str] | None,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[dict[str, object]], int]:
+        clauses: list[str] = []
+        args: list[object] = []
+        if group_id is not None:
+            clauses.append("group_id = %s")
+            args.append(group_id)
+        if group_ids is not None:
+            if not group_ids:
+                return [], 0
+            placeholders = ",".join(["%s"] * len(group_ids))
+            clauses.append(f"group_id IN ({placeholders})")
+            args.extend(group_ids)
+        if statuses is not None:
+            placeholders = ",".join(["%s"] * len(statuses))
+            clauses.append(f"status IN ({placeholders})")
+            args.extend(statuses)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        total_rows = self._run(f"SELECT COUNT(*) AS n FROM amigos_articles {where}", tuple(args))
+        total = int(str(total_rows[0]["n"])) if total_rows else 0
+        rows = self._run(
+            f"SELECT * FROM amigos_articles {where} "
+            "ORDER BY event_date DESC, created_at DESC LIMIT %s OFFSET %s",
+            (*args, limit, offset),
+        )
+        return rows, total
+
+    def list_amigos_articles_by_author(
+        self, author_user_id: str, *, limit: int, offset: int
+    ) -> tuple[list[dict[str, object]], int]:
+        total_rows = self._run(
+            "SELECT COUNT(*) AS n FROM amigos_articles WHERE author_user_id = %s",
+            (author_user_id,),
+        )
+        total = int(str(total_rows[0]["n"])) if total_rows else 0
+        rows = self._run(
+            "SELECT * FROM amigos_articles WHERE author_user_id = %s "
+            "ORDER BY created_at DESC LIMIT %s OFFSET %s",
+            (author_user_id, limit, offset),
+        )
+        return rows, total
+
+    # --- «Los amigos»: recursos (MySQL) --------------------------------------
+
+    def replace_amigos_media(self, article_id: str, items: list[dict[str, object]]) -> None:
+        # Borrado + inserciones en UNA transacción: si algo falla a mitad, no se pierden
+        # los recursos previos del artículo (rollback).
+        conn = self._conn()
+        try:
+            conn.autocommit(False)
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM amigos_media WHERE article_id = %s", (article_id,))
+                for item in items:
+                    cur.execute(
+                        "INSERT INTO amigos_media (article_id, kind, url, provider, video_id, "
+                        "caption, credit, position) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+                        (article_id, item.get("kind"), item.get("url"), item.get("provider"),
+                         item.get("video_id"), item.get("caption"), item.get("credit"),
+                         int(str(item.get("position") or 0))),
+                    )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def list_amigos_media(self, article_id: str) -> list[dict[str, object]]:
+        return self._run(
+            "SELECT * FROM amigos_media WHERE article_id = %s ORDER BY position, id", (article_id,)
+        )
+
+    # --- «Los amigos»: auditoria (MySQL) -------------------------------------
+
+    def add_amigos_event(
+        self,
+        *,
+        group_id: str | None,
+        article_id: str | None,
+        event_type: str,
+        actor: str | None,
+        from_status: str | None = None,
+        to_status: str | None = None,
+        detail_json: str | None = None,
+    ) -> dict[str, object]:
+        self._run(
+            "INSERT INTO amigos_events (group_id, article_id, event_type, actor, from_status, "
+            "to_status, detail_json) VALUES (%s,%s,%s,%s,%s,%s,%s)",
+            (group_id, article_id, event_type, actor, from_status, to_status, detail_json),
+        )
+        rows = self._run("SELECT * FROM amigos_events ORDER BY id DESC LIMIT 1")
+        assert rows
+        return rows[0]
+
+    def list_amigos_events(
+        self, *, group_id: str | None, article_id: str | None
+    ) -> list[dict[str, object]]:
+        clauses: list[str] = []
+        args: list[object] = []
+        if group_id is not None:
+            clauses.append("group_id = %s")
+            args.append(group_id)
+        if article_id is not None:
+            clauses.append("article_id = %s")
+            args.append(article_id)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        return self._run(f"SELECT * FROM amigos_events {where} ORDER BY id", tuple(args))
+
+
+    # --- «Los amigos»: ficha de coral (MySQL) --------------------------------
+
+    _CORAL_FIELDS = (
+        "foundation_date", "dissolution_date", "locality", "region", "country_code",
+        "venue", "formation_type", "member_count", "website", "public_email",
+        "director_person_id", "director_label", "linked_entity",
+    )
+
+    def _ensure_amigos_coral_row(self, group_id: str) -> None:
+        self._run(
+            "INSERT INTO amigos_coral_details (group_id) VALUES (%s) "
+            "ON DUPLICATE KEY UPDATE group_id = group_id",
+            (group_id,),
+        )
+
+    def get_amigos_coral_details(self, group_id: str) -> dict[str, object] | None:
+        rows = self._run("SELECT * FROM amigos_coral_details WHERE group_id = %s", (group_id,))
+        return rows[0] if rows else None
+
+    def upsert_amigos_coral_details(self, group_id: str, **fields: object) -> dict[str, object]:
+        self._ensure_amigos_coral_row(group_id)
+        cols = [k for k in fields if k in self._CORAL_FIELDS]
+        if cols:
+            assignments = ", ".join(f"{k} = %s" for k in cols)
+            self._run(
+                f"UPDATE amigos_coral_details SET {assignments} WHERE group_id = %s",
+                (*[fields[k] for k in cols], group_id),
+            )
+        row = self.get_amigos_coral_details(group_id)
+        assert row is not None
+        return row
+
+    def replace_amigos_coral_attributes(
+        self, group_id: str, items: list[dict[str, object]]
+    ) -> None:
+        self._ensure_amigos_coral_row(group_id)
+        conn = self._conn()
+        try:
+            conn.autocommit(False)
+            with conn.cursor() as cur:
+                cur.execute("DELETE FROM amigos_coral_attributes WHERE group_id = %s", (group_id,))
+                for item in items:
+                    cur.execute(
+                        "INSERT INTO amigos_coral_attributes (group_id, facet, value, position) "
+                        "VALUES (%s,%s,%s,%s) "
+                        "ON DUPLICATE KEY UPDATE position = VALUES(position)",
+                        (group_id, item.get("facet"), item.get("value"),
+                         int(str(item.get("position") or 0))),
+                    )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def list_amigos_coral_attributes(self, group_id: str) -> list[dict[str, object]]:
+        return self._run(
+            "SELECT * FROM amigos_coral_attributes WHERE group_id = %s "
+            "ORDER BY facet, position, id",
+            (group_id,),
         )
 
 

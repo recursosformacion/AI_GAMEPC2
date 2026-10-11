@@ -9,59 +9,144 @@
     {% block canonical %}<link rel="canonical" href="{{ canonical_url }}" />{% endblock %}
     <link rel="alternate" hreflang="es" href="{{ canonical_url }}" />
     <link rel="alternate" hreflang="x-default" href="{{ canonical_url }}" />
+    {% block social %}{% endblock %}
     {% block json_ld %}{% endblock %}
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Libre+Caslon+Display&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+    <meta name="theme-color" content="#5b2d90" />
     <script type="application/ld+json">
       {"@context":"https://schema.org","@graph":[{"@type":"Organization","@id":"https://app.openmusicrepository.com/#org","name":"OpenMusicRepository","alternateName":"OSAP","url":"https://app.openmusicrepository.com/","logo":"https://app.openmusicrepository.com/android-chrome-192x192.png"},{"@type":"WebSite","@id":"https://app.openmusicrepository.com/#website","name":"OpenMusicRepository","url":"https://app.openmusicrepository.com/","inLanguage":["es","ca","fr","en","de"],"publisher":{"@id":"https://app.openmusicrepository.com/#org"}}]}
     </script>
     <style>
-      :root { color-scheme: light dark; }
+      /* Tokens alineados con el Design System de la app (design-system/tokens.css). */
+      :root {
+        color-scheme: light dark;
+        --bg: #f3e2c7;
+        --surface: #ffffff;
+        --ink: #1c1c1e;
+        --muted: #6b7280;
+        --accent: #5b2d90;
+        --accent-soft: #f0eaf7;
+        --accent-2: #0f7b6c;
+        --gold: #b08d57;
+        --border: #e5e5ea;
+        --border-strong: #d6d3ce;
+        --danger: #b42318;
+        --success: #067647;
+        --radius: 0.75rem;
+        --shadow: 0 1px 2px rgb(28 28 30 / 0.04), 0 8px 24px rgb(28 28 30 / 0.06);
+        --font-ui: "DM Sans", system-ui, "Segoe UI", Roboto, sans-serif;
+        --font-display: "Libre Caslon Display", "Iowan Old Style", Palatino, Georgia, serif;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #16151a;
+          --surface: #1f1e24;
+          --ink: #e6e3ea;
+          --muted: #9a95a3;
+          --accent: #c3a8ef;
+          --accent-soft: #2a2740;
+          --accent-2: #6ee7d8;
+          --gold: #dcc089;
+          --border: #3a3742;
+          --border-strong: #4c4959;
+          --danger: #f87171;
+          --success: #34d399;
+          --shadow: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 24px rgb(0 0 0 / 0.35);
+        }
+      }
       * { box-sizing: border-box; }
       body {
         margin: 0;
-        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-        line-height: 1.5;
-        color: #1f2430;
-        background: #f7f7fb;
+        font-family: var(--font-ui);
+        line-height: 1.55;
+        color: var(--ink);
+        background: var(--bg);
       }
-      a { color: #6d28d9; }
-      header, footer { background: #ffffff; border-bottom: 1px solid #e6e6ef; }
-      footer { border-top: 1px solid #e6e6ef; border-bottom: none; margin-top: 2rem; }
-      .wrap { max-width: 860px; margin: 0 auto; padding: 1rem; }
-      .brand { font-weight: 700; color: #7c3aed; text-decoration: none; }
-      .brand small { display: block; font-weight: 400; color: #6b7280; }
-      nav.crumbs { font-size: 0.8rem; color: #6b7280; padding: 0.6rem 0; }
-      nav.crumbs a { text-decoration: none; }
-      h1 { margin: 0.2rem 0 0.4rem; font-size: 1.7rem; }
-      h2 { margin-top: 1.6rem; font-size: 1.1rem; }
-      .badges { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.2rem 0 0.8rem; }
-      .badge { background: #ede9fe; color: #5b21b6; border-radius: 999px; padding: 0.1rem 0.6rem; font-size: 0.78rem; }
-      .muted { color: #6b7280; }
-      ul.works { list-style: none; padding: 0; margin: 0; border: 1px solid #e6e6ef; border-radius: 8px; overflow: hidden; }
-      ul.works li { padding: 0.5rem 0.75rem; border-bottom: 1px solid #eef; background: #fff; }
-      ul.works li:last-child { border-bottom: none; }
-      ul.works a { text-decoration: none; font-weight: 500; }
-      ul.works .cat { color: #6b7280; font-size: 0.82rem; margin-left: 0.4rem; }
-      .reps { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-      .rep { border: 1px solid #e6e6ef; border-radius: 8px; padding: 0.4rem 0.7rem; background: #fff; font-size: 0.85rem; }
-      .rep a { text-decoration: none; font-weight: 600; }
-      .rep span { color: #6b7280; margin-left: 0.35rem; }
-      .cta { display: inline-block; margin-top: 1rem; border: 1px solid #c4b5fd; border-radius: 8px; padding: 0.45rem 0.8rem; text-decoration: none; font-size: 0.9rem; }
-      .card { background: #fff; border: 1px solid #e6e6ef; border-radius: 10px; padding: 1rem; }
+      a { color: var(--accent); }
+      h1, h2, h3 { font-family: var(--font-display); font-weight: 400; letter-spacing: 0; }
+      h1 { margin: 0.2rem 0 0.4rem; font-size: 1.8rem; }
+      h2 { margin-top: 1.6rem; font-size: 1.15rem; }
       p { margin: 0.5rem 0; }
+      header, footer { border-bottom: 1px solid var(--border-strong); }
+      footer { border-top: 1px solid var(--border-strong); border-bottom: none; margin-top: 2.5rem; }
+      .bar { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: 0.7rem 0; }
+      .wrap { max-width: 1000px; margin: 0 auto; padding: 0 1rem; }
+      .brand { font-weight: 700; color: var(--accent); text-decoration: none; }
+      .brand small { display: block; font-weight: 400; color: var(--muted); font-size: 0.72rem; }
+      .topnav { display: flex; align-items: center; gap: 0.9rem; font-size: 0.9rem; }
+      .topnav a { text-decoration: none; color: var(--ink); }
+      .topnav a:hover { color: var(--accent); }
+      .topnav a.btn-app {
+        background: var(--accent); color: #fff; border-radius: 999px; padding: 0.4rem 0.9rem;
+        font-weight: 500;
+      }
+      @media (prefers-color-scheme: dark) { .topnav a.btn-app { color: #1b1a20; } }
+      nav.crumbs { font-size: 0.8rem; color: var(--muted); padding: 0.7rem 0; }
+      nav.crumbs a { text-decoration: none; }
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        padding: 1rem;
+      }
+      .badges { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.3rem 0 0.6rem; }
+      .badge { background: var(--accent-soft); color: var(--accent); border-radius: 999px; padding: 0.12rem 0.6rem; font-size: 0.78rem; }
+      .muted { color: var(--muted); }
+      .btn {
+        display: inline-block; border: 1px solid var(--border-strong); border-radius: 0.5rem;
+        padding: 0.4rem 0.8rem; text-decoration: none; font-size: 0.9rem; color: var(--ink);
+      }
+      .btn:hover { border-color: var(--accent); color: var(--accent); }
+      ul.works { list-style: none; padding: 0; margin: 0; }
+      ul.works li {
+        padding: 0.7rem 0.8rem; border: 1px solid var(--border); border-radius: var(--radius);
+        background: var(--surface); margin-bottom: 0.5rem;
+      }
+      ul.works a { text-decoration: none; font-weight: 600; }
+      ul.works .cat { color: var(--muted); font-size: 0.82rem; margin-left: 0.5rem; }
+      .cta { display: inline-block; margin-top: 1rem; }
+      dl.detail { display: grid; grid-template-columns: 1fr 2fr; gap: 0.35rem 1rem; margin: 0; }
+      dl.detail dt { color: var(--muted); }
+      dd { margin: 0; overflow-wrap: anywhere; }
+      .coral-head { display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap; }
+      .coral-head .logo { max-height: 84px; border-radius: 0.5rem; }
+      .coral-quick { display: flex; flex-wrap: wrap; gap: 0.35rem 1rem; font-size: 0.9rem; color: var(--muted); }
+      .coral-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.6rem; }
+      details.more { margin-top: 0.6rem; }
+      details.more > summary { cursor: pointer; color: var(--accent); font-size: 0.9rem; }
+      .reps { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+      .rep { border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.4rem 0.7rem; background: var(--surface); font-size: 0.85rem; }
+      .rep a { text-decoration: none; font-weight: 600; }
+      .rep span { color: var(--muted); margin-left: 0.35rem; }
+      figure.media-video, figure.media-photo { margin: 1rem 0; }
+      figure figcaption { color: var(--muted); font-size: 0.85rem; }
+      @media (max-width: 640px) { dl.detail { grid-template-columns: 1fr; } }
     </style>
   </head>
   <body>
     <header>
-      <div class="wrap">
+      <div class="wrap bar">
         <a class="brand" href="/">OpenMusicRepository <small>OSAP — Open Score Acquisition Platform</small></a>
+        <nav class="topnav">
+          <a href="/composers">Compositores</a>
+          <a href="/amigos">Los amigos</a>
+          <a class="btn-app" href="/">Ir a la app</a>
+        </nav>
       </div>
     </header>
     <main class="wrap">
       {% block content %}{% endblock %}
     </main>
     <footer>
-      <div class="wrap muted">
-        OpenMusicRepository · <a href="/">Inicio</a> · <a href="/composers">Compositores</a> · <a href="/about">Acerca de</a>
+      <div class="wrap muted" style="padding:0.7rem 1rem">
+        OpenMusicRepository · <a href="/">Inicio</a> · <a href="/amigos">Los amigos</a> · <a href="/composers">Compositores</a> · <a href="/about">Acerca de</a>
       </div>
     </footer>
   </body>

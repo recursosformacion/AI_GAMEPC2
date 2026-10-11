@@ -13,6 +13,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 if TYPE_CHECKING:
     from src.osap.api.seo.views import PersonView, WorkView
+    from src.osap.api.seo.views_amigos import ArticleView, GroupView
 
 _TEMPLATES_DIR = Path(__file__).resolve().parent.parent / "templates"
 _ENV: Environment | None = None
@@ -40,6 +41,16 @@ def render_person(view: PersonView) -> str:
 
 def render_not_found() -> str:
     return _env().get_template("not_found.html").render()
+
+
+def render_amigos_group(view: GroupView) -> str:
+    return _env().get_template("amigos_group.html").render(view=view, canonical_url=view.canonical_url)
+
+
+def render_amigos_article(view: ArticleView) -> str:
+    return _env().get_template("amigos_article.html").render(
+        view=view, canonical_url=view.canonical_url
+    )
 
 
 def render_sitemap_index(sitemaps: list[str]) -> str:

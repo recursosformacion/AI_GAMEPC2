@@ -1,0 +1,69 @@
+{% extends "base.html" %}
+{% block title %}{{ view.title }} — {{ view.group_name }} | OpenMusicRepository{% endblock %}
+{% block description %}{{ view.description_meta }}{% endblock %}
+{% block social %}
+<meta property="og:type" content="article" />
+<meta property="og:title" content="{{ view.title }}" />
+<meta property="og:description" content="{{ view.description_meta }}" />
+<meta property="og:url" content="{{ view.canonical_url }}" />
+<meta property="og:site_name" content="OpenMusicRepository" />
+{% if view.og_image %}<meta property="og:image" content="{{ view.og_image }}" />{% endif %}
+<meta name="twitter:card" content="{% if view.og_image %}summary_large_image{% else %}summary{% endif %}" />
+<meta name="twitter:title" content="{{ view.title }}" />
+<meta name="twitter:description" content="{{ view.description_meta }}" />
+{% if view.og_image %}<meta name="twitter:image" content="{{ view.og_image }}" />{% endif %}
+{% endblock %}
+{% block json_ld %}<script type="application/ld+json">{{ view.json_ld | safe }}</script>{% endblock %}
+{% block content %}
+<nav class="crumbs" aria-label="breadcrumb">
+  <a href="/">Inicio</a> ›
+  <a href="/amigos">Los amigos</a> ›
+  <a href="/amigos/corales/{{ view.group_id }}/{{ view.group_slug }}">{{ view.group_name }}</a> ›
+  <span>{{ view.title }}</span>
+</nav>
+
+<article class="card">
+  <h1>{{ view.title }}</h1>
+  <div class="badges">
+    <span class="badge">{{ view.event_date }}</span>
+    <a class="badge" href="/amigos/corales/{{ view.group_id }}/{{ view.group_slug }}" style="text-decoration:none">{{ view.group_name }}</a>
+  </div>
+
+  {% if view.cover_url %}
+  <p><img src="{{ view.cover_url }}" alt="{{ view.title }}" style="max-width:100%;height:auto;border-radius:0.5rem" /></p>
+  {% endif %}
+
+  {% if view.summary %}<p class="muted"><em>{{ view.summary }}</em></p>{% endif %}
+
+  {% for paragraph in view.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}
+
+  {% if view.media %}
+  <h2>Vídeos y fotografías</h2>
+  <div class="media">
+    {% for item in view.media %}
+      {% if item.kind == 'video' and item.embed_url %}
+      <figure class="media-video">
+        <iframe src="{{ item.embed_url }}" title="{{ item.caption or view.title }}" width="560" height="315"
+                loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen
+                style="max-width:100%;border:0;border-radius:0.5rem"></iframe>
+        {% if item.caption %}<figcaption>{{ item.caption }}</figcaption>{% endif %}
+        {% if item.credit %}<figcaption class="muted">© {{ item.credit }}</figcaption>{% endif %}
+      </figure>
+      {% elif item.kind == 'photo' %}
+      <figure class="media-photo">
+        <img src="{{ item.url }}" alt="{{ item.caption or view.title }}" loading="lazy"
+             style="max-width:100%;height:auto;border-radius:0.5rem" />
+        {% if item.caption %}<figcaption>{{ item.caption }}</figcaption>{% endif %}
+        {% if item.credit %}<figcaption class="muted">© {{ item.credit }}</figcaption>{% endif %}
+      </figure>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+</article>
+
+<div class="coral-actions">
+  <a class="btn" href="/amigos/corales/{{ view.group_id }}/{{ view.group_slug }}">← {{ view.group_name }}</a>
+  <a class="btn" href="/amigos">Los amigos</a>
+</div>
+{% endblock %}
