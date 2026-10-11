@@ -54,7 +54,9 @@ def _slugify(text: str, *, max_len: int = 80) -> str:
 
 
 def _now() -> str:
-    return datetime.now(UTC).isoformat()
+    # Formato compatible con DATETIME de MySQL/MariaDB: sin 'T' ni offset de zona
+    # (un ISO con 'T'/'+00:00' provoca error 1292 en la columna published_at).
+    return datetime.now(UTC).replace(tzinfo=None).isoformat(sep=" ", timespec="microseconds")
 
 
 def youtube_id(url: str) -> str | None:

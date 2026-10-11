@@ -153,6 +153,22 @@ class TestEditorialFlow:
         assert approved["status"] == "published"
         assert service.get_public_article(str(article["id"])) is not None
 
+    def test_published_at_con_formato_datetime_compatible_mysql(self) -> None:
+        service, _store, group = _service()
+        gid = str(group["id"])
+        service.grant_member(
+            actor_user_id=_ADMIN, is_global_admin=True, group_id=gid, user_id="u1"
+        )
+        article = _raw(service, gid, action="publish")  # queda pending (moderada)
+        approved = service.approve_article(
+            actor_user_id=_ADMIN, is_global_admin=True, article_id=str(article["id"])
+        )
+        published_at = approved.get("published_at")
+        assert isinstance(published_at, str)
+        # MySQL DATETIME no admite 'T' ni offset; debe ser "AAAA-MM-DD HH:MM:SS[.ffffff]".
+        assert "T" not in published_at and "+" not in published_at
+        assert re.match(r"^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}", published_at) is not None
+
     def test_admin_publica_directo_en_moderada(self) -> None:
         service, _store, group = _service()
         gid = str(group["id"])
