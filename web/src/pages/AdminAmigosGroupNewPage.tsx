@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
+import type { AmigosGroupLink } from "../api/types";
 import { Card } from "../components/Card";
 import { useI18n } from "../i18n/I18n";
 
@@ -17,6 +18,7 @@ export function AdminAmigosGroupNewPage() {
   const [website, setWebsite] = useState("");
   const [email, setEmail] = useState("");
   const [logoUrl, setLogoUrl] = useState("");
+  const [groupLinks, setGroupLinks] = useState<AmigosGroupLink[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -37,6 +39,7 @@ export function AdminAmigosGroupNewPage() {
         website: website.trim() || null,
         email: email.trim() || null,
         logo_url: logoUrl.trim() || null,
+        links: groupLinks.filter((l) => l.url.trim() !== ""),
       });
       navigate(`/admin/amigos/${encodeURIComponent(group.id)}?mode=edit`);
     } catch {
@@ -132,6 +135,63 @@ export function AdminAmigosGroupNewPage() {
               className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
             />
           </label>
+          <div className="sm:col-span-2">
+            <p className="text-xs text-osap-muted">{t("friends.socialLinks")}</p>
+            {groupLinks.map((link, i) => (
+              <div key={i} className="mt-1 flex flex-wrap items-center gap-2">
+                <select
+                  value={link.kind}
+                  onChange={(e) =>
+                    setGroupLinks((rows) =>
+                      rows.map((r, j) => (j === i ? { ...r, kind: e.target.value } : r)),
+                    )
+                  }
+                  className="rounded-md border border-osap-border bg-osap-surface px-3 py-1.5 text-sm"
+                >
+                  <option value="facebook">{t("friends.social.facebook")}</option>
+                  <option value="instagram">{t("friends.social.instagram")}</option>
+                  <option value="other">{t("friends.social.other")}</option>
+                </select>
+                {link.kind === "other" ? (
+                  <input
+                    value={link.label ?? ""}
+                    onChange={(e) =>
+                      setGroupLinks((rows) =>
+                        rows.map((r, j) => (j === i ? { ...r, label: e.target.value } : r)),
+                      )
+                    }
+                    className="w-32 rounded-md border border-osap-border bg-osap-surface px-3 py-1.5 text-sm"
+                  />
+                ) : null}
+                <input
+                  value={link.url}
+                  onChange={(e) =>
+                    setGroupLinks((rows) =>
+                      rows.map((r, j) => (j === i ? { ...r, url: e.target.value } : r)),
+                    )
+                  }
+                  placeholder={t("friends.linkUrl")}
+                  className="min-w-48 flex-1 rounded-md border border-osap-border bg-osap-surface px-3 py-1.5 text-sm"
+                />
+                <button
+                  type="button"
+                  onClick={() => setGroupLinks((rows) => rows.filter((_, j) => j !== i))}
+                  className="rounded-md border border-osap-border px-3 py-1.5 text-sm text-osap-danger"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+            <button
+              type="button"
+              onClick={() =>
+                setGroupLinks((rows) => [...rows, { kind: "facebook", url: "", label: "" }])
+              }
+              className="mt-1 text-sm text-osap-accent hover:underline"
+            >
+              + {t("friends.addLink")}
+            </button>
+          </div>
         </div>
         <div className="mt-3 flex gap-2">
           <button
