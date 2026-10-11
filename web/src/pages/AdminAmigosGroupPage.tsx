@@ -259,7 +259,7 @@ export function AdminAmigosGroupPage() {
     });
 
   const withdrawPost = (article: AmigosArticle) => {
-    if (!window.confirm(t("friends.confirmBaja"))) return;
+    if (!window.confirm(t("friends.confirmWithdraw"))) return;
     void guard(async () => {
       await apiClient.withdrawAmigosArticle(article.id);
       await load();

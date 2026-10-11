@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { AmigosMediaInput, AmigosMyGroup } from "../api/types";
@@ -45,6 +45,7 @@ export function AmigosEditorPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const submittingRef = useRef(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
@@ -97,6 +98,9 @@ export function AmigosEditorPage() {
       }));
 
   const run = async (fn: () => Promise<void>) => {
+    // Evita dobles envíos (dos POST simultáneos crearían artículos duplicados).
+    if (submittingRef.current) return;
+    submittingRef.current = true;
     setBusy(true);
     setError(null);
     setMessage(null);
@@ -105,6 +109,7 @@ export function AmigosEditorPage() {
     } catch {
       setError(t("friends.errorSaving"));
     } finally {
+      submittingRef.current = false;
       setBusy(false);
     }
   };

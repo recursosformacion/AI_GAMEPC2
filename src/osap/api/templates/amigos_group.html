@@ -72,12 +72,14 @@
 
 <h2>Publicaciones</h2>
 {% if view.articles %}
-<ul class="works">
+<ul class="works works-articles">
   {% for article in view.articles %}
   <li>
-    <a href="/amigos/articulo/{{ article.article_id }}/{{ article.slug }}">{{ article.title }}</a>
-    <span class="cat">{{ article.event_date }}</span>
-    {% if article.summary %}<div class="muted">{{ article.summary }}</div>{% endif %}
+    <a class="work-link" href="/amigos/articulo/{{ article.article_id }}/{{ article.slug }}">
+      <span class="work-title">{{ article.title }}</span>
+      <span class="cat">{{ article.event_date }}</span>
+      {% if article.summary %}<div class="muted">{{ article.summary }}</div>{% endif %}
+    </a>
   </li>
   {% endfor %}
 </ul>
