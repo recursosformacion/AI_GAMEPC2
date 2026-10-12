@@ -52,6 +52,8 @@ class MemoryStore:
         # Agenda: actuaciones/eventos y sus grupos participantes.
         self._amigos_actuaciones: dict[str, dict[str, object]] = {}
         self._amigos_actuacion_groups: list[dict[str, object]] = []
+        # Autorizaciones editoriales (blog general / agenda): (scope, user_id).
+        self._amigos_authorizations: dict[tuple[str, str], dict[str, object]] = {}
 
     def list_suggestions(self) -> list[dict[str, object]]:
         return list(self._suggestions)
@@ -577,6 +579,35 @@ class MemoryStore:
         row = self._amigos_uploads.get(int(file_id))
         return dict(row) if row is not None else None
 
+    # --- «Los amigos»: autorizaciones editoriales -----------------------------
+
+    def set_amigos_authorization(
+        self, *, user_id: str, scope: str, direct_publish: bool, granted_by: str | None
+    ) -> dict[str, object]:
+        ts = now()
+        row: dict[str, object] = {
+            "user_id": user_id,
+            "scope": scope,
+            "direct_publish": bool(direct_publish),
+            "granted_by": granted_by,
+            "created_at": ts,
+            "updated_at": ts,
+        }
+        self._amigos_authorizations[(scope, user_id)] = row
+        return dict(row)
+
+    def get_amigos_authorization(self, scope: str, user_id: str) -> dict[str, object] | None:
+        row = self._amigos_authorizations.get((scope, user_id))
+        return dict(row) if row is not None else None
+
+    def list_amigos_authorizations(self, scope: str) -> list[dict[str, object]]:
+        rows = [dict(r) for r in self._amigos_authorizations.values() if r["scope"] == scope]
+        rows.sort(key=lambda r: str(r.get("user_id")))
+        return rows
+
+    def delete_amigos_authorization(self, scope: str, user_id: str) -> None:
+        self._amigos_authorizations.pop((scope, user_id), None)
+
     # --- «Los amigos»: agenda de actuaciones/eventos -------------------------
 
     def create_amigos_actuacion(
@@ -813,11 +844,13 @@ class MemoryStore:
         cover_url: str | None,
         author_user_id: str,
         status: str,
+        scope: str = "group",
     ) -> dict[str, object]:
         ts = now()
         row: dict[str, object] = {
             "id": article_id,
             "group_id": group_id,
+            "scope": scope,
             "title": title,
             "slug": slug,
             "event_date": event_date,
@@ -843,6 +876,12 @@ class MemoryStore:
     def get_amigos_article_by_slug(self, group_id: str, slug: str) -> dict[str, object] | None:
         for row in self._amigos_articles.values():
             if row["group_id"] == group_id and row["slug"] == slug:
+                return dict(row)
+        return None
+
+    def get_amigos_article_by_scope_slug(self, scope: str, slug: str) -> dict[str, object] | None:
+        for row in self._amigos_articles.values():
+            if str(row.get("scope") or "group") == scope and row["slug"] == slug:
                 return dict(row)
         return None
 
@@ -884,6 +923,7 @@ class MemoryStore:
         group_id: str | None,
         group_ids: list[str] | None = None,
         statuses: list[str] | None,
+        scope: str | None = None,
         limit: int,
         offset: int,
     ) -> tuple[list[dict[str, object]], int]:
@@ -895,6 +935,7 @@ class MemoryStore:
             if (group_id is None or r["group_id"] == group_id)
             and (allowed_groups is None or str(r["group_id"]) in allowed_groups)
             and (wanted is None or str(r["status"]) in wanted)
+            and (scope is None or str(r.get("scope") or "group") == scope)
         ]
         # Orden: fecha del evento DESC (más reciente primero), desempate por creación.
         rows.sort(key=lambda r: (str(r.get("event_date") or ""), str(r.get("created_at") or "")), reverse=True)

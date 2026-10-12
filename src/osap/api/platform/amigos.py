@@ -17,6 +17,9 @@ from src.osap.api.contracts import (
     AmigosArticleListRead,
     AmigosArticleRead,
     AmigosArticleUpdateRequest,
+    AmigosAuthorizationListRead,
+    AmigosAuthorizationRead,
+    AmigosAuthorizationRequest,
     AmigosCoralDetailsRead,
     AmigosCoralDetailsUpdate,
     AmigosEventGroup,
@@ -513,6 +516,108 @@ class AmigosMixin(PlatformApiCore):
             created_at=str(row.get("created_at") or ""),
             updated_at=str(row.get("updated_at") or ""),
             groups=groups,
+        )
+
+    # --- blog general «Artículos» -------------------------------------------
+
+    def amigos_blog_articles(
+        self, *, public_only: bool = True, limit: int = 100, offset: int = 0
+    ) -> AmigosArticleListRead:
+        data = self._amigos_service().list_blog_articles(
+            public_only=public_only, limit=limit, offset=offset
+        )
+        items = [self._amigos_article_read(r) for r in self._rows(data)]
+        return AmigosArticleListRead(items=items, total=self._total(data))
+
+    def amigos_blog_article(
+        self, article_id: str, *, token: str | None = None
+    ) -> AmigosArticleRead | None:
+        row = self._amigos_service().get_public_general_article(article_id)
+        if row is not None:
+            return self._amigos_article_read(row)
+        if token:
+            try:
+                actor = self._amigos_user(token)
+                is_admin = self._amigos_is_global_admin(token)
+            except UnauthenticatedError:
+                return None
+            row = self._amigos_service().get_article_for_reader(
+                article_id=article_id, actor_user_id=actor, is_global_admin=is_admin
+            )
+            return self._amigos_article_read(row) if row is not None else None
+        return None
+
+    def amigos_create_blog_article(
+        self, token: str | None, payload: AmigosArticleCreateRequest
+    ) -> AmigosArticleRead:
+        actor = self._amigos_user(token)
+        row = self._amigos_service().create_general_article(
+            actor_user_id=actor,
+            is_global_admin=self._amigos_is_global_admin(token),
+            title=payload.title,
+            event_date=payload.event_date,
+            body=payload.body,
+            summary=payload.summary,
+            cover_url=payload.cover_url,
+            media=[m.model_dump() for m in payload.media],
+            action=payload.action,
+        )
+        return self._amigos_article_read(row)
+
+    def amigos_approve_blog_article(self, token: str | None, article_id: str) -> AmigosArticleRead:
+        actor = self._amigos_user(token)
+        row = self._amigos_service().approve_general_article(
+            actor_user_id=actor, is_global_admin=self._amigos_is_global_admin(token),
+            article_id=article_id,
+        )
+        return self._amigos_article_read(row)
+
+    # --- autorizaciones editoriales (blog/events) ---------------------------
+
+    def amigos_grant_authorization(
+        self, token: str | None, payload: AmigosAuthorizationRequest
+    ) -> AmigosAuthorizationRead:
+        actor = self._amigos_user(token)
+        row = self._amigos_service().grant_authorization(
+            actor_user_id=actor,
+            is_global_admin=self._amigos_is_global_admin(token),
+            user_id=payload.user_id,
+            scope=payload.scope,
+            direct_publish=payload.direct_publish,
+        )
+        return self._amigos_authorization_read(row)
+
+    def amigos_revoke_authorization(
+        self, token: str | None, user_id: str, scope: str
+    ) -> dict[str, object]:
+        actor = self._amigos_user(token)
+        self._amigos_service().revoke_authorization(
+            actor_user_id=actor,
+            is_global_admin=self._amigos_is_global_admin(token),
+            user_id=user_id,
+            scope=scope,
+        )
+        return {"user_id": user_id, "scope": scope, "revoked": True}
+
+    def amigos_list_authorizations(
+        self, token: str | None, scope: str
+    ) -> AmigosAuthorizationListRead:
+        actor = self._amigos_user(token)
+        rows = self._amigos_service().list_authorizations(
+            actor_user_id=actor,
+            is_global_admin=self._amigos_is_global_admin(token),
+            scope=scope,
+        )
+        return AmigosAuthorizationListRead(
+            items=[self._amigos_authorization_read(r) for r in rows], total=len(rows)
+        )
+
+    def _amigos_authorization_read(self, row: dict[str, object]) -> AmigosAuthorizationRead:
+        return AmigosAuthorizationRead(
+            user_id=str(row.get("user_id") or ""),
+            scope=str(row.get("scope") or ""),
+            direct_publish=bool(row.get("direct_publish")),
+            created_at=str(row.get("created_at") or ""),
         )
 
     # --- ficha de coral (especialización por tipo) ---------------------------

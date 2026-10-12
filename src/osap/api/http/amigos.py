@@ -18,6 +18,7 @@ from src.osap.api.contracts import (
     AmigosActuacionStatusRequest,
     AmigosArticleCreateRequest,
     AmigosArticleUpdateRequest,
+    AmigosAuthorizationRequest,
     AmigosCoralDetailsUpdate,
     AmigosGroupCreateRequest,
     AmigosGroupUpdateRequest,
@@ -152,6 +153,41 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
             data = ctx.api.amigos_get_event(authorization, event_id, public_only=True)
             if data is None:
                 raise AmigosError(404, "EVENT_NOT_FOUND", "Evento no encontrado")
+            return data
+
+        return _call(ctx, response, run)
+
+    @router.get(
+        "/api/v1/amigos/blog",
+        tags=["Friends"],
+        summary="Blog general: artículos publicados (público)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={200: _shared._resp("Articles", _shared._example({"items": [], "total": 0}))},
+    )
+    def list_blog(
+        response: Response,
+        limit: int = Query(100, ge=1, le=500),
+        offset: int = Query(0, ge=0),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(
+            ctx, response,
+            lambda: ctx.api.amigos_blog_articles(public_only=True, limit=limit, offset=offset),
+        )
+
+    @router.get(
+        "/api/v1/amigos/blog/{article_id}",
+        tags=["Friends"],
+        summary="Blog general: artículo (público o autor/admin)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses=standard_errors(404),
+    )
+    def get_blog_article(
+        article_id: str, response: Response, authorization: str | None = Header(default=None)
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        def run() -> object:
+            data = ctx.api.amigos_blog_article(article_id, token=authorization)
+            if data is None:
+                raise AmigosError(404, "ARTICLE_NOT_FOUND", "Artículo no encontrado")
             return data
 
         return _call(ctx, response, run)
@@ -431,6 +467,86 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         return _call(
             ctx, response,
             lambda: ctx.api.amigos_set_event_status(authorization, event_id, payload.editorial_status),
+        )
+
+    @router.post(
+        "/api/v1/admin/amigos/blog",
+        tags=["Friends"],
+        summary="Blog general: crear artículo (autor autorizado o admin)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, **_shared._standard_errors(403, 422)},
+    )
+    def create_blog_article(
+        payload: AmigosArticleCreateRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(
+            ctx, response, lambda: ctx.api.amigos_create_blog_article(authorization, payload)
+        )
+
+    @router.post(
+        "/api/v1/admin/amigos/blog/{article_id}/approve",
+        tags=["Friends"],
+        summary="Blog general: aprobar y publicar",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, **_shared._standard_errors(403, 404, 409)},
+    )
+    def approve_blog_article(
+        article_id: str, response: Response, authorization: str | None = Header(default=None)
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(
+            ctx, response, lambda: ctx.api.amigos_approve_blog_article(authorization, article_id)
+        )
+
+    @router.get(
+        "/api/v1/admin/amigos/authorizations",
+        tags=["Friends"],
+        summary="Autorizaciones editoriales (scope blog|events)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, **_shared._standard_errors(403, 422)},
+    )
+    def list_authorizations(
+        response: Response,
+        scope: str = Query(...),
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(
+            ctx, response, lambda: ctx.api.amigos_list_authorizations(authorization, scope)
+        )
+
+    @router.post(
+        "/api/v1/admin/amigos/authorizations",
+        tags=["Friends"],
+        summary="Autorizar a un usuario (blog|events)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, **_shared._standard_errors(403, 422)},
+    )
+    def grant_authorization(
+        payload: AmigosAuthorizationRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(
+            ctx, response, lambda: ctx.api.amigos_grant_authorization(authorization, payload)
+        )
+
+    @router.delete(
+        "/api/v1/admin/amigos/authorizations/{user_id}",
+        tags=["Friends"],
+        summary="Revocar autorización editorial",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, **_shared._standard_errors(403, 422)},
+    )
+    def revoke_authorization(
+        user_id: str,
+        response: Response,
+        scope: str = Query(...),
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(
+            ctx, response,
+            lambda: ctx.api.amigos_revoke_authorization(authorization, user_id, scope),
         )
 
     # --- membresías ----------------------------------------------------------

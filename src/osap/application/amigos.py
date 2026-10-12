@@ -23,6 +23,7 @@ from typing import Any
 
 from src.osap.domain.amigos import (
     ARTICLE_STATUSES,
+    AUTHORIZATION_SCOPES,
     EDITORIAL_MODES,
     EVENT_GROUP_ROLES,
     EVENT_KINDS,
@@ -514,10 +515,10 @@ class AmigosService:
         self, *, actor_user_id: str, is_global_admin: bool, data: dict[str, Any],
         action: str = "draft",
     ) -> dict[str, object]:
-        # Gestión de eventos reservada (de momento) a la administración global: la política
-        # fina (por grupo, por autor) queda como decisión pendiente.
-        if not is_global_admin:
-            raise AmigosError(403, "FORBIDDEN", "La gestión de eventos requiere autorización")
+        # Escritura reservada a autores autorizados (scope 'events') o admin global.
+        direct = self._require_writer(
+            actor_user_id, is_global_admin, "events", "No estás autorizado para gestionar eventos"
+        )
         if action not in ("draft", "publish"):
             raise AmigosError(422, "INVALID_ACTION", "Acción inválida")
         fields = self._actuacion_fields(data)
@@ -526,7 +527,7 @@ class AmigosService:
         if "starts_on" not in fields:
             raise AmigosError(422, "INVALID_START", "La fecha de inicio es obligatoria")
         slug = self._unique_actuacion_slug(str(fields["title"]))
-        editorial = "published" if action == "publish" else "draft"
+        editorial = "draft" if action == "draft" else ("published" if direct else "pending")
         row = dict(
             self._store.create_amigos_actuacion(
                 actuacion_id=secrets.token_hex(8),
@@ -551,8 +552,9 @@ class AmigosService:
         self, *, actor_user_id: str, is_global_admin: bool, actuacion_id: str,
         data: dict[str, Any],
     ) -> dict[str, object]:
-        if not is_global_admin:
-            raise AmigosError(403, "FORBIDDEN", "La gestión de eventos requiere autorización")
+        self._require_writer(
+            actor_user_id, is_global_admin, "events", "No estás autorizado para gestionar eventos"
+        )
         if self._store.get_amigos_actuacion(actuacion_id) is None:
             raise AmigosError(404, "EVENT_NOT_FOUND", "Evento no encontrado")
         fields = self._actuacion_fields(data)
@@ -566,10 +568,18 @@ class AmigosService:
         self, *, actor_user_id: str, is_global_admin: bool, actuacion_id: str,
         editorial_status: str,
     ) -> dict[str, object]:
-        if not is_global_admin:
-            raise AmigosError(403, "FORBIDDEN", "La gestión de eventos requiere autorización")
         if editorial_status not in ARTICLE_STATUSES:
             raise AmigosError(422, "INVALID_STATUS", "Estado editorial no válido")
+        if editorial_status == "published":
+            if not is_global_admin:
+                raise AmigosError(
+                    403, "FORBIDDEN", "La publicación de eventos es de administración global"
+                )
+        else:
+            self._require_writer(
+                actor_user_id, is_global_admin, "events",
+                "No estás autorizado para gestionar eventos",
+            )
         if self._store.get_amigos_actuacion(actuacion_id) is None:
             raise AmigosError(404, "EVENT_NOT_FOUND", "Evento no encontrado")
         self._store.set_amigos_actuacion_status(
@@ -620,6 +630,158 @@ class AmigosService:
         candidate = base
         suffix = 2
         while self._store.get_amigos_actuacion_by_slug(candidate) is not None:
+            candidate = f"{base}-{suffix}"
+            suffix += 1
+        return candidate
+
+    # --- autorizaciones editoriales (blog/agenda) ---------------------------
+
+    def grant_authorization(
+        self, *, actor_user_id: str, is_global_admin: bool, user_id: str, scope: str,
+        direct_publish: bool = False,
+    ) -> dict[str, object]:
+        if not is_global_admin:
+            raise AmigosError(403, "FORBIDDEN", "Solo la administración global autoriza")
+        if scope not in AUTHORIZATION_SCOPES:
+            raise AmigosError(422, "INVALID_SCOPE", "Ámbito no válido")
+        target = (user_id or "").strip()
+        if not target:
+            raise AmigosError(422, "USER_REQUIRED", "Falta el usuario")
+        return dict(
+            self._store.set_amigos_authorization(
+                user_id=target, scope=scope, direct_publish=bool(direct_publish),
+                granted_by=actor_user_id,
+            )
+        )
+
+    def revoke_authorization(
+        self, *, actor_user_id: str, is_global_admin: bool, user_id: str, scope: str
+    ) -> None:
+        if not is_global_admin:
+            raise AmigosError(403, "FORBIDDEN", "Solo la administración global autoriza")
+        if scope not in AUTHORIZATION_SCOPES:
+            raise AmigosError(422, "INVALID_SCOPE", "Ámbito no válido")
+        self._store.delete_amigos_authorization(scope, user_id)
+
+    def list_authorizations(
+        self, *, actor_user_id: str, is_global_admin: bool, scope: str
+    ) -> list[dict[str, object]]:
+        if not is_global_admin:
+            raise AmigosError(403, "FORBIDDEN", "Solo la administración global")
+        if scope not in AUTHORIZATION_SCOPES:
+            raise AmigosError(422, "INVALID_SCOPE", "Ámbito no válido")
+        return list(self._store.list_amigos_authorizations(scope))
+
+    def _authorization(self, user_id: str, scope: str) -> tuple[bool, bool]:
+        row = self._store.get_amigos_authorization(scope, user_id)
+        if row is None:
+            return (False, False)
+        return (True, bool(row.get("direct_publish")))
+
+    def _require_writer(
+        self, actor_user_id: str, is_global_admin: bool, scope: str, message: str
+    ) -> bool:
+        """Devuelve si el actor puede publicar directamente; 403 si no está autorizado."""
+        if is_global_admin:
+            return True
+        authorized, direct = self._authorization(actor_user_id, scope)
+        if not authorized:
+            raise AmigosError(403, "FORBIDDEN", message)
+        return direct
+
+    def authorize_blog(self, *, actor_user_id: str, is_global_admin: bool) -> bool:
+        return self._require_writer(
+            actor_user_id, is_global_admin, "blog", "No estás autorizado para escribir en el blog"
+        )
+
+    # --- blog general «Artículos» -------------------------------------------
+
+    def create_general_article(
+        self,
+        *,
+        actor_user_id: str,
+        is_global_admin: bool,
+        title: str,
+        event_date: str,
+        body: str,
+        summary: str | None = None,
+        cover_url: str | None = None,
+        media: list[dict[str, Any]] | None = None,
+        action: str = "draft",
+    ) -> dict[str, object]:
+        direct = self._require_writer(
+            actor_user_id, is_global_admin, "blog", "No estás autorizado para escribir en el blog"
+        )
+        clean_title = (title or "").strip()
+        if not clean_title:
+            raise AmigosError(422, "TITLE_REQUIRED", "El título es obligatorio")
+        clean_date = _validate_event_date(event_date)
+        if not (body or "").strip():
+            raise AmigosError(422, "BODY_REQUIRED", "El texto del artículo es obligatorio")
+        if action not in ("draft", "publish"):
+            raise AmigosError(422, "INVALID_ACTION", "Acción inválida")
+        status = "draft" if action == "draft" else ("published" if direct else "pending")
+        slug = self._unique_blog_slug(clean_title)
+        article = dict(
+            self._store.create_amigos_article(
+                article_id=secrets.token_hex(8),
+                group_id=None,
+                scope="general",
+                title=clean_title,
+                slug=slug,
+                event_date=clean_date,
+                summary=(summary or "").strip() or None,
+                body=body,
+                cover_url=_clean_url(cover_url),
+                author_user_id=actor_user_id,
+                status=status,
+            )
+        )
+        self._store.replace_amigos_media(str(article["id"]), _clean_media(media or []))
+        if status == "published":
+            self._store.set_amigos_article_status(
+                article_id=str(article["id"]), status="published", reviewed_by=actor_user_id,
+                review_note=None, published_at=_now(),
+            )
+        return self.get_article_admin(str(article["id"]), actor_user_id, is_global_admin) or {}
+
+    def list_blog_articles(
+        self, *, public_only: bool = True, limit: int = 100, offset: int = 0
+    ) -> dict[str, object]:
+        rows, total = self._store.list_amigos_articles(
+            group_id=None,
+            statuses=["published"] if public_only else None,
+            scope="general",
+            limit=limit,
+            offset=offset,
+        )
+        return {"items": [self._article_read(r) for r in rows], "total": total}
+
+    def get_public_general_article(self, article_id: str) -> dict[str, object] | None:
+        row = self._store.get_amigos_article(article_id)
+        if (
+            row is None
+            or str(row.get("scope") or "group") != "general"
+            or str(row["status"]) != "published"
+        ):
+            return None
+        return self._article_read(row, include_media=True)
+
+    def approve_general_article(
+        self, *, actor_user_id: str, is_global_admin: bool, article_id: str
+    ) -> dict[str, object]:
+        if not is_global_admin:
+            raise AmigosError(403, "FORBIDDEN", "La aprobación del blog es de administración global")
+        row = self._require_article(article_id)
+        if str(row["status"]) != "pending":
+            raise AmigosError(409, "INVALID_TRANSITION", "El artículo no está pendiente")
+        return self._transition(row, "published", actor_user_id, is_global_admin, event="blog_approved")
+
+    def _unique_blog_slug(self, title: str) -> str:
+        base = _slugify(title, max_len=120) or "articulo"
+        candidate = base
+        suffix = 2
+        while self._store.get_amigos_article_by_scope_slug("general", candidate) is not None:
             candidate = f"{base}-{suffix}"
             suffix += 1
         return candidate

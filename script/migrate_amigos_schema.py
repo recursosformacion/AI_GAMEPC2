@@ -38,6 +38,7 @@ _TABLES: list[str] = [
     "amigos_uploads",
     "amigos_actuaciones",
     "amigos_actuacion_groups",
+    "amigos_authorizations",
 ]
 
 # Columnas comunes añadidas a tablas ya existentes (idempotente, comprobando
@@ -46,6 +47,12 @@ _COLUMNS: list[tuple[str, str, str]] = [
     ("amigos_groups", "website", "VARCHAR(1024) NULL"),
     ("amigos_groups", "email", "VARCHAR(254) NULL"),
     ("amigos_groups", "logo_url", "VARCHAR(1024) NULL"),
+    ("amigos_articles", "scope", "VARCHAR(16) NOT NULL DEFAULT 'group'"),
+]
+
+# ALTER idempotentes que se aplican siempre (p. ej. permitir artículos sin grupo = blog).
+_ALTERS: list[str] = [
+    "ALTER TABLE amigos_articles MODIFY group_id CHAR(32) NULL",
 ]
 
 _DDL: list[str] = [
@@ -90,7 +97,8 @@ _DDL: list[str] = [
     """
     CREATE TABLE IF NOT EXISTS amigos_articles (
       id             CHAR(32)      NOT NULL,
-      group_id       CHAR(32)      NOT NULL,
+      group_id       CHAR(32)      NULL,
+      scope          VARCHAR(16)   NOT NULL DEFAULT 'group',
       title          VARCHAR(512)  NOT NULL,
       slug           VARCHAR(200)  NOT NULL,
       event_date     DATE          NOT NULL COMMENT 'fecha del evento (independiente de published_at)',
@@ -280,6 +288,20 @@ _DDL: list[str] = [
         REFERENCES amigos_groups (id) ON DELETE RESTRICT
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """,
+    """
+    CREATE TABLE IF NOT EXISTS amigos_authorizations (
+      id             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+      user_id        CHAR(36)        NOT NULL,
+      scope          VARCHAR(32)     NOT NULL COMMENT 'blog|events',
+      direct_publish TINYINT(1)      NOT NULL DEFAULT 0,
+      granted_by     CHAR(36),
+      created_at     DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+      updated_at     DATETIME(6)     NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+        ON UPDATE CURRENT_TIMESTAMP(6),
+      PRIMARY KEY (id),
+      UNIQUE KEY uq_amigos_auth (scope, user_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    """,
 ]
 
 _FK_TABLES = ("amigos_members", "amigos_articles", "amigos_media", "amigos_coral_details",
@@ -342,6 +364,9 @@ def main() -> int:
         print("[dry-run] Columnas a asegurar (ALTER ADD COLUMN si faltan):")
         for table, column, ddl in _COLUMNS:
             print(f"          - {table}.{column} {ddl}")
+        print("[dry-run] ALTER a aplicar (idempotente):")
+        for stmt in _ALTERS:
+            print(f"          - {stmt}")
         print("[dry-run] No se ha modificado la base de datos.")
         return 0
 
@@ -362,6 +387,9 @@ def main() -> int:
                 if cur.fetchone()[0] == 0:
                     cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
                     print(f"columna añadida: {table}.{column}")
+        for stmt in _ALTERS:
+            with conn.cursor() as cur:
+                cur.execute(stmt)
         after = _existing_tables(conn)
         missing = [t for t in _TABLES if t not in after]
         fks = _fk_counts(conn)

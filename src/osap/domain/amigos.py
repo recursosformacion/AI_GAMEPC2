@@ -76,3 +76,13 @@ EVENT_MODALITIES = frozenset({"onsite", "online", "hybrid"})
 # Relación grupo↔evento.
 EVENT_GROUP_ROLES = frozenset({"organizer", "participant"})
 
+# --- Autorizaciones editoriales (blog general y agenda) -------------------------
+
+# Ámbitos que requieren autorización explícita del admin global para escribir.
+#   blog   — blog general «Artículos»
+#   events — agenda «Próximas actuaciones y eventos»
+AUTHORIZATION_SCOPES = frozenset({"blog", "events"})
+
+# Ámbito de un artículo: ligado a un grupo, o general (blog).
+ARTICLE_SCOPES = frozenset({"group", "general"})
+

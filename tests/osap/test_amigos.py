@@ -591,6 +591,73 @@ class TestEvents:
         assert service.get_public_actuacion(str(event["id"])) is not None
 
 
+class TestAuthorizationsAndBlog:
+    def test_autorizacion_solo_admin_global(self) -> None:
+        service = AmigosService(_MemoryStore())
+        with pytest.raises(AmigosError) as exc:
+            service.grant_authorization(
+                actor_user_id="u1", is_global_admin=False, user_id="u2", scope="blog"
+            )
+        assert exc.value.status == 403
+        row = service.grant_authorization(
+            actor_user_id=_ADMIN, is_global_admin=True, user_id="u2", scope="blog"
+        )
+        assert row["scope"] == "blog" and row["direct_publish"] is False
+
+    def test_blog_autor_pendiente_y_aprobacion(self) -> None:
+        service = AmigosService(_MemoryStore())
+        service.grant_authorization(
+            actor_user_id=_ADMIN, is_global_admin=True, user_id="author", scope="blog"
+        )
+        article = service.create_general_article(
+            actor_user_id="author", is_global_admin=False, title="Noticia coral",
+            event_date="2026-03-01", body="Texto.", action="publish",
+        )
+        assert article["status"] == "pending"
+        assert article["group_id"] is None
+        assert service.get_public_general_article(str(article["id"])) is None
+        with pytest.raises(AmigosError) as exc:
+            service.create_general_article(
+                actor_user_id="stranger", is_global_admin=False, title="X",
+                event_date="2026-03-01", body="y", action="draft",
+            )
+        assert exc.value.status == 403
+        approved = service.approve_general_article(
+            actor_user_id=_ADMIN, is_global_admin=True, article_id=str(article["id"])
+        )
+        assert approved["status"] == "published"
+        assert service.get_public_general_article(str(article["id"])) is not None
+        assert service.list_blog_articles(public_only=True)["total"] == 1
+
+    def test_blog_publicacion_directa(self) -> None:
+        service = AmigosService(_MemoryStore())
+        service.grant_authorization(
+            actor_user_id=_ADMIN, is_global_admin=True, user_id="author", scope="blog",
+            direct_publish=True,
+        )
+        article = service.create_general_article(
+            actor_user_id="author", is_global_admin=False, title="Directo",
+            event_date="2026-03-01", body="y", action="publish",
+        )
+        assert article["status"] == "published"
+
+    def test_eventos_autor_autorizado_queda_pendiente(self) -> None:
+        service = AmigosService(_MemoryStore())
+        with pytest.raises(AmigosError):
+            service.create_actuacion(
+                actor_user_id="u1", is_global_admin=False,
+                data={"title": "E", "starts_on": "2026-05-01"}, action="publish",
+            )
+        service.grant_authorization(
+            actor_user_id=_ADMIN, is_global_admin=True, user_id="u1", scope="events"
+        )
+        event = service.create_actuacion(
+            actor_user_id="u1", is_global_admin=False,
+            data={"title": "E", "starts_on": "2026-05-01"}, action="publish",
+        )
+        assert event["editorial_status"] == "pending"
+
+
 class TestValidation:
     def test_fecha_de_evento_imposible_rechazada(self) -> None:
         service, _store, group = _service()

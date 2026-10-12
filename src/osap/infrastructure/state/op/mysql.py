@@ -261,7 +261,8 @@ class _MysqlStore(_MemoryStore):
             """
             CREATE TABLE IF NOT EXISTS amigos_articles (
                 id CHAR(32) PRIMARY KEY,
-                group_id CHAR(32) NOT NULL,
+                group_id CHAR(32),
+                scope VARCHAR(16) NOT NULL DEFAULT 'group',
                 title VARCHAR(512) NOT NULL,
                 slug VARCHAR(200) NOT NULL,
                 event_date DATE NOT NULL,
@@ -467,6 +468,25 @@ class _MysqlStore(_MemoryStore):
                     REFERENCES amigos_actuaciones (id) ON DELETE CASCADE,
                 CONSTRAINT fk_amigos_ag_group FOREIGN KEY (group_id)
                     REFERENCES amigos_groups (id) ON DELETE RESTRICT
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+            """
+        )
+        # Blog general + autorizaciones editoriales (blog/agenda).
+        self._ensure_column("amigos_articles", "scope", "VARCHAR(16) NOT NULL DEFAULT 'group'")
+        self._run("ALTER TABLE amigos_articles MODIFY group_id CHAR(32) NULL")
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS amigos_authorizations (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                user_id CHAR(36) NOT NULL,
+                scope VARCHAR(32) NOT NULL,
+                direct_publish TINYINT(1) NOT NULL DEFAULT 0,
+                granted_by CHAR(36),
+                created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+                    ON UPDATE CURRENT_TIMESTAMP(6),
+                PRIMARY KEY (id),
+                UNIQUE KEY uq_amigos_auth (scope, user_id)
             ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
             """
         )
@@ -1373,6 +1393,38 @@ class _MysqlStore(_MemoryStore):
             (actuacion_id,),
         )
 
+    # --- «Los amigos»: autorizaciones editoriales (MySQL) --------------------
+
+    def set_amigos_authorization(
+        self, *, user_id: str, scope: str, direct_publish: bool, granted_by: str | None
+    ) -> dict[str, object]:
+        self._run(
+            "INSERT INTO amigos_authorizations (user_id, scope, direct_publish, granted_by) "
+            "VALUES (%s,%s,%s,%s) ON DUPLICATE KEY UPDATE "
+            "direct_publish = VALUES(direct_publish), granted_by = VALUES(granted_by)",
+            (user_id, scope, 1 if direct_publish else 0, granted_by),
+        )
+        row = self.get_amigos_authorization(scope, user_id)
+        assert row is not None
+        return row
+
+    def get_amigos_authorization(self, scope: str, user_id: str) -> dict[str, object] | None:
+        rows = self._run(
+            "SELECT * FROM amigos_authorizations WHERE scope = %s AND user_id = %s",
+            (scope, user_id),
+        )
+        return rows[0] if rows else None
+
+    def list_amigos_authorizations(self, scope: str) -> list[dict[str, object]]:
+        return self._run(
+            "SELECT * FROM amigos_authorizations WHERE scope = %s ORDER BY user_id", (scope,)
+        )
+
+    def delete_amigos_authorization(self, scope: str, user_id: str) -> None:
+        self._run(
+            "DELETE FROM amigos_authorizations WHERE scope = %s AND user_id = %s", (scope, user_id)
+        )
+
     # --- «Los amigos»: membresias (MySQL) ------------------------------------
 
     def set_amigos_member(
@@ -1417,11 +1469,13 @@ class _MysqlStore(_MemoryStore):
         cover_url: str | None,
         author_user_id: str,
         status: str,
+        scope: str = "group",
     ) -> dict[str, object]:
         self._run(
-            "INSERT INTO amigos_articles (id, group_id, title, slug, event_date, summary, "
-            "body, cover_url, author_user_id, status) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-            (article_id, group_id, title, slug, event_date, summary, body, cover_url,
+            "INSERT INTO amigos_articles (id, group_id, scope, title, slug, event_date, summary, "
+            "body, cover_url, author_user_id, status) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
+            (article_id, group_id, scope, title, slug, event_date, summary, body, cover_url,
              author_user_id, status),
         )
         row = self.get_amigos_article(article_id)
@@ -1435,6 +1489,12 @@ class _MysqlStore(_MemoryStore):
     def get_amigos_article_by_slug(self, group_id: str, slug: str) -> dict[str, object] | None:
         rows = self._run(
             "SELECT * FROM amigos_articles WHERE group_id = %s AND slug = %s", (group_id, slug)
+        )
+        return rows[0] if rows else None
+
+    def get_amigos_article_by_scope_slug(self, scope: str, slug: str) -> dict[str, object] | None:
+        rows = self._run(
+            "SELECT * FROM amigos_articles WHERE scope = %s AND slug = %s", (scope, slug)
         )
         return rows[0] if rows else None
 
@@ -1473,6 +1533,7 @@ class _MysqlStore(_MemoryStore):
         group_id: str | None,
         group_ids: list[str] | None = None,
         statuses: list[str] | None,
+        scope: str | None = None,
         limit: int,
         offset: int,
     ) -> tuple[list[dict[str, object]], int]:
@@ -1481,6 +1542,9 @@ class _MysqlStore(_MemoryStore):
         if group_id is not None:
             clauses.append("group_id = %s")
             args.append(group_id)
+        if scope is not None:
+            clauses.append("scope = %s")
+            args.append(scope)
         if group_ids is not None:
             if not group_ids:
                 return [], 0

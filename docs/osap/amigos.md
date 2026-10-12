@@ -158,20 +158,22 @@ API: público `GET /api/v1/amigos/events` (filtros: `kind`, `locality`, `group_i
 grupo, por autor autorizado, etc.). De momento las escrituras se reservan a la **administración
 global**. El resto (UI de administración y páginas públicas) queda para el siguiente bloque.
 
-### «Artículos» — blog general (propuesto, requiere decisión)
+### «Artículos» — blog general (implementado)
 
 Blog general de OSAP dentro de «Los amigos», con **permiso de escritura independiente** de los
-grupos (autorización explícita del admin global; por defecto **pendiente de aprobación**).
+grupos. Decisión tomada: **`group_id` opcional + `scope`** (`group`|`general`) en
+`amigos_articles` (reusa el motor editorial, el editor, los estados y los recursos).
 
-**Decisión técnica clave**: hoy `amigos_articles.group_id` es **obligatorio**, así que un artículo
-general no encaja. Opciones:
-1. **`group_id` opcional** + `scope` (`group`|`general`) en `amigos_articles` (reusa el motor
-   editorial, el editor, los estados y los recursos). Requiere `ALTER` (columna pasa a NULL) y
-   revisar los sitios que asumen `group_id`.
-2. Entidad de **publicación común** separada (más limpio a largo plazo, más trabajo).
+- Artículos generales: `group_id = NULL`, `scope = 'general'`.
+- **Autorizaciones**: tabla `amigos_authorizations` (`user_id`, `scope` ∈ `blog|events`,
+  `direct_publish`), concedidas/revertidas por el **admin global**. Sin autorización → 403.
+- Por defecto el autor autorizado queda en **`pending`** (aprobación del admin global); con
+  `direct_publish=true` publica directamente.
+- API: público `GET /api/v1/amigos/blog` y `…/blog/{id}`; admin `POST /api/v1/admin/amigos/blog`,
+  `POST …/blog/{id}/approve` y `GET/POST/DELETE /api/v1/admin/amigos/authorizations`.
 
-Recomendación: **opción 1** (menor duplicación) + tabla `amigos_blog_authors` (autorización de
-autores del blog). A la espera de confirmación antes de tocar la tabla desplegada.
+La **agenda de eventos** usa el mismo mecanismo: escritura reservada a autores autorizados
+(`scope='events'`) o admin global, con `pending` por defecto.
 
 ### v6 — independizar «Los amigos» (dominio y BD propios)
 

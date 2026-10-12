@@ -281,3 +281,21 @@ class AmigosActuacionRead(_Frozen):
 class AmigosActuacionListRead(_Frozen):
     items: list[AmigosActuacionRead]
     total: int
+
+
+class AmigosAuthorizationRequest(_Frozen):
+    user_id: str
+    scope: str  # blog | events
+    direct_publish: bool = False
+
+
+class AmigosAuthorizationRead(_Frozen):
+    user_id: str
+    scope: str
+    direct_publish: bool = False
+    created_at: str = ""
+
+
+class AmigosAuthorizationListRead(_Frozen):
+    items: list[AmigosAuthorizationRead]
+    total: int
