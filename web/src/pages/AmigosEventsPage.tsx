@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { AmigosEvent } from "../api/types";
 import { Spinner } from "../components/Spinner";
@@ -61,6 +62,12 @@ export function AmigosEventsPage() {
       <div className="rounded-card border border-osap-accent/30 bg-osap-accent-soft p-4">
         <p className="font-semibold text-osap-ink">{t("friends.eventsNoteTitle")}</p>
         <p className="mt-1 text-sm text-osap-ink/80">{t("friends.eventsNoteBody")}</p>
+        <Link
+          to="/corrections?kind=contact"
+          className="mt-2 inline-block text-sm font-medium text-osap-accent hover:underline"
+        >
+          {t("nav.contact")} →
+        </Link>
       </div>
 
       <div className="flex flex-wrap gap-2">
