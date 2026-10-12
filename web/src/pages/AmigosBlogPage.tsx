@@ -37,6 +37,11 @@ export function AmigosBlogPage() {
         <h1 className="mt-2 text-3xl font-semibold text-osap-ink">{t("friends.blogTitle")}</h1>
       </header>
 
+      <div className="rounded-card border border-osap-accent/30 bg-osap-accent-soft p-4">
+        <p className="font-semibold text-osap-ink">{t("friends.blogNoteTitle")}</p>
+        <p className="mt-1 text-sm text-osap-ink/80">{t("friends.blogNoteBody")}</p>
+      </div>
+
       {loading ? (
         <Spinner label={t("states.loading")} />
       ) : articles.length === 0 ? (
