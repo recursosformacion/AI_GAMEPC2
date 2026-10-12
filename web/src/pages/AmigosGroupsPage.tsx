@@ -41,6 +41,11 @@ export function AmigosGroupsPage() {
         <p className="mt-2 max-w-2xl text-sm text-osap-muted">{t("friends.coralesSubtitle")}</p>
       </header>
 
+      <div className="rounded-card border border-osap-accent/30 bg-osap-accent-soft p-4">
+        <p className="font-semibold text-osap-ink">{t("friends.coralesNoteTitle")}</p>
+        <p className="mt-1 text-sm text-osap-ink/80">{t("friends.coralesNoteBody")}</p>
+      </div>
+
       {loading ? (
         <Spinner label={t("states.loading")} />
       ) : error !== null ? (
