@@ -129,6 +129,16 @@ de `deploy/app.openmusicrepository.com.conf`.
 
 ## Migración y pruebas
 
+> **Privilegio ALTER**: el usuario de BD de la app (`osap_api`) **no tiene `ALTER`**. El arranque
+> del store usa `CREATE TABLE IF NOT EXISTS` (permitido) y las columnas nuevas se añaden con un
+> **usuario privilegiado** (root / `sudo mysql`), p. ej.:
+> ```sql
+> ALTER TABLE `osap_api`.`amigos_articles` ADD COLUMN scope VARCHAR(16) NOT NULL DEFAULT 'group';
+> ALTER TABLE `osap_api`.`amigos_articles` MODIFY group_id CHAR(32) NULL;
+> ```
+> `_init` ya **no aborta** si un `ALTER` es denegado (registra un aviso y continúa), para que el
+> store no caiga a memoria. Ejecuta `script/migrate_amigos_schema.py` con un usuario con `ALTER`.
+
 ```powershell
 # Esquema (idempotente; las tablas también se crean al arrancar el store MySQL):
 PYTHONPATH=. python script/migrate_amigos_schema.py --dry-run
