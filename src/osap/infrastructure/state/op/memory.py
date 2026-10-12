@@ -49,6 +49,9 @@ class MemoryStore:
         self._amigos_group_link_seq = 0
         # Imágenes subidas (los ficheros viven en osap-storage; aquí su registro para servir).
         self._amigos_uploads: dict[int, dict[str, object]] = {}
+        # Agenda: actuaciones/eventos y sus grupos participantes.
+        self._amigos_actuaciones: dict[str, dict[str, object]] = {}
+        self._amigos_actuacion_groups: list[dict[str, object]] = []
 
     def list_suggestions(self) -> list[dict[str, object]]:
         return list(self._suggestions)
@@ -573,6 +576,144 @@ class MemoryStore:
     def get_amigos_upload(self, file_id: int) -> dict[str, object] | None:
         row = self._amigos_uploads.get(int(file_id))
         return dict(row) if row is not None else None
+
+    # --- «Los amigos»: agenda de actuaciones/eventos -------------------------
+
+    def create_amigos_actuacion(
+        self,
+        *,
+        actuacion_id: str,
+        slug: str,
+        editorial_status: str,
+        author_user_id: str,
+        fields: dict[str, object],
+    ) -> dict[str, object]:
+        ts = now()
+        row: dict[str, object] = {
+            "id": actuacion_id,
+            "slug": slug,
+            "editorial_status": editorial_status,
+            "author_user_id": author_user_id,
+            "published_at": None,
+            "reviewed_by": None,
+            "reviewed_at": None,
+            "review_note": None,
+            "created_at": ts,
+            "updated_at": ts,
+        }
+        row.update(fields)
+        self._amigos_actuaciones[actuacion_id] = row
+        return dict(row)
+
+    def get_amigos_actuacion(self, actuacion_id: str) -> dict[str, object] | None:
+        row = self._amigos_actuaciones.get(actuacion_id)
+        return dict(row) if row is not None else None
+
+    def get_amigos_actuacion_by_slug(self, slug: str) -> dict[str, object] | None:
+        for row in self._amigos_actuaciones.values():
+            if row["slug"] == slug:
+                return dict(row)
+        return None
+
+    def update_amigos_actuacion(self, actuacion_id: str, **changes: object) -> dict[str, object] | None:
+        row = self._amigos_actuaciones.get(actuacion_id)
+        if row is None:
+            return None
+        allowed = {
+            "title", "summary", "description", "image_url", "kind", "modality",
+            "event_status", "starts_on", "starts_at", "ends_on", "ends_at", "timezone",
+            "registration_deadline", "venue_name", "venue_address", "locality", "region",
+            "country_code", "latitude", "longitude", "map_url", "organizer_name",
+            "organizer_website", "event_url", "tickets_url", "price", "access_info",
+            "public_contact", "organizer_group_id", "last_verified_on", "internal_notes",
+        }
+        for key, value in changes.items():
+            if key in allowed:
+                row[key] = value
+        row["updated_at"] = now()
+        return dict(row)
+
+    def set_amigos_actuacion_status(
+        self,
+        *,
+        actuacion_id: str,
+        editorial_status: str,
+        published_at: str | None,
+        reviewed_by: str | None,
+        review_note: str | None,
+    ) -> dict[str, object] | None:
+        row = self._amigos_actuaciones.get(actuacion_id)
+        if row is None:
+            return None
+        row["editorial_status"] = editorial_status
+        row["review_note"] = review_note
+        if reviewed_by is not None:
+            row["reviewed_by"] = reviewed_by
+            row["reviewed_at"] = now()
+        row["published_at"] = published_at
+        row["updated_at"] = now()
+        return dict(row)
+
+    def list_amigos_actuaciones(
+        self,
+        *,
+        editorial_statuses: list[str] | None,
+        from_date: str | None,
+        to_date: str | None,
+        kind: str | None,
+        locality: str | None,
+        group_id: str | None,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[dict[str, object]], int]:
+        wanted = set(editorial_statuses) if editorial_statuses is not None else None
+        group_ids: set[str] | None = None
+        if group_id is not None:
+            group_ids = {
+                str(g["actuacion_id"])
+                for g in self._amigos_actuacion_groups
+                if g["group_id"] == group_id
+            }
+        rows: list[dict[str, object]] = []
+        for raw in self._amigos_actuaciones.values():
+            if wanted is not None and str(raw.get("editorial_status")) not in wanted:
+                continue
+            if group_ids is not None and str(raw["id"]) not in group_ids:
+                continue
+            if kind is not None and str(raw.get("kind")) != kind:
+                continue
+            if locality is not None and str(raw.get("locality") or "").lower() != locality.lower():
+                continue
+            start = str(raw.get("starts_on") or "")
+            if from_date is not None and start < from_date:
+                continue
+            if to_date is not None and start > to_date:
+                continue
+            rows.append(dict(raw))
+        rows.sort(key=lambda r: (str(r.get("starts_on") or ""), str(r.get("starts_at") or "")))
+        return rows[offset : offset + limit], len(rows)
+
+    def replace_amigos_actuacion_groups(
+        self, actuacion_id: str, items: list[dict[str, object]]
+    ) -> None:
+        self._amigos_actuacion_groups = [
+            x for x in self._amigos_actuacion_groups if x["actuacion_id"] != actuacion_id
+        ]
+        for item in items:
+            self._amigos_actuacion_groups.append(
+                {
+                    "actuacion_id": actuacion_id,
+                    "group_id": item.get("group_id"),
+                    "role": item.get("role"),
+                }
+            )
+
+    def list_amigos_actuacion_groups(self, actuacion_id: str) -> list[dict[str, object]]:
+        rows = [
+            dict(x) for x in self._amigos_actuacion_groups if x["actuacion_id"] == actuacion_id
+        ]
+        rows.sort(key=lambda x: (str(x.get("role")), str(x.get("group_id"))))
+        return rows
 
     # --- «Los amigos»: membresías --------------------------------------------
 

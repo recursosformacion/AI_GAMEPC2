@@ -63,3 +63,16 @@ IMAGE_MIME_TYPES = frozenset(
 )
 MAX_IMAGE_BYTES = 5 * 1024 * 1024
 
+# --- Agenda de actuaciones y eventos (categoría «Próximas actuaciones y eventos») ---
+
+# Tipo de evento.
+EVENT_KINDS = frozenset(
+    {"concert", "meeting", "festival", "workshop", "mass", "competition", "rehearsal", "other"}
+)
+# Estado del evento (independiente del estado editorial de publicación).
+EVENT_STATUSES = frozenset({"scheduled", "postponed", "cancelled", "held"})
+# Modalidad de asistencia.
+EVENT_MODALITIES = frozenset({"onsite", "online", "hybrid"})
+# Relación grupo↔evento.
+EVENT_GROUP_ROLES = frozenset({"organizer", "participant"})
+

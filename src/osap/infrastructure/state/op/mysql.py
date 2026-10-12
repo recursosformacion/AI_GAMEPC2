@@ -401,6 +401,75 @@ class _MysqlStore(_MemoryStore):
             ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
             """
         )
+        # Agenda: actuaciones/eventos (nombre distinto de amigos_events, que es auditoría).
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS amigos_actuaciones (
+                id CHAR(32) PRIMARY KEY,
+                slug VARCHAR(200) NOT NULL,
+                title VARCHAR(512) NOT NULL,
+                summary TEXT,
+                description LONGTEXT,
+                image_url VARCHAR(1024),
+                kind VARCHAR(32) NOT NULL DEFAULT 'concert',
+                modality VARCHAR(16) NOT NULL DEFAULT 'onsite',
+                event_status VARCHAR(16) NOT NULL DEFAULT 'scheduled',
+                editorial_status VARCHAR(16) NOT NULL DEFAULT 'draft',
+                starts_on DATE NOT NULL,
+                starts_at TIME,
+                ends_on DATE,
+                ends_at TIME,
+                timezone VARCHAR(64),
+                registration_deadline DATE,
+                venue_name VARCHAR(255),
+                venue_address VARCHAR(512),
+                locality VARCHAR(160),
+                region VARCHAR(160),
+                country_code CHAR(2),
+                latitude DECIMAL(9,6),
+                longitude DECIMAL(9,6),
+                map_url VARCHAR(1024),
+                organizer_name VARCHAR(255),
+                organizer_website VARCHAR(1024),
+                event_url VARCHAR(1024),
+                tickets_url VARCHAR(1024),
+                price VARCHAR(120),
+                access_info TEXT,
+                public_contact VARCHAR(254),
+                organizer_group_id CHAR(32),
+                author_user_id CHAR(36) NOT NULL,
+                last_verified_on DATE,
+                internal_notes TEXT,
+                published_at DATETIME(6),
+                reviewed_by CHAR(36),
+                reviewed_at DATETIME(6),
+                review_note VARCHAR(512),
+                created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+                    ON UPDATE CURRENT_TIMESTAMP(6),
+                UNIQUE KEY uq_amigos_actuacion_slug (slug),
+                KEY idx_amigos_actuacion_date (starts_on),
+                KEY idx_amigos_actuacion_status (editorial_status),
+                CONSTRAINT fk_amigos_actuacion_org FOREIGN KEY (organizer_group_id)
+                    REFERENCES amigos_groups (id) ON DELETE SET NULL
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+            """
+        )
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS amigos_actuacion_groups (
+                actuacion_id CHAR(32) NOT NULL,
+                group_id CHAR(32) NOT NULL,
+                role VARCHAR(16) NOT NULL DEFAULT 'participant',
+                PRIMARY KEY (actuacion_id, group_id),
+                KEY idx_amigos_ag_group (group_id),
+                CONSTRAINT fk_amigos_ag_actuacion FOREIGN KEY (actuacion_id)
+                    REFERENCES amigos_actuaciones (id) ON DELETE CASCADE,
+                CONSTRAINT fk_amigos_ag_group FOREIGN KEY (group_id)
+                    REFERENCES amigos_groups (id) ON DELETE RESTRICT
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+            """
+        )
         # Columnas comunes añadidas a grupos ya existentes (idempotente).
         self._ensure_column("amigos_groups", "website", "VARCHAR(1024) NULL")
         self._ensure_column("amigos_groups", "email", "VARCHAR(254) NULL")
@@ -1156,6 +1225,153 @@ class _MysqlStore(_MemoryStore):
     def get_amigos_upload(self, file_id: int) -> dict[str, object] | None:
         rows = self._run("SELECT * FROM amigos_uploads WHERE file_id = %s", (int(file_id),))
         return rows[0] if rows else None
+
+    # --- «Los amigos»: agenda (MySQL) ----------------------------------------
+
+    _ACTUACION_COLUMNS = (
+        "title", "summary", "description", "image_url", "kind", "modality", "event_status",
+        "starts_on", "starts_at", "ends_on", "ends_at", "timezone", "registration_deadline",
+        "venue_name", "venue_address", "locality", "region", "country_code", "latitude",
+        "longitude", "map_url", "organizer_name", "organizer_website", "event_url",
+        "tickets_url", "price", "access_info", "public_contact", "organizer_group_id",
+        "last_verified_on", "internal_notes",
+    )
+
+    def create_amigos_actuacion(
+        self,
+        *,
+        actuacion_id: str,
+        slug: str,
+        editorial_status: str,
+        author_user_id: str,
+        fields: dict[str, object],
+    ) -> dict[str, object]:
+        cols = ["id", "slug", "editorial_status", "author_user_id"]
+        vals: list[object] = [actuacion_id, slug, editorial_status, author_user_id]
+        for key in self._ACTUACION_COLUMNS:
+            if key in fields:
+                cols.append(key)
+                vals.append(fields[key])
+        placeholders = ",".join(["%s"] * len(cols))
+        self._run(
+            f"INSERT INTO amigos_actuaciones ({','.join(cols)}) VALUES ({placeholders})",
+            tuple(vals),
+        )
+        row = self.get_amigos_actuacion(actuacion_id)
+        assert row is not None
+        return row
+
+    def get_amigos_actuacion(self, actuacion_id: str) -> dict[str, object] | None:
+        rows = self._run("SELECT * FROM amigos_actuaciones WHERE id = %s", (actuacion_id,))
+        return rows[0] if rows else None
+
+    def get_amigos_actuacion_by_slug(self, slug: str) -> dict[str, object] | None:
+        rows = self._run("SELECT * FROM amigos_actuaciones WHERE slug = %s", (slug,))
+        return rows[0] if rows else None
+
+    def update_amigos_actuacion(self, actuacion_id: str, **changes: object) -> dict[str, object] | None:
+        fields = [k for k in changes if k in self._ACTUACION_COLUMNS]
+        if fields:
+            assignments = ", ".join(f"{k} = %s" for k in fields)
+            self._run(
+                f"UPDATE amigos_actuaciones SET {assignments} WHERE id = %s",
+                (*[changes[k] for k in fields], actuacion_id),
+            )
+        return self.get_amigos_actuacion(actuacion_id)
+
+    def set_amigos_actuacion_status(
+        self,
+        *,
+        actuacion_id: str,
+        editorial_status: str,
+        published_at: str | None,
+        reviewed_by: str | None,
+        review_note: str | None,
+    ) -> dict[str, object] | None:
+        self._run(
+            "UPDATE amigos_actuaciones SET editorial_status = %s, review_note = %s, "
+            "reviewed_by = COALESCE(%s, reviewed_by), "
+            "reviewed_at = CASE WHEN %s IS NULL THEN reviewed_at ELSE NOW(6) END, "
+            "published_at = %s WHERE id = %s",
+            (editorial_status, review_note, reviewed_by, reviewed_by, published_at, actuacion_id),
+        )
+        return self.get_amigos_actuacion(actuacion_id)
+
+    def list_amigos_actuaciones(
+        self,
+        *,
+        editorial_statuses: list[str] | None,
+        from_date: str | None,
+        to_date: str | None,
+        kind: str | None,
+        locality: str | None,
+        group_id: str | None,
+        limit: int,
+        offset: int,
+    ) -> tuple[list[dict[str, object]], int]:
+        clauses: list[str] = []
+        args: list[object] = []
+        if editorial_statuses is not None:
+            if not editorial_statuses:
+                return [], 0
+            placeholders = ",".join(["%s"] * len(editorial_statuses))
+            clauses.append(f"editorial_status IN ({placeholders})")
+            args.extend(editorial_statuses)
+        if from_date is not None:
+            clauses.append("starts_on >= %s")
+            args.append(from_date)
+        if to_date is not None:
+            clauses.append("starts_on <= %s")
+            args.append(to_date)
+        if kind is not None:
+            clauses.append("kind = %s")
+            args.append(kind)
+        if locality is not None:
+            clauses.append("LOWER(locality) = %s")
+            args.append(locality.lower())
+        if group_id is not None:
+            clauses.append(
+                "id IN (SELECT actuacion_id FROM amigos_actuacion_groups WHERE group_id = %s)"
+            )
+            args.append(group_id)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        total_rows = self._run(f"SELECT COUNT(*) AS n FROM amigos_actuaciones {where}", tuple(args))
+        total = int(str(total_rows[0]["n"])) if total_rows else 0
+        rows = self._run(
+            f"SELECT * FROM amigos_actuaciones {where} ORDER BY starts_on, starts_at "
+            "LIMIT %s OFFSET %s",
+            (*args, limit, offset),
+        )
+        return rows, total
+
+    def replace_amigos_actuacion_groups(
+        self, actuacion_id: str, items: list[dict[str, object]]
+    ) -> None:
+        conn = self._conn()
+        try:
+            conn.autocommit(False)
+            with conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM amigos_actuacion_groups WHERE actuacion_id = %s", (actuacion_id,)
+                )
+                for item in items:
+                    cur.execute(
+                        "INSERT INTO amigos_actuacion_groups (actuacion_id, group_id, role) "
+                        "VALUES (%s,%s,%s)",
+                        (actuacion_id, item.get("group_id"), item.get("role") or "participant"),
+                    )
+            conn.commit()
+        except Exception:
+            conn.rollback()
+            raise
+        finally:
+            conn.close()
+
+    def list_amigos_actuacion_groups(self, actuacion_id: str) -> list[dict[str, object]]:
+        return self._run(
+            "SELECT * FROM amigos_actuacion_groups WHERE actuacion_id = %s ORDER BY role, group_id",
+            (actuacion_id,),
+        )
 
     # --- «Los amigos»: membresias (MySQL) ------------------------------------
 

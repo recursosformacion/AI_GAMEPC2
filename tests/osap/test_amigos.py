@@ -507,6 +507,90 @@ class TestUploads:
         assert service.get_upload(999999) is None
 
 
+class TestEvents:
+    def test_gestion_reservada_a_admin_global(self) -> None:
+        service = AmigosService(_MemoryStore())
+        with pytest.raises(AmigosError) as exc:
+            service.create_actuacion(
+                actor_user_id="u1", is_global_admin=False,
+                data={"title": "X", "starts_on": "2026-05-01"}, action="draft",
+            )
+        assert exc.value.status == 403
+
+    def test_alta_publicacion_y_listado(self) -> None:
+        service = AmigosService(_MemoryStore())
+        draft = service.create_actuacion(
+            actor_user_id=_ADMIN, is_global_admin=True,
+            data={"title": "Encuentro Coral", "starts_on": "2026-05-10",
+                  "starts_at": "18:30", "kind": "meeting", "locality": "Barcelona"},
+            action="draft",
+        )
+        assert draft["editorial_status"] == "draft"
+        assert service.get_public_actuacion(str(draft["id"])) is None
+        published = service.create_actuacion(
+            actor_user_id=_ADMIN, is_global_admin=True,
+            data={"title": "Concierto", "starts_on": "2026-04-01"}, action="publish",
+        )
+        assert published["editorial_status"] == "published"
+        listing = service.list_actuaciones(public_only=True)
+        assert listing["total"] == 1
+        ids = [e["id"] for e in listing["items"]]  # type: ignore[union-attr]
+        assert str(published["id"]) in ids and str(draft["id"]) not in ids
+
+    def test_validaciones_y_participantes(self) -> None:
+        service = AmigosService(_MemoryStore())
+        group = service.create_group(
+            actor_user_id=_ADMIN, is_global_admin=True, name="Coral CTV", slug="ctv"
+        )
+        with pytest.raises(AmigosError) as e1:
+            service.create_actuacion(
+                actor_user_id=_ADMIN, is_global_admin=True,
+                data={"starts_on": "2026-05-01"}, action="draft",
+            )
+        assert e1.value.code == "TITLE_REQUIRED"
+        with pytest.raises(AmigosError) as e2:
+            service.create_actuacion(
+                actor_user_id=_ADMIN, is_global_admin=True, data={"title": "X"}, action="draft"
+            )
+        assert e2.value.code == "INVALID_START"
+        with pytest.raises(AmigosError) as e3:
+            service.create_actuacion(
+                actor_user_id=_ADMIN, is_global_admin=True,
+                data={"title": "X", "starts_on": "2026-05-01", "kind": "nope"}, action="draft",
+            )
+        assert e3.value.code == "INVALID_KIND"
+        with pytest.raises(AmigosError) as e4:
+            service.create_actuacion(
+                actor_user_id=_ADMIN, is_global_admin=True,
+                data={"title": "X", "starts_on": "2026-05-01", "groups": [{"group_id": "nope"}]},
+                action="draft",
+            )
+        assert e4.value.code == "INVALID_GROUP"
+        event = service.create_actuacion(
+            actor_user_id=_ADMIN, is_global_admin=True,
+            data={"title": "Encuentro", "starts_on": "2026-05-01",
+                  "groups": [{"group_id": str(group["id"]), "role": "participant"}]},
+            action="publish",
+        )
+        assert event["groups"][0]["group_id"] == str(group["id"])  # type: ignore[index]
+        assert service.list_actuaciones(
+            public_only=True, group_id=str(group["id"])
+        )["total"] == 1
+
+    def test_cambio_de_estado_editorial(self) -> None:
+        service = AmigosService(_MemoryStore())
+        event = service.create_actuacion(
+            actor_user_id=_ADMIN, is_global_admin=True,
+            data={"title": "Taller", "starts_on": "2026-06-01"}, action="draft",
+        )
+        published = service.set_actuacion_editorial(
+            actor_user_id=_ADMIN, is_global_admin=True,
+            actuacion_id=str(event["id"]), editorial_status="published",
+        )
+        assert published["editorial_status"] == "published"
+        assert service.get_public_actuacion(str(event["id"])) is not None
+
+
 class TestValidation:
     def test_fecha_de_evento_imposible_rechazada(self) -> None:
         service, _store, group = _service()

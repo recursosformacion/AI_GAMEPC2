@@ -140,6 +140,39 @@ Tras tocar el backend: reiniciar uvicorn. Tras tocar el frontend: rebuildar `web
 
 ## Roadmap
 
+### Agenda: «Próximas actuaciones y eventos» (implementado — backend)
+
+Categoría nueva al mismo nivel que «Corales». Entidad propia (no reutiliza la tabla de
+auditoría `amigos_events`, que mantiene su nombre):
+
+| Tabla | Contenido |
+|---|---|
+| `amigos_actuaciones` | Evento: `title`, `slug`, `summary`, `description`, `image_url`, `kind` (`concert|meeting|festival|workshop|mass|competition|rehearsal|other`), `modality` (`onsite|online|hybrid`), `event_status` (`scheduled|postponed|cancelled|held`), `editorial_status` (`draft|pending|published|withdrawn`), `starts_on/at`, `ends_on/at`, `timezone`, `registration_deadline`, lugar (`venue_name`, `venue_address`, `locality`, `region`, `country_code`, `latitude`, `longitude`, `map_url`), organización (`organizer_name`, `organizer_website`, `event_url`, `tickets_url`, `price`, `access_info`, `public_contact`), `organizer_group_id` (grupo OSAP opcional), `author_user_id`, `last_verified_on`, `internal_notes`, fechas y revisión. |
+| `amigos_actuacion_groups` | Relación evento ↔ grupos participantes/organizador (`role`), reutilizando `amigos_groups` (kind `coral` etc.). |
+
+API: público `GET /api/v1/amigos/events` (filtros: `kind`, `locality`, `group_id`, `from_date`,
+`to_date`; solo publicados) y `GET /api/v1/amigos/events/{id}`; admin (global)
+`POST/PATCH /api/v1/admin/amigos/events` y `POST …/{id}/status`.
+
+**Decisión pendiente**: la **política de permisos** de eventos (quién puede gestionarlos: por
+grupo, por autor autorizado, etc.). De momento las escrituras se reservan a la **administración
+global**. El resto (UI de administración y páginas públicas) queda para el siguiente bloque.
+
+### «Artículos» — blog general (propuesto, requiere decisión)
+
+Blog general de OSAP dentro de «Los amigos», con **permiso de escritura independiente** de los
+grupos (autorización explícita del admin global; por defecto **pendiente de aprobación**).
+
+**Decisión técnica clave**: hoy `amigos_articles.group_id` es **obligatorio**, así que un artículo
+general no encaja. Opciones:
+1. **`group_id` opcional** + `scope` (`group`|`general`) en `amigos_articles` (reusa el motor
+   editorial, el editor, los estados y los recursos). Requiere `ALTER` (columna pasa a NULL) y
+   revisar los sitios que asumen `group_id`.
+2. Entidad de **publicación común** separada (más limpio a largo plazo, más trabajo).
+
+Recomendación: **opción 1** (menor duplicación) + tabla `amigos_blog_authors` (autorización de
+autores del blog). A la espera de confirmación antes de tocar la tabla desplegada.
+
 ### v6 — independizar «Los amigos» (dominio y BD propios)
 
 **Anotado para la versión 6.** Extraer «Los amigos» a su **propio servicio/dominio y base de

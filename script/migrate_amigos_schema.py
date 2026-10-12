@@ -36,6 +36,8 @@ _TABLES: list[str] = [
     "amigos_coral_attributes",
     "amigos_group_links",
     "amigos_uploads",
+    "amigos_actuaciones",
+    "amigos_actuacion_groups",
 ]
 
 # Columnas comunes añadidas a tablas ya existentes (idempotente, comprobando
@@ -214,10 +216,75 @@ _DDL: list[str] = [
       KEY idx_amigos_upload_group (group_id)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
     """,
+    """
+    CREATE TABLE IF NOT EXISTS amigos_actuaciones (
+      id CHAR(32) PRIMARY KEY,
+      slug VARCHAR(200) NOT NULL,
+      title VARCHAR(512) NOT NULL,
+      summary TEXT,
+      description LONGTEXT,
+      image_url VARCHAR(1024),
+      kind VARCHAR(32) NOT NULL DEFAULT 'concert',
+      modality VARCHAR(16) NOT NULL DEFAULT 'onsite',
+      event_status VARCHAR(16) NOT NULL DEFAULT 'scheduled',
+      editorial_status VARCHAR(16) NOT NULL DEFAULT 'draft',
+      starts_on DATE NOT NULL,
+      starts_at TIME,
+      ends_on DATE,
+      ends_at TIME,
+      timezone VARCHAR(64),
+      registration_deadline DATE,
+      venue_name VARCHAR(255),
+      venue_address VARCHAR(512),
+      locality VARCHAR(160),
+      region VARCHAR(160),
+      country_code CHAR(2),
+      latitude DECIMAL(9,6),
+      longitude DECIMAL(9,6),
+      map_url VARCHAR(1024),
+      organizer_name VARCHAR(255),
+      organizer_website VARCHAR(1024),
+      event_url VARCHAR(1024),
+      tickets_url VARCHAR(1024),
+      price VARCHAR(120),
+      access_info TEXT,
+      public_contact VARCHAR(254),
+      organizer_group_id CHAR(32),
+      author_user_id CHAR(36) NOT NULL,
+      last_verified_on DATE,
+      internal_notes TEXT,
+      published_at DATETIME(6),
+      reviewed_by CHAR(36),
+      reviewed_at DATETIME(6),
+      review_note VARCHAR(512),
+      created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+      updated_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
+        ON UPDATE CURRENT_TIMESTAMP(6),
+      UNIQUE KEY uq_amigos_actuacion_slug (slug),
+      KEY idx_amigos_actuacion_date (starts_on),
+      KEY idx_amigos_actuacion_status (editorial_status),
+      CONSTRAINT fk_amigos_actuacion_org FOREIGN KEY (organizer_group_id)
+        REFERENCES amigos_groups (id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS amigos_actuacion_groups (
+      actuacion_id CHAR(32) NOT NULL,
+      group_id CHAR(32) NOT NULL,
+      role VARCHAR(16) NOT NULL DEFAULT 'participant',
+      PRIMARY KEY (actuacion_id, group_id),
+      KEY idx_amigos_ag_group (group_id),
+      CONSTRAINT fk_amigos_ag_actuacion FOREIGN KEY (actuacion_id)
+        REFERENCES amigos_actuaciones (id) ON DELETE CASCADE,
+      CONSTRAINT fk_amigos_ag_group FOREIGN KEY (group_id)
+        REFERENCES amigos_groups (id) ON DELETE RESTRICT
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+    """,
 ]
 
 _FK_TABLES = ("amigos_members", "amigos_articles", "amigos_media", "amigos_coral_details",
-              "amigos_coral_attributes", "amigos_group_links")
+              "amigos_coral_attributes", "amigos_group_links", "amigos_actuaciones",
+              "amigos_actuacion_groups")
 
 
 def _connect(args: argparse.Namespace) -> pymysql.connections.Connection:

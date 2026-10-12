@@ -22,7 +22,12 @@ from datetime import UTC, date, datetime
 from typing import Any
 
 from src.osap.domain.amigos import (
+    ARTICLE_STATUSES,
     EDITORIAL_MODES,
+    EVENT_GROUP_ROLES,
+    EVENT_KINDS,
+    EVENT_MODALITIES,
+    EVENT_STATUSES,
     FORMATION_TYPES,
     GROUP_KINDS,
     GROUP_LINK_KINDS,
@@ -436,6 +441,188 @@ class AmigosService:
     def get_upload(self, file_id: int) -> dict[str, object] | None:
         row = self._store.get_amigos_upload(file_id)
         return dict(row) if row is not None else None
+
+    # --- agenda de actuaciones/eventos --------------------------------------
+
+    def _actuacion_fields(self, data: dict[str, Any]) -> dict[str, object]:
+        fields: dict[str, object] = {}
+        if "title" in data:
+            title = str(data.get("title") or "").strip()
+            if not title:
+                raise AmigosError(422, "TITLE_REQUIRED", "El nombre del evento es obligatorio")
+            fields["title"] = title
+        if "kind" in data:
+            if str(data.get("kind")) not in EVENT_KINDS:
+                raise AmigosError(422, "INVALID_KIND", "Tipo de evento no válido")
+            fields["kind"] = str(data["kind"])
+        if "modality" in data:
+            if str(data.get("modality")) not in EVENT_MODALITIES:
+                raise AmigosError(422, "INVALID_MODALITY", "Modalidad no válida")
+            fields["modality"] = str(data["modality"])
+        if "event_status" in data:
+            if str(data.get("event_status")) not in EVENT_STATUSES:
+                raise AmigosError(422, "INVALID_EVENT_STATUS", "Estado del evento no válido")
+            fields["event_status"] = str(data["event_status"])
+        if "starts_on" in data:
+            fields["starts_on"] = _require_date(data.get("starts_on"))
+        for key in ("ends_on", "registration_deadline", "last_verified_on"):
+            if key in data:
+                fields[key] = _validate_optional_date(data.get(key))
+        for key in ("starts_at", "ends_at"):
+            if key in data:
+                fields[key] = _validate_time(data.get(key))
+        for key in ("image_url", "map_url", "organizer_website", "event_url", "tickets_url"):
+            if key in data:
+                fields[key] = _clean_url(data.get(key))
+        if "public_contact" in data:
+            fields["public_contact"] = _validate_email(data.get("public_contact"))
+        if "country_code" in data:
+            fields["country_code"] = _validate_country_code(data.get("country_code"))
+        if "organizer_group_id" in data:
+            gid = _clean_text(data.get("organizer_group_id"))
+            if gid is not None and self._store.get_amigos_group(gid) is None:
+                raise AmigosError(422, "INVALID_GROUP", "El grupo organizador no existe")
+            fields["organizer_group_id"] = gid
+        for key in (
+            "summary", "description", "venue_name", "venue_address", "locality", "region",
+            "timezone", "organizer_name", "price", "access_info", "internal_notes",
+        ):
+            if key in data:
+                fields[key] = _clean_text(data.get(key))
+        return fields
+
+    def _actuacion_groups(self, data: dict[str, Any]) -> list[dict[str, object]]:
+        raw = data.get("groups")
+        if not isinstance(raw, list):
+            return []
+        items: list[dict[str, object]] = []
+        for entry in raw:
+            if not isinstance(entry, dict):
+                continue
+            gid = _clean_text(entry.get("group_id"))
+            role = str(entry.get("role") or "participant")
+            if gid is None:
+                continue
+            if role not in EVENT_GROUP_ROLES:
+                raise AmigosError(422, "INVALID_GROUP_ROLE", "Rol de grupo no válido")
+            if self._store.get_amigos_group(gid) is None:
+                raise AmigosError(422, "INVALID_GROUP", "Grupo participante inexistente")
+            items.append({"group_id": gid, "role": role})
+        return items
+
+    def create_actuacion(
+        self, *, actor_user_id: str, is_global_admin: bool, data: dict[str, Any],
+        action: str = "draft",
+    ) -> dict[str, object]:
+        # Gestión de eventos reservada (de momento) a la administración global: la política
+        # fina (por grupo, por autor) queda como decisión pendiente.
+        if not is_global_admin:
+            raise AmigosError(403, "FORBIDDEN", "La gestión de eventos requiere autorización")
+        if action not in ("draft", "publish"):
+            raise AmigosError(422, "INVALID_ACTION", "Acción inválida")
+        fields = self._actuacion_fields(data)
+        if "title" not in fields:
+            raise AmigosError(422, "TITLE_REQUIRED", "El nombre del evento es obligatorio")
+        if "starts_on" not in fields:
+            raise AmigosError(422, "INVALID_START", "La fecha de inicio es obligatoria")
+        slug = self._unique_actuacion_slug(str(fields["title"]))
+        editorial = "published" if action == "publish" else "draft"
+        row = dict(
+            self._store.create_amigos_actuacion(
+                actuacion_id=secrets.token_hex(8),
+                slug=slug,
+                editorial_status=editorial,
+                author_user_id=actor_user_id,
+                fields=fields,
+            )
+        )
+        self._store.replace_amigos_actuacion_groups(str(row["id"]), self._actuacion_groups(data))
+        if editorial == "published":
+            self._store.set_amigos_actuacion_status(
+                actuacion_id=str(row["id"]),
+                editorial_status="published",
+                published_at=_now(),
+                reviewed_by=actor_user_id,
+                review_note=None,
+            )
+        return self.get_actuacion(str(row["id"])) or {}
+
+    def update_actuacion(
+        self, *, actor_user_id: str, is_global_admin: bool, actuacion_id: str,
+        data: dict[str, Any],
+    ) -> dict[str, object]:
+        if not is_global_admin:
+            raise AmigosError(403, "FORBIDDEN", "La gestión de eventos requiere autorización")
+        if self._store.get_amigos_actuacion(actuacion_id) is None:
+            raise AmigosError(404, "EVENT_NOT_FOUND", "Evento no encontrado")
+        fields = self._actuacion_fields(data)
+        if fields:
+            self._store.update_amigos_actuacion(actuacion_id, **fields)
+        if "groups" in data:
+            self._store.replace_amigos_actuacion_groups(actuacion_id, self._actuacion_groups(data))
+        return self.get_actuacion(actuacion_id) or {}
+
+    def set_actuacion_editorial(
+        self, *, actor_user_id: str, is_global_admin: bool, actuacion_id: str,
+        editorial_status: str,
+    ) -> dict[str, object]:
+        if not is_global_admin:
+            raise AmigosError(403, "FORBIDDEN", "La gestión de eventos requiere autorización")
+        if editorial_status not in ARTICLE_STATUSES:
+            raise AmigosError(422, "INVALID_STATUS", "Estado editorial no válido")
+        if self._store.get_amigos_actuacion(actuacion_id) is None:
+            raise AmigosError(404, "EVENT_NOT_FOUND", "Evento no encontrado")
+        self._store.set_amigos_actuacion_status(
+            actuacion_id=actuacion_id,
+            editorial_status=editorial_status,
+            published_at=_now() if editorial_status == "published" else None,
+            reviewed_by=actor_user_id,
+            review_note=None,
+        )
+        return self.get_actuacion(actuacion_id) or {}
+
+    def get_actuacion(self, actuacion_id: str) -> dict[str, object] | None:
+        row = self._store.get_amigos_actuacion(actuacion_id)
+        return self._actuacion_read(row) if row is not None else None
+
+    def get_public_actuacion(self, actuacion_id: str) -> dict[str, object] | None:
+        row = self._store.get_amigos_actuacion(actuacion_id)
+        if row is None or str(row.get("editorial_status")) != "published":
+            return None
+        return self._actuacion_read(row)
+
+    def list_actuaciones(
+        self, *, public_only: bool = True, from_date: str | None = None, to_date: str | None = None,
+        kind: str | None = None, locality: str | None = None, group_id: str | None = None,
+        limit: int = 100, offset: int = 0,
+    ) -> dict[str, object]:
+        if kind is not None and kind not in EVENT_KINDS:
+            raise AmigosError(422, "INVALID_KIND", "Tipo de evento no válido")
+        rows, total = self._store.list_amigos_actuaciones(
+            editorial_statuses=["published"] if public_only else None,
+            from_date=from_date,
+            to_date=to_date,
+            kind=kind,
+            locality=locality,
+            group_id=group_id,
+            limit=limit,
+            offset=offset,
+        )
+        return {"items": [self._actuacion_read(r) for r in rows], "total": total}
+
+    def _actuacion_read(self, row: dict[str, object]) -> dict[str, object]:
+        data = dict(row)
+        data["groups"] = self._store.list_amigos_actuacion_groups(str(row["id"]))
+        return data
+
+    def _unique_actuacion_slug(self, title: str) -> str:
+        base = _slugify(title, max_len=120) or "evento"
+        candidate = base
+        suffix = 2
+        while self._store.get_amigos_actuacion_by_slug(candidate) is not None:
+            candidate = f"{base}-{suffix}"
+            suffix += 1
+        return candidate
 
     # --- artículos: alta y edición ------------------------------------------
 
@@ -884,6 +1071,22 @@ def _validate_optional_date(value: object) -> str | None:
         raise AmigosError(422, "INVALID_DATE", "Fecha inválida (formato AAAA-MM-DD)") from None
     if parsed.isoformat() != text:
         raise AmigosError(422, "INVALID_DATE", "Fecha inválida (formato AAAA-MM-DD)")
+    return text
+
+
+def _require_date(value: object) -> str:
+    text = _validate_optional_date(value)
+    if text is None:
+        raise AmigosError(422, "INVALID_DATE", "Fecha obligatoria (AAAA-MM-DD)")
+    return text
+
+
+def _validate_time(value: object) -> str | None:
+    text = str(value).strip() if value is not None else ""
+    if not text:
+        return None
+    if not re.fullmatch(r"([01]\d|2[0-3]):[0-5]\d(:[0-5]\d)?", text):
+        raise AmigosError(422, "INVALID_TIME", "Hora inválida (HH:MM)")
     return text
 
 

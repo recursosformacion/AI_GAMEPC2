@@ -10,12 +10,16 @@ from __future__ import annotations
 import logging
 
 from src.osap.api.contracts import (
+    AmigosActuacionListRead,
+    AmigosActuacionRead,
+    AmigosActuacionRequest,
     AmigosArticleCreateRequest,
     AmigosArticleListRead,
     AmigosArticleRead,
     AmigosArticleUpdateRequest,
     AmigosCoralDetailsRead,
     AmigosCoralDetailsUpdate,
+    AmigosEventGroup,
     AmigosGroupCreateRequest,
     AmigosGroupLink,
     AmigosGroupRead,
@@ -354,6 +358,162 @@ class AmigosMixin(PlatformApiCore):
             group_id=group_id,
         )
         return AmigosMemberListRead(items=[self._amigos_member_read(r) for r in rows], total=len(rows))
+
+    # --- agenda: actuaciones y eventos --------------------------------------
+
+    def amigos_list_events(
+        self,
+        token: str | None,
+        *,
+        public_only: bool,
+        from_date: str | None = None,
+        to_date: str | None = None,
+        kind: str | None = None,
+        locality: str | None = None,
+        group_id: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> AmigosActuacionListRead:
+        is_admin = public_only is False and self._amigos_is_global_admin(token)
+        data = self._amigos_service().list_actuaciones(
+            public_only=not is_admin,
+            from_date=from_date,
+            to_date=to_date,
+            kind=kind,
+            locality=locality,
+            group_id=group_id,
+            limit=limit,
+            offset=offset,
+        )
+        items = [self._amigos_event_read(r) for r in self._rows(data)]
+        return AmigosActuacionListRead(items=items, total=self._total(data))
+
+    def amigos_get_event(
+        self, token: str | None, event_id: str, *, public_only: bool
+    ) -> AmigosActuacionRead | None:
+        if public_only and not self._amigos_is_global_admin(token):
+            row = self._amigos_service().get_public_actuacion(event_id)
+        else:
+            row = self._amigos_service().get_actuacion(event_id)
+        return self._amigos_event_read(row) if row is not None else None
+
+    def amigos_create_event(
+        self, token: str | None, payload: AmigosActuacionRequest
+    ) -> AmigosActuacionRead:
+        actor = self._amigos_user(token)
+        data = payload.model_dump(exclude_unset=True)
+        data["groups"] = [g.model_dump() for g in payload.groups]
+        action = str(data.pop("action", "draft"))
+        row = self._amigos_service().create_actuacion(
+            actor_user_id=actor,
+            is_global_admin=self._amigos_is_global_admin(token),
+            data=data,
+            action=action,
+        )
+        return self._amigos_event_read(row)
+
+    def amigos_update_event(
+        self, token: str | None, event_id: str, payload: AmigosActuacionRequest
+    ) -> AmigosActuacionRead | None:
+        actor = self._amigos_user(token)
+        data = payload.model_dump(exclude_unset=True)
+        if "groups" in data or payload.groups:
+            data["groups"] = [g.model_dump() for g in payload.groups]
+        data.pop("action", None)
+        row = self._amigos_service().update_actuacion(
+            actor_user_id=actor,
+            is_global_admin=self._amigos_is_global_admin(token),
+            actuacion_id=event_id,
+            data=data,
+        )
+        return self._amigos_event_read(row)
+
+    def amigos_set_event_status(
+        self, token: str | None, event_id: str, editorial_status: str
+    ) -> AmigosActuacionRead:
+        actor = self._amigos_user(token)
+        row = self._amigos_service().set_actuacion_editorial(
+            actor_user_id=actor,
+            is_global_admin=self._amigos_is_global_admin(token),
+            actuacion_id=event_id,
+            editorial_status=editorial_status,
+        )
+        return self._amigos_event_read(row)
+
+    def sitemap_amigos_events(self) -> list[dict[str, object]]:
+        data = self._amigos_service().list_actuaciones(public_only=True, limit=10000, offset=0)
+        out: list[dict[str, object]] = []
+        for event in self._rows(data):
+            out.append(
+                {
+                    "id": str(event.get("id") or ""),
+                    "title": str(event.get("title") or ""),
+                    "updated_at": str(event.get("updated_at") or ""),
+                }
+            )
+        return out
+
+    def seo_amigos_event(self, event_id: str) -> dict[str, object] | None:
+        row = self._amigos_service().get_public_actuacion(event_id)
+        return self._amigos_event_read(row).model_dump() if row is not None else None
+
+    def _amigos_event_read(self, row: dict[str, object]) -> AmigosActuacionRead:
+        def text(key: str) -> str | None:
+            value = row.get(key)
+            clean = str(value).strip() if value is not None else ""
+            return clean or None
+
+        lat = row.get("latitude")
+        lon = row.get("longitude")
+        raw_groups = row.get("groups")
+        groups = [
+            AmigosEventGroup(
+                group_id=str(g.get("group_id") or ""),
+                role=str(g.get("role") or "participant"),
+            )
+            for g in (raw_groups if isinstance(raw_groups, list) else [])
+            if isinstance(g, dict)
+        ]
+        return AmigosActuacionRead(
+            id=str(row["id"]),
+            slug=str(row["slug"]),
+            title=str(row.get("title") or ""),
+            summary=text("summary"),
+            description=text("description"),
+            image_url=text("image_url"),
+            kind=str(row.get("kind") or "other"),
+            modality=str(row.get("modality") or "onsite"),
+            event_status=str(row.get("event_status") or "scheduled"),
+            editorial_status=str(row.get("editorial_status") or "draft"),
+            starts_on=str(row.get("starts_on") or ""),
+            starts_at=text("starts_at"),
+            ends_on=text("ends_on"),
+            ends_at=text("ends_at"),
+            timezone=text("timezone"),
+            registration_deadline=text("registration_deadline"),
+            venue_name=text("venue_name"),
+            venue_address=text("venue_address"),
+            locality=text("locality"),
+            region=text("region"),
+            country_code=text("country_code"),
+            latitude=float(str(lat)) if lat is not None else None,
+            longitude=float(str(lon)) if lon is not None else None,
+            map_url=text("map_url"),
+            organizer_name=text("organizer_name"),
+            organizer_website=text("organizer_website"),
+            event_url=text("event_url"),
+            tickets_url=text("tickets_url"),
+            price=text("price"),
+            access_info=text("access_info"),
+            public_contact=text("public_contact"),
+            organizer_group_id=text("organizer_group_id"),
+            last_verified_on=text("last_verified_on"),
+            author_user_id=str(row.get("author_user_id") or ""),
+            published_at=text("published_at"),
+            created_at=str(row.get("created_at") or ""),
+            updated_at=str(row.get("updated_at") or ""),
+            groups=groups,
+        )
 
     # --- ficha de coral (especialización por tipo) ---------------------------
 

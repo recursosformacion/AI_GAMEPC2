@@ -187,3 +187,97 @@ class AmigosCoralDetailsRead(_Frozen):
     repertoire: list[str] = []
     languages: list[str] = []
     places: list[str] = []
+
+
+# --- Agenda: actuaciones y eventos -------------------------------------------
+
+
+class AmigosEventGroup(_Frozen):
+    group_id: str
+    role: str = "participant"  # participant | organizer
+
+
+class AmigosActuacionRequest(_Frozen):
+    title: str | None = None
+    summary: str | None = None
+    description: str | None = None
+    image_url: str | None = None
+    kind: str | None = None
+    modality: str | None = None
+    event_status: str | None = None
+    starts_on: str | None = None
+    starts_at: str | None = None
+    ends_on: str | None = None
+    ends_at: str | None = None
+    timezone: str | None = None
+    registration_deadline: str | None = None
+    venue_name: str | None = None
+    venue_address: str | None = None
+    locality: str | None = None
+    region: str | None = None
+    country_code: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    map_url: str | None = None
+    organizer_name: str | None = None
+    organizer_website: str | None = None
+    event_url: str | None = None
+    tickets_url: str | None = None
+    price: str | None = None
+    access_info: str | None = None
+    public_contact: str | None = None
+    organizer_group_id: str | None = None
+    last_verified_on: str | None = None
+    internal_notes: str | None = None
+    groups: list[AmigosEventGroup] = []
+    action: str = "draft"
+
+
+class AmigosActuacionStatusRequest(_Frozen):
+    editorial_status: str
+
+
+class AmigosActuacionRead(_Frozen):
+    id: str
+    slug: str
+    title: str
+    summary: str | None = None
+    description: str | None = None
+    image_url: str | None = None
+    kind: str
+    modality: str
+    event_status: str
+    editorial_status: str
+    starts_on: str
+    starts_at: str | None = None
+    ends_on: str | None = None
+    ends_at: str | None = None
+    timezone: str | None = None
+    registration_deadline: str | None = None
+    venue_name: str | None = None
+    venue_address: str | None = None
+    locality: str | None = None
+    region: str | None = None
+    country_code: str | None = None
+    latitude: float | None = None
+    longitude: float | None = None
+    map_url: str | None = None
+    organizer_name: str | None = None
+    organizer_website: str | None = None
+    event_url: str | None = None
+    tickets_url: str | None = None
+    price: str | None = None
+    access_info: str | None = None
+    public_contact: str | None = None
+    organizer_group_id: str | None = None
+    last_verified_on: str | None = None
+    author_user_id: str = ""
+    published_at: str | None = None
+    created_at: str = ""
+    updated_at: str = ""
+    groups: list[AmigosEventGroup] = []
+
+
+class AmigosActuacionListRead(_Frozen):
+    items: list[AmigosActuacionRead]
+    total: int

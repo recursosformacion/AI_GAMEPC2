@@ -14,6 +14,8 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter, Header, Query, Request, Response
 
 from src.osap.api.contracts import (
+    AmigosActuacionRequest,
+    AmigosActuacionStatusRequest,
     AmigosArticleCreateRequest,
     AmigosArticleUpdateRequest,
     AmigosCoralDetailsUpdate,
@@ -107,6 +109,49 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
             data = ctx.api.amigos_coral_details(group_id)
             if data is None:
                 raise AmigosError(404, "CORAL_NOT_FOUND", "El grupo no es de tipo coral")
+            return data
+
+        return _call(ctx, response, run)
+
+    @router.get(
+        "/api/v1/amigos/events",
+        tags=["Friends"],
+        summary="Agenda: eventos publicados (público)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={200: _shared._resp("Events", _shared._example({"items": [], "total": 0}))},
+    )
+    def list_events(
+        response: Response,
+        kind: str | None = Query(None),
+        locality: str | None = Query(None),
+        group_id: str | None = Query(None),
+        from_date: str | None = Query(None),
+        to_date: str | None = Query(None),
+        limit: int = Query(100, ge=1, le=500),
+        offset: int = Query(0, ge=0),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(
+            ctx, response,
+            lambda: ctx.api.amigos_list_events(
+                None, public_only=True, from_date=from_date, to_date=to_date, kind=kind,
+                locality=locality, group_id=group_id, limit=limit, offset=offset,
+            ),
+        )
+
+    @router.get(
+        "/api/v1/amigos/events/{event_id}",
+        tags=["Friends"],
+        summary="Agenda: evento publicado (público)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses=standard_errors(404),
+    )
+    def get_event(
+        event_id: str, response: Response, authorization: str | None = Header(default=None)
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        def run() -> object:
+            data = ctx.api.amigos_get_event(authorization, event_id, public_only=True)
+            if data is None:
+                raise AmigosError(404, "EVENT_NOT_FOUND", "Evento no encontrado")
             return data
 
         return _call(ctx, response, run)
@@ -333,6 +378,59 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         return _call(
             ctx, response,
             lambda: ctx.api.amigos_update_coral_details(authorization, group_id, payload),
+        )
+
+    @router.post(
+        "/api/v1/admin/amigos/events",
+        tags=["Friends"],
+        summary="Crear una actuación/evento (borrador o publicar)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, **_shared._standard_errors(403, 422)},
+    )
+    def create_event(
+        payload: AmigosActuacionRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(ctx, response, lambda: ctx.api.amigos_create_event(authorization, payload))
+
+    @router.patch(
+        "/api/v1/admin/amigos/events/{event_id}",
+        tags=["Friends"],
+        summary="Editar una actuación/evento",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, **_shared._standard_errors(403, 404, 422)},
+    )
+    def update_event(
+        event_id: str,
+        payload: AmigosActuacionRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        def run() -> object:
+            updated = ctx.api.amigos_update_event(authorization, event_id, payload)
+            if updated is None:
+                raise AmigosError(404, "EVENT_NOT_FOUND", "Evento no encontrado")
+            return updated
+
+        return _call(ctx, response, run)
+
+    @router.post(
+        "/api/v1/admin/amigos/events/{event_id}/status",
+        tags=["Friends"],
+        summary="Cambiar el estado editorial de un evento",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, **_shared._standard_errors(403, 404, 422)},
+    )
+    def set_event_status(
+        event_id: str,
+        payload: AmigosActuacionStatusRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(
+            ctx, response,
+            lambda: ctx.api.amigos_set_event_status(authorization, event_id, payload.editorial_status),
         )
 
     # --- membresías ----------------------------------------------------------
