@@ -46,6 +46,20 @@
   </div>
 </section>
 
+{# Acciones para usuarios con sesión (el enlace solo aparece si hay sesión en este navegador;
+   los permisos reales los aplica la app). #}
+<div id="amigos-edit" hidden class="coral-actions" style="margin-top:0.6rem">
+  <a class="btn" href="/amigos/editor?group={{ view.group_id }}">+ Nueva publicación</a>
+  <a class="btn" href="/admin/amigos/{{ view.group_id }}?mode=edit">Editar ficha</a>
+</div>
+<script>
+  try {
+    if (localStorage.getItem("osap.refresh_token")) {
+      document.getElementById("amigos-edit").hidden = false;
+    }
+  } catch (e) {}
+</script>
+
 {% if view.coral and view.coral.has_data %}
 <details class="card more">
   <summary>Ficha completa</summary>

@@ -11,6 +11,7 @@ import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
+import { useOidcLogin } from "../components/useOidcLogin";
 import { useAuth } from "../state/auth";
 
 interface AdminItem {
@@ -111,6 +112,8 @@ const SECTIONS: AdminSection[] = [
 export function AdminLayout(): ReactNode {
   const { t } = useI18n();
   const isAdmin = useAuth((s) => s.isAdmin());
+  const authenticated = useAuth((s) => s.isAuthenticated());
+  const { start: startLogin } = useOidcLogin();
   const logout = useAuth((s) => s.logout);
   const navigate = useNavigate();
 
@@ -141,6 +144,24 @@ export function AdminLayout(): ReactNode {
   const label = (item: AdminItem): string => item.label ?? (item.key ? t(item.key) : "");
   const itemKey = (item: AdminItem): string =>
     (item.to ?? item.storage ?? item.support ?? "") + label(item);
+
+  if (!authenticated) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 osap-score-bg text-osap-ink">
+        <p className="text-sm text-osap-muted">{t("admin.loginRequired")}</p>
+        <button
+          type="button"
+          onClick={() => void startLogin()}
+          className="rounded-md bg-osap-accent px-4 py-2 text-sm font-medium text-white hover:bg-osap-accent/90"
+        >
+          {t("auth.login")}
+        </button>
+        <Link to="/" className="text-sm text-osap-accent hover:underline">
+          {t("nav.home")}
+        </Link>
+      </div>
+    );
+  }
 
   if (!isAdmin) {
     return (

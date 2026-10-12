@@ -29,6 +29,7 @@ interface DirectoryUser {
   user_id: string;
   email: string;
   name?: string | null;
+  nickname?: string | null;
 }
 
 interface CoralForm {
@@ -232,10 +233,32 @@ export function AdminAmigosGroupPage() {
       await load();
     });
 
+  const resolveUser = (query: string): DirectoryUser | null => {
+    const q = query.trim().toLowerCase();
+    if (q === "") return null;
+    return (
+      users.find((u) => u.email.toLowerCase() === q) ??
+      users.find((u) => u.user_id === query.trim()) ??
+      null
+    );
+  };
+
+  const userLabel = (userId: string): string => {
+    const u = users.find((x) => x.user_id === userId);
+    if (u === undefined) return userId;
+    const nick = u.nickname ? ` (${u.nickname})` : "";
+    const name = u.name ? `${u.name} · ` : "";
+    return `${name}${u.email}${nick}`;
+  };
+
   const grantMember = () =>
     guard(async () => {
-      if (newUserId.trim() === "") return;
-      await apiClient.grantAmigosMember(groupId, newUserId.trim(), newRole);
+      const query = newUserId.trim();
+      if (query === "") return;
+      // Se admite el email (buscado en el directorio) o el propio user_id.
+      const resolved = resolveUser(query);
+      const userId = resolved !== null ? resolved.user_id : query;
+      await apiClient.grantAmigosMember(groupId, userId, newRole);
       setNewUserId("");
       await load();
     });
@@ -572,32 +595,27 @@ export function AdminAmigosGroupPage() {
       <Card title={t("friends.members")}>
         {viewMode ? null : (
           <div className="flex flex-wrap gap-2">
-            {usersUnavailable ? (
-              <input
-                value={newUserId}
-                onChange={(e) => setNewUserId(e.target.value)}
-                placeholder={t("friends.userId")}
-                className="min-w-48 flex-1 rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
-              />
-            ) : (
-              <select
-                value={newUserId}
-                onChange={(e) => setNewUserId(e.target.value)}
-                className="min-w-64 flex-1 rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
-              >
-                <option value="">{t("friends.pickUser")}</option>
+            <input
+              list="amigos-users"
+              value={newUserId}
+              onChange={(e) => setNewUserId(e.target.value)}
+              placeholder={usersUnavailable ? t("friends.userId") : t("friends.emailOrUser")}
+              className="min-w-64 flex-1 rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
+            />
+            {usersUnavailable ? null : (
+              <datalist id="amigos-users">
                 {users
                   .filter(
                     (u) =>
                       !members.some((m) => m.user_id === u.user_id && m.status === "active"),
                   )
                   .map((u) => (
-                    <option key={u.user_id} value={u.user_id}>
-                      {u.email}
-                      {u.name ? ` — ${u.name}` : ""}
+                    <option key={u.user_id} value={u.email}>
+                      {u.name ?? ""}
+                      {u.nickname ? ` (${u.nickname})` : ""}
                     </option>
                   ))}
-              </select>
+              </datalist>
             )}
             <select
               value={newRole}
@@ -619,7 +637,9 @@ export function AdminAmigosGroupPage() {
         <ul className="mt-3 divide-y divide-osap-border">
           {members.map((m) => (
             <li key={m.user_id} className="flex items-center justify-between py-2 text-sm">
-              <span className="min-w-0 truncate font-mono text-xs">{m.user_id}</span>
+              <span className="min-w-0 truncate text-xs" title={m.user_id}>
+                {userLabel(m.user_id)}
+              </span>
               <span className="flex items-center gap-2 text-xs">
                 <span className="rounded bg-osap-accent-soft px-2 py-0.5">
                   {m.role === "admin" ? t("friends.roleAdmin") : t("friends.roleCollaborator")}
