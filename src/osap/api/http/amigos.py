@@ -549,6 +549,48 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
             lambda: ctx.api.amigos_revoke_authorization(authorization, user_id, scope),
         )
 
+    @router.get(
+        "/api/v1/admin/amigos/events",
+        tags=["Friends"],
+        summary="Agenda: eventos para gestión (no admin ve solo publicados)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401},
+    )
+    def admin_list_events(
+        response: Response,
+        kind: str | None = Query(None),
+        locality: str | None = Query(None),
+        group_id: str | None = Query(None),
+        limit: int = Query(200, ge=1, le=500),
+        offset: int = Query(0, ge=0),
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(
+            ctx, response,
+            lambda: ctx.api.amigos_list_events(
+                authorization, public_only=False, kind=kind, locality=locality,
+                group_id=group_id, limit=limit, offset=offset,
+            ),
+        )
+
+    @router.get(
+        "/api/v1/admin/amigos/blog",
+        tags=["Friends"],
+        summary="Blog general: todos los artículos (admin)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, **_shared._standard_errors(403)},
+    )
+    def admin_list_blog(
+        response: Response,
+        limit: int = Query(200, ge=1, le=500),
+        offset: int = Query(0, ge=0),
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(
+            ctx, response,
+            lambda: ctx.api.amigos_admin_blog_articles(authorization, limit, offset),
+        )
+
     # --- membresías ----------------------------------------------------------
 
     @router.get(

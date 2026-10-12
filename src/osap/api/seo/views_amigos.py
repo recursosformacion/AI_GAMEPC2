@@ -275,8 +275,9 @@ def build_article_view(data: dict[str, object]) -> ArticleView:
     slug = slugify(title) or "articulo"
     event_date = str(data.get("event_date") or "")
     group_id = str(data.get("group_id") or "")
+    is_general = group_id == ""
     group_slug = str(data.get("group_slug") or "") or "grupo"
-    group_name = str(data.get("group_name") or "Grupo")
+    group_name = "Artículos" if is_general else str(data.get("group_name") or "Grupo")
     summary = _str_or_none(data.get("summary"))
     body = str(data.get("body") or "")
     cover_url = _str_or_none(data.get("cover_url"))
@@ -298,7 +299,11 @@ def build_article_view(data: dict[str, object]) -> ArticleView:
                     credit=_str_or_none(item.get("credit")),
                 )
             )
-    group_url = group_canonical_url(group_id, group_slug)
+    group_url = (
+        f"{public_base_url()}/amigos/articulos"
+        if is_general
+        else group_canonical_url(group_id, group_slug)
+    )
     canonical = article_canonical_url(article_id, slug)
     description = summary or (body[:180].strip() + ("…" if len(body) > 180 else ""))
     if not description:

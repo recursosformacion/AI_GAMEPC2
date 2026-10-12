@@ -180,6 +180,8 @@ const SPACE_NAV: readonly NavItem[] = [{ to: "/activity", key: "nav.activity", i
 const FRIENDS_NAV: readonly NavItem[] = [
   { to: "/amigos", key: "nav.friends", icon: "friends" },
   { to: "/amigos/corales", key: "nav.corales", icon: "people" },
+  { to: "/amigos/eventos", key: "nav.events", icon: "clock" },
+  { to: "/amigos/articulos", key: "nav.articles", icon: "article" },
   { to: "/amigos/mis-articulos", key: "nav.myArticles", icon: "article" },
 ];
 

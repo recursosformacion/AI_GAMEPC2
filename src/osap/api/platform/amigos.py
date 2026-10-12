@@ -572,6 +572,17 @@ class AmigosMixin(PlatformApiCore):
         )
         return self._amigos_article_read(row)
 
+    def amigos_admin_blog_articles(
+        self, token: str | None, limit: int = 200, offset: int = 0
+    ) -> AmigosArticleListRead:
+        if not self._amigos_is_global_admin(token):
+            raise ForbiddenError("Se requiere administración global")
+        data = self._amigos_service().list_blog_articles(
+            public_only=False, limit=limit, offset=offset
+        )
+        items = [self._amigos_article_read(r) for r in self._rows(data)]
+        return AmigosArticleListRead(items=items, total=self._total(data))
+
     # --- autorizaciones editoriales (blog/events) ---------------------------
 
     def amigos_grant_authorization(
@@ -735,6 +746,15 @@ class AmigosMixin(PlatformApiCore):
                         "updated_at": str(article.get("updated_at") or ""),
                     }
                 )
+        # Blog general (artículos sin grupo).
+        for article in self._rows(self._amigos_service().list_blog_articles(public_only=True, limit=10000, offset=0)):
+            out.append(
+                {
+                    "id": str(article["id"]),
+                    "title": str(article["title"]),
+                    "updated_at": str(article.get("updated_at") or ""),
+                }
+            )
         return out
 
     # --- serialización -------------------------------------------------------

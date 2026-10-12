@@ -15,6 +15,11 @@ import type {
   AmigosArticleUpdateInput,
   AmigosCoralDetails,
   AmigosCoralDetailsInput,
+  AmigosEvent,
+  AmigosEventInput,
+  AmigosEventList,
+  AmigosAuthorization,
+  AmigosAuthorizationScope,
   AmigosGroup,
   AmigosGroupLink,
   AmigosMember,
@@ -337,6 +342,77 @@ export class ApiClient {
     return this.put<AmigosCoralDetails>(
       `/admin/amigos/groups/${encodeURIComponent(groupId)}/coral`,
       input,
+    );
+  }
+
+  // --- Agenda: actuaciones y eventos ---------------------------------------
+
+  async getAmigosEvents(
+    params: { kind?: string; locality?: string; group_id?: string; from_date?: string } = {},
+  ): Promise<AmigosEventList> {
+    const q = new URLSearchParams();
+    if (params.kind) q.set("kind", params.kind);
+    if (params.locality) q.set("locality", params.locality);
+    if (params.group_id) q.set("group_id", params.group_id);
+    if (params.from_date) q.set("from_date", params.from_date);
+    const qs = q.toString();
+    return this.get<AmigosEventList>(`/amigos/events${qs === "" ? "" : `?${qs}`}`);
+  }
+
+  async getAmigosEvent(eventId: string): Promise<AmigosEvent> {
+    return this.get<AmigosEvent>(`/amigos/events/${encodeURIComponent(eventId)}`);
+  }
+
+  async createAmigosEvent(input: AmigosEventInput): Promise<AmigosEvent> {
+    return this.post<AmigosEvent>("/admin/amigos/events", input);
+  }
+
+  async updateAmigosEvent(eventId: string, input: Partial<AmigosEventInput>): Promise<AmigosEvent> {
+    return this.patch<AmigosEvent>(`/admin/amigos/events/${encodeURIComponent(eventId)}`, input);
+  }
+
+  async setAmigosEventStatus(eventId: string, editorialStatus: string): Promise<AmigosEvent> {
+    return this.post<AmigosEvent>(
+      `/admin/amigos/events/${encodeURIComponent(eventId)}/status`,
+      { editorial_status: editorialStatus },
+    );
+  }
+
+  // --- Blog general «Artículos» --------------------------------------------
+
+  async getAmigosBlog(limit = 100, offset = 0): Promise<AmigosArticleList> {
+    return this.get<AmigosArticleList>(`/amigos/blog?limit=${limit}&offset=${offset}`);
+  }
+
+  async createAmigosBlogArticle(input: AmigosArticleCreateInput): Promise<AmigosArticle> {
+    return this.post<AmigosArticle>("/admin/amigos/blog", input);
+  }
+
+  async approveAmigosBlogArticle(articleId: string): Promise<AmigosArticle> {
+    return this.post<AmigosArticle>(`/admin/amigos/blog/${encodeURIComponent(articleId)}/approve`);
+  }
+
+  // --- Autorizaciones editoriales (blog/events) ----------------------------
+
+  async getAmigosAuthorizations(scope: AmigosAuthorizationScope): Promise<{ items: AmigosAuthorization[]; total: number }> {
+    return this.get(`/admin/amigos/authorizations?scope=${scope}`);
+  }
+
+  async grantAmigosAuthorization(
+    userId: string,
+    scope: AmigosAuthorizationScope,
+    directPublish = false,
+  ): Promise<AmigosAuthorization> {
+    return this.post<AmigosAuthorization>("/admin/amigos/authorizations", {
+      user_id: userId,
+      scope,
+      direct_publish: directPublish,
+    });
+  }
+
+  async revokeAmigosAuthorization(userId: string, scope: AmigosAuthorizationScope): Promise<unknown> {
+    return this.delete(
+      `/admin/amigos/authorizations/${encodeURIComponent(userId)}?scope=${scope}`,
     );
   }
 

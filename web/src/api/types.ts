@@ -985,4 +985,77 @@ export type AmigosCoralDetailsInput = Partial<
   places?: string[];
 };
 
+// --- Agenda: actuaciones y eventos -------------------------------------------
+
+export interface AmigosEventGroupRef {
+  group_id: string;
+  role: string;
+}
+
+export interface AmigosEvent {
+  id: string;
+  slug: string;
+  title: string;
+  summary?: string | null;
+  description?: string | null;
+  image_url?: string | null;
+  kind: string;
+  modality: string;
+  event_status: string;
+  editorial_status: string;
+  starts_on: string;
+  starts_at?: string | null;
+  ends_on?: string | null;
+  ends_at?: string | null;
+  timezone?: string | null;
+  registration_deadline?: string | null;
+  venue_name?: string | null;
+  venue_address?: string | null;
+  locality?: string | null;
+  region?: string | null;
+  country_code?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  map_url?: string | null;
+  organizer_name?: string | null;
+  organizer_website?: string | null;
+  event_url?: string | null;
+  tickets_url?: string | null;
+  price?: string | null;
+  access_info?: string | null;
+  public_contact?: string | null;
+  organizer_group_id?: string | null;
+  last_verified_on?: string | null;
+  author_user_id?: string;
+  published_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
+  groups: AmigosEventGroupRef[];
+}
+
+export type AmigosEventInput = Partial<
+  Omit<AmigosEvent, "id" | "slug" | "editorial_status" | "author_user_id" | "created_at" | "updated_at" | "published_at" | "groups">
+> & {
+  title: string;
+  starts_on: string;
+  groups?: AmigosEventGroupRef[];
+  action?: "draft" | "publish";
+};
+
+export interface AmigosEventList {
+  items: AmigosEvent[];
+  total: number;
+}
+
+// --- Autorizaciones editoriales (blog/agenda) --------------------------------
+
+export type AmigosAuthorizationScope = "blog" | "events";
+
+export interface AmigosAuthorization {
+  user_id: string;
+  scope: AmigosAuthorizationScope | string;
+  direct_publish: boolean;
+  created_at?: string;
+}
+
 

@@ -60,6 +60,9 @@ const SECTIONS: AdminSection[] = [
     items: [
       { to: "/admin/amigos", key: "friends.adminGrupos" },
       { to: "/admin/amigos/corales", key: "nav.corales" },
+      { to: "/admin/amigos/eventos", key: "nav.events" },
+      { to: "/admin/amigos/blog", key: "nav.articles" },
+      { to: "/admin/amigos/autorizaciones", key: "friends.authorizations" },
     ],
   },
   {
