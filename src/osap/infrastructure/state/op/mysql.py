@@ -473,7 +473,7 @@ class _MysqlStore(_MemoryStore):
         )
         # Blog general + autorizaciones editoriales (blog/agenda).
         self._ensure_column("amigos_articles", "scope", "VARCHAR(16) NOT NULL DEFAULT 'group'")
-        self._run("ALTER TABLE amigos_articles MODIFY group_id CHAR(32) NULL")
+        self._ensure_column_nullable("amigos_articles", "group_id", "CHAR(32) NULL")
         self._run(
             """
             CREATE TABLE IF NOT EXISTS amigos_authorizations (
@@ -496,13 +496,24 @@ class _MysqlStore(_MemoryStore):
         self._ensure_column("amigos_groups", "logo_url", "VARCHAR(1024) NULL")
 
     def _ensure_column(self, table: str, column: str, ddl: str) -> None:
-        rows = self._run(
-            "SELECT COUNT(*) AS n FROM information_schema.COLUMNS "
-            "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND COLUMN_NAME = %s",
-            (table, column),
-        )
-        if rows and int(str(rows[0]["n"])) == 0:
-            self._run(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
+        # Nunca debe abortar el arranque del store: el usuario de la app puede no tener
+        # privilegio ALTER (se registra y se continúa; la columna se añade vía migración DBA).
+        try:
+            rows = self._run(
+                "SELECT COUNT(*) AS n FROM information_schema.COLUMNS "
+                "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = %s AND COLUMN_NAME = %s",
+                (table, column),
+            )
+            if rows and int(str(rows[0]["n"])) == 0:
+                self._run(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
+        except Exception as exc:  # noqa: BLE001
+            _LOGGER.warning("no se pudo asegurar la columna %s.%s: %s", table, column, exc)
+
+    def _ensure_column_nullable(self, table: str, column: str, ddl: str) -> None:
+        try:
+            self._run(f"ALTER TABLE {table} MODIFY {column} {ddl}")
+        except Exception as exc:  # noqa: BLE001
+            _LOGGER.warning("no se pudo modificar %s.%s: %s", table, column, exc)
 
     def _migrate(self) -> None:
         """Migraciones idempotentes sobre tablas ya existentes.
