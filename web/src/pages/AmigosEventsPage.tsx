@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { AmigosEvent } from "../api/types";
+import { AmigosNote } from "../components/AmigosNote";
 import { Spinner } from "../components/Spinner";
 import { useAmigosPermissions } from "../components/useAmigosPermissions";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
+import { formatEuroDate } from "../utils/dates";
 
 const KIND_KEY: Record<string, TKey> = {
   concert: "friends.eventKind.concert",
@@ -26,15 +28,17 @@ function buyUrl(e: AmigosEvent): string | null {
   return e.tickets_url ?? e.event_url ?? null;
 }
 
-// «Próximas actuaciones y eventos»: rejilla de anuncios (imagen + Comprar). El orden lo pone
-// el servidor (peso desc, fecha desc) y los pasados quedan fuera. Se cuentan impresiones
-// (view), ampliaciones de imagen (expand) y clics de compra (buy).
+// «Próximas actuaciones y eventos»: rejilla de anuncios (imagen entera + fecha/localidad +
+// Comprar). Orden y exclusión de pasados los pone el servidor. Filtros por tipo, localidad
+// (desplegable alimentado por los anuncios vigentes) y fecha. Se cuentan impresiones (view),
+// ampliaciones (expand) y compras (buy).
 export function AmigosEventsPage() {
   const { t } = useI18n();
   const [events, setEvents] = useState<AmigosEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [kind, setKind] = useState("");
   const [locality, setLocality] = useState("");
+  const [date, setDate] = useState("");
   const [open, setOpen] = useState<AmigosEvent | null>(null);
   const seenViews = useRef<Set<string>>(new Set());
   const perms = useAmigosPermissions();
@@ -42,32 +46,48 @@ export function AmigosEventsPage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await apiClient.getAmigosEvents({
-        kind: kind === "" ? undefined : kind,
-        locality: locality.trim() === "" ? undefined : locality.trim(),
-        from_date: today(),
-      });
+      const data = await apiClient.getAmigosEvents({ from_date: today() });
       setEvents(data.items);
     } catch {
       setEvents([]);
     } finally {
       setLoading(false);
     }
-  }, [kind, locality]);
+  }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
 
+  // Localidades disponibles (de los anuncios vigentes).
+  const localities = useMemo(
+    () =>
+      Array.from(new Set(events.map((e) => e.locality).filter((x): x is string => !!x))).sort(
+        (a, b) => a.localeCompare(b),
+      ),
+    [events],
+  );
+
+  const filtered = useMemo(
+    () =>
+      events.filter(
+        (e) =>
+          (kind === "" || e.kind === kind) &&
+          (locality === "" || e.locality === locality) &&
+          (date === "" || e.starts_on === date),
+      ),
+    [events, kind, locality, date],
+  );
+
   // Impresión: se cuenta una vez por anuncio mostrado.
   useEffect(() => {
-    for (const e of events) {
+    for (const e of filtered) {
       if (!seenViews.current.has(e.id)) {
         seenViews.current.add(e.id);
         apiClient.recordAmigosEvent(e.id, "view");
       }
     }
-  }, [events]);
+  }, [filtered]);
 
   const buy = (e: AmigosEvent) => {
     const url = buyUrl(e);
@@ -84,33 +104,24 @@ export function AmigosEventsPage() {
   return (
     <div className="space-y-5">
       <header className="border-b border-osap-border pb-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-osap-accent">
-          {t("nav.sectionFriends")}
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold text-osap-ink">{t("friends.eventsTitle")}</h1>
-      </header>
-
-      <div className="rounded-card border border-osap-accent/30 bg-osap-accent-soft p-4">
-        <p className="font-semibold text-osap-ink">{t("friends.eventsNoteTitle")}</p>
-        <p className="mt-1 text-sm text-osap-ink/80">{t("friends.eventsNoteBody")}</p>
-        <Link
-          to="/corrections?kind=contact"
-          className="mt-2 inline-block text-sm font-medium text-osap-accent hover:underline"
-        >
-          {t("nav.contact")} →
-        </Link>
-      </div>
-
-      {perms?.events ? (
-        <div>
-          <Link
-            to="/mis/anuncios"
-            className="inline-block rounded-md bg-osap-accent px-4 py-2 text-sm font-medium text-white hover:bg-osap-accent/90"
-          >
-            {t("friends.manageEvents")}
-          </Link>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-osap-accent">
+              {t("nav.sectionFriends")}
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold text-osap-ink">{t("friends.eventsTitle")}</h1>
+          </div>
+          {perms?.events ? (
+            <Link
+              to="/mis/anuncios"
+              className="shrink-0 rounded-md bg-osap-accent px-4 py-2 text-sm font-medium text-white hover:bg-osap-accent/90"
+            >
+              {t("friends.manageEvents")}
+            </Link>
+          ) : null}
         </div>
-      ) : null}
+        <AmigosNote titleKey="friends.eventsNoteTitle" bodyKey="friends.eventsNoteBody" />
+      </header>
 
       <div className="flex flex-wrap gap-2">
         <select
@@ -125,21 +136,46 @@ export function AmigosEventsPage() {
             </option>
           ))}
         </select>
-        <input
+        <select
           value={locality}
           onChange={(e) => setLocality(e.target.value)}
-          placeholder={t("friends.locality")}
-          className="min-w-48 rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
+          className="rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
+        >
+          <option value="">{t("friends.locality")}: —</option>
+          {localities.map((loc) => (
+            <option key={loc} value={loc}>
+              {loc}
+            </option>
+          ))}
+        </select>
+        <input
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
+          className="rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
         />
+        {date !== "" || locality !== "" || kind !== "" ? (
+          <button
+            type="button"
+            onClick={() => {
+              setKind("");
+              setLocality("");
+              setDate("");
+            }}
+            className="rounded-md border border-osap-border px-3 py-2 text-sm"
+          >
+            ✕
+          </button>
+        ) : null}
       </div>
 
       {loading ? (
         <Spinner label={t("states.loading")} />
-      ) : events.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <p className="text-sm text-osap-muted">{t("friends.eventsEmpty")}</p>
       ) : (
         <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {events.map((e) => (
+          {filtered.map((e) => (
             <li
               key={e.id}
               className="flex flex-col overflow-hidden rounded-card border border-osap-border bg-osap-surface shadow-card"
@@ -148,14 +184,19 @@ export function AmigosEventsPage() {
                 type="button"
                 onClick={() => expand(e)}
                 aria-label={e.title}
-                className="block w-full"
+                className="block w-full bg-osap-accent-soft"
               >
                 {e.image_url ? (
-                  <img src={e.image_url} alt={e.title} className="aspect-[4/3] w-full object-cover" />
+                  <img src={e.image_url} alt={e.title} className="h-64 w-full object-contain" />
                 ) : (
-                  <span className="block aspect-[4/3] w-full bg-osap-accent-soft" />
+                  <span className="block h-64 w-full" />
                 )}
               </button>
+              <div className="px-3 py-2 text-sm text-osap-muted">
+                {formatEuroDate(e.starts_on)}
+                {e.starts_at ? ` · ${e.starts_at}` : ""}
+                {e.locality ? ` · ${e.locality}` : ""}
+              </div>
               {buyUrl(e) !== null ? (
                 <button
                   type="button"

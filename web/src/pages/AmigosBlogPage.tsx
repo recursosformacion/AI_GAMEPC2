@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { AmigosArticle } from "../api/types";
+import { AmigosNote } from "../components/AmigosNote";
 import { Spinner } from "../components/Spinner";
 import { useAmigosPermissions } from "../components/useAmigosPermissions";
 import { useI18n } from "../i18n/I18n";
@@ -35,33 +36,24 @@ export function AmigosBlogPage() {
   return (
     <div className="space-y-5">
       <header className="border-b border-osap-border pb-5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-osap-accent">
-          {t("nav.sectionFriends")}
-        </p>
-        <h1 className="mt-2 text-3xl font-semibold text-osap-ink">{t("friends.blogTitle")}</h1>
-      </header>
-
-      <div className="rounded-card border border-osap-accent/30 bg-osap-accent-soft p-4">
-        <p className="font-semibold text-osap-ink">{t("friends.blogNoteTitle")}</p>
-        <p className="mt-1 text-sm text-osap-ink/80">{t("friends.blogNoteBody")}</p>
-        <Link
-          to="/corrections?kind=contact"
-          className="mt-2 inline-block text-sm font-medium text-osap-accent hover:underline"
-        >
-          {t("nav.contact")} →
-        </Link>
-      </div>
-
-      {perms?.blog ? (
-        <div>
-          <Link
-            to="/mis/blog"
-            className="inline-block rounded-md bg-osap-accent px-4 py-2 text-sm font-medium text-white hover:bg-osap-accent/90"
-          >
-            {t("friends.manageBlog")}
-          </Link>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-osap-accent">
+              {t("nav.sectionFriends")}
+            </p>
+            <h1 className="mt-2 text-3xl font-semibold text-osap-ink">{t("friends.blogTitle")}</h1>
+          </div>
+          {perms?.blog ? (
+            <Link
+              to="/mis/blog"
+              className="shrink-0 rounded-md bg-osap-accent px-4 py-2 text-sm font-medium text-white hover:bg-osap-accent/90"
+            >
+              {t("friends.manageBlog")}
+            </Link>
+          ) : null}
         </div>
-      ) : null}
+        <AmigosNote titleKey="friends.blogNoteTitle" bodyKey="friends.blogNoteBody" />
+      </header>
 
       {loading ? (
         <Spinner label={t("states.loading")} />

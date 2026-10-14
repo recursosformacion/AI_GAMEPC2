@@ -725,6 +725,22 @@ class TestAuthorizationsAndBlog:
         assert event["editorial_status"] == "pending"
 
 
+class TestRichtext:
+    def test_sanitiza_html_del_cuerpo(self) -> None:
+        from src.osap.domain.richtext import looks_like_html, sanitize_body
+
+        assert not looks_like_html("Hola\n\nmundo")
+        assert sanitize_body("Hola\n\nmundo") == "Hola\n\nmundo"
+        html = (
+            '<p>Hola <strong>mundo</strong></p><script>alert(1)</script>'
+            '<a href="javascript:alert(1)">x</a><a href="/rel">r</a>'
+        )
+        out = sanitize_body(html)
+        assert "<p>" in out and "<strong>mundo</strong>" in out
+        assert "script" not in out and "javascript:" not in out
+        assert 'href="/rel"' in out
+
+
 class TestValidation:
     def test_fecha_de_evento_imposible_rechazada(self) -> None:
         service, _store, group = _service()

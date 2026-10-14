@@ -14,6 +14,7 @@ from dataclasses import dataclass, field
 
 from src.osap.api.seo.slug import slugify
 from src.osap.api.seo.views import public_base_url
+from src.osap.domain.richtext import looks_like_html, sanitize_html
 
 _IMG_EXT = re.compile(r"\.(jpg|jpeg|png|webp|gif|avif)(\?|$)", re.IGNORECASE)
 
@@ -185,6 +186,7 @@ class ArticleView:
     og_image: str | None = None
     json_ld: str = ""
     event_date_display: str = ""
+    body_html: str | None = None
 
 
 def _breadcrumb(items: list[tuple[str, str | None]]) -> dict[str, object]:
@@ -374,4 +376,5 @@ def build_article_view(data: dict[str, object]) -> ArticleView:
         og_image=og_image,
         json_ld=json_ld,
         event_date_display=_euro_date(data.get("event_date")),
+        body_html=sanitize_html(body) if looks_like_html(body) else None,
     )

@@ -38,6 +38,7 @@ from src.osap.domain.amigos import (
     MEDIA_KINDS,
     MEMBER_ROLES,
 )
+from src.osap.domain.richtext import sanitize_body
 
 _NON_ALNUM = re.compile(r"[^a-z0-9]+")
 _DASHES = re.compile(r"[\u2010-\u2015\u2212]")
@@ -808,7 +809,7 @@ class AmigosService:
                 slug=slug,
                 event_date=clean_date,
                 summary=(summary or "").strip() or None,
-                body=body,
+                body=sanitize_body(body),
                 cover_url=_clean_url(cover_url),
                 author_user_id=actor_user_id,
                 status=status,
@@ -900,7 +901,7 @@ class AmigosService:
                 slug=slug,
                 event_date=clean_date,
                 summary=(summary or "").strip() or None,
-                body=body,
+                body=sanitize_body(body),
                 cover_url=_clean_url(cover_url),
                 author_user_id=actor_user_id,
                 status=status,
@@ -958,7 +959,7 @@ class AmigosService:
         if body is not None:
             if not body.strip():
                 raise AmigosError(422, "BODY_REQUIRED", "El texto no puede quedar vacío")
-            changes["body"] = body
+            changes["body"] = sanitize_body(body)
         if summary is not None:
             changes["summary"] = summary.strip() or None
         if cover_url is not None:

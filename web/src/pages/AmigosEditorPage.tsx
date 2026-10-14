@@ -7,6 +7,7 @@ import { Card } from "../components/Card";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
 import { useAuth } from "../state/auth";
+import { htmlToText, textToHtml } from "../utils/richtext";
 
 const STATUS_KEY: Record<string, TKey> = {
   draft: "friends.status.draft",
@@ -39,6 +40,7 @@ export function AmigosEditorPage() {
   const [eventDate, setEventDate] = useState("");
   const [summary, setSummary] = useState("");
   const [body, setBody] = useState("");
+  const [bodyMode, setBodyMode] = useState<"text" | "code">("text");
   const [coverUrl, setCoverUrl] = useState("");
   const [media, setMedia] = useState<MediaRow[]>([]);
   const [status, setStatus] = useState<string>("draft");
@@ -294,11 +296,26 @@ export function AmigosEditorPage() {
       </Card>
 
       <Card title={t("friends.bodyField")}>
+        <div className="mb-2 flex justify-end">
+          <button
+            type="button"
+            onClick={() => {
+              setBody((b) => (bodyMode === "text" ? textToHtml(b) : htmlToText(b)));
+              setBodyMode((m) => (m === "text" ? "code" : "text"));
+            }}
+            className="rounded-md border border-osap-border px-3 py-1 text-xs"
+          >
+            {bodyMode === "text" ? t("friends.code") : t("friends.text")}
+          </button>
+        </div>
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
           rows={10}
-          className="w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
+          spellCheck={bodyMode === "text"}
+          className={`w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm ${
+            bodyMode === "code" ? "font-mono" : ""
+          }`}
         />
       </Card>
 

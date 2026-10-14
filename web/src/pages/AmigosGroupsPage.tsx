@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { AmigosGroup } from "../api/types";
+import { AmigosNote } from "../components/AmigosNote";
 import { Spinner } from "../components/Spinner";
 import { useI18n } from "../i18n/I18n";
 
@@ -40,18 +40,8 @@ export function AmigosGroupsPage() {
         </p>
         <h1 className="mt-2 text-3xl font-semibold text-osap-ink">{t("friends.coralesTitle")}</h1>
         <p className="mt-2 max-w-2xl text-sm text-osap-muted">{t("friends.coralesSubtitle")}</p>
+        <AmigosNote titleKey="friends.coralesNoteTitle" bodyKey="friends.coralesNoteBody" />
       </header>
-
-      <div className="rounded-card border border-osap-accent/30 bg-osap-accent-soft p-4">
-        <p className="font-semibold text-osap-ink">{t("friends.coralesNoteTitle")}</p>
-        <p className="mt-1 text-sm text-osap-ink/80">{t("friends.coralesNoteBody")}</p>
-        <Link
-          to="/corrections?kind=contact"
-          className="mt-2 inline-block text-sm font-medium text-osap-accent hover:underline"
-        >
-          {t("nav.contact")} →
-        </Link>
-      </div>
 
       {loading ? (
         <Spinner label={t("states.loading")} />
