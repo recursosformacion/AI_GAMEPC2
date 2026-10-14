@@ -569,11 +569,15 @@ class AmigosService:
         self, *, actor_user_id: str, is_global_admin: bool, actuacion_id: str,
         data: dict[str, Any],
     ) -> dict[str, object]:
-        self._require_writer(
-            actor_user_id, is_global_admin, "events", "No estás autorizado para gestionar eventos"
-        )
-        if self._store.get_amigos_actuacion(actuacion_id) is None:
+        row = self._store.get_amigos_actuacion(actuacion_id)
+        if row is None:
             raise AmigosError(404, "EVENT_NOT_FOUND", "Evento no encontrado")
+        if not is_global_admin:
+            self._require_writer(
+                actor_user_id, is_global_admin, "events", "No estás autorizado para gestionar eventos"
+            )
+            if str(row.get("author_user_id")) != actor_user_id:
+                raise AmigosError(403, "FORBIDDEN", "Solo puedes editar tus propios anuncios")
         fields = self._actuacion_fields(data)
         if fields:
             self._store.update_amigos_actuacion(actuacion_id, **fields)
@@ -587,18 +591,21 @@ class AmigosService:
     ) -> dict[str, object]:
         if editorial_status not in ARTICLE_STATUSES:
             raise AmigosError(422, "INVALID_STATUS", "Estado editorial no válido")
+        row = self._store.get_amigos_actuacion(actuacion_id)
+        if row is None:
+            raise AmigosError(404, "EVENT_NOT_FOUND", "Evento no encontrado")
         if editorial_status == "published":
             if not is_global_admin:
                 raise AmigosError(
                     403, "FORBIDDEN", "La publicación de eventos es de administración global"
                 )
-        else:
+        elif not is_global_admin:
             self._require_writer(
                 actor_user_id, is_global_admin, "events",
                 "No estás autorizado para gestionar eventos",
             )
-        if self._store.get_amigos_actuacion(actuacion_id) is None:
-            raise AmigosError(404, "EVENT_NOT_FOUND", "Evento no encontrado")
+            if str(row.get("author_user_id")) != actor_user_id:
+                raise AmigosError(403, "FORBIDDEN", "Solo puedes gestionar tus propios anuncios")
         self._store.set_amigos_actuacion_status(
             actuacion_id=actuacion_id,
             editorial_status=editorial_status,
@@ -641,7 +648,6 @@ class AmigosService:
         return {"items": [self._actuacion_read(r) for r in rows], "total": total}
 
     def record_event_counter(self, actuacion_id: str, kind: str) -> int | None:
-        """Incrementa un contador de anuncio (`view`|`expand`|`buy`). Solo si está publicado."""
         field = {"view": "views", "expand": "expands", "buy": "buys"}.get(kind)
         if field is None:
             raise AmigosError(422, "INVALID_COUNTER", "Contador no válido")
@@ -650,6 +656,46 @@ class AmigosService:
             return None
         count = self._store.increment_amigos_actuacion_counter(actuacion_id, field)
         return int(str(count)) if count is not None else None
+
+    # --- «míos» y permisos (zona de usuario) --------------------------------
+
+    def list_my_actuaciones(self, *, actor_user_id: str, is_global_admin: bool) -> dict[str, object]:
+        rows, _total = self._store.list_amigos_actuaciones(
+            editorial_statuses=None, from_date=None, to_date=None, kind=None, locality=None,
+            group_id=None, limit=10000, offset=0,
+        )
+        items = [
+            r for r in rows if is_global_admin or str(r.get("author_user_id")) == actor_user_id
+        ]
+        items.sort(key=lambda r: str(r.get("created_at") or ""), reverse=True)
+        return {"items": [self._actuacion_read(r) for r in items], "total": len(items)}
+
+    def list_my_general_articles(self, *, actor_user_id: str, is_global_admin: bool) -> dict[str, object]:
+        rows, _total = self._store.list_amigos_articles(
+            group_id=None, statuses=None, scope="general", limit=10000, offset=0,
+        )
+        items = [
+            r for r in rows if is_global_admin or str(r.get("author_user_id")) == actor_user_id
+        ]
+        items.sort(key=lambda r: str(r.get("created_at") or ""), reverse=True)
+        return {"items": [self._article_read(r) for r in items], "total": len(items)}
+
+    def my_permissions(self, *, actor_user_id: str, is_global_admin: bool) -> dict[str, object]:
+        groups = [
+            m for m in self._store.list_amigos_memberships_by_user(actor_user_id)
+            if str(m.get("status")) == "active"
+        ]
+        events_ok, _events_direct = self._authorization(actor_user_id, "events")
+        blog_ok, _blog_direct = self._authorization(actor_user_id, "blog")
+        return {
+            "global_admin": is_global_admin,
+            "groups": [
+                {"group_id": str(m["group_id"]), "role": str(m.get("role") or "collaborator")}
+                for m in groups
+            ],
+            "events": is_global_admin or events_ok,
+            "blog": is_global_admin or blog_ok,
+        }
 
     def _actuacion_read(self, row: dict[str, object]) -> dict[str, object]:
         data = dict(row)

@@ -25,7 +25,7 @@ const STATUS_KEY: Record<string, TKey> = {
 
 type Form = Partial<AmigosEventInput>;
 
-export function AdminAmigosEventsPage() {
+export function AdminAmigosEventsPage({ mine = false }: { mine?: boolean } = {}) {
   const { t } = useI18n();
   const [events, setEvents] = useState<AmigosEvent[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -34,12 +34,14 @@ export function AdminAmigosEventsPage() {
 
   const load = useCallback(async () => {
     try {
-      const data = await apiClient.get<AmigosEventList>("/admin/amigos/events");
+      const data = mine
+        ? await apiClient.getAmigosMyEvents()
+        : await apiClient.get<AmigosEventList>("/admin/amigos/events");
       setEvents(data.items);
     } catch {
       setEvents([]);
     }
-  }, []);
+  }, [mine]);
 
   useEffect(() => {
     void load();

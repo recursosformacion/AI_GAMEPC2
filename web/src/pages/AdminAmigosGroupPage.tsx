@@ -94,6 +94,7 @@ export function AdminAmigosGroupPage() {
   const [groupLinks, setGroupLinks] = useState<AmigosGroupLink[]>([]);
   const [mode, setMode] = useState<"direct" | "moderated">("moderated");
   const [status, setStatus] = useState<"active" | "inactive" | "dissolved">("active");
+  const [status0, setStatus0] = useState<"active" | "inactive" | "dissolved">("active");
   const [coralForm, setCoralForm] = useState<CoralForm>(EMPTY_CORAL);
   const setCoralField = (patch: Partial<CoralForm>) =>
     setCoralForm((prev) => ({ ...prev, ...patch }));
@@ -118,13 +119,14 @@ export function AdminAmigosGroupPage() {
         setLogoUrl(found.logo_url ?? "");
         setGroupLinks(found.links ?? []);
         setMode(found.editorial_mode === "direct" ? "direct" : "moderated");
-        setStatus(
+        const resolvedStatus =
           found.status === "inactive"
             ? "inactive"
             : found.status === "dissolved"
               ? "dissolved"
-              : "active",
-        );
+              : "active";
+        setStatus(resolvedStatus);
+        setStatus0(resolvedStatus);
         if (found.kind === "coral") {
           try {
             const c = await apiClient.getAmigosCoralDetails(groupId);
@@ -195,7 +197,7 @@ export function AdminAmigosGroupPage() {
         logo_url: logoUrl.trim() || null,
         links: groupLinks.filter((l) => l.url.trim() !== ""),
         editorial_mode: mode,
-        status,
+        ...(status !== status0 ? { status } : {}),
       });
       setMessage(t("friends.saved"));
       await load();

@@ -281,6 +281,42 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(ctx, response, lambda: ctx.api.amigos_my_groups(authorization))
 
+    @router.get(
+        "/api/v1/amigos/my/events",
+        tags=["Friends"],
+        summary="Mis anuncios (o todos, si admin global o autorizador de eventos)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401},
+    )
+    def my_events(
+        response: Response, authorization: str | None = Header(default=None)
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(ctx, response, lambda: ctx.api.amigos_my_events(authorization))
+
+    @router.get(
+        "/api/v1/amigos/my/blog",
+        tags=["Friends"],
+        summary="Mis artículos del blog (o todos, si autorizador)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401},
+    )
+    def my_blog(
+        response: Response, authorization: str | None = Header(default=None)
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(ctx, response, lambda: ctx.api.amigos_my_blog_articles(authorization))
+
+    @router.get(
+        "/api/v1/amigos/my/permissions",
+        tags=["Friends"],
+        summary="Permisos del usuario en «Los amigos» (grupos, eventos, blog)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401},
+    )
+    def my_permissions(
+        response: Response, authorization: str | None = Header(default=None)
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(ctx, response, lambda: ctx.api.amigos_my_permissions(authorization))
+
     @router.post(
         "/api/v1/amigos/uploads",
         tags=["Friends"],

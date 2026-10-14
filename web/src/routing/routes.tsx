@@ -81,6 +81,10 @@ export function AppRoutes() {
           <Route path="/amigos/mis-articulos" element={<AmigosMyArticlesPage />} />
           <Route path="/amigos/editor" element={<AmigosEditorPage />} />
           <Route path="/amigos/editor/:articleId" element={<AmigosEditorPage />} />
+          {/* Zona de usuario: gestión sin pasar por el menú Admin. */}
+          <Route path="/mis/corales/:groupId" element={<AdminAmigosGroupPage />} />
+          <Route path="/mis/anuncios" element={<AdminAmigosEventsPage mine />} />
+          <Route path="/mis/blog" element={<AdminAmigosBlogPage mine />} />
           <Route path="/corrections" element={<CorrectionsPage />} />
           <Route path="/catalog" element={<SourceCatalogPage />} />
           <Route path="/sources" element={<SourcesPage />} />

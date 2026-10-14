@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { AmigosEvent } from "../api/types";
 import { Spinner } from "../components/Spinner";
+import { useAmigosPermissions } from "../components/useAmigosPermissions";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
 
@@ -36,6 +37,7 @@ export function AmigosEventsPage() {
   const [locality, setLocality] = useState("");
   const [open, setOpen] = useState<AmigosEvent | null>(null);
   const seenViews = useRef<Set<string>>(new Set());
+  const perms = useAmigosPermissions();
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -98,6 +100,17 @@ export function AmigosEventsPage() {
           {t("nav.contact")} →
         </Link>
       </div>
+
+      {perms?.events ? (
+        <div>
+          <Link
+            to="/mis/anuncios"
+            className="inline-block rounded-md bg-osap-accent px-4 py-2 text-sm font-medium text-white hover:bg-osap-accent/90"
+          >
+            {t("friends.manageEvents")}
+          </Link>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap gap-2">
         <select

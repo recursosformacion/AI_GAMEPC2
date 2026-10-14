@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { AmigosArticle } from "../api/types";
 import { Spinner } from "../components/Spinner";
+import { useAmigosPermissions } from "../components/useAmigosPermissions";
 import { useI18n } from "../i18n/I18n";
 
 // «Artículos»: blog general de OSAP. Cada entrada enlaza a su página pública (SSR) canónica.
@@ -10,6 +11,7 @@ export function AmigosBlogPage() {
   const { t } = useI18n();
   const [articles, setArticles] = useState<AmigosArticle[]>([]);
   const [loading, setLoading] = useState(true);
+  const perms = useAmigosPermissions();
 
   useEffect(() => {
     let cancelled = false;
@@ -48,6 +50,17 @@ export function AmigosBlogPage() {
           {t("nav.contact")} →
         </Link>
       </div>
+
+      {perms?.blog ? (
+        <div>
+          <Link
+            to="/mis/blog"
+            className="inline-block rounded-md bg-osap-accent px-4 py-2 text-sm font-medium text-white hover:bg-osap-accent/90"
+          >
+            {t("friends.manageBlog")}
+          </Link>
+        </div>
+      ) : null}
 
       {loading ? (
         <Spinner label={t("states.loading")} />

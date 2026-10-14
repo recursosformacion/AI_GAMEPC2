@@ -557,6 +557,30 @@ class AmigosMixin(PlatformApiCore):
             groups=groups,
         )
 
+    # --- «míos» y permisos (zona de usuario) --------------------------------
+
+    def amigos_my_events(self, token: str | None) -> AmigosActuacionListRead:
+        actor = self._amigos_user(token)
+        data = self._amigos_service().list_my_actuaciones(
+            actor_user_id=actor, is_global_admin=self._amigos_is_global_admin(token)
+        )
+        items = [self._amigos_event_read(r) for r in self._rows(data)]
+        return AmigosActuacionListRead(items=items, total=self._total(data))
+
+    def amigos_my_blog_articles(self, token: str | None) -> AmigosArticleListRead:
+        actor = self._amigos_user(token)
+        data = self._amigos_service().list_my_general_articles(
+            actor_user_id=actor, is_global_admin=self._amigos_is_global_admin(token)
+        )
+        items = [self._amigos_article_read(r) for r in self._rows(data)]
+        return AmigosArticleListRead(items=items, total=self._total(data))
+
+    def amigos_my_permissions(self, token: str | None) -> dict[str, object]:
+        actor = self._amigos_user(token)
+        return self._amigos_service().my_permissions(
+            actor_user_id=actor, is_global_admin=self._amigos_is_global_admin(token)
+        )
+
     # --- blog general «Artículos» -------------------------------------------
 
     def amigos_blog_articles(

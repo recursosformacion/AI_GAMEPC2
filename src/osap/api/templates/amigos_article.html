@@ -29,7 +29,7 @@
 {# Acciones para usuarios con sesión (los permisos reales los aplica la app). #}
 <div id="amigos-edit" hidden class="coral-actions" style="margin-bottom:0.6rem">
   <a class="btn" href="/amigos/editor/{{ view.article_id }}">Editar publicación</a>
-  <a class="btn" href="/admin/amigos/{{ view.group_id }}?mode=edit">Administrar {{ view.group_name }}</a>
+  {% if view.group_id %}<a class="btn" href="/mis/corales/{{ view.group_id }}">Administrar {{ view.group_name }}</a>{% endif %}
 </div>
 <script>
   try {

@@ -633,6 +633,31 @@ class TestEvents:
             service.record_event_counter(str(event["id"]), "nope")
 
 
+    def test_mios_y_permisos_y_edicion_solo_del_propio(self) -> None:
+        service = AmigosService(_MemoryStore())
+        service.grant_authorization(
+            actor_user_id=_ADMIN, is_global_admin=True, user_id="u1", scope="events"
+        )
+        own = service.create_actuacion(
+            actor_user_id="u1", is_global_admin=False,
+            data={"title": "Mío", "starts_on": "2099-06-01"}, action="draft",
+        )
+        other = service.create_actuacion(
+            actor_user_id=_ADMIN, is_global_admin=True,
+            data={"title": "Otro", "starts_on": "2099-06-01"}, action="draft",
+        )
+        mine = service.list_my_actuaciones(actor_user_id="u1", is_global_admin=False)
+        assert mine["total"] == 1 and mine["items"][0]["id"] == str(own["id"])  # type: ignore[union-attr]
+        with pytest.raises(AmigosError) as exc:
+            service.update_actuacion(
+                actor_user_id="u1", is_global_admin=False, actuacion_id=str(other["id"]),
+                data={"title": "X"},
+            )
+        assert exc.value.status == 403
+        perms = service.my_permissions(actor_user_id="u1", is_global_admin=False)
+        assert perms["events"] is True and perms["blog"] is False
+
+
 class TestAuthorizationsAndBlog:
     def test_autorizacion_solo_admin_global(self) -> None:
         service = AmigosService(_MemoryStore())

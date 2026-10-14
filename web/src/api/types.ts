@@ -1064,4 +1064,12 @@ export interface AmigosAuthorization {
   created_at?: string;
 }
 
+/** Permisos del usuario en «Los amigos» (zona de usuario, sin pasar por Admin). */
+export interface AmigosMyPermissions {
+  global_admin: boolean;
+  groups: { group_id: string; role: string }[];
+  events: boolean;
+  blog: boolean;
+}
+
 

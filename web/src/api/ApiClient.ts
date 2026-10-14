@@ -25,6 +25,7 @@ import type {
   AmigosMember,
   AmigosMemberList,
   AmigosMyGroup,
+  AmigosMyPermissions,
   Catalogue,
   Collaborator,
   Ensemble,
@@ -240,6 +241,21 @@ export class ApiClient {
   /** Grupos en los que puedo colaborar (con mi rol). Requiere sesión. */
   async getAmigosMyGroups(): Promise<AmigosMyGroup[]> {
     return this.get<AmigosMyGroup[]>("/amigos/my/groups");
+  }
+
+  /** Permisos del usuario en «Los amigos» (grupos, eventos, blog). */
+  async getAmigosMyPermissions(): Promise<AmigosMyPermissions> {
+    return this.get<AmigosMyPermissions>("/amigos/my/permissions");
+  }
+
+  /** Mis anuncios (o todos, si soy autorizador/admin). */
+  async getAmigosMyEvents(): Promise<AmigosEventList> {
+    return this.get<AmigosEventList>("/amigos/my/events");
+  }
+
+  /** Mis artículos del blog (o todos, si soy autorizador/admin). */
+  async getAmigosMyBlog(limit = 200, offset = 0): Promise<AmigosArticleList> {
+    return this.get<AmigosArticleList>(`/amigos/my/blog?limit=${limit}&offset=${offset}`);
   }
 
   async getAmigosMyArticles(limit = 100, offset = 0): Promise<AmigosArticleList> {

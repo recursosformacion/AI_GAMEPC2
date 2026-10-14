@@ -13,7 +13,7 @@ const STATUS_KEY: Record<string, TKey> = {
 };
 
 // Blog general «Artículos»: crear y aprobar publicaciones (autor autorizado o admin).
-export function AdminAmigosBlogPage() {
+export function AdminAmigosBlogPage({ mine = false }: { mine?: boolean } = {}) {
   const { t } = useI18n();
   const [articles, setArticles] = useState<AmigosArticle[]>([]);
   const [title, setTitle] = useState("");
@@ -24,12 +24,14 @@ export function AdminAmigosBlogPage() {
 
   const load = useCallback(async () => {
     try {
-      const data = await apiClient.get<AmigosArticleList>("/admin/amigos/blog");
+      const data = mine
+        ? await apiClient.getAmigosMyBlog()
+        : await apiClient.get<AmigosArticleList>("/admin/amigos/blog");
       setArticles(data.items);
     } catch {
       setArticles([]);
     }
-  }, []);
+  }, [mine]);
 
   useEffect(() => {
     void load();
