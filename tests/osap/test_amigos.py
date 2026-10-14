@@ -732,17 +732,21 @@ class TestRichtext:
         assert not looks_like_html("Hola\n\nmundo")
         assert sanitize_body("Hola\n\nmundo") == "Hola\n\nmundo"
         html = (
-            '<p>Hola <strong>mundo</strong></p><script>alert(1)</script>'
+            '<div class="articulo-osap"><p>Hola <strong>mundo</strong></p></div>'
+            '<script>alert(1)</script>'
             '<style>body{color:red}@import url("http://x/y.css");a{background:url(http://e/p.png)}</style>'
-            '<a href="javascript:alert(1)">x</a><a href="/rel">r</a>'
+            '<a href="javascript:alert(1)">x</a><a href="/rel">r</a><p onclick="x()">a</p>'
         )
         out = sanitize_body(html)
+        assert '<div class="articulo-osap">' in out
         assert "<p>" in out and "<strong>mundo</strong>" in out
         assert "script" not in out and "javascript:" not in out
         assert 'href="/rel"' in out
         # <style> se conserva; se filtran @import y url(...)
         assert "<style>" in out and "color:red" in out
         assert "@import" not in out and "url(" not in out
+        # atributos peligrosos fuera
+        assert "onclick" not in out
 
 
 class TestValidation:

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiClient } from "../api/ApiClient";
 import type { AmigosArticle, AmigosArticleCreateInput, AmigosArticleList } from "../api/types";
+import { AmigosImageField } from "../components/AmigosImageField";
 import { Card } from "../components/Card";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
@@ -21,6 +22,7 @@ export function AdminAmigosBlogPage({ mine = false }: { mine?: boolean } = {}) {
   const [title, setTitle] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [summary, setSummary] = useState("");
+  const [cover, setCover] = useState("");
   const [body, setBody] = useState("");
   const [bodyMode, setBodyMode] = useState<"text" | "code">("text");
   const [error, setError] = useState<string | null>(null);
@@ -51,6 +53,7 @@ export function AdminAmigosBlogPage({ mine = false }: { mine?: boolean } = {}) {
       event_date: eventDate,
       body,
       summary: summary.trim() || null,
+      cover_url: cover.trim() || null,
       action,
     };
     try {
@@ -58,6 +61,7 @@ export function AdminAmigosBlogPage({ mine = false }: { mine?: boolean } = {}) {
       setTitle("");
       setEventDate("");
       setSummary("");
+      setCover("");
       setBody("");
       await load();
     } catch {
@@ -95,6 +99,14 @@ export function AdminAmigosBlogPage({ mine = false }: { mine?: boolean } = {}) {
             {t("friends.summaryField")}
             <input value={summary} onChange={(e) => setSummary(e.target.value)} className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm" />
           </label>
+          <div className="sm:col-span-3">
+            <AmigosImageField
+              label={t("friends.coverField")}
+              scope="blog"
+              value={cover}
+              onChange={setCover}
+            />
+          </div>
           <div className="text-xs text-osap-muted sm:col-span-3">
             <div className="flex items-center justify-between">
               <span>{t("friends.bodyField")} *</span>

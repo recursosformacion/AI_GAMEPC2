@@ -399,9 +399,12 @@ class AmigosService:
         if not is_global_admin:
             self._require_can_contribute(group_id, actor_user_id, is_global_admin)
 
-    def authorize_events_upload(self, *, actor_user_id: str, is_global_admin: bool) -> None:
+    def authorize_scope_upload(
+        self, *, scope: str, actor_user_id: str, is_global_admin: bool
+    ) -> None:
+        """Autoriza subir una imagen para un ámbito editorial sin grupo (blog/events)."""
         self._require_writer(
-            actor_user_id, is_global_admin, "events", "No estás autorizado para anuncios"
+            actor_user_id, is_global_admin, scope, "No estás autorizado para subir imágenes aquí"
         )
 
     def validate_upload(

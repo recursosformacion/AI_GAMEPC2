@@ -22,12 +22,14 @@ from html.parser import HTMLParser
 
 _ALLOWED_TAGS = frozenset(
     {"p", "br", "strong", "b", "em", "i", "u", "s", "ul", "ol", "li", "h2", "h3", "h4",
-     "blockquote", "a", "hr", "style"}
+     "blockquote", "a", "hr", "style", "div", "span", "section"}
 )
 _VOID_TAGS = frozenset({"br", "hr"})
 _DROP_CONTENT_TAGS = frozenset({"script"})
 _SAFE_SCHEMES = ("http://", "https://", "mailto:")
 _TAG_DETECT = re.compile(r"<\s*/?\s*[a-zA-Z][^>]*>")
+_CLASS_UNSAFE = re.compile(r"[^A-Za-z0-9_\- ]")
+_WS = re.compile(r"\s+")
 
 _CSS_AT_IMPORT = re.compile(r"@import[^;]*;?", re.IGNORECASE)
 _CSS_URL = re.compile(r"url\s*\([^)]*\)", re.IGNORECASE)
@@ -48,6 +50,11 @@ def _safe_href(value: str | None) -> str | None:
     if lowered.startswith(_SAFE_SCHEMES) or href.startswith("/") or href.startswith("#"):
         return href
     return None
+
+
+def _safe_class(value: str | None) -> str | None:
+    text = _WS.sub(" ", _CLASS_UNSAFE.sub("", value or "")).strip()
+    return text or None
 
 
 def _sanitize_css(css: str) -> str:
@@ -73,18 +80,23 @@ class _Sanitizer(HTMLParser):
             return
         if tag not in _ALLOWED_TAGS:
             return
+        attrs_map = dict(attrs)
+        class_attr = _safe_class(attrs_map.get("class"))
+        class_html = f' class="{escape(class_attr, quote=True)}"' if class_attr else ""
         if tag == "style":
             self._parts.append("<style>")
             self._in_style += 1
             return
         if tag == "a":
-            href = _safe_href(dict(attrs).get("href"))
+            href = _safe_href(attrs_map.get("href"))
             if href is not None:
-                self._parts.append(f'<a href="{escape(href, quote=True)}" rel="nofollow noopener">')
+                self._parts.append(
+                    f'<a{class_html} href="{escape(href, quote=True)}" rel="nofollow noopener">'
+                )
             else:
-                self._parts.append("<a>")
+                self._parts.append(f"<a{class_html}>")
         else:
-            self._parts.append(f"<{tag}>")
+            self._parts.append(f"<{tag}{class_html}>")
 
     def handle_endtag(self, tag: str) -> None:
         tag = tag.lower()

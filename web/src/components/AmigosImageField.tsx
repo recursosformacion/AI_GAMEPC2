@@ -14,7 +14,7 @@ export function AmigosImageField({
   disabled = false,
 }: {
   groupId?: string;
-  scope?: "group" | "events";
+  scope?: "group" | "events" | "blog";
   label: string;
   value: string;
   onChange: (url: string) => void;

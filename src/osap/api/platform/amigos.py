@@ -378,8 +378,8 @@ class AmigosMixin(PlatformApiCore):
         actor = self._amigos_user(token)
         service = self._amigos_service()
         is_admin = self._amigos_is_global_admin(token)
-        if scope == "events":
-            service.authorize_events_upload(actor_user_id=actor, is_global_admin=is_admin)
+        if scope in ("events", "blog"):
+            service.authorize_scope_upload(scope=scope, actor_user_id=actor, is_global_admin=is_admin)
             store_group = ""
         else:
             if not group_id:

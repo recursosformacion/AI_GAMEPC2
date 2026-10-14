@@ -121,7 +121,7 @@ export class ApiClient {
   /** Sube una imagen de «Los amigos» (logo/portada/foto/anuncio) y devuelve su URL pública. */
   async uploadAmigosImage(
     file: File,
-    opts: { groupId?: string; scope?: "group" | "events" } = {},
+    opts: { groupId?: string; scope?: "group" | "events" | "blog" } = {},
   ): Promise<{ id: number; url: string }> {
     const doFetch = this.fetcher ?? globalThis.fetch.bind(globalThis);
     const params = new URLSearchParams({
