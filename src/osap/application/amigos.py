@@ -938,9 +938,9 @@ class AmigosService:
         media: list[dict[str, Any]] | None = None,
     ) -> dict[str, object]:
         article = self._require_article(article_id)
-        group_id = str(article["group_id"])
+        group_id = self._article_group(article)
         is_author = str(article["author_user_id"]) == actor_user_id
-        is_group_admin = self._is_group_admin(group_id, actor_user_id)
+        is_group_admin = self._is_group_admin(group_id, actor_user_id) if group_id else False
         if not (is_author or is_group_admin or is_global_admin):
             raise AmigosError(403, "FORBIDDEN", "No puedes editar este artículo")
         # El autor solo edita sus propios borradores/pendientes; el admin puede corregir
@@ -987,7 +987,8 @@ class AmigosService:
         self._require_author_or_admin(article, actor_user_id, is_global_admin)
         if str(article["status"]) != "draft":
             raise AmigosError(409, "INVALID_TRANSITION", "Solo un borrador se puede enviar")
-        group = self._store.get_amigos_group(str(article["group_id"]))
+        group_value = self._article_group(article)
+        group = self._store.get_amigos_group(group_value) if group_value else None
         mode = str(group.get("editorial_mode")) if group else "moderated"
         target = "published" if mode == "direct" else "pending"
         return self._transition(article, target, actor_user_id, is_global_admin, event="article_submitted")
@@ -996,13 +997,27 @@ class AmigosService:
         self, *, actor_user_id: str, is_global_admin: bool, article_id: str
     ) -> dict[str, object]:
         article = self._require_article(article_id)
-        group_id = str(article["group_id"])
-        role = self._require_can_contribute(group_id, actor_user_id, is_global_admin)
         current = str(article["status"])
         if current == "published":
             return self.get_article_admin(article_id, actor_user_id, is_global_admin)  # type: ignore[return-value]
         if current not in ("draft", "pending"):
             raise AmigosError(409, "INVALID_TRANSITION", "El artículo no se puede publicar ahora")
+        # Blog general (sin grupo): autoriza el autor/admin; el pase directo depende de la
+        # autorización editorial `blog` (sin ella el artículo queda pendiente de aprobación).
+        if str(article.get("scope") or "group") == "general":
+            self._require_author_or_admin(article, actor_user_id, is_global_admin)
+            direct = is_global_admin or self._authorization(actor_user_id, "blog")[1]
+            if direct:
+                return self._transition(
+                    article, "published", actor_user_id, is_global_admin, event="article_published"
+                )
+            if current == "pending":
+                return self.get_article_admin(article_id, actor_user_id, is_global_admin)  # type: ignore[return-value]
+            return self._transition(
+                article, "pending", actor_user_id, is_global_admin, event="article_submitted"
+            )
+        group_id = self._article_group(article) or ""
+        role = self._require_can_contribute(group_id, actor_user_id, is_global_admin)
         # Un colaborador (no admin del grupo) solo publica directo si la modalidad es `direct`.
         if role == "collaborator":
             group = self._store.get_amigos_group(group_id)
@@ -1016,7 +1031,7 @@ class AmigosService:
         self, *, actor_user_id: str, is_global_admin: bool, article_id: str
     ) -> dict[str, object]:
         article = self._require_article(article_id)
-        self._require_group_admin(str(article["group_id"]), actor_user_id, is_global_admin)
+        self._require_group_admin(self._article_group(article) or "", actor_user_id, is_global_admin)
         if str(article["status"]) != "pending":
             raise AmigosError(409, "INVALID_TRANSITION", "El artículo no está pendiente")
         return self._transition(article, "published", actor_user_id, is_global_admin, event="article_approved")
@@ -1025,7 +1040,7 @@ class AmigosService:
         self, *, actor_user_id: str, is_global_admin: bool, article_id: str, note: str | None = None
     ) -> dict[str, object]:
         article = self._require_article(article_id)
-        self._require_group_admin(str(article["group_id"]), actor_user_id, is_global_admin)
+        self._require_group_admin(self._article_group(article) or "", actor_user_id, is_global_admin)
         if str(article["status"]) != "pending":
             raise AmigosError(409, "INVALID_TRANSITION", "El artículo no está pendiente")
         row = self._store.set_amigos_article_status(
@@ -1129,7 +1144,7 @@ class AmigosService:
             return self._article_read(row, include_media=True)
         if actor_user_id and (
             self._is_author(row, actor_user_id)
-            or self._is_group_admin(str(row["group_id"]), actor_user_id)
+            or self._is_group_admin(self._article_group(row) or "", actor_user_id)
         ):
             return self._article_read(row, include_media=True)
         return None
@@ -1142,7 +1157,7 @@ class AmigosService:
             return None
         if not is_global_admin and not (
             self._is_author(row, actor_user_id)
-            or self._is_group_admin(str(row["group_id"]), actor_user_id)
+            or self._is_group_admin(self._article_group(row) or "", actor_user_id)
         ):
             return None
         return self._article_read(row, include_media=True)
@@ -1186,9 +1201,15 @@ class AmigosService:
     ) -> None:
         if is_global_admin or self._is_author(article, actor_user_id):
             return
-        if self._is_group_admin(str(article["group_id"]), actor_user_id):
+        if self._is_group_admin(self._article_group(article) or "", actor_user_id):
             return
         raise AmigosError(403, "FORBIDDEN", "No autorizado sobre este artículo")
+
+    @staticmethod
+    def _article_group(article: dict[str, object]) -> str | None:
+        """Grupo del artículo; `None` en los artículos generales del blog (sin grupo)."""
+        value = article.get("group_id")
+        return str(value) if value else None
 
     @staticmethod
     def _is_author(article: dict[str, object], actor_user_id: str) -> bool:
@@ -1246,7 +1267,7 @@ class AmigosService:
         to_status: str | None = None,
     ) -> None:
         self._store.add_amigos_event(
-            group_id=str(article["group_id"]),
+            group_id=self._article_group(article),
             article_id=str(article["id"]),
             event_type=event_type,
             actor=actor,

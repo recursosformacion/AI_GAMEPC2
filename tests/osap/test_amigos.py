@@ -708,6 +708,72 @@ class TestAuthorizationsAndBlog:
         )
         assert article["status"] == "published"
 
+    def test_blog_publicar_articulo_general_por_autor(self) -> None:
+        """El autor publica su propio artículo del blog (sin grupo) y no recibe 403."""
+        service = AmigosService(_MemoryStore())
+        service.grant_authorization(
+            actor_user_id=_ADMIN, is_global_admin=True, user_id="author", scope="blog",
+            direct_publish=True,
+        )
+        article = service.create_general_article(
+            actor_user_id="author", is_global_admin=False, title="Borrador",
+            event_date="2026-03-01", body="y", action="draft",
+        )
+        published = service.publish_article(
+            actor_user_id="author", is_global_admin=False, article_id=str(article["id"])
+        )
+        assert published["status"] == "published"
+
+    def test_blog_publicar_sin_directo_queda_pendiente(self) -> None:
+        service = AmigosService(_MemoryStore())
+        service.grant_authorization(
+            actor_user_id=_ADMIN, is_global_admin=True, user_id="author", scope="blog"
+        )
+        article = service.create_general_article(
+            actor_user_id="author", is_global_admin=False, title="Borrador",
+            event_date="2026-03-01", body="y", action="draft",
+        )
+        result = service.publish_article(
+            actor_user_id="author", is_global_admin=False, article_id=str(article["id"])
+        )
+        assert result["status"] == "pending"
+        assert service.get_public_general_article(str(article["id"])) is None
+
+    def test_blog_ajeno_no_publica(self) -> None:
+        service = AmigosService(_MemoryStore())
+        service.grant_authorization(
+            actor_user_id=_ADMIN, is_global_admin=True, user_id="author", scope="blog"
+        )
+        article = service.create_general_article(
+            actor_user_id="author", is_global_admin=False, title="X",
+            event_date="2026-03-01", body="y", action="draft",
+        )
+        with pytest.raises(AmigosError) as exc:
+            service.publish_article(
+                actor_user_id="stranger", is_global_admin=False, article_id=str(article["id"])
+            )
+        assert exc.value.status == 403
+
+    def test_articulo_general_expone_group_id_vacio(self) -> None:
+        """El blog (sin grupo) no debe exponer `group_id = "None"` al frontend."""
+        from src.osap.api.platform.amigos import AmigosMixin
+
+        store = _MemoryStore()
+        article = AmigosService(store).create_general_article(
+            actor_user_id=_ADMIN, is_global_admin=True, title="Nota",
+            event_date="2026-03-01", body="y", action="publish",
+        )
+
+        class _Api(AmigosMixin):
+            def __init__(self, op_store: object) -> None:
+                self._store = op_store  # type: ignore[assignment]
+
+        row = store.get_amigos_article(str(article["id"]))
+        assert row is not None
+        read = _Api(store)._amigos_article_read(row)
+        assert read.group_id == ""
+        assert read.group_name is None
+
     def test_eventos_autor_autorizado_queda_pendiente(self) -> None:
         service = AmigosService(_MemoryStore())
         with pytest.raises(AmigosError):

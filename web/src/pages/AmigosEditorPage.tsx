@@ -65,7 +65,12 @@ export function AmigosEditorPage() {
         if (articleId !== undefined) {
           const article = await apiClient.getAmigosArticle(articleId);
           setGroupId(article.group_id);
-          setEditGroup({ id: article.group_id, name: article.group_name ?? article.group_id });
+          setEditGroup({
+            id: article.group_id,
+            name:
+              article.group_name ??
+              (article.group_id === "" ? t("friends.blogTitle") : article.group_id),
+          });
           setTitle(article.title);
           setEventDate(article.event_date);
           setSummary(article.summary ?? "");
@@ -88,6 +93,9 @@ export function AmigosEditorPage() {
       }
     })();
   }, [articleId, preferredGroup, t]);
+
+  const generalArticle = groupId === "" || groupId === "None";
+  const uploadScope: "blog" | "group" = generalArticle ? "blog" : "group";
 
   const mediaPayload = (): AmigosMediaInput[] =>
     media
@@ -197,7 +205,10 @@ export function AmigosEditorPage() {
 
   const uploadPhoto = async (index: number, file: File) => {
     try {
-      const res = await apiClient.uploadAmigosImage(file, { groupId });
+      const res = await apiClient.uploadAmigosImage(file, {
+        groupId: generalArticle ? undefined : groupId,
+        scope: uploadScope,
+      });
       updateMedia(index, { url: res.url });
     } catch {
       setError(t("friends.errorSaving"));
@@ -286,11 +297,11 @@ export function AmigosEditorPage() {
         />
         <div className="mt-3">
           <AmigosImageField
-            groupId={groupId}
+            groupId={generalArticle ? undefined : groupId}
+            scope={uploadScope}
             label={t("friends.coverField")}
             value={coverUrl}
             onChange={setCoverUrl}
-            disabled={groupId === ""}
           />
         </div>
       </Card>

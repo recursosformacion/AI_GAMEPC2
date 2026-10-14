@@ -942,17 +942,19 @@ class AmigosMixin(PlatformApiCore):
         cache: dict[str, dict[str, object] | None] = {}
         out: list[AmigosArticleRead] = []
         for row in rows:
-            group_id = str(row["group_id"])
+            group_id = str(row["group_id"]) if row.get("group_id") else ""
             if group_id not in cache:
-                cache[group_id] = self._amigos_service().get_group(group_id)
+                cache[group_id] = self._amigos_service().get_group(group_id) if group_id else None
             out.append(self._amigos_article_read(row, group=cache[group_id]))
         return out
 
     def _amigos_article_read(
         self, row: dict[str, object], *, group: object = _GROUP_UNSET
     ) -> AmigosArticleRead:
+        # Los artículos del blog general tienen `group_id` NULL: se expone como "" (no "None").
+        group_id = str(row["group_id"]) if row.get("group_id") else ""
         if group is _GROUP_UNSET:
-            group = self._amigos_service().get_group(str(row["group_id"]))
+            group = self._amigos_service().get_group(group_id) if group_id else None
         media_rows = row.get("media")
         media = [
             AmigosMediaRead(
@@ -970,7 +972,7 @@ class AmigosMixin(PlatformApiCore):
         group_row = group if isinstance(group, dict) else None
         return AmigosArticleRead(
             id=str(row["id"]),
-            group_id=str(row["group_id"]),
+            group_id=group_id,
             group_slug=str(group_row["slug"]) if group_row else None,
             group_name=str(group_row["name"]) if group_row else None,
             title=str(row["title"]),
