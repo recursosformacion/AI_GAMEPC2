@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 
 from src.osap.api.seo.slug import slugify
 from src.osap.api.seo.views import public_base_url
-from src.osap.domain.richtext import looks_like_html, sanitize_html
+from src.osap.domain.richtext import looks_like_html, plain_text, sanitize_html
 
 _IMG_EXT = re.compile(r"\.(jpg|jpeg|png|webp|gif|avif)(\?|$)", re.IGNORECASE)
 
@@ -317,7 +317,10 @@ def build_article_view(data: dict[str, object]) -> ArticleView:
         else group_canonical_url(group_id, group_slug)
     )
     canonical = article_canonical_url(article_id, slug)
-    description = summary or (body[:180].strip() + ("…" if len(body) > 180 else ""))
+    body_text = plain_text(body)
+    description = summary or (
+        body_text[:180].strip() + ("…" if len(body_text) > 180 else "")
+    )
     if not description:
         description = f"{title} — {group_name}"
     og_image = cover_url

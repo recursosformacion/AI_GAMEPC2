@@ -814,6 +814,34 @@ class TestRichtext:
         # atributos peligrosos fuera
         assert "onclick" not in out
 
+    def test_texto_suelto_en_cuerpo_html_se_envuelve_en_parrafos(self) -> None:
+        """Un cuerpo con HTML (p. ej. `<style>` + `<div>`) conserva los retornos como `<p>`."""
+        from src.osap.domain.richtext import sanitize_body
+
+        html = (
+            "<style>.articulo-osap p{font-size:20px}</style>"
+            '<div class="articulo-osap">Hola mundo\n\nSegundo parrafo\ncon salto</div>'
+        )
+        out = sanitize_body(html)
+        assert "<p>Hola mundo</p>" in out
+        assert "<p>Segundo parrafo<br>con salto</p>" in out
+        assert "font-size:20px" in out
+
+    def test_parrafos_existentes_no_se_duplican(self) -> None:
+        from src.osap.domain.richtext import sanitize_html
+
+        assert sanitize_html("<p>a</p>\n<p>b</p>") == "<p>a</p><p>b</p>"
+        assert sanitize_html("<p>a <strong>b</strong> c</p>") == "<p>a <strong>b</strong> c</p>"
+        assert sanitize_html("<ul>\n<li>uno</li>\n<li>dos</li>\n</ul>") == (
+            "<ul><li>uno</li><li>dos</li></ul>"
+        )
+
+    def test_plain_text_quita_estilos_y_etiquetas(self) -> None:
+        from src.osap.domain.richtext import plain_text
+
+        assert plain_text("<style>.a{color:red}</style><p>Hola</p>\n<p>Mundo</p>") == "Hola Mundo"
+        assert plain_text("Texto plano\n\nen dos lineas") == "Texto plano en dos lineas"
+
 
 class TestValidation:
     def test_fecha_de_evento_imposible_rechazada(self) -> None:
