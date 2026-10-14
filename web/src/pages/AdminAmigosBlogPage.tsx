@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { AmigosArticle, AmigosArticleCreateInput, AmigosArticleList } from "../api/types";
 import { AmigosImageField } from "../components/AmigosImageField";
@@ -153,6 +154,12 @@ export function AdminAmigosBlogPage({ mine = false }: { mine?: boolean } = {}) {
               <span className="rounded bg-osap-accent-soft px-2 py-0.5">
                 {t(STATUS_KEY[a.status] ?? "friends.status.draft")}
               </span>
+              <Link
+                to={`/amigos/editor/${encodeURIComponent(a.id)}`}
+                className="text-osap-accent hover:underline"
+              >
+                {t("friends.edit")}
+              </Link>
               {a.status === "pending" ? (
                 <button type="button" onClick={() => void approve(a.id)} className="text-osap-success hover:underline">
                   {t("friends.approve")}
