@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiClient } from "../api/ApiClient";
 import type { AmigosEvent, AmigosEventInput, AmigosEventList } from "../api/types";
+import { AmigosImageField } from "../components/AmigosImageField";
 import { Card } from "../components/Card";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
@@ -113,6 +114,14 @@ export function AdminAmigosEventsPage() {
             {t("friends.titleField")} *
             <input {...field("title")} />
           </label>
+          <div className="sm:col-span-3">
+            <AmigosImageField
+              label={t("friends.imageUrl")}
+              scope="events"
+              value={(form.image_url as string) ?? ""}
+              onChange={(url) => set({ image_url: url })}
+            />
+          </div>
           <label className="text-xs text-osap-muted">
             {t("friends.kind")}
             <select value={form.kind ?? "concert"} onChange={(e) => set({ kind: e.target.value })} className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm">

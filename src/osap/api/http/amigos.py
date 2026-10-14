@@ -291,8 +291,9 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
     async def upload_image(
         request: Request,
         response: Response,
-        group_id: str = Query(..., min_length=1),
         name: str = Query(..., min_length=1),
+        group_id: str | None = Query(default=None),
+        scope: str = Query(default="group"),
         mime_type: str | None = Query(default=None),
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
@@ -301,7 +302,9 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(422, response, "EMPTY_UPLOAD", "El fichero está vacío")
         return _call(
             ctx, response,
-            lambda: ctx.api.amigos_upload(authorization, group_id, name, mime_type, data),
+            lambda: ctx.api.amigos_upload(
+                authorization, group_id, name, mime_type, data, scope=scope
+            ),
         )
 
     @router.post(

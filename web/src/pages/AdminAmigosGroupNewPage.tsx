@@ -44,7 +44,7 @@ export function AdminAmigosGroupNewPage() {
         links: groupLinks.filter((l) => l.url.trim() !== ""),
       });
       if (logoFile) {
-        const uploaded = await apiClient.uploadAmigosImage(group.id, logoFile);
+        const uploaded = await apiClient.uploadAmigosImage(logoFile, { groupId: group.id });
         await apiClient.updateAmigosGroup(group.id, { logo_url: uploaded.url });
       }
       navigate(`/admin/amigos/${encodeURIComponent(group.id)}?mode=edit`);

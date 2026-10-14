@@ -328,15 +328,20 @@ class AmigosMixin(PlatformApiCore):
     # --- imágenes (osap-storage) --------------------------------------------
 
     def amigos_upload(
-        self, token: str | None, group_id: str, name: str, mime_type: str | None, data: bytes
+        self, token: str | None, group_id: str | None, name: str, mime_type: str | None,
+        data: bytes, *, scope: str = "group",
     ) -> dict[str, object]:
         actor = self._amigos_user(token)
         service = self._amigos_service()
-        service.authorize_upload(
-            group_id=group_id,
-            actor_user_id=actor,
-            is_global_admin=self._amigos_is_global_admin(token),
-        )
+        is_admin = self._amigos_is_global_admin(token)
+        if scope == "events":
+            service.authorize_events_upload(actor_user_id=actor, is_global_admin=is_admin)
+            store_group = ""
+        else:
+            if not group_id:
+                raise AmigosError(422, "GROUP_REQUIRED", "Falta el grupo")
+            service.authorize_upload(group_id=group_id, actor_user_id=actor, is_global_admin=is_admin)
+            store_group = group_id
         clean_name, mime = service.validate_upload(
             name=name, mime_type=mime_type, size_bytes=len(data)
         )
@@ -348,7 +353,7 @@ class AmigosMixin(PlatformApiCore):
             raise AmigosError(502, "STORAGE_UNAVAILABLE", "Almacenamiento no disponible") from exc
         file_id = int(str(uploaded["id"]))
         service.record_upload(
-            group_id=group_id,
+            group_id=store_group,
             file_id=file_id,
             mime_type=mime,
             size_bytes=len(data),

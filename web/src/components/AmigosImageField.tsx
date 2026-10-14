@@ -7,12 +7,14 @@ import { useI18n } from "../i18n/I18n";
 // logo/portada/fotos. Requiere un `groupId` ya existente (destino de la subida).
 export function AmigosImageField({
   groupId,
+  scope = "group",
   label,
   value,
   onChange,
   disabled = false,
 }: {
-  groupId: string;
+  groupId?: string;
+  scope?: "group" | "events";
   label: string;
   value: string;
   onChange: (url: string) => void;
@@ -27,7 +29,7 @@ export function AmigosImageField({
     setBusy(true);
     setError(null);
     try {
-      const res = await apiClient.uploadAmigosImage(groupId, file);
+      const res = await apiClient.uploadAmigosImage(file, { groupId, scope });
       onChange(res.url);
     } catch {
       setError(t("friends.errorSaving"));

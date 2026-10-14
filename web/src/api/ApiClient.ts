@@ -117,14 +117,18 @@ export class ApiClient {
     );
   }
 
-  /** Sube una imagen de «Los amigos» (logo/portada/foto) y devuelve su URL pública. */
-  async uploadAmigosImage(groupId: string, file: File): Promise<{ id: number; url: string }> {
+  /** Sube una imagen de «Los amigos» (logo/portada/foto/anuncio) y devuelve su URL pública. */
+  async uploadAmigosImage(
+    file: File,
+    opts: { groupId?: string; scope?: "group" | "events" } = {},
+  ): Promise<{ id: number; url: string }> {
     const doFetch = this.fetcher ?? globalThis.fetch.bind(globalThis);
     const params = new URLSearchParams({
-      group_id: groupId,
       name: file.name,
       mime_type: file.type,
+      scope: opts.scope ?? "group",
     });
+    if (opts.groupId) params.set("group_id", opts.groupId);
     const headers: Record<string, string> = { "Content-Type": "application/octet-stream" };
     const token = this.auth.getToken() ?? this.token;
     if (token !== null) headers["Authorization"] = `Bearer ${token}`;

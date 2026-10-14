@@ -195,7 +195,7 @@ export function AmigosEditorPage() {
 
   const uploadPhoto = async (index: number, file: File) => {
     try {
-      const res = await apiClient.uploadAmigosImage(groupId, file);
+      const res = await apiClient.uploadAmigosImage(file, { groupId });
       updateMedia(index, { url: res.url });
     } catch {
       setError(t("friends.errorSaving"));

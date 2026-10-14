@@ -398,6 +398,11 @@ class AmigosService:
         if not is_global_admin:
             self._require_can_contribute(group_id, actor_user_id, is_global_admin)
 
+    def authorize_events_upload(self, *, actor_user_id: str, is_global_admin: bool) -> None:
+        self._require_writer(
+            actor_user_id, is_global_admin, "events", "No estás autorizado para anuncios"
+        )
+
     def validate_upload(
         self, *, name: str | None, mime_type: str | None, size_bytes: int
     ) -> tuple[str, str]:
