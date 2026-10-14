@@ -4,6 +4,7 @@ import type { AmigosArticle, AmigosArticleCreateInput, AmigosArticleList } from 
 import { Card } from "../components/Card";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
+import { formatEuroDate } from "../utils/dates";
 
 const STATUS_KEY: Record<string, TKey> = {
   draft: "friends.status.draft",
@@ -112,7 +113,7 @@ export function AdminAmigosBlogPage({ mine = false }: { mine?: boolean } = {}) {
           <li key={a.id} className="flex items-center justify-between px-4 py-3">
             <div className="min-w-0">
               <p className="truncate text-sm">{a.title}</p>
-              <p className="text-xs text-osap-muted">{a.event_date}</p>
+              <p className="text-xs text-osap-muted">{formatEuroDate(a.event_date)}</p>
             </div>
             <span className="flex items-center gap-2 text-xs">
               <span className="rounded bg-osap-accent-soft px-2 py-0.5">

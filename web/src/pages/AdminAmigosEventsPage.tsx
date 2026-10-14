@@ -5,6 +5,7 @@ import { AmigosImageField } from "../components/AmigosImageField";
 import { Card } from "../components/Card";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
+import { formatEuroDate } from "../utils/dates";
 
 const KIND_KEY: Record<string, TKey> = {
   concert: "friends.eventKind.concert",
@@ -196,7 +197,7 @@ export function AdminAmigosEventsPage({ mine = false }: { mine?: boolean } = {})
             {events.map((e) => (
               <tr key={e.id} className="border-b border-osap-border last:border-0">
                 <td className="px-3 py-2">{e.title}</td>
-                <td className="px-3 py-2">{e.starts_on}</td>
+                <td className="px-3 py-2">{formatEuroDate(e.starts_on)}</td>
                 <td className="px-3 py-2">{t(KIND_KEY[e.kind] ?? "friends.eventKind.other")}</td>
                 <td className="px-3 py-2">{e.weight ?? 5}</td>
                 <td className="px-3 py-2 text-xs">{e.source_email ?? e.source_note ?? "—"}</td>

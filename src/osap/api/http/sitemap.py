@@ -65,6 +65,8 @@ _STATIC_PATHS: tuple[str, ...] = (
     "/about/how-it-works",
     "/amigos",
     "/amigos/corales",
+    "/amigos/eventos",
+    "/amigos/articulos",
 )
 
 _CACHE: dict[str, tuple[float, str]] = {}

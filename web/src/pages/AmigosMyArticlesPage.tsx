@@ -6,6 +6,7 @@ import { Spinner } from "../components/Spinner";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
 import { useAuth } from "../state/auth";
+import { formatEuroDate } from "../utils/dates";
 
 const STATUS_KEY: Record<string, TKey> = {
   draft: "friends.status.draft",
@@ -90,7 +91,7 @@ export function AmigosMyArticlesPage() {
                 <div className="min-w-0">
                   <p className="truncate font-display text-base text-osap-ink">{a.title}</p>
                   <p className="mt-0.5 text-xs text-osap-muted">
-                    {a.group_name ?? a.group_id} · {t("friends.eventDate")}: {a.event_date}
+                    {a.group_name ?? a.group_id} · {t("friends.eventDate")}: {formatEuroDate(a.event_date)}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

@@ -42,7 +42,7 @@
 <article class="card">
   <h1>{{ view.title }}</h1>
   <div class="badges">
-    <span class="badge">{{ view.event_date }}</span>
+    <span class="badge">{{ view.event_date_display or view.event_date }}</span>
     {% if view.group_id %}
     <a class="badge" href="/amigos/corales/{{ view.group_id }}/{{ view.group_slug }}" style="text-decoration:none">{{ view.group_name }}</a>
     {% else %}

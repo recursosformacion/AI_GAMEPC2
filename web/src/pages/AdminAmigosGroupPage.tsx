@@ -7,6 +7,7 @@ import { Card } from "../components/Card";
 import { Spinner } from "../components/Spinner";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
+import { formatEuroDate } from "../utils/dates";
 
 const STATUS_KEY: Record<string, TKey> = {
   draft: "friends.status.draft",
@@ -681,7 +682,7 @@ export function AdminAmigosGroupPage() {
               <li key={a.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
                 <span className="min-w-0 truncate text-sm">{a.title}</span>
                 <span className="flex flex-wrap items-center gap-2 text-xs">
-                  <span className="text-osap-muted">{a.event_date}</span>
+                  <span className="text-osap-muted">{formatEuroDate(a.event_date)}</span>
                   <span className="rounded bg-osap-accent-soft px-2 py-0.5">
                     {t(STATUS_KEY[a.status] ?? "friends.status.draft")}
                   </span>

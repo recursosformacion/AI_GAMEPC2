@@ -8,6 +8,8 @@ la identidad autenticada; nunca del cuerpo. El rol global `admin` se comprueba a
 from __future__ import annotations
 
 import logging
+import os
+import threading
 
 from src.osap.api.contracts import (
     AmigosActuacionListRead,
@@ -33,6 +35,9 @@ from src.osap.api.contracts import (
     AmigosMemberRead,
 )
 from src.osap.api.platform.core import PlatformApiCore
+from src.osap.api.seo.indexnow import DEFAULT_KEY as INDEXNOW_DEFAULT_KEY
+from src.osap.api.seo.indexnow import indexnow_host, submit_urls
+from src.osap.api.seo.slug import slugify
 from src.osap.api.seo.views import public_base_url
 from src.osap.application.amigos import AmigosError, AmigosService
 from src.osap.domain.votes import ForbiddenError, UnauthenticatedError
@@ -65,6 +70,45 @@ class AmigosMixin(PlatformApiCore):
         if not user_id:
             raise UnauthenticatedError("Login required")
         return str(user_id)
+
+    # --- IndexNow (aviso a buscadores, best-effort) --------------------------
+
+    def _amigos_indexnow(self, urls: list[str]) -> None:
+        if not urls:
+            return
+        key = os.environ.get("INDEXNOW_KEY", INDEXNOW_DEFAULT_KEY)
+        base = public_base_url()
+        host = indexnow_host(base)
+
+        def _send() -> None:
+            try:
+                submit_urls(urls, host=host, key=key, base_url=base, timeout=10.0)
+            except Exception as exc:  # noqa: BLE001 — best-effort
+                _LOGGER.warning("amigos indexnow: %s", exc)
+
+        threading.Thread(target=_send, daemon=True).start()
+
+    def _index_amigos_group(self, group: AmigosGroupRead) -> None:
+        base = public_base_url()
+        self._amigos_indexnow(
+            [f"{base}/amigos/corales/{group.id}/{group.slug}", f"{base}/amigos/corales"]
+        )
+
+    def _index_amigos_article(self, article: AmigosArticleRead) -> None:
+        base = public_base_url()
+        self._amigos_indexnow(
+            [f"{base}/amigos/articulo/{article.id}/{slugify(article.title) or 'articulo'}"]
+        )
+
+    def _index_article_if_public(self, article: AmigosArticleRead) -> AmigosArticleRead:
+        if article.status in ("published", "withdrawn"):
+            self._index_amigos_article(article)
+        return article
+
+    def _index_group_if_active(self, group: AmigosGroupRead) -> AmigosGroupRead:
+        if group.status == "active":
+            self._index_amigos_group(group)
+        return group
 
     def _amigos_actor_email(self, token: str | None) -> str | None:
         try:
@@ -149,7 +193,7 @@ class AmigosMixin(PlatformApiCore):
         row = self._amigos_service().get_article_for_reader(
             article_id=article_id, actor_user_id=actor, is_global_admin=is_admin
         )
-        return self._amigos_article_read(row) if row else None
+        return self._index_article_if_public(self._amigos_article_read(row)) if row else None
 
     def amigos_my_articles(
         self, token: str | None, limit: int = 100, offset: int = 0
@@ -211,7 +255,7 @@ class AmigosMixin(PlatformApiCore):
             media=[m.model_dump() for m in payload.media],
             action=payload.action,
         )
-        return self._amigos_article_read(row)
+        return self._index_article_if_public(self._amigos_article_read(row))
 
     def amigos_update_article(
         self, token: str | None, article_id: str, payload: AmigosArticleUpdateRequest
@@ -230,7 +274,7 @@ class AmigosMixin(PlatformApiCore):
             cover_url=payload.cover_url,
             media=media,
         )
-        return self._amigos_article_read(row) if row else None
+        return self._index_article_if_public(self._amigos_article_read(row)) if row else None
 
     def amigos_submit_article(self, token: str | None, article_id: str) -> AmigosArticleRead:
         actor = self._amigos_user(token)
@@ -238,7 +282,7 @@ class AmigosMixin(PlatformApiCore):
             actor_user_id=actor, is_global_admin=self._amigos_is_global_admin(token),
             article_id=article_id,
         )
-        return self._amigos_article_read(row)
+        return self._index_article_if_public(self._amigos_article_read(row))
 
     def amigos_publish_article(self, token: str | None, article_id: str) -> AmigosArticleRead:
         actor = self._amigos_user(token)
@@ -246,7 +290,7 @@ class AmigosMixin(PlatformApiCore):
             actor_user_id=actor, is_global_admin=self._amigos_is_global_admin(token),
             article_id=article_id,
         )
-        return self._amigos_article_read(row)
+        return self._index_article_if_public(self._amigos_article_read(row))
 
     def amigos_withdraw_article(self, token: str | None, article_id: str) -> AmigosArticleRead:
         actor = self._amigos_user(token)
@@ -254,7 +298,7 @@ class AmigosMixin(PlatformApiCore):
             actor_user_id=actor, is_global_admin=self._amigos_is_global_admin(token),
             article_id=article_id,
         )
-        return self._amigos_article_read(row)
+        return self._index_article_if_public(self._amigos_article_read(row))
 
     # --- administración de grupos y moderación -------------------------------
 
@@ -276,7 +320,7 @@ class AmigosMixin(PlatformApiCore):
             logo_url=payload.logo_url,
             links=[link.model_dump() for link in payload.links],
         )
-        return self._amigos_group_read(row)
+        return self._index_group_if_active(self._amigos_group_read(row))
 
     def amigos_update_group(
         self, token: str | None, group_id: str, payload: AmigosGroupUpdateRequest
@@ -298,7 +342,7 @@ class AmigosMixin(PlatformApiCore):
             if payload.links is not None
             else None,
         )
-        return self._amigos_group_read(row)
+        return self._index_group_if_active(self._amigos_group_read(row))
 
     def amigos_grant_member(
         self, token: str | None, group_id: str, payload: AmigosMemberGrantRequest
@@ -597,7 +641,7 @@ class AmigosMixin(PlatformApiCore):
     ) -> AmigosArticleRead | None:
         row = self._amigos_service().get_public_general_article(article_id)
         if row is not None:
-            return self._amigos_article_read(row)
+            return self._index_article_if_public(self._amigos_article_read(row))
         if token:
             try:
                 actor = self._amigos_user(token)
@@ -607,7 +651,7 @@ class AmigosMixin(PlatformApiCore):
             row = self._amigos_service().get_article_for_reader(
                 article_id=article_id, actor_user_id=actor, is_global_admin=is_admin
             )
-            return self._amigos_article_read(row) if row is not None else None
+            return self._index_article_if_public(self._amigos_article_read(row)) if row is not None else None
         return None
 
     def amigos_create_blog_article(
@@ -625,7 +669,7 @@ class AmigosMixin(PlatformApiCore):
             media=[m.model_dump() for m in payload.media],
             action=payload.action,
         )
-        return self._amigos_article_read(row)
+        return self._index_article_if_public(self._amigos_article_read(row))
 
     def amigos_approve_blog_article(self, token: str | None, article_id: str) -> AmigosArticleRead:
         actor = self._amigos_user(token)
@@ -633,7 +677,7 @@ class AmigosMixin(PlatformApiCore):
             actor_user_id=actor, is_global_admin=self._amigos_is_global_admin(token),
             article_id=article_id,
         )
-        return self._amigos_article_read(row)
+        return self._index_article_if_public(self._amigos_article_read(row))
 
     def amigos_admin_blog_articles(
         self, token: str | None, limit: int = 200, offset: int = 0
@@ -733,7 +777,7 @@ class AmigosMixin(PlatformApiCore):
             actor_user_id=actor, is_global_admin=self._amigos_is_global_admin(token),
             article_id=article_id,
         )
-        return self._amigos_article_read(row)
+        return self._index_article_if_public(self._amigos_article_read(row))
 
     def amigos_return_article(
         self, token: str | None, article_id: str, note: str
@@ -743,7 +787,7 @@ class AmigosMixin(PlatformApiCore):
             actor_user_id=actor, is_global_admin=self._amigos_is_global_admin(token),
             article_id=article_id, note=note,
         )
-        return self._amigos_article_read(row)
+        return self._index_article_if_public(self._amigos_article_read(row))
 
     def amigos_audit(self, token: str | None, group_id: str) -> list[dict[str, object]]:
         actor = self._amigos_user(token)
@@ -773,7 +817,7 @@ class AmigosMixin(PlatformApiCore):
         if row is None:
             return None
         # Se enriquece con `group_slug`/`group_name` para la URL canónica y el JSON-LD.
-        return self._amigos_article_read(row).model_dump()
+        return self._index_article_if_public(self._amigos_article_read(row)).model_dump()
 
     # --- sitemap -------------------------------------------------------------
 

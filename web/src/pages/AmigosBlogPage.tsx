@@ -5,6 +5,7 @@ import type { AmigosArticle } from "../api/types";
 import { Spinner } from "../components/Spinner";
 import { useAmigosPermissions } from "../components/useAmigosPermissions";
 import { useI18n } from "../i18n/I18n";
+import { formatEuroDate } from "../utils/dates";
 
 // «Artículos»: blog general de OSAP. Cada entrada enlaza a su página pública (SSR) canónica.
 export function AmigosBlogPage() {
@@ -76,7 +77,7 @@ export function AmigosBlogPage() {
               >
                 {a.title}
               </a>
-              <p className="mt-1 text-xs text-osap-muted">{a.event_date}</p>
+              <p className="mt-1 text-xs text-osap-muted">{formatEuroDate(a.event_date)}</p>
               {a.summary ? <p className="mt-2 text-sm text-osap-muted">{a.summary}</p> : null}
             </li>
           ))}

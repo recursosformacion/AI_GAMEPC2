@@ -31,6 +31,13 @@ def _str_or_none(value: object) -> str | None:
     return text or None
 
 
+def _euro_date(value: object) -> str:
+    """Fecha ISO (`AAAA-MM-DD`) → formato europeo `dd/mm/aaaa` para mostrar."""
+    text = str(value).strip() if value is not None else ""
+    match = re.match(r"^(\d{4})-(\d{2})-(\d{2})", text)
+    return f"{match.group(3)}/{match.group(2)}/{match.group(1)}" if match else text
+
+
 def _build_coral_view(raw: object) -> CoralView | None:
     if not isinstance(raw, dict):
         return None
@@ -45,8 +52,8 @@ def _build_coral_view(raw: object) -> CoralView | None:
     languages = raw.get("languages")
     places = raw.get("places")
     return CoralView(
-        foundation_date=opt("foundation_date"),
-        dissolution_date=opt("dissolution_date"),
+        foundation_date=_euro_date(opt("foundation_date")),
+        dissolution_date=_euro_date(opt("dissolution_date")),
         locality=opt("locality"),
         region=opt("region"),
         country_code=opt("country_code"),
@@ -99,6 +106,7 @@ class ArticleLink:
     title: str
     event_date: str
     summary: str | None = None
+    event_date_display: str = ""
 
 
 @dataclass(frozen=True)
@@ -176,6 +184,7 @@ class ArticleView:
     description_meta: str = ""
     og_image: str | None = None
     json_ld: str = ""
+    event_date_display: str = ""
 
 
 def _breadcrumb(items: list[tuple[str, str | None]]) -> dict[str, object]:
@@ -209,6 +218,7 @@ def build_group_view(data: dict[str, object]) -> GroupView:
                     title=title,
                     event_date=str(item.get("event_date") or ""),
                     summary=_str_or_none(item.get("summary")),
+                    event_date_display=_euro_date(item.get("event_date")),
                 )
             )
     canonical = group_canonical_url(group_id, slug)
@@ -363,4 +373,5 @@ def build_article_view(data: dict[str, object]) -> ArticleView:
         description_meta=description,
         og_image=og_image,
         json_ld=json_ld,
+        event_date_display=_euro_date(data.get("event_date")),
     )
