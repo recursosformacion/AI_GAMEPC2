@@ -229,6 +229,9 @@ class AmigosActuacionRequest(_Frozen):
     organizer_group_id: str | None = None
     last_verified_on: str | None = None
     internal_notes: str | None = None
+    weight: int | None = None
+    source_email: str | None = None
+    source_note: str | None = None
     groups: list[AmigosEventGroup] = []
     action: str = "draft"
 
@@ -275,6 +278,12 @@ class AmigosActuacionRead(_Frozen):
     published_at: str | None = None
     created_at: str = ""
     updated_at: str = ""
+    weight: int = 5
+    views: int = 0
+    expands: int = 0
+    buys: int = 0
+    source_email: str | None = None
+    source_note: str | None = None
     groups: list[AmigosEventGroup] = []
 
 

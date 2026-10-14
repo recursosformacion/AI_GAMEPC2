@@ -192,6 +192,24 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
 
         return _call(ctx, response, run)
 
+    @router.post(
+        "/api/v1/amigos/events/{event_id}/stat",
+        tags=["Friends"],
+        summary="Contador de anuncio (view|expand|buy)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses=standard_errors(404),
+    )
+    def event_stat(
+        event_id: str, response: Response, kind: str = Query(...)
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        def run() -> object:
+            data = ctx.api.amigos_record_event_counter(event_id, kind)
+            if data is None:
+                raise AmigosError(404, "EVENT_NOT_FOUND", "Evento no encontrado")
+            return data
+
+        return _call(ctx, response, run)
+
     @router.get(
         "/api/v1/amigos/media/{file_id}",
         tags=["Friends"],

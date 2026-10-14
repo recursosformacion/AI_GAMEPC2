@@ -490,6 +490,18 @@ class AmigosService:
         ):
             if key in data:
                 fields[key] = _clean_text(data.get(key))
+        if "weight" in data:
+            try:
+                weight = int(str(data.get("weight")))
+            except (TypeError, ValueError):
+                raise AmigosError(422, "INVALID_WEIGHT", "Peso inválido (1-9)") from None
+            if weight < 1 or weight > 9:
+                raise AmigosError(422, "INVALID_WEIGHT", "El peso debe estar entre 1 y 9")
+            fields["weight"] = weight
+        if "source_email" in data:
+            fields["source_email"] = _validate_email(data.get("source_email"))
+        if "source_note" in data:
+            fields["source_note"] = _clean_text(data.get("source_note"))
         return fields
 
     def _actuacion_groups(self, data: dict[str, Any]) -> list[dict[str, object]]:
@@ -608,6 +620,9 @@ class AmigosService:
     ) -> dict[str, object]:
         if kind is not None and kind not in EVENT_KINDS:
             raise AmigosError(422, "INVALID_KIND", "Tipo de evento no válido")
+        if public_only and from_date is None:
+            # Un anuncio desaparece una vez pasada la fecha de la actuación.
+            from_date = datetime.now(UTC).date().isoformat()
         rows, total = self._store.list_amigos_actuaciones(
             editorial_statuses=["published"] if public_only else None,
             from_date=from_date,
@@ -619,6 +634,17 @@ class AmigosService:
             offset=offset,
         )
         return {"items": [self._actuacion_read(r) for r in rows], "total": total}
+
+    def record_event_counter(self, actuacion_id: str, kind: str) -> int | None:
+        """Incrementa un contador de anuncio (`view`|`expand`|`buy`). Solo si está publicado."""
+        field = {"view": "views", "expand": "expands", "buy": "buys"}.get(kind)
+        if field is None:
+            raise AmigosError(422, "INVALID_COUNTER", "Contador no válido")
+        row = self._store.get_amigos_actuacion(actuacion_id)
+        if row is None or str(row.get("editorial_status")) != "published":
+            return None
+        count = self._store.increment_amigos_actuacion_counter(actuacion_id, field)
+        return int(str(count)) if count is not None else None
 
     def _actuacion_read(self, row: dict[str, object]) -> dict[str, object]:
         data = dict(row)

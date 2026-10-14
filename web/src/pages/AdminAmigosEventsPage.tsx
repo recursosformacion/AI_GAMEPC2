@@ -62,7 +62,7 @@ export function AdminAmigosEventsPage() {
       country_code: e.country_code ?? "", organizer_name: e.organizer_name ?? "",
       organizer_website: e.organizer_website ?? "", event_url: e.event_url ?? "",
       tickets_url: e.tickets_url ?? "", price: e.price ?? "", summary: e.summary ?? "",
-      description: e.description ?? "",
+      description: e.description ?? "", weight: e.weight ?? 5, source_note: e.source_note ?? "",
     });
   };
 
@@ -128,9 +128,24 @@ export function AdminAmigosEventsPage() {
             <input type="time" value={(form.starts_at as string) ?? ""} onChange={(e) => set({ starts_at: e.target.value })} className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm" />
           </label>
           <label className="text-xs text-osap-muted">{t("friends.locality")}<input {...field("locality")} /></label>
-          <label className="text-xs text-osap-muted">{t("friends.venue")}<input {...field("venue_name")} /></label>
+          <label className="text-xs text-osap-muted">{t("friends.eventVenue")}<input {...field("venue_name")} /></label>
           <label className="text-xs text-osap-muted">{t("friends.country")}<input maxLength={2} {...field("country_code")} /></label>
+          <label className="text-xs text-osap-muted">
+            {t("friends.weight")}
+            <input
+              type="number"
+              min={1}
+              max={9}
+              value={form.weight ?? 5}
+              onChange={(e) => set({ weight: Number(e.target.value) })}
+              className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
+            />
+          </label>
           <label className="text-xs text-osap-muted">{t("friends.eventOrganizer")}<input {...field("organizer_name")} /></label>
+          <label className="text-xs text-osap-muted sm:col-span-3">
+            {t("friends.sourceNote")}
+            <input {...field("source_note")} />
+          </label>
           <label className="text-xs text-osap-muted">{t("friends.eventInfoUrl")}<input {...field("event_url")} /></label>
           <label className="text-xs text-osap-muted">{t("friends.eventTicketsUrl")}<input {...field("tickets_url")} /></label>
           <label className="text-xs text-osap-muted sm:col-span-3">{t("friends.summaryField")}<input {...field("summary")} /></label>
@@ -157,6 +172,11 @@ export function AdminAmigosEventsPage() {
               <th className="px-3 py-2">{t("friends.titleField")}</th>
               <th className="px-3 py-2">{t("friends.eventDate")}</th>
               <th className="px-3 py-2">{t("friends.kind")}</th>
+              <th className="px-3 py-2">{t("friends.weight")}</th>
+              <th className="px-3 py-2">{t("friends.source")}</th>
+              <th className="px-3 py-2">{t("friends.views")}</th>
+              <th className="px-3 py-2">{t("friends.expands")}</th>
+              <th className="px-3 py-2">{t("friends.buys")}</th>
               <th className="px-3 py-2">{t("friends.active")}</th>
               <th className="px-3 py-2 text-right">{t("adminUsers.actions")}</th>
             </tr>
@@ -167,6 +187,11 @@ export function AdminAmigosEventsPage() {
                 <td className="px-3 py-2">{e.title}</td>
                 <td className="px-3 py-2">{e.starts_on}</td>
                 <td className="px-3 py-2">{t(KIND_KEY[e.kind] ?? "friends.eventKind.other")}</td>
+                <td className="px-3 py-2">{e.weight ?? 5}</td>
+                <td className="px-3 py-2 text-xs">{e.source_email ?? e.source_note ?? "—"}</td>
+                <td className="px-3 py-2">{e.views ?? 0}</td>
+                <td className="px-3 py-2">{e.expands ?? 0}</td>
+                <td className="px-3 py-2">{e.buys ?? 0}</td>
                 <td className="px-3 py-2">{t(STATUS_KEY[e.editorial_status] ?? "friends.status.draft")}</td>
                 <td className="px-3 py-2">
                   <div className="flex flex-wrap items-center justify-end gap-2 text-xs">
@@ -191,7 +216,7 @@ export function AdminAmigosEventsPage() {
               </tr>
             ))}
             {events.length === 0 ? (
-              <tr><td colSpan={5} className="px-3 py-4 text-center text-osap-muted">{t("friends.eventsEmpty")}</td></tr>
+              <tr><td colSpan={10} className="px-3 py-4 text-center text-osap-muted">{t("friends.eventsEmpty")}</td></tr>
             ) : null}
           </tbody>
         </table>

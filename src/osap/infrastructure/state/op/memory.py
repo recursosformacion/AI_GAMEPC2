@@ -629,6 +629,12 @@ class MemoryStore:
             "reviewed_by": None,
             "reviewed_at": None,
             "review_note": None,
+            "weight": 5,
+            "views": 0,
+            "expands": 0,
+            "buys": 0,
+            "source_email": None,
+            "source_note": None,
             "created_at": ts,
             "updated_at": ts,
         }
@@ -657,6 +663,7 @@ class MemoryStore:
             "country_code", "latitude", "longitude", "map_url", "organizer_name",
             "organizer_website", "event_url", "tickets_url", "price", "access_info",
             "public_contact", "organizer_group_id", "last_verified_on", "internal_notes",
+            "weight", "source_email", "source_note",
         }
         for key, value in changes.items():
             if key in allowed:
@@ -721,8 +728,24 @@ class MemoryStore:
             if to_date is not None and start > to_date:
                 continue
             rows.append(dict(raw))
-        rows.sort(key=lambda r: (str(r.get("starts_on") or ""), str(r.get("starts_at") or "")))
+        rows.sort(
+            key=lambda r: (
+                int(str(r.get("weight") or 0)),
+                str(r.get("starts_on") or ""),
+                str(r.get("starts_at") or ""),
+            ),
+            reverse=True,
+        )
         return rows[offset : offset + limit], len(rows)
+
+    def increment_amigos_actuacion_counter(self, actuacion_id: str, field: str) -> int | None:
+        if field not in ("views", "expands", "buys"):
+            return None
+        row = self._amigos_actuaciones.get(actuacion_id)
+        if row is None:
+            return None
+        row[field] = int(str(row.get(field) or 0)) + 1
+        return int(str(row[field]))
 
     def replace_amigos_actuacion_groups(
         self, actuacion_id: str, items: list[dict[str, object]]

@@ -48,6 +48,12 @@ _COLUMNS: list[tuple[str, str, str]] = [
     ("amigos_groups", "email", "VARCHAR(254) NULL"),
     ("amigos_groups", "logo_url", "VARCHAR(1024) NULL"),
     ("amigos_articles", "scope", "VARCHAR(16) NOT NULL DEFAULT 'group'"),
+    ("amigos_actuaciones", "weight", "TINYINT NOT NULL DEFAULT 5"),
+    ("amigos_actuaciones", "views", "INT UNSIGNED NOT NULL DEFAULT 0"),
+    ("amigos_actuaciones", "expands", "INT UNSIGNED NOT NULL DEFAULT 0"),
+    ("amigos_actuaciones", "buys", "INT UNSIGNED NOT NULL DEFAULT 0"),
+    ("amigos_actuaciones", "source_email", "VARCHAR(254) NULL"),
+    ("amigos_actuaciones", "source_note", "VARCHAR(255) NULL"),
 ]
 
 # ALTER idempotentes que se aplican siempre (p. ej. permitir artículos sin grupo = blog).
@@ -261,6 +267,12 @@ _DDL: list[str] = [
       author_user_id CHAR(36) NOT NULL,
       last_verified_on DATE,
       internal_notes TEXT,
+      weight TINYINT NOT NULL DEFAULT 5,
+      views INT UNSIGNED NOT NULL DEFAULT 0,
+      expands INT UNSIGNED NOT NULL DEFAULT 0,
+      buys INT UNSIGNED NOT NULL DEFAULT 0,
+      source_email VARCHAR(254),
+      source_note VARCHAR(255),
       published_at DATETIME(6),
       reviewed_by CHAR(36),
       reviewed_at DATETIME(6),

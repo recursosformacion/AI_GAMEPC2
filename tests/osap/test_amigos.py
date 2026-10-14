@@ -513,7 +513,7 @@ class TestEvents:
         with pytest.raises(AmigosError) as exc:
             service.create_actuacion(
                 actor_user_id="u1", is_global_admin=False,
-                data={"title": "X", "starts_on": "2026-05-01"}, action="draft",
+                data={"title": "X", "starts_on": "2099-05-01"}, action="draft",
             )
         assert exc.value.status == 403
 
@@ -521,7 +521,7 @@ class TestEvents:
         service = AmigosService(_MemoryStore())
         draft = service.create_actuacion(
             actor_user_id=_ADMIN, is_global_admin=True,
-            data={"title": "Encuentro Coral", "starts_on": "2026-05-10",
+            data={"title": "Encuentro Coral", "starts_on": "2099-05-10",
                   "starts_at": "18:30", "kind": "meeting", "locality": "Barcelona"},
             action="draft",
         )
@@ -529,7 +529,7 @@ class TestEvents:
         assert service.get_public_actuacion(str(draft["id"])) is None
         published = service.create_actuacion(
             actor_user_id=_ADMIN, is_global_admin=True,
-            data={"title": "Concierto", "starts_on": "2026-04-01"}, action="publish",
+            data={"title": "Concierto", "starts_on": "2099-04-01"}, action="publish",
         )
         assert published["editorial_status"] == "published"
         listing = service.list_actuaciones(public_only=True)
@@ -545,7 +545,7 @@ class TestEvents:
         with pytest.raises(AmigosError) as e1:
             service.create_actuacion(
                 actor_user_id=_ADMIN, is_global_admin=True,
-                data={"starts_on": "2026-05-01"}, action="draft",
+                data={"starts_on": "2099-05-01"}, action="draft",
             )
         assert e1.value.code == "TITLE_REQUIRED"
         with pytest.raises(AmigosError) as e2:
@@ -556,19 +556,19 @@ class TestEvents:
         with pytest.raises(AmigosError) as e3:
             service.create_actuacion(
                 actor_user_id=_ADMIN, is_global_admin=True,
-                data={"title": "X", "starts_on": "2026-05-01", "kind": "nope"}, action="draft",
+                data={"title": "X", "starts_on": "2099-05-01", "kind": "nope"}, action="draft",
             )
         assert e3.value.code == "INVALID_KIND"
         with pytest.raises(AmigosError) as e4:
             service.create_actuacion(
                 actor_user_id=_ADMIN, is_global_admin=True,
-                data={"title": "X", "starts_on": "2026-05-01", "groups": [{"group_id": "nope"}]},
+                data={"title": "X", "starts_on": "2099-05-01", "groups": [{"group_id": "nope"}]},
                 action="draft",
             )
         assert e4.value.code == "INVALID_GROUP"
         event = service.create_actuacion(
             actor_user_id=_ADMIN, is_global_admin=True,
-            data={"title": "Encuentro", "starts_on": "2026-05-01",
+            data={"title": "Encuentro", "starts_on": "2099-05-01",
                   "groups": [{"group_id": str(group["id"]), "role": "participant"}]},
             action="publish",
         )
@@ -581,7 +581,7 @@ class TestEvents:
         service = AmigosService(_MemoryStore())
         event = service.create_actuacion(
             actor_user_id=_ADMIN, is_global_admin=True,
-            data={"title": "Taller", "starts_on": "2026-06-01"}, action="draft",
+            data={"title": "Taller", "starts_on": "2099-06-01"}, action="draft",
         )
         published = service.set_actuacion_editorial(
             actor_user_id=_ADMIN, is_global_admin=True,
@@ -589,6 +589,48 @@ class TestEvents:
         )
         assert published["editorial_status"] == "published"
         assert service.get_public_actuacion(str(event["id"])) is not None
+
+
+    def test_peso_ordena_desc_y_excluye_pasados(self) -> None:
+        service = AmigosService(_MemoryStore())
+        low = service.create_actuacion(
+            actor_user_id=_ADMIN, is_global_admin=True,
+            data={"title": "Baja", "starts_on": "2099-06-01", "weight": 2}, action="publish",
+        )
+        high = service.create_actuacion(
+            actor_user_id=_ADMIN, is_global_admin=True,
+            data={"title": "Alta", "starts_on": "2099-07-01", "weight": 9}, action="publish",
+        )
+        service.create_actuacion(
+            actor_user_id=_ADMIN, is_global_admin=True,
+            data={"title": "Pasada", "starts_on": "2000-01-01", "weight": 9}, action="publish",
+        )
+        listing = service.list_actuaciones(public_only=True)
+        assert [e["id"] for e in listing["items"]] == [str(high["id"]), str(low["id"])]  # type: ignore[union-attr]
+        with pytest.raises(AmigosError) as exc:
+            service.create_actuacion(
+                actor_user_id=_ADMIN, is_global_admin=True,
+                data={"title": "X", "starts_on": "2099-06-01", "weight": 10}, action="draft",
+            )
+        assert exc.value.code == "INVALID_WEIGHT"
+
+    def test_contadores_de_anuncio(self) -> None:
+        service = AmigosService(_MemoryStore())
+        event = service.create_actuacion(
+            actor_user_id=_ADMIN, is_global_admin=True,
+            data={"title": "E", "starts_on": "2099-06-01"}, action="publish",
+        )
+        assert service.record_event_counter(str(event["id"]), "view") == 1
+        assert service.record_event_counter(str(event["id"]), "view") == 2
+        assert service.record_event_counter(str(event["id"]), "expand") == 1
+        assert service.record_event_counter(str(event["id"]), "buy") == 1
+        draft = service.create_actuacion(
+            actor_user_id=_ADMIN, is_global_admin=True,
+            data={"title": "D", "starts_on": "2099-06-01"}, action="draft",
+        )
+        assert service.record_event_counter(str(draft["id"]), "view") is None
+        with pytest.raises(AmigosError):
+            service.record_event_counter(str(event["id"]), "nope")
 
 
 class TestAuthorizationsAndBlog:
@@ -646,14 +688,14 @@ class TestAuthorizationsAndBlog:
         with pytest.raises(AmigosError):
             service.create_actuacion(
                 actor_user_id="u1", is_global_admin=False,
-                data={"title": "E", "starts_on": "2026-05-01"}, action="publish",
+                data={"title": "E", "starts_on": "2099-05-01"}, action="publish",
             )
         service.grant_authorization(
             actor_user_id=_ADMIN, is_global_admin=True, user_id="u1", scope="events"
         )
         event = service.create_actuacion(
             actor_user_id="u1", is_global_admin=False,
-            data={"title": "E", "starts_on": "2026-05-01"}, action="publish",
+            data={"title": "E", "starts_on": "2099-05-01"}, action="publish",
         )
         assert event["editorial_status"] == "pending"
 

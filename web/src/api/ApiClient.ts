@@ -378,6 +378,13 @@ export class ApiClient {
     );
   }
 
+  /** Contador de anuncio (best-effort): 'view' | 'expand' | 'buy'. */
+  recordAmigosEvent(eventId: string, kind: "view" | "expand" | "buy"): void {
+    void this
+      .post<unknown>(`/amigos/events/${encodeURIComponent(eventId)}/stat?kind=${kind}`)
+      .catch(() => undefined);
+  }
+
   // --- Blog general «Artículos» --------------------------------------------
 
   async getAmigosBlog(limit = 100, offset = 0): Promise<AmigosArticleList> {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { AmigosEvent } from "../api/types";
@@ -21,14 +21,21 @@ function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-// «Próximas actuaciones y eventos»: agenda pública. Muestra los eventos futuros ordenados por
-// fecha, con los datos del evento y un enlace a la información oficial del organizador.
+function buyUrl(e: AmigosEvent): string | null {
+  return e.tickets_url ?? e.event_url ?? null;
+}
+
+// «Próximas actuaciones y eventos»: rejilla de anuncios (imagen + Comprar). El orden lo pone
+// el servidor (peso desc, fecha desc) y los pasados quedan fuera. Se cuentan impresiones
+// (view), ampliaciones de imagen (expand) y clics de compra (buy).
 export function AmigosEventsPage() {
   const { t } = useI18n();
   const [events, setEvents] = useState<AmigosEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [kind, setKind] = useState("");
   const [locality, setLocality] = useState("");
+  const [open, setOpen] = useState<AmigosEvent | null>(null);
+  const seenViews = useRef<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -49,6 +56,28 @@ export function AmigosEventsPage() {
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Impresión: se cuenta una vez por anuncio mostrado.
+  useEffect(() => {
+    for (const e of events) {
+      if (!seenViews.current.has(e.id)) {
+        seenViews.current.add(e.id);
+        apiClient.recordAmigosEvent(e.id, "view");
+      }
+    }
+  }, [events]);
+
+  const buy = (e: AmigosEvent) => {
+    const url = buyUrl(e);
+    if (url === null) return;
+    apiClient.recordAmigosEvent(e.id, "buy");
+    window.open(url, "_blank", "noopener");
+  };
+
+  const expand = (e: AmigosEvent) => {
+    apiClient.recordAmigosEvent(e.id, "expand");
+    setOpen(e);
+  };
 
   return (
     <div className="space-y-5">
@@ -96,50 +125,66 @@ export function AmigosEventsPage() {
       ) : events.length === 0 ? (
         <p className="text-sm text-osap-muted">{t("friends.eventsEmpty")}</p>
       ) : (
-        <ul className="space-y-3">
+        <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {events.map((e) => (
             <li
               key={e.id}
-              className="rounded-card border border-osap-border bg-osap-surface p-4 shadow-card"
+              className="flex flex-col overflow-hidden rounded-card border border-osap-border bg-osap-surface shadow-card"
             >
-              <div className="flex flex-wrap items-start justify-between gap-2">
-                <h2 className="font-display text-lg font-semibold text-osap-ink">{e.title}</h2>
-                <span className="rounded bg-osap-accent-soft px-2 py-0.5 text-xs text-osap-accent">
-                  {t(KIND_KEY[e.kind] ?? "friends.eventKind.other")}
-                </span>
-              </div>
-              <p className="mt-1 text-sm text-osap-muted">
-                {e.starts_on}
-                {e.starts_at ? ` · ${e.starts_at}` : ""}
-                {e.locality ? ` · ${e.locality}` : ""}
-                {e.event_status === "postponed"
-                  ? ` · ${t("friends.eventStatus.postponed")}`
-                  : e.event_status === "cancelled"
-                    ? ` · ${t("friends.eventStatus.cancelled")}`
-                    : ""}
-              </p>
-              {e.summary ? <p className="mt-2 text-sm">{e.summary}</p> : null}
-              <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
-                {e.organizer_name ? (
-                  <span className="text-osap-muted">
-                    {t("friends.eventOrganizer")}: {e.organizer_name}
-                  </span>
-                ) : null}
-                {e.event_url ?? e.organizer_website ? (
-                  <a
-                    href={(e.event_url ?? e.organizer_website) as string}
-                    rel="nofollow noopener"
-                    target="_blank"
-                    className="text-osap-accent hover:underline"
-                  >
-                    {t("friends.eventInfo")} ↗
-                  </a>
-                ) : null}
-              </div>
+              <button
+                type="button"
+                onClick={() => expand(e)}
+                aria-label={e.title}
+                className="block w-full"
+              >
+                {e.image_url ? (
+                  <img src={e.image_url} alt={e.title} className="aspect-[4/3] w-full object-cover" />
+                ) : (
+                  <span className="block aspect-[4/3] w-full bg-osap-accent-soft" />
+                )}
+              </button>
+              {buyUrl(e) !== null ? (
+                <button
+                  type="button"
+                  onClick={() => buy(e)}
+                  className="mt-auto block w-full bg-osap-accent px-3 py-2 text-center text-sm font-medium text-white hover:bg-osap-accent/90"
+                >
+                  {t("friends.buy")}
+                </button>
+              ) : null}
             </li>
           ))}
         </ul>
       )}
+
+      {open !== null ? (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 p-4"
+          onClick={() => setOpen(null)}
+        >
+          <button
+            type="button"
+            aria-label={t("friends.close")}
+            onClick={() => setOpen(null)}
+            className="absolute right-4 top-4 text-3xl leading-none text-white"
+          >
+            ✕
+          </button>
+          {open.image_url ? (
+            <img
+              src={open.image_url}
+              alt={open.title}
+              onClick={(ev) => {
+                ev.stopPropagation();
+                buy(open);
+              }}
+              className="max-h-full max-w-full cursor-pointer object-contain"
+            />
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

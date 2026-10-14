@@ -441,6 +441,12 @@ class _MysqlStore(_MemoryStore):
                 author_user_id CHAR(36) NOT NULL,
                 last_verified_on DATE,
                 internal_notes TEXT,
+                weight TINYINT NOT NULL DEFAULT 5 COMMENT '1..9; primer criterio de orden (desc)',
+                views INT UNSIGNED NOT NULL DEFAULT 0,
+                expands INT UNSIGNED NOT NULL DEFAULT 0,
+                buys INT UNSIGNED NOT NULL DEFAULT 0,
+                source_email VARCHAR(254) COMMENT 'email de quien registra el anuncio',
+                source_note VARCHAR(255) COMMENT 'texto libre cuando lo registra un admin global',
                 published_at DATETIME(6),
                 reviewed_by CHAR(36),
                 reviewed_at DATETIME(6),
@@ -451,6 +457,7 @@ class _MysqlStore(_MemoryStore):
                 UNIQUE KEY uq_amigos_actuacion_slug (slug),
                 KEY idx_amigos_actuacion_date (starts_on),
                 KEY idx_amigos_actuacion_status (editorial_status),
+                KEY idx_amigos_actuacion_weight (weight),
                 CONSTRAINT fk_amigos_actuacion_org FOREIGN KEY (organizer_group_id)
                     REFERENCES amigos_groups (id) ON DELETE SET NULL
             ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
@@ -471,6 +478,16 @@ class _MysqlStore(_MemoryStore):
             ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
             """
         )
+        # Columnas de la agenda añadidas a tablas ya existentes (idempotente/tolerante).
+        for _col, _ddl in (
+            ("weight", "TINYINT NOT NULL DEFAULT 5"),
+            ("views", "INT UNSIGNED NOT NULL DEFAULT 0"),
+            ("expands", "INT UNSIGNED NOT NULL DEFAULT 0"),
+            ("buys", "INT UNSIGNED NOT NULL DEFAULT 0"),
+            ("source_email", "VARCHAR(254) NULL"),
+            ("source_note", "VARCHAR(255) NULL"),
+        ):
+            self._ensure_column("amigos_actuaciones", _col, _ddl)
         # Blog general + autorizaciones editoriales (blog/agenda).
         self._ensure_column("amigos_articles", "scope", "VARCHAR(16) NOT NULL DEFAULT 'group'")
         self._ensure_column_nullable("amigos_articles", "group_id", "CHAR(32) NULL")
@@ -1265,7 +1282,7 @@ class _MysqlStore(_MemoryStore):
         "venue_name", "venue_address", "locality", "region", "country_code", "latitude",
         "longitude", "map_url", "organizer_name", "organizer_website", "event_url",
         "tickets_url", "price", "access_info", "public_contact", "organizer_group_id",
-        "last_verified_on", "internal_notes",
+        "last_verified_on", "internal_notes", "weight", "source_email", "source_note",
     )
 
     def create_amigos_actuacion(
@@ -1369,11 +1386,25 @@ class _MysqlStore(_MemoryStore):
         total_rows = self._run(f"SELECT COUNT(*) AS n FROM amigos_actuaciones {where}", tuple(args))
         total = int(str(total_rows[0]["n"])) if total_rows else 0
         rows = self._run(
-            f"SELECT * FROM amigos_actuaciones {where} ORDER BY starts_on, starts_at "
-            "LIMIT %s OFFSET %s",
+            f"SELECT * FROM amigos_actuaciones {where} "
+            "ORDER BY weight DESC, starts_on DESC, starts_at DESC LIMIT %s OFFSET %s",
             (*args, limit, offset),
         )
         return rows, total
+
+    def increment_amigos_actuacion_counter(self, actuacion_id: str, field: str) -> int | None:
+        if field not in ("views", "expands", "buys"):
+            return None
+        rows = self._run(
+            f"UPDATE amigos_actuaciones SET {field} = {field} + 1 WHERE id = %s", (actuacion_id,)
+        )
+        _ = rows
+        current = self._run(
+            f"SELECT {field} AS n FROM amigos_actuaciones WHERE id = %s", (actuacion_id,)
+        )
+        if not current:
+            return None
+        return int(str(current[0]["n"]))
 
     def replace_amigos_actuacion_groups(
         self, actuacion_id: str, items: list[dict[str, object]]

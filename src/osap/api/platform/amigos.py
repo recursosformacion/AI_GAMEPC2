@@ -66,6 +66,17 @@ class AmigosMixin(PlatformApiCore):
             raise UnauthenticatedError("Login required")
         return str(user_id)
 
+    def _amigos_actor_email(self, token: str | None) -> str | None:
+        try:
+            code, doc = self._container.auth_proxy().me(token or "")
+        except Exception as exc:  # noqa: BLE001 — si auth no responde, no hay email
+            _LOGGER.warning("amigos: email de autor sin osap-auth (%s)", exc)
+            return None
+        if code == 200 and isinstance(doc, dict):
+            email = doc.get("email")
+            return str(email) if email else None
+        return None
+
     def _amigos_is_global_admin(self, token: str | None) -> bool:
         principal = self._container.authenticator().resolve(token)
         if principal is None:
@@ -404,16 +415,33 @@ class AmigosMixin(PlatformApiCore):
         self, token: str | None, payload: AmigosActuacionRequest
     ) -> AmigosActuacionRead:
         actor = self._amigos_user(token)
+        is_admin = self._amigos_is_global_admin(token)
         data = payload.model_dump(exclude_unset=True)
         data["groups"] = [g.model_dump() for g in payload.groups]
         action = str(data.pop("action", "draft"))
+        # Origen del anuncio: admin global → texto libre; si no, email de quien lo registra.
+        if is_admin:
+            data.pop("source_email", None)
+        else:
+            data.pop("source_note", None)
+            email = self._amigos_actor_email(token)
+            if email:
+                data["source_email"] = email
         row = self._amigos_service().create_actuacion(
             actor_user_id=actor,
-            is_global_admin=self._amigos_is_global_admin(token),
+            is_global_admin=is_admin,
             data=data,
             action=action,
         )
         return self._amigos_event_read(row)
+
+    def amigos_record_event_counter(
+        self, event_id: str, kind: str
+    ) -> dict[str, object] | None:
+        count = self._amigos_service().record_event_counter(event_id, kind)
+        if count is None:
+            return None
+        return {"id": event_id, "kind": kind, "count": count}
 
     def amigos_update_event(
         self, token: str | None, event_id: str, payload: AmigosActuacionRequest
@@ -515,6 +543,12 @@ class AmigosMixin(PlatformApiCore):
             published_at=text("published_at"),
             created_at=str(row.get("created_at") or ""),
             updated_at=str(row.get("updated_at") or ""),
+            weight=int(str(row.get("weight") or 5)),
+            views=int(str(row.get("views") or 0)),
+            expands=int(str(row.get("expands") or 0)),
+            buys=int(str(row.get("buys") or 0)),
+            source_email=text("source_email"),
+            source_note=text("source_note"),
             groups=groups,
         )
 

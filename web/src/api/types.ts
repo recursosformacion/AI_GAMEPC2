@@ -1030,11 +1030,17 @@ export interface AmigosEvent {
   published_at?: string | null;
   created_at?: string;
   updated_at?: string;
+  weight?: number;
+  views?: number;
+  expands?: number;
+  buys?: number;
+  source_email?: string | null;
+  source_note?: string | null;
   groups: AmigosEventGroupRef[];
 }
 
 export type AmigosEventInput = Partial<
-  Omit<AmigosEvent, "id" | "slug" | "editorial_status" | "author_user_id" | "created_at" | "updated_at" | "published_at" | "groups">
+  Omit<AmigosEvent, "id" | "slug" | "editorial_status" | "author_user_id" | "created_at" | "updated_at" | "published_at" | "groups" | "views" | "expands" | "buys">
 > & {
   title: string;
   starts_on: string;
