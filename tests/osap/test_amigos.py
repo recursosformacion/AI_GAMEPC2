@@ -963,6 +963,8 @@ class TestSeo:
         assert "Ficha" in page.text and "Valencia" in page.text and "ES" in page.text
         assert "renacimiento" in page.text and "barroco" in page.text
         assert "Lugares de actuación" in page.text and "Auditori" in page.text
+        # Fecha en formato europeo (dd/mm/aaaa).
+        assert "20/12/2026" in page.text
         # Datos comunes del grupo: web, email, logo y redes.
         assert "https://ctv.example.org" in page.text
         assert "mailto:info@ctv.example.org" in page.text
