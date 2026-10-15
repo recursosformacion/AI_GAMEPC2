@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass, field
+from urllib.parse import quote
 
 from src.osap.api.seo.slug import slugify
 from src.osap.api.seo.views import public_base_url
@@ -143,6 +144,38 @@ class CoralView:
 
 
 @dataclass(frozen=True)
+class ShareTarget:
+    """Destino de compartición con intención web (href listo para usar)."""
+
+    key: str
+    label: str
+    href: str
+
+
+def share_targets(url: str, title: str) -> list[ShareTarget]:
+    """Enlaces de «compartir» para una URL pública.
+
+    Cubre las redes con intención web. **Instagram no ofrece una**: para él se usa
+    «Copiar enlace» o la hoja nativa del sistema (`navigator.share`), que incluye Instagram
+    en móvil/escritorio.
+    """
+    u = quote(url, safe="")
+    t = quote(title, safe="")
+    return [
+        ShareTarget("facebook", "Facebook", f"https://www.facebook.com/sharer/sharer.php?u={u}"),
+        ShareTarget(
+            "linkedin", "LinkedIn", f"https://www.linkedin.com/sharing/share-offsite/?url={u}"
+        ),
+        ShareTarget("x", "X", f"https://twitter.com/intent/tweet?url={u}&text={t}"),
+        ShareTarget("whatsapp", "WhatsApp", f"https://wa.me/?text={t}%20{u}"),
+        ShareTarget("telegram", "Telegram", f"https://t.me/share/url?url={u}&text={t}"),
+        ShareTarget("reddit", "Reddit", f"https://www.reddit.com/submit?url={u}&title={t}"),
+        ShareTarget("mastodon", "Mastodon", f"https://mastodon.social/share?text={t}%20{u}"),
+        ShareTarget("email", "Email", f"mailto:?subject={t}&body={u}"),
+    ]
+
+
+@dataclass(frozen=True)
 class GroupView:
     group_id: str
     slug: str
@@ -159,6 +192,7 @@ class GroupView:
     canonical_url: str = ""
     description_meta: str = ""
     json_ld: str = ""
+    share: list[ShareTarget] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -181,6 +215,7 @@ class ArticleView:
     json_ld: str = ""
     event_date_display: str = ""
     body_html: str | None = None
+    share: list[ShareTarget] = field(default_factory=list)
 
 
 def _breadcrumb(items: list[tuple[str, str | None]]) -> dict[str, object]:
@@ -272,6 +307,7 @@ def build_group_view(data: dict[str, object]) -> GroupView:
         canonical_url=canonical,
         description_meta=description_meta,
         json_ld=json_ld,
+        share=share_targets(canonical, name),
     )
 
 
@@ -373,4 +409,5 @@ def build_article_view(data: dict[str, object]) -> ArticleView:
         json_ld=json_ld,
         event_date_display=_euro_date(data.get("event_date")),
         body_html=to_html_body(body) or None,
+        share=share_targets(canonical, title),
     )

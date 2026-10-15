@@ -1092,6 +1092,19 @@ class TestSeo:
         # El vídeo se incrusta desde el id validado (no desde HTML del usuario).
         assert "https://www.youtube.com/embed/dQw4w9WgXcQ" in resp.text
 
+    def test_pagina_de_articulo_tiene_compartir(self) -> None:
+        """El artículo ofrece enlaces de compartición (Facebook/LinkedIn/X…) y copiar enlace."""
+        client = _seo_client()
+        resp = client.get("/amigos/articulo/a1/concierto-de-navidad")
+        assert resp.status_code == 200
+        url = f"{_A_BASE}/amigos/articulo/a1/concierto-de-navidad"
+        encoded = url.replace("/", "%2F").replace(":", "%3A")
+        assert "facebook.com/sharer" in resp.text
+        assert "linkedin.com/sharing" in resp.text
+        assert "twitter.com/intent/tweet" in resp.text
+        assert encoded in resp.text
+        assert "Copiar enlace" in resp.text
+
     def test_grupo_sin_slug_redirige_y_lista_articulos(self) -> None:
         client = _seo_client()
         resp = client.get("/amigos/corales/g123", follow_redirects=False)
@@ -1112,6 +1125,8 @@ class TestSeo:
         assert "mailto:info@ctv.example.org" in page.text
         assert "https://cdn.example.org/logo.png" in page.text
         assert "https://facebook.com/ctv" in page.text and "YouTube" in page.text
+        # La ficha del coral también se puede compartir.
+        assert "linkedin.com/sharing" in page.text and "Copiar enlace" in page.text
 
     def test_articulo_no_publicado_404(self) -> None:
         client = _seo_client()

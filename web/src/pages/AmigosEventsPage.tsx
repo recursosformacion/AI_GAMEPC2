@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { AmigosEvent } from "../api/types";
 import { AmigosNote } from "../components/AmigosNote";
+import { ShareBar } from "../components/ShareBar";
 import { Spinner } from "../components/Spinner";
 import { useAmigosPermissions } from "../components/useAmigosPermissions";
 import { useI18n } from "../i18n/I18n";
@@ -26,6 +27,12 @@ function today(): string {
 
 function buyUrl(e: AmigosEvent): string | null {
   return e.tickets_url ?? e.event_url ?? null;
+}
+
+// URL pública del anuncio: la agenda es una página SPA, así que se enlaza con ancla al
+// propio anuncio (`#e-<id>`), que es lo que se comparte.
+function eventShareUrl(id: string): string {
+  return `${window.location.origin}/amigos/eventos#e-${id}`;
 }
 
 // «Próximas actuaciones y eventos»: rejilla de anuncios (imagen entera + fecha/localidad +
@@ -178,6 +185,7 @@ export function AmigosEventsPage() {
           {filtered.map((e) => (
             <li
               key={e.id}
+              id={`e-${e.id}`}
               className="flex flex-col overflow-hidden rounded-card border border-osap-border bg-osap-surface shadow-card"
             >
               <button
@@ -197,6 +205,7 @@ export function AmigosEventsPage() {
                 {e.starts_at ? ` · ${e.starts_at}` : ""}
                 {e.locality ? ` · ${e.locality}` : ""}
               </div>
+              <ShareBar className="px-3 pb-2" url={eventShareUrl(e.id)} title={e.title} />
               {buyUrl(e) !== null ? (
                 <button
                   type="button"

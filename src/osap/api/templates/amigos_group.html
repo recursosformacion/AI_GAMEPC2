@@ -43,6 +43,9 @@
       {% for link in view.links %}<a class="btn" href="{{ link.url }}" rel="nofollow noopener">{{ link.label or link.kind }}</a>{% endfor %}
     </div>
     {% endif %}
+    {% with share=view.share, share_url=view.canonical_url, share_label="Compartir", copy_label="Copiar enlace", copied_label="Enlace copiado" %}
+    {% include "_share_bar.html" %}
+    {% endwith %}
   </div>
 </section>
 
