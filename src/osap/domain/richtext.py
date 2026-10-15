@@ -49,6 +49,10 @@ _CSS_URL = re.compile(r"url\s*\([^)]*\)", re.IGNORECASE)
 _CSS_DANGEROUS = re.compile(r"(expression\s*\(|javascript\s*:|behavior\s*:|-moz-binding)", re.IGNORECASE)
 _CSS_END_TAG = re.compile(r"</\s*style", re.IGNORECASE)
 
+# Enlaces en texto plano: `[texto](url)` y URLs sueltas (http/https).
+_MD_LINK = re.compile(r"\[([^\]\n]{1,200})\]\(([^\s)]{1,500})\)")
+_BARE_URL = re.compile(r"https?://[^\s<>\"')]+")
+
 
 def looks_like_html(text: str | None) -> bool:
     """Heurística: ¿el cuerpo contiene etiquetas HTML?"""
@@ -77,6 +81,39 @@ def _sanitize_css(css: str) -> str:
     return _CSS_END_TAG.sub("<\\/style", text)
 
 
+def _autolink(text: str) -> str:
+    """Convierte URLs sueltas (http/https) en enlaces; el texto ya viene escapado."""
+
+    def repl(match: re.Match[str]) -> str:
+        url = match.group(0)
+        tail = ""
+        while url and url[-1] in ".,;:":
+            tail = url[-1] + tail
+            url = url[:-1]
+        if not url:
+            return match.group(0)
+        return f'<a href="{url}" rel="nofollow noopener">{url}</a>{tail}'
+
+    return _BARE_URL.sub(repl, text)
+
+
+def _linkify(escaped_text: str) -> str:
+    """Enlaces en texto ya escapado: `[texto](url)` y URLs sueltas → `<a>` seguro."""
+    parts: list[str] = []
+    pos = 0
+    for match in _MD_LINK.finditer(escaped_text):
+        parts.append(_autolink(escaped_text[pos : match.start()]))
+        label = match.group(1).strip()
+        href = _safe_href(match.group(2))
+        if href is not None and label:
+            parts.append(f'<a href="{escape(href, quote=True)}" rel="nofollow noopener">{label}</a>')
+        else:
+            parts.append(match.group(0))
+        pos = match.end()
+    parts.append(_autolink(escaped_text[pos:]))
+    return "".join(parts)
+
+
 def _text_to_paragraphs(data: str) -> str:
     """Texto suelto → HTML: las líneas en blanco separan párrafos y los saltos son `<br>`."""
     text = data.replace("\r\n", "\n").replace("\r", "\n")
@@ -85,7 +122,7 @@ def _text_to_paragraphs(data: str) -> str:
         return "" if "\n" in text else " "
     chunks = [chunk.strip() for chunk in _BLANK_LINES.split(text)]
     return "".join(
-        f"<p>{escape(chunk, quote=False).replace(chr(10), '<br>')}</p>"
+        f"<p>{_linkify(escape(chunk, quote=False)).replace(chr(10), '<br>')}</p>"
         for chunk in chunks
         if chunk
     )
@@ -171,6 +208,18 @@ def sanitize_html(html: str) -> str:
 def sanitize_body(body: str) -> str:
     """Sanea el cuerpo si parece HTML; si es texto plano, se devuelve tal cual."""
     return sanitize_html(body) if looks_like_html(body) else (body or "")
+
+
+def to_html_body(body: str | None) -> str:
+    """Cuerpo listo para mostrar como HTML.
+
+    Si es HTML se sanea; si es texto plano se convierte (párrafos, saltos y **enlaces**:
+    `[texto](url)` o URLs sueltas `https://…`, que pasan a `<a>`).
+    """
+    text = str(body or "")
+    if not text.strip():
+        return ""
+    return sanitize_html(text) if looks_like_html(text) else _text_to_paragraphs(text)
 
 
 _STYLE_BLOCK = re.compile(r"<style[\s\S]*?</style>", re.IGNORECASE)

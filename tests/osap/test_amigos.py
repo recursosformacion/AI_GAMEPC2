@@ -842,6 +842,30 @@ class TestRichtext:
         assert plain_text("<style>.a{color:red}</style><p>Hola</p>\n<p>Mundo</p>") == "Hola Mundo"
         assert plain_text("Texto plano\n\nen dos lineas") == "Texto plano en dos lineas"
 
+    def test_enlaces_en_texto_plano(self) -> None:
+        """Un cuerpo de texto plano puede llevar enlaces: URL suelta o `[texto](url)`."""
+        from src.osap.domain.richtext import to_html_body
+
+        out = to_html_body("Mira https://osap.example y [Guía](https://x.org)")
+        assert (
+            '<a href="https://osap.example" rel="nofollow noopener">https://osap.example</a>' in out
+        )
+        assert '<a href="https://x.org" rel="nofollow noopener">Guía</a>' in out
+
+    def test_enlaces_peligrosos_no_se_enlazan(self) -> None:
+        from src.osap.domain.richtext import to_html_body
+
+        out = to_html_body("[malo](javascript:alert(1))")
+        assert "<a" not in out
+        assert "javascript:alert(1)" in out
+
+    def test_to_html_body_sanea_el_html(self) -> None:
+        from src.osap.domain.richtext import to_html_body
+
+        out = to_html_body("<p>Hola</p><script>x</script>")
+        assert "<p>Hola</p>" in out
+        assert "script" not in out
+
 
 class TestValidation:
     def test_fecha_de_evento_imposible_rechazada(self) -> None:

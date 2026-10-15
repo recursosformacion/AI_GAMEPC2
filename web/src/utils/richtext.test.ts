@@ -21,4 +21,25 @@ describe("richText", () => {
     expect(html).toContain("<style>.a{color:red}</style>");
     expect(html).toContain("<p>Texto</p>");
   });
+
+  it("convierte URLs sueltas y enlaces markdown en <a>", () => {
+    expect(textToHtml("Ver https://osap.example")).toBe(
+      '<p>Ver <a href="https://osap.example" rel="nofollow noopener">https://osap.example</a></p>',
+    );
+    expect(textToHtml("[Guía](https://x.org)")).toBe(
+      '<p><a href="https://x.org" rel="nofollow noopener">Guía</a></p>',
+    );
+    expect(textToHtml("Fin https://x.org.")).toContain("</a>.");
+  });
+
+  it("no enlaza esquemas peligrosos", () => {
+    expect(textToHtml("[malo](javascript:alert(1))")).toBe(
+      "<p>[malo](javascript:alert(1))</p>",
+    );
+  });
+
+  it("conserva los enlaces al volver a texto plano", () => {
+    const html = textToHtml("Ver [Guía](https://x.org) y https://y.org");
+    expect(htmlToText(html)).toBe("Ver [Guía](https://x.org) y https://y.org");
+  });
 });

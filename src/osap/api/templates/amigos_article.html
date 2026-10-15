@@ -57,7 +57,7 @@
   {% if view.summary %}<p class="muted"><em>{{ view.summary }}</em></p>{% endif %}
 
   <div class="articulo-osap">
-  {% if view.body_html %}{{ view.body_html | safe }}{% else %}{% for paragraph in view.paragraphs %}<p>{{ paragraph }}</p>{% endfor %}{% endif %}
+  {{ view.body_html | safe }}
   </div>
 
   {% if view.media %}

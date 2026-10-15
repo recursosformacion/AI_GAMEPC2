@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 
 from src.osap.api.seo.slug import slugify
 from src.osap.api.seo.views import public_base_url
-from src.osap.domain.richtext import looks_like_html, plain_text, sanitize_html
+from src.osap.domain.richtext import plain_text, to_html_body
 
 _IMG_EXT = re.compile(r"\.(jpg|jpeg|png|webp|gif|avif)(\?|$)", re.IGNORECASE)
 
@@ -69,11 +69,6 @@ def _build_coral_view(raw: object) -> CoralView | None:
         languages=[str(v) for v in languages] if isinstance(languages, list) else [],
         places=[str(v) for v in places] if isinstance(places, list) else [],
     )
-
-
-def _paragraphs(body: str) -> list[str]:
-    chunks = re.split(r"\n\s*\n", body or "")
-    return [c.strip() for c in chunks if c.strip()]
 
 
 def _youtube_embed(video_id: str | None) -> str | None:
@@ -178,7 +173,6 @@ class ArticleView:
     group_name: str
     group_url: str
     summary: str | None
-    paragraphs: list[str] = field(default_factory=list)
     cover_url: str | None = None
     media: list[MediaLink] = field(default_factory=list)
     canonical_url: str = ""
@@ -371,7 +365,6 @@ def build_article_view(data: dict[str, object]) -> ArticleView:
         group_name=group_name,
         group_url=group_url,
         summary=summary,
-        paragraphs=_paragraphs(body),
         cover_url=cover_url,
         media=media,
         canonical_url=canonical,
@@ -379,5 +372,5 @@ def build_article_view(data: dict[str, object]) -> ArticleView:
         og_image=og_image,
         json_ld=json_ld,
         event_date_display=_euro_date(data.get("event_date")),
-        body_html=sanitize_html(body) if looks_like_html(body) else None,
+        body_html=to_html_body(body) or None,
     )
