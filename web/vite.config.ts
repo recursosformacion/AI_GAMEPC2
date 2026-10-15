@@ -1,8 +1,17 @@
+import { readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
+// Versión de la app: única fuente `package.json`, expuesta al código como `__APP_VERSION__`.
+const pkg = JSON.parse(
+  readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), "package.json"), "utf8"),
+) as { version: string };
+
 export default defineConfig({
+  define: { __APP_VERSION__: JSON.stringify(pkg.version) },
   plugins: [react(), tailwindcss()],
   build: {
     // El bundle actual ronda los ~533 kB tras minificar; la advertencia de Vite por

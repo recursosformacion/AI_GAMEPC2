@@ -397,6 +397,14 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
           >
             ?
           </Link>
+          <a
+            href="/manual/"
+            aria-label={t("nav.manual")}
+            title={t("nav.manual")}
+            className="hidden rounded-full border border-osap-border px-2.5 py-1 text-sm text-osap-muted hover:text-osap-accent sm:block"
+          >
+            {t("nav.manual")}
+          </a>
           <LanguageSelect />
           <DarkModeToggle />
           {user === null ? (
@@ -484,6 +492,10 @@ export function Footer() {
         {t("nav.collaborators")}
       </Link>
       {" · "}
+      <a href="/manual/" className="text-osap-accent hover:underline">
+        {t("nav.manual")}
+      </a>
+      {" · "}
       <Link to="/support" className="text-osap-accent hover:underline">
         {t("nav.support")}
       </Link>
@@ -507,6 +519,9 @@ export function Footer() {
       >
         Configurar cookies
       </button>
+      <span className="mt-1 block text-[11px] text-osap-muted">
+        {t("app.name")} v{__APP_VERSION__}
+      </span>
     </footer>
   );
 }

@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Manual de usuario · OpenMusicRepository</title>
+<meta name="description" content="Manual de usuario de OpenMusicRepository (OSAP) en castellano, catalán, francés, inglés y alemán.">
+<meta name="robots" content="noindex,follow">
+<link rel="icon" href="/favicon.ico">
+<link rel="stylesheet" href="./assets/manual.css">
+</head>
+<body><div class="shell">
+<main class="main">
+<p class="eyebrow">OpenMusicRepository · OSAP</p>
+<h1>Manual de usuario</h1>
+<p class="lead">Elige el idioma del manual. / Choose the manual language.</p>
+<ul class="section-list">
+<li><a href="./es/"><strong>Español</strong><br><small>Manual en castellano</small></a></li>
+<li><a href="./ca/"><strong>Català</strong><br><small>Manual en català</small></a></li>
+<li><a href="./fr/"><strong>Français</strong><br><small>Manuel en français</small></a></li>
+<li><a href="./en/"><strong>English</strong><br><small>Manual in English</small></a></li>
+<li><a href="./de/"><strong>Deutsch</strong><br><small>Handbuch auf Deutsch</small></a></li>
+</ul>
+<p class="muted"><a href="https://app.openmusicrepository.com/">← Volver a OSAP / Back to OSAP</a></p>
+</main></div>
+<script>
+  // Abre directamente el manual en el idioma de la app: `osap.lang` (elección guardada por
+  // la SPA), si no la hay el del navegador, y "en" como último recurso — igual que
+  // `web/src/state/preferences.ts`. Los idiomas disponibles son los mismos cinco.
+  (function () {
+    var LANGS = ["es", "ca", "fr", "en", "de"];
+    var pick = null;
+    try {
+      pick = localStorage.getItem("osap.lang");
+    } catch (e) {}
+    if (LANGS.indexOf(pick) === -1) {
+      pick = null;
+      var candidates = [navigator.language].concat(navigator.languages || []);
+      for (var i = 0; i < candidates.length; i++) {
+        var primary = String(candidates[i] || "").toLowerCase().split("-")[0];
+        if (LANGS.indexOf(primary) !== -1) {
+          pick = primary;
+          break;
+        }
+      }
+    }
+    if (!pick) pick = "en";
+    location.replace("./" + pick + "/");
+  })();
+</script>
+</body></html>
