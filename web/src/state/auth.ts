@@ -54,6 +54,43 @@ function decodeUser(accessToken: string): FrontendUser {
 
 let refreshInFlight: Promise<boolean> | null = null;
 
+// Refresh proactivo: renueva el access token ~60 s antes de caducar, para que la sesión
+// no expire mientras se trabaja (independientemente de si hay llamadas o no).
+let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+
+function tokenExpiryMs(token: string): number | null {
+  try {
+    const payload = token.split(".")[1] ?? "";
+    const padded = payload + "=".repeat((4 - (payload.length % 4)) % 4);
+    const raw = JSON.parse(atob(padded.replace(/-/g, "+").replace(/_/g, "/"))) as { exp?: number };
+    return typeof raw.exp === "number" ? raw.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+function armRefresh(): void {
+  if (refreshTimer !== null) {
+    clearTimeout(refreshTimer);
+    refreshTimer = null;
+  }
+  const token = useAuth.getState().accessToken;
+  if (token === null) return;
+  const exp = tokenExpiryMs(token);
+  if (exp === null) return;
+  const delay = Math.max(30_000, exp - Date.now() - 60_000);
+  refreshTimer = setTimeout(() => {
+    void useAuth.getState().refreshSession();
+  }, delay);
+}
+
+function clearRefresh(): void {
+  if (refreshTimer !== null) {
+    clearTimeout(refreshTimer);
+    refreshTimer = null;
+  }
+}
+
 // El JWT no lleva nombre/email (privacidad); el perfil se pide a /auth/me y se fusiona.
 async function loadProfile(accessToken: string): Promise<Partial<FrontendUser>> {
   try {
@@ -86,6 +123,7 @@ export const useAuth = create<AuthState>((set, get) => ({
         user: { ...decodeUser(session.access_token), ...profile },
         status: "authenticated",
       });
+      armRefresh();
     } catch (error) {
       set({ status: "anonymous" });
       throw error;
@@ -93,6 +131,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
+    clearRefresh();
     localStorage.removeItem(REFRESH_KEY);
     set({ accessToken: null, refreshToken: null, user: null, status: "anonymous" });
   },
@@ -108,6 +147,7 @@ export const useAuth = create<AuthState>((set, get) => ({
         user: decodeUser(session.access_token),
         status: "authenticated",
       });
+      armRefresh();
       return true;
     } catch {
       return false;
@@ -123,6 +163,7 @@ export const useAuth = create<AuthState>((set, get) => ({
       user: decodeUser(accessToken),
       status: "authenticated",
     });
+    armRefresh();
     void get().refreshProfile();
   },
 
@@ -169,6 +210,7 @@ export const useAuth = create<AuthState>((set, get) => ({
           user: decodeUser(session.access_token),
           status: "authenticated",
         });
+        armRefresh();
         void get().refreshProfile();
         return true;
       } catch {

@@ -10,6 +10,7 @@ from src.osap.api.platform._support import (
     SessionSources,
     SourceCatalog,
 )
+from src.osap.api.platform.amigos import AmigosMixin
 from src.osap.api.platform.analytics import AnalyticsMixin
 from src.osap.api.platform.composers import ComposersMixin
 from src.osap.api.platform.contributions import ContributionsMixin
@@ -68,6 +69,7 @@ class PlatformApi(
     SourcesMixin,
     CorrectionsMixin,
     ContributionsMixin,
+    AmigosMixin,
     KnowledgeMixin,
     SystemMixin,
     JobsMixin,

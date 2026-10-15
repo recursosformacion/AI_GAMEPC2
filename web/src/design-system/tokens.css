@@ -11,6 +11,7 @@ html {
 
 @theme {
   --color-osap-bg: #f3e2c7;
+  --color-osap-bg-transparent: #f3e2c7; /* para el fondo de la app con partitura, que se mezcla con la tesela */
   --color-osap-surface: #ffffff;
   --color-osap-ink: #1c1c1e;
   --color-osap-muted: #6b7280;
@@ -41,6 +42,7 @@ html {
 :root[data-theme="dark"] {
   color-scheme: dark;
   --color-osap-bg: #16151a;
+  --color-osap-bg-transparent:#16151a; /* para el fondo de la app con partitura, que se mezcla con la tesela */
   --color-osap-surface: #1f1e24;
   --color-osap-ink: #e6e3ea;
   --color-osap-muted: #9a95a3;
@@ -78,7 +80,7 @@ html {
      Sube el 60% -> partitura más tenue; bájalo -> más visible. */
   background-image:
     linear-gradient(
-      color-mix(in srgb, var(--color-osap-bg) 60%, transparent),
+      color-mix(in srgb, var(--color-osap-bg-transparent) 60%, transparent),
       color-mix(in srgb, var(--color-osap-bg) 60%, transparent)
     ),
     var(--osap-score-tile);

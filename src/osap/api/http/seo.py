@@ -13,9 +13,16 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 
-from src.osap.api.seo.render import render_not_found, render_person, render_work
+from src.osap.api.seo.render import (
+    render_amigos_article,
+    render_amigos_group,
+    render_not_found,
+    render_person,
+    render_work,
+)
 from src.osap.api.seo.slug import normalize_work_id, person_slug, work_canonical_slug
 from src.osap.api.seo.views import build_person_view, build_work_view
+from src.osap.api.seo.views_amigos import build_article_view, build_group_view
 
 if TYPE_CHECKING:
     from src.osap.api.http.context import HttpContext
@@ -79,5 +86,43 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
             return RedirectResponse(url=f"/compositor/{person_id}/{expected}", status_code=301)
         works = ctx.api.seo_person_works(person_id, 300, 0)
         return _html(render_person(build_person_view(detail, works)))
+
+    # --- «Los amigos» (grupo y artículo) -------------------------------------
+
+    @router.get("/amigos/corales/{group_id}", include_in_schema=False)
+    def amigos_group_canonical(group_id: str) -> Response:
+        data = ctx.api.seo_amigos_group(group_id)
+        if data is None:
+            return _html(render_not_found(), status_code=404)
+        view = build_group_view(data)
+        return RedirectResponse(url=f"/amigos/corales/{group_id}/{view.slug}", status_code=301)
+
+    @router.get("/amigos/corales/{group_id}/{slug}", include_in_schema=False)
+    def amigos_group_page(group_id: str, slug: str) -> Response:
+        data = ctx.api.seo_amigos_group(group_id)
+        if data is None:
+            return _html(render_not_found(), status_code=404)
+        view = build_group_view(data)
+        if slug != view.slug:
+            return RedirectResponse(url=f"/amigos/corales/{group_id}/{view.slug}", status_code=301)
+        return _html(render_amigos_group(view))
+
+    @router.get("/amigos/articulo/{article_id}", include_in_schema=False)
+    def amigos_article_canonical(article_id: str) -> Response:
+        data = ctx.api.seo_amigos_article(article_id)
+        if data is None:
+            return _html(render_not_found(), status_code=404)
+        view = build_article_view(data)
+        return RedirectResponse(url=f"/amigos/articulo/{article_id}/{view.slug}", status_code=301)
+
+    @router.get("/amigos/articulo/{article_id}/{slug}", include_in_schema=False)
+    def amigos_article_page(article_id: str, slug: str) -> Response:
+        data = ctx.api.seo_amigos_article(article_id)
+        if data is None:
+            return _html(render_not_found(), status_code=404)
+        view = build_article_view(data)
+        if slug != view.slug:
+            return RedirectResponse(url=f"/amigos/articulo/{article_id}/{view.slug}", status_code=301)
+        return _html(render_amigos_article(view))
 
     return router

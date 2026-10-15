@@ -43,6 +43,12 @@ class _FakeApi:
     def sitemap_persons_page(self, limit: int, offset: int) -> list[dict[str, object]]:
         return _PERSONS[offset : offset + limit]
 
+    def sitemap_amigos_groups(self) -> list[dict[str, object]]:
+        return []
+
+    def sitemap_amigos_articles(self) -> list[dict[str, object]]:
+        return []
+
 
 @pytest.fixture(autouse=True)
 def _fixed_env(monkeypatch: pytest.MonkeyPatch) -> None:

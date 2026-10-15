@@ -27,6 +27,8 @@ if TYPE_CHECKING:
 INDEXNOW_ENDPOINT = "https://api.indexnow.org/indexnow"
 # Límite documentado por petición de IndexNow.
 MAX_URLS_PER_REQUEST = 10_000
+# Clave por defecto (fichero de verificación: web/public/{key}.txt).
+DEFAULT_KEY = "osap-indexnow-2026"
 
 
 def indexnow_host(base_url: str) -> str:

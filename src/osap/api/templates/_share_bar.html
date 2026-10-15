@@ -1,0 +1,35 @@
+{# Barra de «compartir» para las páginas SSR (artículo y coral).
+   Variables de contexto: share (lista de ShareTarget), share_url, share_label,
+   copy_label, copied_label.
+   Instagram no ofrece intención web: se cubre con «Copiar enlace» y con la hoja nativa
+   del sistema (navigator.share), que sí lo incluye. #}
+{% if share %}
+<div class="share-bar" id="share-bar" data-url="{{ share_url }}">
+  <span class="share-label">{{ share_label }}</span>
+  {% for target in share %}
+  <a class="btn" href="{{ target.href }}" target="_blank" rel="noopener nofollow"
+     title="{{ share_label }} {{ target.label }}">{{ target.label }}</a>
+  {% endfor %}
+  <button type="button" class="btn" id="share-copy" data-copied="{{ copied_label }}">{{ copy_label }}</button>
+</div>
+<script>
+  (function () {
+    var bar = document.getElementById("share-bar");
+    var btn = document.getElementById("share-copy");
+    if (!bar || !btn) return;
+    btn.addEventListener("click", function () {
+      var url = bar.getAttribute("data-url") || window.location.href;
+      if (navigator.share) {
+        navigator.share({ title: document.title, url: url }).catch(function () {});
+        return;
+      }
+      var done = function () { btn.textContent = btn.getAttribute("data-copied"); };
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(url).then(done, function () {});
+        return;
+      }
+      window.prompt(btn.textContent, url);
+    });
+  })();
+</script>
+{% endif %}

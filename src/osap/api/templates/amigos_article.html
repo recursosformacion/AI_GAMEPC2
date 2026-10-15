@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}{{ view.title }} — {{ view.group_name }} | OpenMusicRepository{% endblock %}
+{% block description %}{{ view.description_meta }}{% endblock %}
+{% block social %}
+<meta property="og:type" content="article" />
+<meta property="og:title" content="{{ view.title }}" />
+<meta property="og:description" content="{{ view.description_meta }}" />
+<meta property="og:url" content="{{ view.canonical_url }}" />
+<meta property="og:site_name" content="OpenMusicRepository" />
+{% if view.og_image %}<meta property="og:image" content="{{ view.og_image }}" />{% endif %}
+<meta name="twitter:card" content="{% if view.og_image %}summary_large_image{% else %}summary{% endif %}" />
+<meta name="twitter:title" content="{{ view.title }}" />
+<meta name="twitter:description" content="{{ view.description_meta }}" />
+{% if view.og_image %}<meta name="twitter:image" content="{{ view.og_image }}" />{% endif %}
+{% endblock %}
+{% block json_ld %}<script type="application/ld+json">{{ view.json_ld | safe }}</script>{% endblock %}
+{% block content %}
+<nav class="crumbs" aria-label="breadcrumb">
+  <a href="/">Inicio</a> ›
+  <a href="/amigos">Los amigos</a> ›
+  {% if view.group_id %}
+  <a href="/amigos/corales/{{ view.group_id }}/{{ view.group_slug }}">{{ view.group_name }}</a> ›
+  {% else %}
+  <a href="/amigos/articulos">{{ view.group_name }}</a> ›
+  {% endif %}
+  <span>{{ view.title }}</span>
+</nav>
+
+{# Acciones para usuarios con sesión (los permisos reales los aplica la app). #}
+<div id="amigos-edit" hidden class="coral-actions" style="margin-bottom:0.6rem">
+  <a class="btn" href="/amigos/editor/{{ view.article_id }}">Editar publicación</a>
+  {% if view.group_id %}<a class="btn" href="/mis/corales/{{ view.group_id }}">Administrar {{ view.group_name }}</a>{% endif %}
+</div>
+<script>
+  try {
+    if (localStorage.getItem("osap.refresh_token")) {
+      document.getElementById("amigos-edit").hidden = false;
+    }
+  } catch (e) {}
+</script>
+
+<article class="card">
+  <h1>{{ view.title }}</h1>
+  <div class="badges">
+    <span class="badge">{{ view.event_date_display or view.event_date }}</span>
+    {% if view.group_id %}
+    <a class="badge" href="/amigos/corales/{{ view.group_id }}/{{ view.group_slug }}" style="text-decoration:none">{{ view.group_name }}</a>
+    {% else %}
+    <a class="badge" href="/amigos/articulos" style="text-decoration:none">{{ view.group_name }}</a>
+    {% endif %}
+  </div>
+
+  {% if view.cover_url %}
+  <p><img src="{{ view.cover_url }}" alt="{{ view.title }}" style="max-width:100%;height:auto;border-radius:0.5rem" /></p>
+  {% endif %}
+  {% if view.summary %}<p class="muted"><em>{{ view.summary }}</em></p>{% endif %}
+
+  {% with share=view.share, share_url=view.canonical_url, share_label="Compartir", copy_label="Copiar enlace", copied_label="Enlace copiado" %}
+  {% include "_share_bar.html" %}
+  {% endwith %}
+
+  <div class="articulo-osap">
+  {{ view.body_html | safe }}
+  </div>
+
+  {% if view.media %}
+  <h2>Vídeos y fotografías</h2>
+  <div class="media">
+    {% for item in view.media %}
+      {% if item.kind == 'video' and item.embed_url %}
+      <figure class="media-video">
+        <iframe src="{{ item.embed_url }}" title="{{ item.caption or view.title }}" width="560" height="315"
+                loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen
+                style="max-width:100%;border:0;border-radius:0.5rem"></iframe>
+        {% if item.caption %}<figcaption>{{ item.caption }}</figcaption>{% endif %}
+        {% if item.credit %}<figcaption class="muted">© {{ item.credit }}</figcaption>{% endif %}
+      </figure>
+      {% elif item.kind == 'photo' %}
+      <figure class="media-photo">
+        <img src="{{ item.url }}" alt="{{ item.caption or view.title }}" loading="lazy"
+             style="max-width:100%;height:auto;border-radius:0.5rem" />
+        {% if item.caption %}<figcaption>{{ item.caption }}</figcaption>{% endif %}
+        {% if item.credit %}<figcaption class="muted">© {{ item.credit }}</figcaption>{% endif %}
+      </figure>
+      {% endif %}
+    {% endfor %}
+  </div>
+  {% endif %}
+</article>
+
+<div class="coral-actions">
+  {% if view.group_id %}
+  <a class="btn" href="/amigos/corales/{{ view.group_id }}/{{ view.group_slug }}">← {{ view.group_name }}</a>
+  {% else %}
+  <a class="btn" href="/amigos/articulos">← {{ view.group_name }}</a>
+  {% endif %}
+  <a class="btn" href="/amigos">Los amigos</a>
+</div>
+{% endblock %}

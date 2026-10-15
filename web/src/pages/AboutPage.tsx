@@ -28,7 +28,20 @@ export function AboutPage() {
           <h2 className="text-base font-semibold">{t("about.composers")}</h2>
           <p className="mt-1 text-sm text-osap-muted">{t("about.composersDesc")}</p>
         </Link>
+        <a
+          href="/manual/"
+          target="_blank"
+          rel="noopener"
+          className="rounded border border-osap-border bg-osap-surface p-4 hover:bg-osap-bg"
+        >
+          <h2 className="text-base font-semibold">{t("about.manual")}</h2>
+          <p className="mt-1 text-sm text-osap-muted">{t("about.manualDesc")}</p>
+        </a>
       </nav>
+
+      <p className="text-xs text-osap-muted">
+        {t("app.name")} v{__APP_VERSION__}
+      </p>
     </div>
   );
 }

@@ -68,7 +68,7 @@ Write-Host "== [4/6] Extrayendo en el servidor y reiniciando ==" -ForegroundColo
 $configStep = if ($WithConfig) { "cp -f ~/deploy_tmp/osap.production.toml $BackendDir/osap.toml && " } else { "test -f $BackendDir/osap.toml && " }
 $remoteCmd = "set -e; $configStep cd $BackendDir && tar -xzf ~/deploy_tmp/backend.tar.gz && " +
     ".venv/bin/pip install --quiet PyMySQL requests Jinja2 PyJWT cryptography && " +
-    "cd $SpaDir && rm -rf assets index.html && tar -xzf ~/deploy_tmp/dist.tar.gz && " +
+    "cd $SpaDir && rm -rf assets index.html manual && tar -xzf ~/deploy_tmp/dist.tar.gz && " +
     "sudo cp ~/deploy_tmp/app.conf /etc/nginx/sites-enabled/app.openmusicrepository.com.conf && " +
     "sudo nginx -t && sudo nginx -s reload && " +
     "rm -rf ~/deploy_tmp && sudo systemctl restart osap-api.service && echo RESTART_DONE"

@@ -58,6 +58,15 @@ const ROUTE_META: Record<string, { title: string; description: string }> = {
     title: "Colaboradores | OpenMusicRepository",
     description: "Personas y entidades que colaboran con OpenMusicRepository.",
   },
+  "/amigos": {
+    title: "Los amigos — grupos musicales | OpenMusicRepository",
+    description:
+      "Miniblog de agrupaciones musicales: actividades, conciertos y encuentros de los grupos que participan en OSAP.",
+  },
+  "/amigos/corales": {
+    title: "Corales | OpenMusicRepository",
+    description: "Corales y agrupaciones musicales participantes en OSAP.",
+  },
 };
 
 // Herramientas internas o resultados de búsqueda: nunca deben indexarse.
@@ -76,6 +85,8 @@ const NOINDEX_ROUTES = [
   "/providers",
   "/oidc",
   "/corrections",
+  "/amigos/editor",
+  "/amigos/mis-articulos",
 ];
 
 const SORTED_ROUTE_KEYS = Object.keys(ROUTE_META).sort((a, b) => b.length - a.length);

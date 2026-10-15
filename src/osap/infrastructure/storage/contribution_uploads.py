@@ -176,6 +176,28 @@ class StorageContributionClient:
             raise StorageContributionError(f"storage upload HTTP {status}")
         return doc
 
+    def fetch_file(self, file_id: int, provider_id: int | None = None) -> tuple[str, bytes]:
+        """Descarga el contenido de un fichero (scope `storage:read`) → `(mime, bytes)`."""
+        qs = f"?provider_id={provider_id}" if provider_id is not None else ""
+        token = (
+            self._write_token_provider.token(("storage:read",))
+            if self._write_token_provider is not None
+            else ""
+        )
+        request = urllib.request.Request(
+            f"{self._base_url}/api/v1/files/{file_id}/content{qs}",
+            method="GET",
+            headers={"Authorization": f"Bearer {token}", "User-Agent": _USER_AGENT},
+        )
+        try:
+            with urllib.request.urlopen(request, timeout=self._timeout) as resp:
+                mime = resp.headers.get("Content-Type") or "application/octet-stream"
+                return mime.split(";")[0].strip(), resp.read()
+        except urllib.error.HTTPError as exc:
+            raise StorageContributionError(f"storage fetch HTTP {exc.code}") from exc
+        except Exception as exc:  # noqa: BLE001 — red/servicio caído
+            raise StorageContributionError(str(exc)) from exc
+
     # --- interno -------------------------------------------------------------
 
     def _request(

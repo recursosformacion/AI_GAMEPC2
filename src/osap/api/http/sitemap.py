@@ -19,12 +19,13 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter, Response
 
 from src.osap.api.seo.render import render_sitemap_index, render_sitemap_urlset
-from src.osap.api.seo.slug import person_slug, work_canonical_slug
+from src.osap.api.seo.slug import person_slug, slugify, work_canonical_slug
 from src.osap.api.seo.views import (
     canonical_person_url,
     canonical_work_url,
     public_base_url,
 )
+from src.osap.api.seo.views_amigos import article_canonical_url, group_canonical_url
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -39,7 +40,7 @@ _DEFAULT_PERSONS_PAGE_SIZE = 500
 _MAX_PERSONS_PAGE_SIZE = 500
 _FILE_CACHE_TTL = 3600
 _INDEX_CACHE_TTL = 600
-_NAME_RE = re.compile(r"^(works|persons|static)-(\d{1,6})\.xml$")
+_NAME_RE = re.compile(r"^(works|persons|static|amigos)-(\d{1,6})\.xml$")
 _LASTMOD_RE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 # Landings públicas indexables de la SPA (menú de contenido). Se excluyen las rutas
@@ -62,6 +63,16 @@ _STATIC_PATHS: tuple[str, ...] = (
     "/collaborators",
     "/about",
     "/about/how-it-works",
+    "/amigos",
+    "/amigos/corales",
+    "/amigos/eventos",
+    "/amigos/articulos",
+    # Manual de usuario (HTML estático en `web/public/manual/<lang>/`).
+    "/manual/es/",
+    "/manual/ca/",
+    "/manual/fr/",
+    "/manual/en/",
+    "/manual/de/",
 )
 
 _CACHE: dict[str, tuple[float, str]] = {}
@@ -112,6 +123,8 @@ def _sitemap_index(ctx: HttpContext) -> str:
     refs += [f"{base}/sitemaps/persons-{page}.xml" for page in range(1, persons_pages + 1)]
     if _STATIC_PATHS:
         refs.append(f"{base}/sitemaps/static-1.xml")
+    if ctx.api.sitemap_amigos_groups() or ctx.api.sitemap_amigos_articles():
+        refs.append(f"{base}/sitemaps/amigos-1.xml")
     return render_sitemap_index(refs)
 
 
@@ -154,6 +167,35 @@ def _static_urlset(_ctx: HttpContext, page: int) -> str:
     return render_sitemap_urlset(urls)
 
 
+def _amigos_urlset(ctx: HttpContext, page: int) -> str:
+    """Una única página con los grupos activos y sus artículos PUBLICADOS.
+
+    Nunca se indexan borradores, pendientes ni retirados (solo se listan grupos activos y
+    artículos `published`), de modo que el sitemap solo contiene URLs públicas reales.
+    """
+    if page != 1:
+        return render_sitemap_urlset([])
+    urls: list[tuple[str, str | None]] = []
+    for group in ctx.api.sitemap_amigos_groups():
+        group_id = str(group.get("id") or "")
+        slug = str(group.get("slug") or "")
+        if not group_id or not slug:
+            continue
+        urls.append((group_canonical_url(group_id, slug), _lastmod(group.get("updated_at"))))
+    for article in ctx.api.sitemap_amigos_articles():
+        article_id = str(article.get("id") or "")
+        title = str(article.get("title") or "")
+        if not article_id or not title:
+            continue
+        urls.append(
+            (
+                article_canonical_url(article_id, slugify(title) or "articulo"),
+                _lastmod(article.get("updated_at")),
+            )
+        )
+    return render_sitemap_urlset(urls)
+
+
 def build_sitemap_router(ctx: HttpContext) -> APIRouter:
     router: APIRouter = APIRouter()
 
@@ -177,6 +219,8 @@ def build_sitemap_router(ctx: HttpContext) -> APIRouter:
                 return _works_urlset(ctx, page)
             if kind == "persons":
                 return _persons_urlset(ctx, page)
+            if kind == "amigos":
+                return _amigos_urlset(ctx, page)
             return _static_urlset(ctx, page)
 
         body = _cached(key, _FILE_CACHE_TTL, build)
