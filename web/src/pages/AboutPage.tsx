@@ -30,6 +30,8 @@ export function AboutPage() {
         </Link>
         <a
           href="/manual/"
+          target="_blank"
+          rel="noopener"
           className="rounded border border-osap-border bg-osap-surface p-4 hover:bg-osap-bg"
         >
           <h2 className="text-base font-semibold">{t("about.manual")}</h2>

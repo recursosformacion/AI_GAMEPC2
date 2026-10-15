@@ -399,6 +399,8 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
           </Link>
           <a
             href="/manual/"
+            target="_blank"
+            rel="noopener"
             aria-label={t("nav.manual")}
             title={t("nav.manual")}
             className="hidden rounded-full border border-osap-border px-2.5 py-1 text-sm text-osap-muted hover:text-osap-accent sm:block"
@@ -492,7 +494,7 @@ export function Footer() {
         {t("nav.collaborators")}
       </Link>
       {" · "}
-      <a href="/manual/" className="text-osap-accent hover:underline">
+      <a href="/manual/" target="_blank" rel="noopener" className="text-osap-accent hover:underline">
         {t("nav.manual")}
       </a>
       {" · "}
