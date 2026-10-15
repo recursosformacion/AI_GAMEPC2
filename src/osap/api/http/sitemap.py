@@ -67,6 +67,12 @@ _STATIC_PATHS: tuple[str, ...] = (
     "/amigos/corales",
     "/amigos/eventos",
     "/amigos/articulos",
+    # Manual de usuario (HTML estático en `web/public/manual/<lang>/`).
+    "/manual/es/",
+    "/manual/ca/",
+    "/manual/fr/",
+    "/manual/en/",
+    "/manual/de/",
 )
 
 _CACHE: dict[str, tuple[float, str]] = {}
