@@ -4,10 +4,10 @@ import { apiClient } from "../api/ApiClient";
 import type { AmigosArticle, AmigosArticleCreateInput, AmigosArticleList } from "../api/types";
 import { AmigosImageField } from "../components/AmigosImageField";
 import { Card } from "../components/Card";
+import { useBodyMode } from "../components/useBodyMode";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
 import { formatEuroDate } from "../utils/dates";
-import { htmlToText, textToHtml } from "../utils/richtext";
 
 const STATUS_KEY: Record<string, TKey> = {
   draft: "friends.status.draft",
@@ -24,8 +24,7 @@ export function AdminAmigosBlogPage({ mine = false }: { mine?: boolean } = {}) {
   const [eventDate, setEventDate] = useState("");
   const [summary, setSummary] = useState("");
   const [cover, setCover] = useState("");
-  const [body, setBody] = useState("");
-  const [bodyMode, setBodyMode] = useState<"text" | "code">("text");
+  const { body, setBody, mode: bodyMode, toggle: toggleBody } = useBodyMode("");
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -113,10 +112,7 @@ export function AdminAmigosBlogPage({ mine = false }: { mine?: boolean } = {}) {
               <span>{t("friends.bodyField")} *</span>
               <button
                 type="button"
-                onClick={() => {
-                  setBody((b) => (bodyMode === "text" ? textToHtml(b) : htmlToText(b)));
-                  setBodyMode((m) => (m === "text" ? "code" : "text"));
-                }}
+                onClick={toggleBody}
                 className="rounded-md border border-osap-border px-3 py-1 text-xs"
               >
                 {bodyMode === "text" ? t("friends.code") : t("friends.text")}

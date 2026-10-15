@@ -4,10 +4,10 @@ import { apiClient } from "../api/ApiClient";
 import type { AmigosMediaInput, AmigosMyGroup } from "../api/types";
 import { AmigosImageField } from "../components/AmigosImageField";
 import { Card } from "../components/Card";
+import { useBodyMode } from "../components/useBodyMode";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
 import { useAuth } from "../state/auth";
-import { htmlToText, textToHtml } from "../utils/richtext";
 
 const STATUS_KEY: Record<string, TKey> = {
   draft: "friends.status.draft",
@@ -39,8 +39,7 @@ export function AmigosEditorPage() {
   const [title, setTitle] = useState("");
   const [eventDate, setEventDate] = useState("");
   const [summary, setSummary] = useState("");
-  const [body, setBody] = useState("");
-  const [bodyMode, setBodyMode] = useState<"text" | "code">("text");
+  const { body, setBody, mode: bodyMode, toggle: toggleBody, load: loadBody } = useBodyMode("");
   const [coverUrl, setCoverUrl] = useState("");
   const [media, setMedia] = useState<MediaRow[]>([]);
   const [status, setStatus] = useState<string>("draft");
@@ -74,7 +73,7 @@ export function AmigosEditorPage() {
           setTitle(article.title);
           setEventDate(article.event_date);
           setSummary(article.summary ?? "");
-          setBody(article.body);
+          loadBody(article.body);
           setCoverUrl(article.cover_url ?? "");
           setStatus(article.status);
           setMedia(
@@ -310,10 +309,7 @@ export function AmigosEditorPage() {
         <div className="mb-2 flex justify-end">
           <button
             type="button"
-            onClick={() => {
-              setBody((b) => (bodyMode === "text" ? textToHtml(b) : htmlToText(b)));
-              setBodyMode((m) => (m === "text" ? "code" : "text"));
-            }}
+            onClick={toggleBody}
             className="rounded-md border border-osap-border px-3 py-1 text-xs"
           >
             {bodyMode === "text" ? t("friends.code") : t("friends.text")}
