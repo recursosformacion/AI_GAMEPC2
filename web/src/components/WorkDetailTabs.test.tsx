@@ -135,4 +135,29 @@ describe("WorkDetailTabs — select best known representation", () => {
     fireEvent.click(screen.getByRole("button", { name: "Representations" }));
     expect(screen.queryByRole("button", { name: "Find better representations" })).toBeNull();
   });
+
+  it("las representaciones externas solo se abren en el proveedor (ni Ver ni Descargar)", () => {
+    // CPDL/IMSLP: `available: false` y URL externa → no hay fichero servible que descargar.
+    const external: RepresentationInfo[] = [
+      {
+        id: "idx-554810-cpdl-391919-musicxml",
+        provider: "cpdl",
+        format: "musicxml",
+        confidence: 0.7,
+        available: false,
+        url: "https://www.cpdl.org/wiki/index.php/Special:FilePath/ave_verum.mxl",
+        title: "Ave verum corpus",
+      },
+    ];
+    mockFetch({} as RepresentationSelection);
+    renderTabs(baseWork, external);
+    fireEvent.click(screen.getByRole("button", { name: "Representations" }));
+
+    expect(screen.getByRole("link", { name: "Open in cpdl" })).toHaveAttribute(
+      "href",
+      "https://www.cpdl.org/wiki/index.php/Special:FilePath/ave_verum.mxl",
+    );
+    expect(screen.queryByRole("link", { name: "View" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "DL" })).toBeNull();
+  });
 });

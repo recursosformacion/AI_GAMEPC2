@@ -96,6 +96,9 @@ function KnownSelectionBlock({
 
   const sel = selection?.selected ?? null;
   const status = selection?.status;
+  // La selección solo trae `url`: si es externa (CPDL/IMSLP) no hay fichero servible, así que
+  // no se ofrece «Ver partitura»/«Descargar», solo abrir en el proveedor.
+  const selExternal = sel?.url && !_isStorageUrl(sel.url) ? sel.url : null;
 
   return (
     <div className="mt-3 rounded border border-dashed border-osap-border p-3">
@@ -137,29 +140,40 @@ function KnownSelectionBlock({
               ) : null}
             </div>
             <div className="flex shrink-0 items-center gap-2">
-              {sel.source_id ? (
+              {selExternal ? (
                 <a
-                  href={_viewHref(sel.source_id, sel.format, workTitle)}
+                  href={selExternal}
                   target="_blank"
                   rel="noreferrer"
+                  title={t("work.openIn").replace("{p}", sel.provider ?? "—")}
+                  aria-label={t("work.openIn").replace("{p}", sel.provider ?? "—")}
                   className="inline-block rounded border border-osap-accent px-2 py-0.5 text-xs text-osap-accent"
                 >
-                  {t("actions.viewScore")}
+                  {t("work.openIn").replace("{p}", sel.provider ?? "—")}
                 </a>
-              ) : null}
-              {sel.source_id || (sel.url && !_isStorageUrl(sel.url)) ? (
-                <a
-                  href={
-                    sel.source_id
-                      ? `/api/v1/representations/${encodeURIComponent(sel.source_id)}/download`
-                      : (sel.url as string)
-                  }
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-block rounded bg-osap-accent px-2 py-0.5 text-xs text-white"
-                >
-                  {t("actions.download")}
-                </a>
+              ) : sel.source_id ? (
+                <>
+                  <a
+                    href={_viewHref(sel.source_id, sel.format, workTitle)}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={t("actions.viewScore")}
+                    aria-label={t("actions.viewScore")}
+                    className="inline-block rounded border border-osap-accent px-2 py-0.5 text-xs text-osap-accent"
+                  >
+                    {t("actions.viewScore")}
+                  </a>
+                  <a
+                    href={`/api/v1/representations/${encodeURIComponent(sel.source_id)}/download`}
+                    target="_blank"
+                    rel="noreferrer"
+                    title={t("actions.download")}
+                    aria-label={t("actions.download")}
+                    className="inline-block rounded bg-osap-accent px-2 py-0.5 text-xs text-white"
+                  >
+                    {t("actions.download")}
+                  </a>
+                </>
               ) : null}
             </div>
           </div>
@@ -334,7 +348,12 @@ function RepresentationsTab({
       </p>
 
       <ul className="divide-y divide-osap-border">
-        {representations.map((rep, i) => (
+        {representations.map((rep, i) => {
+          // Solo se ofrece Ver/Descargar si hay fichero servible: `available` explícito o, en su
+          // defecto, una URL que no sea de un proveedor externo (CPDL/IMSLP solo se abren).
+          const repExternal = rep.url && !_isStorageUrl(rep.url) ? rep.url : null;
+          const repDownloadable = repExternal === null && rep.available !== false;
+          return (
           <li
             key={`${rep.provider}-${rep.format}-${i}`}
             className={`flex items-center gap-2 px-1 py-1.5 text-sm hover:bg-osap-accent-soft ${
@@ -349,23 +368,7 @@ function RepresentationsTab({
               </span>
             </span>
             <span className="flex shrink-0 items-center gap-1.5">
-              {rep.available === false ? (
-                rep.url && !_isStorageUrl(rep.url) ? (
-                  <a
-                    href={rep.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    title={t("work.openIn").replace("{p}", rep.provider)}
-                    aria-label={t("work.openIn").replace("{p}", rep.provider)}
-                    onClick={(e) => e.stopPropagation()}
-                    className="px-1.5 text-osap-muted hover:text-osap-accent"
-                  >
-                    <_LinkIcon />
-                  </a>
-                ) : (
-                  <span className="px-1 text-xs text-osap-muted">—</span>
-                )
-              ) : (
+              {repDownloadable ? (
                 <>
                   <a
                     href={_viewHref(rep.id, rep.format, workTitle)}
@@ -403,10 +406,25 @@ function RepresentationsTab({
                     </Link>
                   ) : null}
                 </>
+              ) : repExternal ? (
+                <a
+                  href={repExternal}
+                  target="_blank"
+                  rel="noreferrer"
+                  title={t("work.openIn").replace("{p}", rep.provider)}
+                  aria-label={t("work.openIn").replace("{p}", rep.provider)}
+                  onClick={(e) => e.stopPropagation()}
+                  className="inline-flex items-center gap-1.5 rounded border border-osap-border px-3 py-1 text-sm text-osap-muted hover:text-osap-accent"
+                >
+                  <_LinkIcon /> {t("work.openIn").replace("{p}", rep.provider)}
+                </a>
+              ) : (
+                <span className="px-1 text-xs text-osap-muted">—</span>
               )}
             </span>
           </li>
-        ))}
+          );
+        })}
       </ul>
       <p className="mt-2 text-xs text-osap-muted">{t("work.titlesFromSources")}</p>
       {representations.length > 1 ? (

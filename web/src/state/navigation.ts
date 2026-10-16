@@ -18,10 +18,9 @@ export async function searchAndGo(navigate: NavigateFunction, payload: SearchReq
     // Single structured search by the extracted composer name (intent.label).
     await useSearches.getState().create({ query: "", composer: intent.label, limit: 30 });
     navigate("/composer");
-  } else if (intent.type === "catalogue") {
-    await useSearches.getState().create(payload);
-    navigate("/resolution");
   } else {
+    // Los trabajos y las búsquedas por catálogo van a la MISMA página de resultados: antes el
+    // catálogo se enviaba a `/resolution`, con otra presentación, y parecía una página distinta.
     // work: si la query mezclaba título+compositor, busca con ambos ("ave verum mozart").
     const req = intent.composer
       ? { ...payload, query: intent.label || payload.query, composer: intent.composer }
