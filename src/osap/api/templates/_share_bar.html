@@ -1,34 +1,52 @@
 {# Barra de «compartir» para las páginas SSR (artículo y coral).
-   Variables de contexto: share (lista de ShareTarget), share_url, share_label,
-   copy_label, copied_label.
+   Variables de contexto: share (lista de ShareTarget con su icono SVG), share_url,
+   share_label, copy_label, copied_label.
+   Los destinos son iconos con el nombre en `title`/`aria-label` (no texto).
    Instagram no ofrece intención web: se cubre con «Copiar enlace» y con la hoja nativa
    del sistema (navigator.share), que sí lo incluye. #}
 {% if share %}
 <div class="share-bar" id="share-bar" data-url="{{ share_url }}">
   <span class="share-label">{{ share_label }}</span>
   {% for target in share %}
-  <a class="btn" href="{{ target.href }}" target="_blank" rel="noopener nofollow"
-     title="{{ share_label }} {{ target.label }}">{{ target.label }}</a>
+  <a class="share-link" data-net="{{ target.key }}" href="{{ target.href }}" target="_blank"
+     rel="noopener nofollow" title="{{ target.label }}" aria-label="{{ target.label }}">{{ target.icon | safe }}</a>
   {% endfor %}
-  <button type="button" class="btn" id="share-copy" data-copied="{{ copied_label }}">{{ copy_label }}</button>
+  <button type="button" class="share-link share-copy" id="share-copy"
+          title="{{ copy_label }}" aria-label="{{ copy_label }}" data-copied="{{ copied_label }}">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+      <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </svg>
+  </button>
 </div>
 <script>
   (function () {
     var bar = document.getElementById("share-bar");
     var btn = document.getElementById("share-copy");
     if (!bar || !btn) return;
+    var label = btn.getAttribute("aria-label");
     btn.addEventListener("click", function () {
       var url = bar.getAttribute("data-url") || window.location.href;
+      var done = function () {
+        btn.classList.add("is-copied");
+        btn.setAttribute("title", btn.getAttribute("data-copied"));
+        btn.setAttribute("aria-label", btn.getAttribute("data-copied"));
+        window.setTimeout(function () {
+          btn.classList.remove("is-copied");
+          btn.setAttribute("title", label);
+          btn.setAttribute("aria-label", label);
+        }, 2000);
+      };
       if (navigator.share) {
         navigator.share({ title: document.title, url: url }).catch(function () {});
         return;
       }
-      var done = function () { btn.textContent = btn.getAttribute("data-copied"); };
       if (navigator.clipboard) {
         navigator.clipboard.writeText(url).then(done, function () {});
         return;
       }
-      window.prompt(btn.textContent, url);
+      window.prompt(label, url);
     });
   })();
 </script>

@@ -1093,7 +1093,7 @@ class TestSeo:
         assert "https://www.youtube.com/embed/dQw4w9WgXcQ" in resp.text
 
     def test_pagina_de_articulo_tiene_compartir(self) -> None:
-        """El artículo ofrece enlaces de compartición (Facebook/LinkedIn/X…) y copiar enlace."""
+        """Compartir con iconos: el nombre del destino va en `title`/`aria-label`, no como texto."""
         client = _seo_client()
         resp = client.get("/amigos/articulo/a1/concierto-de-navidad")
         assert resp.status_code == 200
@@ -1103,7 +1103,14 @@ class TestSeo:
         assert "linkedin.com/sharing" in resp.text
         assert "twitter.com/intent/tweet" in resp.text
         assert encoded in resp.text
-        assert "Copiar enlace" in resp.text
+        assert 'title="Facebook"' in resp.text
+        assert 'aria-label="LinkedIn"' in resp.text
+        assert "<svg" in resp.text
+        # Los botones son iconos: ya no llevan el nombre como texto visible.
+        assert ">Facebook<" not in resp.text
+        assert ">LinkedIn<" not in resp.text
+        # Copiar enlace (icono con title) sigue disponible.
+        assert 'title="Copiar enlace"' in resp.text
 
     def test_grupo_sin_slug_redirige_y_lista_articulos(self) -> None:
         client = _seo_client()
@@ -1125,8 +1132,8 @@ class TestSeo:
         assert "mailto:info@ctv.example.org" in page.text
         assert "https://cdn.example.org/logo.png" in page.text
         assert "https://facebook.com/ctv" in page.text and "YouTube" in page.text
-        # La ficha del coral también se puede compartir.
-        assert "linkedin.com/sharing" in page.text and "Copiar enlace" in page.text
+        # La ficha del coral también se puede compartir (iconos con title).
+        assert "linkedin.com/sharing" in page.text and 'title="Copiar enlace"' in page.text
 
     def test_articulo_no_publicado_404(self) -> None:
         client = _seo_client()

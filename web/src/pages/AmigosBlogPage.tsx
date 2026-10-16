@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { AmigosArticle } from "../api/types";
 import { AmigosNote } from "../components/AmigosNote";
-import { ShareBar } from "../components/ShareBar";
 import { Spinner } from "../components/Spinner";
 import { useAmigosPermissions } from "../components/useAmigosPermissions";
 import { useI18n } from "../i18n/I18n";
@@ -72,11 +71,6 @@ export function AmigosBlogPage() {
               </a>
               <p className="mt-1 text-xs text-osap-muted">{formatEuroDate(a.event_date)}</p>
               {a.summary ? <p className="mt-2 text-sm text-osap-muted">{a.summary}</p> : null}
-              <ShareBar
-                className="mt-3"
-                url={`${window.location.origin}/amigos/articulo/${encodeURIComponent(a.id)}/${a.slug}`}
-                title={a.title}
-              />
             </li>
           ))}
         </ul>
