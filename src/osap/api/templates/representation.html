@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ view.format }} · {{ view.title }}{% if view.composer %} — {{ view.composer }}{% endif %} | OpenMusicRepository{% endblock %}
+{% block description %}{{ view.description }}{% endblock %}
+{% block json_ld %}<script type="application/ld+json">{{ view.json_ld | safe }}</script>{% endblock %}
+{% block content %}
+<nav class="crumbs" aria-label="breadcrumb">
+  <a href="/">Inicio</a> ›
+  <a href="{{ view.work_path }}">{{ view.title }}</a> ›
+  <span>{{ view.provider }} · {{ view.format }}</span>
+</nav>
+
+<h1>{{ view.title }}</h1>
+<div class="badges">
+  {% if view.composer %}<span class="badge">{{ view.composer }}</span>{% endif %}
+  {% if view.catalogue %}<span class="badge">{{ view.catalogue }}</span>{% endif %}
+  <span class="badge">{{ view.provider }}</span>
+  <span class="badge">{{ view.format }}</span>
+</div>
+
+<p class="lead">{{ view.description }}</p>
+
+<div class="coral-actions">
+  {% if view.download_url %}
+  <a class="btn" href="{{ view.download_url }}" rel="nofollow">Descargar</a>
+  {% elif view.site %}
+  <a class="btn" href="{{ view.site }}" rel="nofollow noopener" target="_blank" title="Abrir en {{ view.provider }}">Abrir en {{ view.provider }}</a>
+  {% endif %}
+  <a class="btn" href="{{ view.work_path }}">Ver la obra</a>
+</div>
+
+<p class="muted">Proveedor: {{ view.provider }} · Formato: {{ view.format }}{% if view.catalogue %} · {{ view.catalogue }}{% endif %}</p>
+{% endblock %}

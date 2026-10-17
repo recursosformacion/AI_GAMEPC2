@@ -839,8 +839,25 @@ export interface PopularWorkList {
   items: RecentWork[];
 }
 
+/** Ficha pública de una representación (`/representacion/<id>`). */
+export interface RepresentationSheet {
+  id: string;
+  provider: string;
+  format: string;
+  title: string;
+  composer?: string | null;
+  catalogue?: string | null;
+  work_id: string;
+  work_path: string;
+  download_url?: string | null;
+  site?: string | null;
+  canonical_url: string;
+  description: string;
+}
+
 /** Ficha pública de obra del índice (la misma fuente que la página SEO). */
 export interface PublicWorkRepresentation {
+  id?: string | null;
   provider: string;
   format: string;
   url?: string | null;

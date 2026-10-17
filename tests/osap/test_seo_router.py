@@ -83,6 +83,26 @@ class _FakeApi:
         """No-op: la analítica no forma parte de lo que verifica este router."""
         return None
 
+    def get_representation_download(self, rep_id: str) -> dict[str, object] | None:
+        base = {
+            "title": "Ave verum corpus",
+            "composer": "Wolfgang Amadeus Mozart",
+            "catalogue": "KV 618",
+            "format": "musicxml",
+            "work_id": "7",
+        }
+        if rep_id == "idx-7-omr-9-musicxml":
+            return {**base, "provider": "omr",
+                    "download_url": "https://storage.example/api/download/9", "view_url": None}
+        if rep_id == "idx-7-cpdl-9-musicxml":
+            return {
+                **base,
+                "provider": "cpdl",
+                "download_url": None,
+                "view_url": "https://www.cpdl.org/wiki/index.php/Special:FilePath/x.mxl",
+            }
+        return None
+
 
 def _client(api: _FakeApi) -> TestClient:
     app = FastAPI()
@@ -146,6 +166,31 @@ def test_obra_sin_pagina_de_compositor_no_enlaza_404() -> None:
     assert resp.status_code == 200
     assert "/compositor/anonimo/" not in resp.text
     assert "Anónimo" in resp.text
+
+
+def test_representacion_descargable_tiene_canonical_y_descarga(client: TestClient) -> None:
+    resp = client.get("/representacion/idx-7-omr-9-musicxml")
+    assert resp.status_code == 200
+    assert (
+        f'<link rel="canonical" href="{_BASE}/representacion/idx-7-omr-9-musicxml" />'
+        in resp.text
+    )
+    assert "https://storage.example/api/download/9" in resp.text
+    assert "Descargar" in resp.text
+    assert '<a href="/obra/index-7/' in resp.text
+
+
+def test_representacion_externa_enlaza_al_sitio_del_proveedor(client: TestClient) -> None:
+    """CPDL: nunca al fichero crudo (403), siempre al sitio del proveedor."""
+    resp = client.get("/representacion/idx-7-cpdl-9-musicxml")
+    assert resp.status_code == 200
+    assert "Special:FilePath" not in resp.text
+    assert 'href="https://www.cpdl.org/"' in resp.text
+    assert "Abrir en cpdl" in resp.text
+
+
+def test_representacion_inexistente_404(client: TestClient) -> None:
+    assert client.get("/representacion/no-existe").status_code == 404
 
 
 def test_pagina_de_obra_json_ld_es_music_composition(client: TestClient) -> None:

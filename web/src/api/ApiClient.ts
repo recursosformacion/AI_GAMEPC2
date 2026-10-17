@@ -69,6 +69,7 @@ import type {
   RecentWorkList,
   PopularWorkList,
   PublicWork,
+  RepresentationSheet,
 } from "./types";
 import { ApiError } from "./errors";
 
@@ -218,6 +219,13 @@ export class ApiClient {
   /** Ficha pública del índice (obras que no están en el store de compositores). */
   async getPublicWork(workId: string): Promise<PublicWork> {
     return this.get<PublicWork>(`/works/public/${encodeURIComponent(workId)}`);
+  }
+
+  /** Ficha de una representación (obra, proveedor, formato y acciones). */
+  async getRepresentation(representationId: string): Promise<RepresentationSheet> {
+    return this.get<RepresentationSheet>(
+      `/representations/${encodeURIComponent(representationId)}`,
+    );
   }
 
   /** Colaboradores públicos de un proyecto (fachada osap-api → support + auth). */

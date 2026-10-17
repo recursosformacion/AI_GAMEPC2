@@ -19,10 +19,15 @@ from src.osap.api.seo.render import (
     render_amigos_group,
     render_not_found,
     render_person,
+    render_representation,
     render_work,
 )
 from src.osap.api.seo.slug import normalize_work_id, person_slug, work_canonical_slug
-from src.osap.api.seo.views import build_person_view, build_work_view
+from src.osap.api.seo.views import (
+    build_person_view,
+    build_representation_payload,
+    build_work_view,
+)
 from src.osap.api.seo.views_amigos import build_article_view, build_group_view
 
 if TYPE_CHECKING:
@@ -79,6 +84,16 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
         if canonical is not None and not _BOT_UA.search(request.headers.get("user-agent", "")):
             ctx.api.record_work_consult(work_id=canonical)
         return _html(render_work(build_work_view(data, related, composer_page=composer_page)))
+
+    @router.get("/representacion/{rep_id}", include_in_schema=False)
+    def representation_page(rep_id: str) -> Response:
+        info = ctx.api.get_representation_download(rep_id)
+        payload = (
+            build_representation_payload(info, rep_id) if isinstance(info, dict) else None
+        )
+        if payload is None:
+            return _html(render_not_found(), status_code=404)
+        return _html(render_representation(payload))
 
     @router.get("/compositor/{person_id}", include_in_schema=False)
     def person_canonical(person_id: str) -> Response:

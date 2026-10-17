@@ -35,6 +35,12 @@ def render_work(view: WorkView) -> str:
     return _env().get_template("work.html").render(view=view, canonical_url=view.canonical_url)
 
 
+def render_representation(view: dict[str, object]) -> str:
+    return _env().get_template("representation.html").render(
+        view=view, canonical_url=view.get("canonical_url", "")
+    )
+
+
 def render_person(view: PersonView) -> str:
     return _env().get_template("composer.html").render(view=view, canonical_url=view.canonical_url)
 

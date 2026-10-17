@@ -17,6 +17,7 @@ from src.osap.api.contracts import (
     SearchResponse,
     SuccessEnvelope,
 )
+from src.osap.api.seo.views import build_representation_payload
 
 if TYPE_CHECKING:
     from src.osap.api.http.context import HttpContext
@@ -87,6 +88,31 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
     from src.osap.api.http import shared as _shared
 
     router: APIRouter = APIRouter()
+
+    @router.get(
+        "/api/v1/representations/{representation_id}",
+        tags=["Searches"],
+        summary="Representation sheet",
+        description="Ficha de una representación del índice: obra, proveedor, formato y "
+        "acciones (descarga servible o sitio del proveedor). Base de `/representacion/<id>`.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("Representation", _shared._example({})),
+            404: _shared._NOT_FOUND_404,
+        },
+    )
+    def representation_sheet(
+        response: Response, representation_id: str
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        info = ctx.api.get_representation_download(representation_id)
+        payload = (
+            build_representation_payload(info, representation_id)
+            if isinstance(info, dict)
+            else None
+        )
+        if payload is None:
+            return ctx.fail(404, response, "NOT_FOUND", "Representation not found")
+        return ctx.ok(payload)
 
     @router.get(
         "/api/v1/representations/{representation_id}/download",

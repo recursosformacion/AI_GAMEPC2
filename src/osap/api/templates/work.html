@@ -39,6 +39,7 @@
     <strong>{{ rep.format or rep.provider }}</strong>
     {% endif %}
     <span>{{ rep.provider }} · {{ rep.format }}{% if rep.downloadable %} · descargable{% endif %}</span>
+    {% if rep.id %}<a href="/representacion/{{ rep.id | urlencode }}">Ver ficha</a>{% endif %}
   </div>
   {% endfor %}
 </div>

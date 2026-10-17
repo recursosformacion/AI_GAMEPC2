@@ -341,7 +341,7 @@ class IndexCatalogProvider(ICatalogProvider):
                 if work is None:
                     return None
                 cur.execute(
-                    "SELECT provider, format, download_url, available "
+                    "SELECT provider, format, download_url, available, resource_id "
                     "FROM index_representations WHERE work_id = %s ORDER BY provider, format",
                     (work_ref,),
                 )
@@ -354,6 +354,13 @@ class IndexCatalogProvider(ICatalogProvider):
                 conn.close()
         representations = [
             {
+                # Id determinista de la representación: base de `/representacion/<id>`.
+                "id": (
+                    f"idx-{int(str(work.get('id') or 0))}-"
+                    f"{str(row.get('provider') or '')}-"
+                    f"{int(str(row.get('resource_id') or 0))}-"
+                    f"{str(row.get('format') or '')}"
+                ),
                 "provider": str(row.get("provider") or ""),
                 "format": str(row.get("format") or ""),
                 "url": str(row.get("download_url") or "") or None,

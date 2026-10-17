@@ -119,7 +119,18 @@ export function WorkPage() {
                     key={`${rep.provider}-${rep.format}-${index}`}
                     className="flex items-center justify-between gap-2 rounded border border-osap-border bg-osap-surface px-3 py-2 text-sm"
                   >
-                    <span className="truncate">{label}</span>
+                    <span className="truncate">
+                      {rep.id ? (
+                        <Link
+                          to={`/representacion/${encodeURIComponent(rep.id)}`}
+                          className="text-osap-accent hover:underline"
+                        >
+                          {label}
+                        </Link>
+                      ) : (
+                        label
+                      )}
+                    </span>
                     {rep.downloadable && rep.url ? (
                       <a
                         href={rep.url}

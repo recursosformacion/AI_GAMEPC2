@@ -60,6 +60,9 @@ const SupportOsapPage = lazy(() => import("../pages/SupportOsapPage").then((m) =
 const CorrectionsPage = lazy(() => import("../pages/CorrectionsPage").then((m) => ({ default: m.CorrectionsPage })));
 const WorkResolutionPage = lazy(() => import("../pages/WorkResolutionPage").then((m) => ({ default: m.WorkResolutionPage })));
 const WorkPage = lazy(() => import("../pages/WorkPage").then((m) => ({ default: m.WorkPage })));
+const RepresentationPage = lazy(() =>
+  import("../pages/RepresentationPage").then((m) => ({ default: m.RepresentationPage })),
+);
 const CookiePolicyPage = lazy(() => import("../pages/legal/LegalPages").then((m) => ({ default: m.CookiePolicyPage })));
 const LegalNoticePage = lazy(() => import("../pages/legal/LegalPages").then((m) => ({ default: m.LegalNoticePage })));
 const PrivacyPolicyPage = lazy(() => import("../pages/legal/LegalPages").then((m) => ({ default: m.PrivacyPolicyPage })));
@@ -108,6 +111,7 @@ export function AppRoutes() {
           <Route path="/collaborators" element={<CollaboratorsPage />} />
           <Route path="/candidates" element={<CandidatesPage />} />
           <Route path="/obras/:id" element={<WorkPage />} />
+          <Route path="/representacion/:id" element={<RepresentationPage />} />
           <Route path="/resolution" element={<WorkResolutionPage />} />
           <Route path="/knowledge" element={<Navigate to="/knowledge/observations" replace />} />
           <Route path="/knowledge/observations" element={<ObservationsPage />} />

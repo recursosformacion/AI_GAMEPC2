@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field
-from urllib.parse import urlsplit
+from urllib.parse import quote, urlsplit
 
 from src.osap.api.seo.slug import person_slug, work_canonical_slug
 
@@ -77,6 +77,8 @@ class RepresentationLink:
     # Sitio del proveedor (para «abrir en …» cuando no hay fichero servible). Enlazar el
     # fichero crudo de CPDL/IMSLP falla (403): solo se enlaza si es descargable.
     site: str | None = None
+    # Id determinista (`idx-<work>-<provider>-<resource>-<format>`) → `/representacion/<id>`.
+    id: str | None = None
 
 
 @dataclass(frozen=True)
@@ -185,6 +187,7 @@ def build_work_view(
                     url=url,
                     downloadable=bool(rep.get("downloadable")) and url is not None,
                     site=_site_of(url),
+                    id=_str_or_none(rep.get("id")),
                 )
             )
 
@@ -255,6 +258,65 @@ def build_work_view(
         json_ld=json_ld,
         composer_page=composer_page,
     )
+
+
+def build_representation_payload(
+    info: dict[str, object], rep_id: str
+) -> dict[str, object] | None:
+    """Ficha pública de una representación (indexable y para la app).
+
+    `download_url` solo existe para proveedores servibles (OMR/Mutopia); en el resto se
+    ofrece el sitio del proveedor (`site`), nunca el fichero externo (responde 403).
+    """
+    work_numeric = str(info.get("work_id") or "")
+    if not work_numeric.isdigit():
+        return None
+    work_id = f"index-{int(work_numeric)}"
+    title = str(info.get("title") or "").strip() or "Obra"
+    composer = _str_or_none(info.get("composer"))
+    catalogue = _str_or_none(info.get("catalogue"))
+    provider = str(info.get("provider") or "")
+    fmt = str(info.get("format") or "").upper()
+    download_url = _str_or_none(info.get("download_url"))
+    view_url = _str_or_none(info.get("view_url"))
+    site = _site_of(view_url)
+    work_slug = work_canonical_slug(title)
+    canonical = f"{public_base_url()}/representacion/{quote(rep_id, safe='')}"
+    composer_label = composer or "compositor desconocido"
+    description = (
+        f"{fmt or 'Recurso'} de «{title}» de {composer_label} en {provider}. "
+        "Ficha, visor y descarga en OpenMusicRepository."
+    )
+    json_ld: dict[str, object] = {
+        "@context": "https://schema.org",
+        "@type": "MediaObject",
+        "name": f"{title} — {provider} {fmt}".strip(),
+        "encodingFormat": fmt.lower(),
+        "url": canonical,
+        "description": description,
+        "isPartOf": {
+            "@type": "MusicComposition",
+            "name": title,
+            "url": canonical_work_url(work_id, work_slug),
+        },
+    }
+    if download_url:
+        json_ld["contentUrl"] = download_url
+    return {
+        "id": rep_id,
+        "provider": provider,
+        "format": fmt,
+        "title": title,
+        "composer": composer,
+        "catalogue": catalogue,
+        "work_id": work_id,
+        "work_path": f"/obra/{work_id}/{work_slug}",
+        "download_url": download_url,
+        "site": site,
+        "canonical_url": canonical,
+        "description": description,
+        "json_ld": json.dumps(json_ld, ensure_ascii=False),
+    }
 
 
 def build_person_view(detail: dict[str, object], works: dict[str, object]) -> PersonView:
