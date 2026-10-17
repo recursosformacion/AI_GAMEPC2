@@ -68,7 +68,9 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
             return RedirectResponse(url=f"/obra/{canonical}/{expected}", status_code=301)
         related: list[dict[str, object]] = []
         composer_id = data.get("composer_id")
+        composer_page = False
         if isinstance(composer_id, str) and composer_id:
+            composer_page = ctx.api.seo_person(composer_id) is not None
             siblings = ctx.api.seo_person_works(composer_id, 8, 0)
             items = siblings.get("items")
             if isinstance(items, list):
@@ -76,7 +78,7 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
         # Consulta real (personas): alimenta «Obras más consultadas» de la portada.
         if canonical is not None and not _BOT_UA.search(request.headers.get("user-agent", "")):
             ctx.api.record_work_consult(work_id=canonical)
-        return _html(render_work(build_work_view(data, related)))
+        return _html(render_work(build_work_view(data, related, composer_page=composer_page)))
 
     @router.get("/compositor/{person_id}", include_in_schema=False)
     def person_canonical(person_id: str) -> Response:

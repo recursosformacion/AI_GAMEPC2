@@ -11,6 +11,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field
+from urllib.parse import urlsplit
 
 from src.osap.api.seo.slug import person_slug, work_canonical_slug
 
@@ -21,6 +22,20 @@ _JSON_LD_CONTEXT = "https://schema.org"
 def public_base_url() -> str:
     """Base canónica del sitio público (configurable por `OSAP_PUBLIC_BASE_URL`)."""
     return os.environ.get("OSAP_PUBLIC_BASE_URL", _DEFAULT_BASE_URL).rstrip("/")
+
+
+def _site_of(url: str | None) -> str | None:
+    """Sitio del proveedor (`https://host/`) para «abrir en …» sin enlazar el fichero crudo.
+
+    Los ficheros de CPDL/IMSLP responden 403 a peticiones directas, así que cuando no hay
+    copia servible se enlaza el sitio del proveedor, no el fichero.
+    """
+    if not url:
+        return None
+    parts = urlsplit(url)
+    if not parts.scheme or not parts.netloc:
+        return None
+    return f"{parts.scheme}://{parts.netloc}/"
 
 
 def _str_or_none(value: object) -> str | None:
@@ -59,6 +74,9 @@ class RepresentationLink:
     format: str
     url: str | None
     downloadable: bool
+    # Sitio del proveedor (para «abrir en …» cuando no hay fichero servible). Enlazar el
+    # fichero crudo de CPDL/IMSLP falla (403): solo se enlaza si es descargable.
+    site: str | None = None
 
 
 @dataclass(frozen=True)
@@ -77,6 +95,8 @@ class WorkView:
     canonical_url: str = ""
     description: str = ""
     json_ld: str = ""
+    # Hay página SSR del compositor (algunos anónimos no la tienen: enlazar daría 404).
+    composer_page: bool = True
 
 
 @dataclass(frozen=True)
@@ -135,7 +155,12 @@ def _dump(payload: dict[str, object]) -> str:
     )
 
 
-def build_work_view(data: dict[str, object], related: list[dict[str, object]]) -> WorkView:
+def build_work_view(
+    data: dict[str, object],
+    related: list[dict[str, object]],
+    *,
+    composer_page: bool = True,
+) -> WorkView:
     work_id = str(data.get("work_id") or "")
     title = str(data.get("title") or "").strip() or "Obra"
     composer = _str_or_none(data.get("composer"))
@@ -159,6 +184,7 @@ def build_work_view(data: dict[str, object], related: list[dict[str, object]]) -
                     format=str(rep.get("format") or "").upper(),
                     url=url,
                     downloadable=bool(rep.get("downloadable")) and url is not None,
+                    site=_site_of(url),
                 )
             )
 
@@ -186,7 +212,7 @@ def build_work_view(data: dict[str, object], related: list[dict[str, object]]) -
     )
 
     breadcrumb: list[tuple[str, str | None]] = [("Inicio", public_base_url() + "/")]
-    if composer and composer_id and composer_slug:
+    if composer and composer_id and composer_slug and composer_page:
         breadcrumb.append(("Compositores", public_base_url() + "/composers"))
         breadcrumb.append((composer, canonical_person_url(composer_id, composer_slug)))
     breadcrumb.append((title, None))
@@ -199,7 +225,7 @@ def build_work_view(data: dict[str, object], related: list[dict[str, object]]) -
     }
     if composer:
         composer_node: dict[str, object] = {"@type": "Person", "name": composer}
-        if composer_id and composer_slug:
+        if composer_id and composer_slug and composer_page:
             composer_node["url"] = canonical_person_url(composer_id, composer_slug)
         composition["composer"] = composer_node
     if year:
@@ -227,6 +253,7 @@ def build_work_view(data: dict[str, object], related: list[dict[str, object]]) -
         canonical_url=canonical,
         description=description,
         json_ld=json_ld,
+        composer_page=composer_page,
     )
 
 

@@ -79,6 +79,10 @@ class _FakeApi:
     def seo_person_works(self, person_id: str, limit: int, offset: int) -> dict[str, object]:
         return self._works if person_id == self._person.get("id") else {"items": [], "total": 0}
 
+    def record_work_consult(self, *, work_id: str, provider: str = "", fmt: str = "") -> None:
+        """No-op: la analítica no forma parte de lo que verifica este router."""
+        return None
+
 
 def _client(api: _FakeApi) -> TestClient:
     app = FastAPI()
@@ -126,9 +130,22 @@ def test_pagina_de_obra_tiene_html_real_y_metadatos(client: TestClient) -> None:
     assert "Wolfgang Amadeus Mozart" in resp.text
     assert 'href="/compositor/person-1/wolfgang-amadeus-mozart"' in resp.text
     assert "KV 618" in resp.text
-    # Recursos enlazados.
+    # Recursos: el fichero servible se enlaza; el externo (IMSLP) lleva al sitio del
+    # proveedor, porque el fichero crudo responde 403.
     assert "https://storage.openmusicrepository.com/api/download/9" in resp.text
-    assert "https://imslp.org/wiki/Ave_verum" in resp.text
+    assert "https://imslp.org/wiki/Ave_verum" not in resp.text
+    assert 'href="https://imslp.org/"' in resp.text
+    assert "Abrir en imslp" in resp.text
+
+
+def test_obra_sin_pagina_de_compositor_no_enlaza_404() -> None:
+    """Compositores anónimos sin página SSR: se muestra el nombre, sin enlace que dé 404."""
+    work = {**_WORK, "composer_id": "anonimo", "composer": "Anónimo"}
+    client = _client(_FakeApi(work=work))
+    resp = client.get("/obra/index-7/ave-verum-corpus")
+    assert resp.status_code == 200
+    assert "/compositor/anonimo/" not in resp.text
+    assert "Anónimo" in resp.text
 
 
 def test_pagina_de_obra_json_ld_es_music_composition(client: TestClient) -> None:

@@ -9,6 +9,11 @@ import { usePopularWorks } from "../state/popularWorks";
 import { useRecentWorks } from "../state/recentWorks";
 import { useSources } from "../state/repositorySources";
 
+// Ruta de la app para una obra (`index-<n>` → `/obras/<n>`, que es la experiencia SPA).
+function appWorkPath(workId: string): string {
+  return `/obras/${encodeURIComponent(workId.replace(/^index-/, ""))}`;
+}
+
 function hint(query: string): string | null {
   const q = query.trim();
   if (/^(kv|k\.?|bwv|op\.?|hob\.?)\s?[0-9]/i.test(q)) return "Looks like a catalogue number — search as catalogue.";
@@ -189,9 +194,9 @@ export function HomePage() {
             <ul className="space-y-1">
               {(popular.data?.items ?? []).map((work) => (
                 <li key={work.work_id} className="text-sm">
-                  <a href={work.path} className="text-osap-accent hover:underline">
+                  <Link to={appWorkPath(work.work_id)} className="text-osap-accent hover:underline">
                     {work.title}
-                  </a>
+                  </Link>
                   {work.composer ? <span className="text-osap-muted"> — {work.composer}</span> : null}
                 </li>
               ))}
@@ -210,10 +215,9 @@ export function HomePage() {
             <ul className="space-y-1">
               {(recent.data ?? []).map((work) => (
                 <li key={work.work_id} className="text-sm">
-                  {/* /obra lo sirve el backend (SEO), no la SPA: navegación completa. */}
-                  <a href={work.path} className="text-osap-accent hover:underline">
+                  <Link to={appWorkPath(work.work_id)} className="text-osap-accent hover:underline">
                     {work.title}
-                  </a>
+                  </Link>
                   {work.composer ? <span className="text-osap-muted"> — {work.composer}</span> : null}
                 </li>
               ))}

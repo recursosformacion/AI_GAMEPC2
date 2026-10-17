@@ -44,7 +44,7 @@ function toWorkInfo(w: WorksListWork, d: WorkDetail): WorkInfo {
   };
 }
 
-function toRepresentations(d: WorkDetail): RepresentationInfo[] {
+export function toRepresentations(d: WorkDetail): RepresentationInfo[] {
   // IMPORTANTE: el `id` de estas reps es el `file_id` del storage (numérico). NO se puede
   // fabricar un `idx-<work>-…`: los ids de osap-storage y los del índice son SECUENCIAS
   // DISTINTAS, y el mismo número apunta a obras diferentes (p. ej. storage 134764 = Myers
