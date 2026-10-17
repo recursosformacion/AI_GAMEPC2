@@ -62,10 +62,12 @@ def _probe_external(url: str) -> dict[str, object]:
                 url, timeout=8, headers=_shared_headers(), stream=True
             )
             try:
+                content_type = response.headers.get("Content-Type", "")
+                # Un 200 con HTML no es un fichero: es la página del proveedor (IMSLP).
                 result = {
-                    "readable": response.status_code == 200,
+                    "readable": response.status_code == 200 and "html" not in content_type.lower(),
                     "status": response.status_code,
-                    "content_type": response.headers.get("Content-Type", ""),
+                    "content_type": content_type,
                 }
             finally:
                 response.close()
@@ -234,6 +236,10 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
             except requests.RequestException:
                 return RedirectResponse(url, status_code=302)
             if upstream.status_code != 200 or not upstream.content:
+                return RedirectResponse(url, status_code=302)
+            # Algunos proveedores enlazan su PÁGINA (HTML), no un fichero: en ese caso se
+            # manda al navegador en vez de servir HTML disfrazado de PDF/MusicXML.
+            if "html" in upstream.headers.get("Content-Type", "").lower():
                 return RedirectResponse(url, status_code=302)
             if len(upstream.content) > _EXTERNAL_VIEW_MAX_BYTES:
                 return RedirectResponse(url, status_code=302)
