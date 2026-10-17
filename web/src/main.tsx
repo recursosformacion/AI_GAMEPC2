@@ -7,7 +7,19 @@ import "./design-system/tokens.css";
 // Tras un despliegue, una pestaña abierta con el bundle anterior pide chunks que ya no
 // existen (404) y la app se quedaba en blanco. Vite emite `vite:preloadError`: recargamos
 // una vez (con guarda para no entrar en bucle) y la pestaña pasa al bundle nuevo.
-window.addEventListener("vite:preloadError", () => {
+window.addEventListener("vite:preloadError", () => reloadOnce());
+
+// Red de seguridad: nunca dejar la pantalla en blanco. Si el error es de carga de un chunk
+// (bundle antiguo tras un despliegue), se recarga sola; si es otro, muestra el detalle y un
+// botón de recarga. El texto no depende del i18n, que podría ser justo lo que falló.
+function isChunkLoadError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error ?? "");
+  return /dynamically imported module|Importing a module script failed|Loading chunk|Failed to fetch/i.test(
+    message,
+  );
+}
+
+function reloadOnce(): void {
   const KEY = "osap.chunkReloadAt";
   let last = 0;
   try {
@@ -22,19 +34,22 @@ window.addEventListener("vite:preloadError", () => {
     /* almacenamiento no disponible */
   }
   window.location.reload();
-});
+}
 
-// Red de seguridad: nunca dejar la pantalla en blanco. Un error de render muestra un aviso
-// y un botón de recarga (con el texto sin depender del i18n, que podría ser el que falló).
-class ErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
-  state = { failed: false };
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  { failed: boolean; detail: string }
+> {
+  state = { failed: false, detail: "" };
 
-  static getDerivedStateFromError(): { failed: boolean } {
-    return { failed: true };
+  static getDerivedStateFromError(error: unknown): { failed: boolean; detail: string } {
+    const detail = error instanceof Error ? error.message : String(error ?? "");
+    return { failed: true, detail: detail.slice(0, 300) };
   }
 
   componentDidCatch(error: Error, info: ErrorInfo): void {
     console.error("OSAP render error", error, info);
+    if (isChunkLoadError(error)) reloadOnce();
   }
 
   render(): ReactNode {
@@ -53,6 +68,11 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { failed: boolean
           Recarga la página para continuar. Si acabas de actualizar, puede ser una versión
           antigua en caché.
         </p>
+        {this.state.detail ? (
+          <p style={{ marginTop: ".5rem", fontSize: ".75rem", color: "#888", wordBreak: "break-word" }}>
+            {this.state.detail}
+          </p>
+        ) : null}
         <button
           type="button"
           onClick={() => window.location.reload()}
