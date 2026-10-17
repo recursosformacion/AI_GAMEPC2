@@ -74,8 +74,8 @@ class AnalyticsMixin(PlatformApiCore):
         window = max(1, min(days, 365))
         from_day = (datetime.now(UTC).date() - timedelta(days=window)).isoformat()
         consulted = self._analytics_store.top_works(from_day, limit)
-        basis = "consults" if consulted else "downloads"
         rows: list[dict[str, object]] = list(consulted)
+        used_fallback = False
         if len(rows) < limit:
             seen = {str(row.get("work_id")) for row in rows}
             for row in self._analytics_store.top_downloaded_works(from_day, limit):
@@ -85,6 +85,9 @@ class AnalyticsMixin(PlatformApiCore):
                 if work_id and work_id not in seen:
                     rows.append(row)
                     seen.add(work_id)
+                    used_fallback = True
+        # `basis` indica si el cuadro se completó con descargas (para avisarlo en la portada).
+        basis = "downloads" if used_fallback else "consults"
         items: list[dict[str, object]] = []
         for row in rows:
             raw_id = str(row.get("work_id") or "")
