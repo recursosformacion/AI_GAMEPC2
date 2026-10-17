@@ -99,18 +99,26 @@ class AnalyticsMixin(PlatformApiCore):
             if canonical_id is None:
                 continue
             numeric_id = canonical_id[len("index-") :]
-            detail = self.composers().get_work(numeric_id) or self.composers().get_work(raw_id)
-            work = detail.get("work") if isinstance(detail, dict) else None
-            if not isinstance(work, dict):
-                continue
-            title = str(work.get("title") or "")
+            # El índice es la fuente de las páginas públicas; el store de compositores usa
+            # otro espacio de ids (un mismo número puede ser otra obra), así que va después.
+            index_work = self.seo_work(canonical_id)
+            if isinstance(index_work, dict):
+                title = str(index_work.get("title") or "")
+                composer = index_work.get("composer")
+            else:
+                detail = self.composers().get_work(numeric_id) or self.composers().get_work(raw_id)
+                work = detail.get("work") if isinstance(detail, dict) else None
+                if not isinstance(work, dict):
+                    continue
+                title = str(work.get("title") or "")
+                composer = work.get("composer")
             if not title:
                 continue
             items.append(
                 {
                     "work_id": canonical_id,
                     "title": title,
-                    "composer": work.get("composer"),
+                    "composer": composer,
                     "path": f"/obra/{canonical_id}/{work_canonical_slug(title)}",
                 }
             )

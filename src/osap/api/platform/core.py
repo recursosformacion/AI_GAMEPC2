@@ -155,6 +155,10 @@ class PlatformApiCore:
         """Implementado por el mixin de compositores; consumido por correcciones."""
         raise NotImplementedError
 
+    def seo_work(self, work_id: str) -> dict[str, object] | None:
+        """Implementado por el mixin SEO; consumido por la ficha pública (populares)."""
+        raise NotImplementedError
+
     def composer_review_stats(self, token: str | None) -> dict[str, int]:
         """Implementado por el mixin de compositores; consumido por admin (system)."""
         raise NotImplementedError
