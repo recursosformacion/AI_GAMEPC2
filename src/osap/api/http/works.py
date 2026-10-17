@@ -102,6 +102,38 @@ def build_works_router(ctx: HttpContext) -> APIRouter:
         return ctx.ok(ctx.api.popular_works(max(1, min(limit, 10)), max(1, min(days, 365))))
 
     @router.get(
+        "/api/v1/works/public/{work_id}",
+        tags=["Works"],
+        summary="Public work sheet (index)",
+        description="Ficha pública de una obra del índice (la misma fuente que la página SEO), "
+        "con sus representaciones. Acepta `index-<n>` o `<n>`. Sirve a la app para obras que "
+        "aún no están en el store de compositores.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("Public work", _shared._example({})),
+            404: _shared._NOT_FOUND_404,
+            **_shared._standard_errors(),
+        },
+    )
+    def public_work(response: Response, work_id: str) -> SuccessEnvelope[object] | ErrorEnvelope:
+        data = ctx.api.seo_work(work_id)
+        if data is None:
+            return ctx.fail(404, response, "NOT_FOUND", "Work not found")
+        return ctx.ok(
+            {
+                "work": {
+                    "work_id": data.get("work_id"),
+                    "title": data.get("title"),
+                    "composer": data.get("composer"),
+                    "catalogue": data.get("catalogue"),
+                    "year": data.get("year"),
+                    "instrumentation": data.get("instrumentation"),
+                },
+                "representations": data.get("representations") or [],
+            }
+        )
+
+    @router.get(
         "/api/v1/works/{work_id}",
         tags=["Composers"],
         summary="Work detail (inspection)",

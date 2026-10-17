@@ -68,6 +68,7 @@ import type {
   WorkAiReviewAction,
   RecentWorkList,
   PopularWorkList,
+  PublicWork,
 } from "./types";
 import { ApiError } from "./errors";
 
@@ -212,6 +213,11 @@ export class ApiClient {
   /** Obras más consultadas de los últimos días (portada). */
   async getPopularWorks(limit = 5, days = 30): Promise<PopularWorkList> {
     return this.get<PopularWorkList>(`/works/popular?limit=${limit}&days=${days}`);
+  }
+
+  /** Ficha pública del índice (obras que no están en el store de compositores). */
+  async getPublicWork(workId: string): Promise<PublicWork> {
+    return this.get<PublicWork>(`/works/public/${encodeURIComponent(workId)}`);
   }
 
   /** Colaboradores públicos de un proyecto (fachada osap-api → support + auth). */

@@ -839,6 +839,26 @@ export interface PopularWorkList {
   items: RecentWork[];
 }
 
+/** Ficha pública de obra del índice (la misma fuente que la página SEO). */
+export interface PublicWorkRepresentation {
+  provider: string;
+  format: string;
+  url?: string | null;
+  downloadable: boolean;
+}
+
+export interface PublicWork {
+  work: {
+    work_id: string;
+    title: string;
+    composer?: string | null;
+    catalogue?: string | null;
+    year?: number | null;
+    instrumentation?: string | null;
+  };
+  representations: PublicWorkRepresentation[];
+}
+
 // --- «Los amigos» (grupos, artículos y recursos) -----------------------------
 
 export type AmigosGroupKind = "coral";
