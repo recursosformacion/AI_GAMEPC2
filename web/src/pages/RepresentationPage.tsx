@@ -5,16 +5,16 @@ import type { RepresentationSheet } from "../api/types";
 import { Spinner } from "../components/Spinner";
 import { useI18n } from "../i18n/I18n";
 
-// Página de una representación (SPA): misma URL canónica que la SSR `/representacion/<id>`,
-// con acciones útiles: visor (si hay fichero servible), descarga y enlace a la obra.
+// Página de una representación (SPA): misma URL canónica que la SSR `/representacion/<id>`.
+// Si el fichero es servible (propio o externo legible por el servidor) se ofrece el visor;
+// si el proveedor pone un reto anti-bot (CPDL/Cloudflare) se ofrece abrirlo en el navegador.
 function viewerHref(sheet: RepresentationSheet): string | null {
-  if (!sheet.download_url) return null;
   const fmt = sheet.format.toLowerCase();
+  if (["musicxml", "mxl", "xml", "mei", "pdf"].includes(fmt)) {
+    return `/viewer?rep=${encodeURIComponent(sheet.id)}&title=${encodeURIComponent(sheet.title)}`;
+  }
   if (fmt === "midi") {
     return `/viewer?rep=${encodeURIComponent(sheet.id)}&format=midi&title=${encodeURIComponent(sheet.title)}`;
-  }
-  if (["musicxml", "mxl", "xml", "mei"].includes(fmt)) {
-    return `/viewer?rep=${encodeURIComponent(sheet.id)}&title=${encodeURIComponent(sheet.title)}`;
   }
   return null;
 }
@@ -27,17 +27,30 @@ export function RepresentationPage() {
   const { id = "" } = useParams();
   const { t } = useI18n();
   const [sheet, setSheet] = useState<RepresentationSheet | null>(null);
+  const [probe, setProbe] = useState<boolean | null>(null);
   const [state, setState] = useState<"loading" | "ok" | "missing">("loading");
 
   useEffect(() => {
     let cancelled = false;
     setState("loading");
+    setProbe(null);
     apiClient
       .getRepresentation(id)
       .then((data) => {
         if (cancelled) return;
         setSheet(data);
         setState("ok");
+        // Sin fichero propio: sondea si el servidor puede leer el externo (para el visor).
+        if (!data.download_url && data.site) {
+          apiClient
+            .probeRepresentation(id)
+            .then((result) => {
+              if (!cancelled) setProbe(result.readable);
+            })
+            .catch(() => {
+              if (!cancelled) setProbe(false);
+            });
+        }
       })
       .catch(() => {
         if (!cancelled) setState("missing");
@@ -58,6 +71,7 @@ export function RepresentationPage() {
   }
 
   const viewer = viewerHref(sheet);
+  const canView = viewer !== null && (Boolean(sheet.download_url) || probe === true);
   return (
     <div className="space-y-4">
       <p className="text-xs text-osap-muted">
@@ -78,7 +92,7 @@ export function RepresentationPage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        {viewer ? (
+        {canView && viewer ? (
           <Link to={viewer} className="rounded bg-osap-accent px-3 py-1.5 text-sm text-white">
             {t("actions.viewScore")}
           </Link>
@@ -92,17 +106,22 @@ export function RepresentationPage() {
           >
             {t("actions.download")}
           </a>
-        ) : sheet.site ? (
+        ) : null}
+        {!sheet.download_url && sheet.site ? (
           <a
             href={sheet.site}
             target="_blank"
             rel="noopener noreferrer"
             className="rounded border border-osap-accent px-3 py-1.5 text-sm text-osap-accent"
           >
-            {t("work.openIn").replace("{p}", sheet.provider)}
+            {t("work.openIn").replace("{p}", sheet.provider)} · {sheet.format}
           </a>
         ) : null}
       </div>
+
+      {!sheet.download_url && probe === false ? (
+        <p className="text-xs text-osap-muted">{t("work.externalChallenge")}</p>
+      ) : null}
 
       <p className="text-xs text-osap-muted">
         <a href={sheet.canonical_url} className="text-osap-accent hover:underline">

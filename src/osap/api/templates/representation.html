@@ -22,14 +22,33 @@
 <div class="coral-actions">
   {% if view.download_url %}
   <a class="btn" href="{{ view.download_url }}" rel="nofollow">Descargar</a>
-  {% if view.format in ['MUSICXML', 'MXL', 'XML', 'MEI', 'MIDI'] %}
+  {% if view.format in ['MUSICXML', 'MXL', 'XML', 'MEI', 'MIDI', 'PDF'] %}
   <a class="btn" href="/viewer?rep={{ view.id | urlencode }}{% if view.format == 'MIDI' %}&amp;format=midi{% endif %}">Abrir en el visor</a>
   {% endif %}
   {% elif view.site %}
-  <a class="btn" href="{{ view.site }}" rel="nofollow noopener" target="_blank" title="Abrir en {{ view.provider }}">Abrir en {{ view.provider }}</a>
+  <a class="btn" href="{{ view.site }}" rel="nofollow noopener" target="_blank" title="Abrir en {{ view.provider }}">Abrir en {{ view.provider }} ({{ view.format }})</a>
+  {% if view.id and view.format in ['MUSICXML', 'MXL', 'XML', 'MEI', 'MIDI', 'PDF'] %}
+  <a class="btn" id="rep-viewer" hidden href="/viewer?rep={{ view.id | urlencode }}{% if view.format == 'MIDI' %}&amp;format=midi{% endif %}">Abrir en el visor</a>
+  {% endif %}
   {% endif %}
   <a class="btn" href="{{ view.work_path }}">Ver la obra</a>
 </div>
+{% if not view.download_url and view.site and view.id %}
+<script>
+  // Sondea si el servidor puede leer el fichero externo (sin reto anti-bot). Si puede,
+  // se ofrece el visor; si no (CPDL/Cloudflare), queda «Abrir en …», que resuelve el navegador.
+  (function () {
+    var btn = document.getElementById("rep-viewer");
+    if (!btn) return;
+    fetch("/api/v1/representations/{{ view.id | urlencode }}/probe")
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (body) {
+        if (body && body.data && body.data.readable) btn.hidden = false;
+      })
+      .catch(function () {});
+  })();
+</script>
+{% endif %}
 
 <p class="muted">Proveedor: {{ view.provider }} · Formato: {{ view.format }}{% if view.catalogue %} · {{ view.catalogue }}{% endif %}</p>
 {% endblock %}

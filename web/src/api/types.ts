@@ -855,6 +855,15 @@ export interface RepresentationSheet {
   description: string;
 }
 
+/** Sondeo del fichero externo: ¿puede el servidor leerlo para el visor? */
+export interface RepresentationProbe {
+  readable: boolean;
+  origin?: "osap" | "provider";
+  status?: number;
+  content_type?: string;
+  reason?: string;
+}
+
 /** Ficha pública de obra del índice (la misma fuente que la página SEO). */
 export interface PublicWorkRepresentation {
   id?: string | null;

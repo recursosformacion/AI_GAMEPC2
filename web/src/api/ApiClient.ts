@@ -70,6 +70,7 @@ import type {
   PopularWorkList,
   PublicWork,
   RepresentationSheet,
+  RepresentationProbe,
 } from "./types";
 import { ApiError } from "./errors";
 
@@ -225,6 +226,13 @@ export class ApiClient {
   async getRepresentation(representationId: string): Promise<RepresentationSheet> {
     return this.get<RepresentationSheet>(
       `/representations/${encodeURIComponent(representationId)}`,
+    );
+  }
+
+  /** ¿Se puede servir el fichero externo en el visor? (retos anti-bot ⇒ false). */
+  async probeRepresentation(representationId: string): Promise<RepresentationProbe> {
+    return this.get<RepresentationProbe>(
+      `/representations/${encodeURIComponent(representationId)}/probe`,
     );
   }
 

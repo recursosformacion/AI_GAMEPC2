@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 import urllib.parse
 from typing import TYPE_CHECKING
 
@@ -17,12 +18,18 @@ from src.osap.api.contracts import (
     SearchResponse,
     SuccessEnvelope,
 )
+from src.osap.api.platform._support import _validate_preview_url
 from src.osap.api.seo.views import build_representation_payload
 
 if TYPE_CHECKING:
     from src.osap.api.http.context import HttpContext
 
 _LOCAL_STORAGE_HOSTS = {"127.0.0.1", "localhost"}
+# Límite al proxear un fichero externo para el visor (no descargar 100 MB sin querer).
+_EXTERNAL_VIEW_MAX_BYTES = 30 * 1024 * 1024
+# Caché del sondeo de proveedores externos (¿puede el servidor leer el fichero?).
+_PROBE_TTL_SECONDS = 600.0
+_PROBE_CACHE: dict[str, tuple[float, dict[str, object]]] = {}
 _INLINE_FILE_SUFFIXES = (
     ".pdf",
     ".mxl",
@@ -33,6 +40,45 @@ _INLINE_FILE_SUFFIXES = (
     ".mei",
     ".krn",
 )
+
+
+def _probe_external(url: str) -> dict[str, object]:
+    """¿Puede el servidor leer el fichero externo? Cacheado (el reto de CPDL no cambia).
+
+    IMSLP y otros se leen directamente (⇒ visor disponible). CPDL responde
+    `403 Cf-Mitigated: challenge` a peticiones de servidor ⇒ solo se puede abrir en el
+    navegador, que resuelve el reto.
+    """
+    now = time.monotonic()
+    cached = _PROBE_CACHE.get(url)
+    if cached is not None and now - cached[0] < _PROBE_TTL_SECONDS:
+        return cached[1]
+    result: dict[str, object]
+    if _validate_preview_url(url) is not None:
+        result = {"readable": False, "reason": "invalid_url"}
+    else:
+        try:
+            response = requests.get(
+                url, timeout=8, headers=_shared_headers(), stream=True
+            )
+            try:
+                result = {
+                    "readable": response.status_code == 200,
+                    "status": response.status_code,
+                    "content_type": response.headers.get("Content-Type", ""),
+                }
+            finally:
+                response.close()
+        except requests.RequestException:
+            result = {"readable": False, "reason": "unreachable"}
+    _PROBE_CACHE[url] = (now, result)
+    return result
+
+
+def _shared_headers() -> dict[str, str]:
+    from src.osap.api.http import shared
+
+    return dict(shared._BROWSER_FETCH_HEADERS)
 
 
 def _is_file_url(url: str) -> bool:
@@ -115,6 +161,32 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
         return ctx.ok(payload)
 
     @router.get(
+        "/api/v1/representations/{representation_id}/probe",
+        tags=["Searches"],
+        summary="External file reachable?",
+        description="Indica si el servidor puede leer el fichero externo (⇒ visor disponible). "
+        "Los proveedores con reto anti-bot (p. ej. CPDL/Cloudflare) devuelven readable=false: "
+        "solo se pueden abrir en el navegador, que resuelve el reto.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("Probe", _shared._example({"readable": False})),
+            404: _shared._NOT_FOUND_404,
+        },
+    )
+    def representation_probe(
+        response: Response, representation_id: str
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        info = ctx.api.get_representation_download(representation_id)
+        if info is None:
+            return ctx.fail(404, response, "NOT_FOUND", "Representation not found")
+        if info.get("download_url"):
+            return ctx.ok({"readable": True, "origin": "osap"})
+        view_url = str(info.get("view_url") or "")
+        if not view_url:
+            return ctx.ok({"readable": False, "origin": "provider"})
+        return ctx.ok({**_probe_external(view_url), "origin": "provider"})
+
+    @router.get(
         "/api/v1/representations/{representation_id}/download",
         tags=["Searches"],
         summary="Download a representation",
@@ -136,11 +208,41 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
         if info is None:
             return ctx.fail(404, response, "NOT_FOUND", "Representation not found")
         url = str(info.get("download_url") or "")
+        # Vista de un fichero externo (CPDL/IMSLP): se intenta proxear para el visor; si el
+        # proveedor pone un reto anti-bot (Cloudflare) se redirige y lo resuelve el navegador.
+        proxy_external = False
+        if not url and view == 1:
+            candidate = str(info.get("view_url") or "")
+            if candidate and _validate_preview_url(candidate) is None:
+                url = candidate
+                proxy_external = True
         if not url:
             return ctx.fail(404, response, "NOT_FOUND", "No download available")
         provider, work_id, fmt = _analytics_target(info, representation_id)
         user_id, is_admin = _shared._current_identity(ctx, authorization)
         is_download = view == 0
+
+        if proxy_external:
+            # Proveedor sin reto: el servidor sí puede leer el fichero → se sirve inline para
+            # el visor. Con reto (CPDL) o error, se redirige al navegador (resuelve el reto).
+            try:
+                upstream = requests.get(
+                    url,
+                    timeout=20,
+                    headers=_shared._BROWSER_FETCH_HEADERS,
+                )
+            except requests.RequestException:
+                return RedirectResponse(url, status_code=302)
+            if upstream.status_code != 200 or not upstream.content:
+                return RedirectResponse(url, status_code=302)
+            if len(upstream.content) > _EXTERNAL_VIEW_MAX_BYTES:
+                return RedirectResponse(url, status_code=302)
+            filename = _shared._download_filename(info).replace('"', "").replace("\n", "")
+            return Response(
+                content=upstream.content,
+                media_type=_shared._media_type_for_format(str(info.get("format") or "")),
+                headers={"Content-Disposition": f'inline; filename="{filename}"'},
+            )
 
         # Cuota: solo la descarga facturable (OMR), nunca la vista inline ni otras fuentes.
         if is_download and provider == "omr":
@@ -296,3 +398,4 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
         return ctx.ok(search)
 
     return router
+
