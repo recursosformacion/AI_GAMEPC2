@@ -8,9 +8,10 @@ canónico, de modo que el enlace permanente nunca se rompe.
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from src.osap.api.seo.render import (
@@ -28,6 +29,12 @@ if TYPE_CHECKING:
     from src.osap.api.http.context import HttpContext
 
 _CACHE_CONTROL = "public, max-age=3600, stale-while-revalidate=86400"
+
+# Las consultas de ficha se cuentan solo para personas: los rastreadores no inflan el ranking.
+_BOT_UA = re.compile(
+    r"bot|crawl|spider|slurp|bingpreview|facebookexternalhit|headless|lighthouse|preview",
+    re.IGNORECASE,
+)
 
 
 def _html(body: str, status_code: int = 200) -> HTMLResponse:
@@ -51,7 +58,7 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
         return RedirectResponse(url=f"/obra/{canonical}/{slug}", status_code=301)
 
     @router.get("/obra/{work_id}/{slug}", include_in_schema=False)
-    def work_page(work_id: str, slug: str) -> Response:
+    def work_page(work_id: str, slug: str, request: Request) -> Response:
         canonical = normalize_work_id(work_id)
         data = ctx.api.seo_work(canonical) if canonical is not None else None
         if data is None:
@@ -66,6 +73,9 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
             items = siblings.get("items")
             if isinstance(items, list):
                 related = [item for item in items if isinstance(item, dict)]
+        # Consulta real (personas): alimenta «Obras más consultadas» de la portada.
+        if canonical is not None and not _BOT_UA.search(request.headers.get("user-agent", "")):
+            ctx.api.record_work_consult(work_id=canonical)
         return _html(render_work(build_work_view(data, related)))
 
     @router.get("/compositor/{person_id}", include_in_schema=False)

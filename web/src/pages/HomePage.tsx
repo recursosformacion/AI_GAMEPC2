@@ -5,6 +5,7 @@ import { Card } from "../components/Card";
 import { useI18n } from "../i18n/I18n";
 import { searchAndGo } from "../state/navigation";
 import { loadRecentSearches, type RecentSearch } from "../state/recentSearches";
+import { usePopularWorks } from "../state/popularWorks";
 import { useRecentWorks } from "../state/recentWorks";
 import { useSources } from "../state/repositorySources";
 
@@ -25,13 +26,15 @@ export function HomePage() {
   const [catalogue, setCatalogue] = useState("");
   const { list, loadList } = useSources();
   const { list: recent, load: loadRecent } = useRecentWorks();
+  const { list: popular, load: loadPopular } = usePopularWorks();
   const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
 
   useEffect(() => {
     void loadList();
     void loadRecent();
+    void loadPopular();
     setRecentSearches(loadRecentSearches());
-  }, [loadList, loadRecent]);
+  }, [loadList, loadRecent, loadPopular]);
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
@@ -180,7 +183,25 @@ export function HomePage() {
           )}
         </Card>
         <Card title={t("home.mostAccessed")}>
-          <p className="text-sm text-osap-muted">{t("home.mostAccessedEmpty")}</p>
+          {(popular.data?.items ?? []).length === 0 ? (
+            <p className="text-sm text-osap-muted">{t("home.mostAccessedEmpty")}</p>
+          ) : (
+            <ul className="space-y-1">
+              {(popular.data?.items ?? []).map((work) => (
+                <li key={work.work_id} className="text-sm">
+                  <a href={work.path} className="text-osap-accent hover:underline">
+                    {work.title}
+                  </a>
+                  {work.composer ? <span className="text-osap-muted"> — {work.composer}</span> : null}
+                </li>
+              ))}
+              {popular.data?.basis === "downloads" ? (
+                <li className="pt-1 text-xs text-osap-muted">
+                  {t("home.mostAccessedBasisDownloads")}
+                </li>
+              ) : null}
+            </ul>
+          )}
         </Card>
         <Card title={t("home.recentlyAdded")}>
           {(recent.data ?? []).length === 0 ? (

@@ -26,6 +26,8 @@ class MemoryStore:
         self._downloads: dict[tuple[str, str, str, str, str], dict[str, int]] = {}
         # (day, provider) -> contadores agregados
         self._provider_daily: dict[tuple[str, str], dict[str, int]] = {}
+        # (day, work_id, provider, format) -> consultas
+        self._consults: dict[tuple[str, str, str, str], int] = {}
 
     @staticmethod
     def _provider_row() -> dict[str, int]:
@@ -77,6 +79,33 @@ class MemoryStore:
     def record_download_failure(self, day: str, provider: str) -> None:
         provider_row = self._provider_daily.setdefault((day, provider), self._provider_row())
         provider_row["downloads_failed"] += 1
+
+    def record_consult(
+        self, day: str, work_id: str, provider: str = "", fmt: str = "", quantity: int = 1
+    ) -> None:
+        """Cuenta consultas de una obra (vistas de su ficha)."""
+        if not work_id:
+            return
+        key = (day, work_id, provider, fmt)
+        self._consults[key] = self._consults.get(key, 0) + max(1, quantity)
+
+    def top_works(self, from_day: str, limit: int) -> list[dict[str, object]]:
+        """Obras más consultadas desde `from_day` (de mayor a menor)."""
+        agg: dict[str, int] = {}
+        for (day, work_id, _provider, _fmt), count in self._consults.items():
+            if day >= from_day and work_id:
+                agg[work_id] = agg.get(work_id, 0) + count
+        rows = sorted(agg.items(), key=lambda kv: -kv[1])[:limit]
+        return [{"work_id": work, "consults": count} for work, count in rows]
+
+    def top_downloaded_works(self, from_day: str, limit: int) -> list[dict[str, object]]:
+        """Obras más descargadas desde `from_day` (respaldo si aún no hay consultas)."""
+        agg: dict[str, int] = {}
+        for (day, _user, _provider, work, _fmt), row in self._downloads.items():
+            if day >= from_day and work:
+                agg[work] = agg.get(work, 0) + row["quantity"]
+        rows = sorted(agg.items(), key=lambda kv: -kv[1])[:limit]
+        return [{"work_id": work, "downloads": count} for work, count in rows]
 
     def usage_for_user(self, user_id: str, from_day: str, to_day: str) -> dict[str, object]:
         """Descargas del propio usuario en [from_day, to_day] (dimensión usuario).

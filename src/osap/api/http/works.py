@@ -84,6 +84,24 @@ def build_works_router(ctx: HttpContext) -> APIRouter:
         return ctx.ok({"items": ctx.api.recent_works(max(1, min(limit, 24)))})
 
     @router.get(
+        "/api/v1/works/popular",
+        tags=["Works"],
+        summary="Most consulted works",
+        description="Obras más consultadas en los últimos `days` días (por defecto 30). "
+        "Mientras no haya consultas registradas se completa con las más descargadas. "
+        "`limit` acotado a 10.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("Popular works", _shared._example({"basis": "consults", "items": []})),
+            **_shared._standard_errors(),
+        },
+    )
+    def popular_works(
+        response: Response, limit: int = 5, days: int = 30
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return ctx.ok(ctx.api.popular_works(max(1, min(limit, 10)), max(1, min(days, 365))))
+
+    @router.get(
         "/api/v1/works/{work_id}",
         tags=["Composers"],
         summary="Work detail (inspection)",

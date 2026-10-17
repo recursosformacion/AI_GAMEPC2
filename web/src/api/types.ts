@@ -833,6 +833,12 @@ export interface RecentWorkList {
   items: RecentWork[];
 }
 
+/** Obras más consultadas (portada). `basis` indica la métrica usada por el servidor. */
+export interface PopularWorkList {
+  basis: "consults" | "downloads";
+  items: RecentWork[];
+}
+
 // --- «Los amigos» (grupos, artículos y recursos) -----------------------------
 
 export type AmigosGroupKind = "coral";

@@ -65,6 +65,41 @@ def test_overview_filters_by_day() -> None:
     assert store.usage_overview(DAY, DAY)["searches_total"] == 1
 
 
+def test_consults_ranking_y_respaldo_por_descargas() -> None:
+    """«Obras más consultadas»: ranking por consultas y respaldo por descargas."""
+    store = MemoryStore()
+    store.record_consult(DAY, "work-a")
+    store.record_consult(DAY, "work-a")
+    store.record_consult(DAY, "work-b")
+    store.record_consult(DAY, "")  # se ignora
+    assert store.top_works("2026-09-01", 5) == [
+        {"work_id": "work-a", "consults": 2},
+        {"work_id": "work-b", "consults": 1},
+    ]
+    # Si aún no hay consultas, las descargas sirven de respaldo.
+    empty = MemoryStore()
+    empty.record_download(DAY, "u1", "omr", "work-x", "musicxml")
+    empty.record_download(DAY, "u1", "omr", "work-x", "musicxml")
+    empty.record_download(DAY, "u1", "omr", "work-y", "pdf")
+    assert empty.top_works("2026-09-01", 5) == []
+    assert empty.top_downloaded_works("2026-09-01", 5) == [
+        {"work_id": "work-x", "downloads": 2},
+        {"work_id": "work-y", "downloads": 1},
+    ]
+    # El filtro por día excluye lo anterior.
+    assert empty.top_downloaded_works(DAY, 5) != []
+
+
+def test_recorder_flushes_consultas() -> None:
+    store = MemoryStore()
+    recorder = AnalyticsRecorder(store, flush_interval=3600)
+    recorder.record_consult("work-z")
+    recorder.record_consult("work-z")
+    recorder.flush()
+    day = today()
+    assert store.top_works(day, 5) == [{"work_id": "work-z", "consults": 2}]
+
+
 def test_recorder_aggregates_and_flushes() -> None:
     store = MemoryStore()
     recorder = AnalyticsRecorder(store, flush_interval=3600)

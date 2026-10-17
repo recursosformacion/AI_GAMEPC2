@@ -40,6 +40,8 @@ class AnalyticsRecorder:
         self._downloads: dict[tuple[str, str, str, str, str], dict[str, int]] = {}
         # (day, provider) -> fallos
         self._failures: dict[tuple[str, str], int] = {}
+        # (day, work_id, provider, fmt) -> consultas
+        self._consults: dict[tuple[str, str, str, str], int] = {}
         self._count = 0
         self._thread: threading.Thread | None = None
         self._stop = threading.Event()
@@ -87,6 +89,19 @@ class AnalyticsRecorder:
             self._count += 1
         self._after_record()
 
+    def record_consult(
+        self, work_id: str, provider: str = "", fmt: str = "", day: str | None = None
+    ) -> None:
+        """Cuenta la consulta (vista) de una ficha de obra."""
+        if not work_id:
+            return
+        target = day or today()
+        key = (target, work_id, provider, fmt)
+        with self._lock:
+            self._consults[key] = self._consults.get(key, 0) + 1
+            self._count += 1
+        self._after_record()
+
     # --- flush ---------------------------------------------------------------
 
     def _after_record(self) -> None:
@@ -102,9 +117,11 @@ class AnalyticsRecorder:
             search = self._search
             downloads = self._downloads
             failures = self._failures
+            consults = self._consults
             self._search = {}
             self._downloads = {}
             self._failures = {}
+            self._consults = {}
             self._count = 0
         for day, row in search.items():
             self._safe(
@@ -127,6 +144,8 @@ class AnalyticsRecorder:
             )
         for (day, provider), _ in failures.items():
             self._safe(self._store.record_download_failure, day, provider)
+        for (day, work_id, provider, fmt), count in consults.items():
+            self._safe(self._store.record_consult, day, work_id, provider, fmt, count)
 
     @staticmethod
     def _safe(func: Callable[..., object], *args: object) -> None:

@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import json
 import logging
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from src.osap.api.platform.core import PlatformApiCore
+from src.osap.api.seo.slug import normalize_work_id, work_canonical_slug
 from src.osap.infrastructure.state.analytics.memory import today
 
 _LOGGER = logging.getLogger("osap.analytics")
@@ -51,6 +53,65 @@ class AnalyticsMixin(PlatformApiCore):
             self._analytics.record_download_failure(provider)
         except Exception:  # noqa: BLE001
             _LOGGER.warning("No se pudo registrar el fallo de descarga", exc_info=True)
+
+    def record_work_consult(self, *, work_id: str, provider: str = "", fmt: str = "") -> None:
+        """Cuenta una consulta de ficha de obra (nunca rompe la petición)."""
+        try:
+            self._analytics.record_consult(work_id, provider, fmt)
+        except Exception:  # noqa: BLE001
+            _LOGGER.warning("No se pudo registrar la consulta", exc_info=True)
+
+    def popular_works(self, limit: int, days: int = 30) -> dict[str, object]:
+        """Obras más consultadas en los últimos `days` días, con su ruta pública.
+
+        Mientras no haya consultas registradas, se completa con las **más descargadas**
+        (el cuadro de portada nunca queda vacío si hay algo de uso real).
+        """
+        try:
+            self._analytics.flush()
+        except Exception:  # noqa: BLE001 — leer no debe fallar por un flush
+            _LOGGER.warning("No se pudo volcar la analítica antes de leer", exc_info=True)
+        window = max(1, min(days, 365))
+        from_day = (datetime.now(UTC).date() - timedelta(days=window)).isoformat()
+        consulted = self._analytics_store.top_works(from_day, limit)
+        basis = "consults" if consulted else "downloads"
+        rows: list[dict[str, object]] = list(consulted)
+        if len(rows) < limit:
+            seen = {str(row.get("work_id")) for row in rows}
+            for row in self._analytics_store.top_downloaded_works(from_day, limit):
+                if len(rows) >= limit:
+                    break
+                work_id = str(row.get("work_id") or "")
+                if work_id and work_id not in seen:
+                    rows.append(row)
+                    seen.add(work_id)
+        items: list[dict[str, object]] = []
+        for row in rows:
+            raw_id = str(row.get("work_id") or "")
+            if not raw_id:
+                continue
+            # Solo obras con ficha pública: el id canónico es `index-<n>`; los contadores
+            # guardan a veces el numérico suelto, que el store de compositores sí resuelve.
+            canonical_id = normalize_work_id(raw_id)
+            if canonical_id is None:
+                continue
+            numeric_id = canonical_id[len("index-") :]
+            detail = self.composers().get_work(numeric_id) or self.composers().get_work(raw_id)
+            work = detail.get("work") if isinstance(detail, dict) else None
+            if not isinstance(work, dict):
+                continue
+            title = str(work.get("title") or "")
+            if not title:
+                continue
+            items.append(
+                {
+                    "work_id": canonical_id,
+                    "title": title,
+                    "composer": work.get("composer"),
+                    "path": f"/obra/{canonical_id}/{work_canonical_slug(title)}",
+                }
+            )
+        return {"basis": basis, "items": items}
 
     def analytics_overview(self, from_day: str, to_day: str) -> dict[str, int]:
         """Vuelca el buffer y devuelve los agregados del rango [from_day, to_day]."""

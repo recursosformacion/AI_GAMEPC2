@@ -67,6 +67,7 @@ import type {
   WorkAiProposalStatus,
   WorkAiReviewAction,
   RecentWorkList,
+  PopularWorkList,
 } from "./types";
 import { ApiError } from "./errors";
 
@@ -206,6 +207,11 @@ export class ApiClient {
   /** Obras incorporadas/actualizadas recientemente (alimenta la portada). */
   async getRecentWorks(limit = 8): Promise<RecentWorkList> {
     return this.get<RecentWorkList>(`/works/recent?limit=${limit}`);
+  }
+
+  /** Obras más consultadas de los últimos días (portada). */
+  async getPopularWorks(limit = 5, days = 30): Promise<PopularWorkList> {
+    return this.get<PopularWorkList>(`/works/popular?limit=${limit}&days=${days}`);
   }
 
   /** Colaboradores públicos de un proyecto (fachada osap-api → support + auth). */

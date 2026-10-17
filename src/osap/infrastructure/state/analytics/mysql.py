@@ -169,6 +169,44 @@ class _MysqlStore(_MemoryStore):
             (day, provider),
         )
 
+    def record_consult(
+        self, day: str, work_id: str, provider: str = "", fmt: str = "", quantity: int = 1
+    ) -> None:
+        if not work_id:
+            return
+        self._run(
+            """
+            INSERT INTO analytics_consults_daily (day, work_id, provider, format, consults)
+            VALUES (%s, %s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE consults = consults + VALUES(consults)
+            """,
+            (day, work_id, provider, fmt, max(1, quantity)),
+        )
+
+    def top_works(self, from_day: str, limit: int) -> list[dict[str, object]]:
+        rows = self._run(
+            "SELECT work_id, SUM(consults) AS consults FROM analytics_consults_daily "
+            "WHERE day >= %s AND work_id <> '' GROUP BY work_id "
+            "ORDER BY consults DESC LIMIT %s",
+            (from_day, limit),
+        )
+        return [
+            {"work_id": str(row["work_id"]), "consults": _as_int(row["consults"])}
+            for row in rows
+        ]
+
+    def top_downloaded_works(self, from_day: str, limit: int) -> list[dict[str, object]]:
+        rows = self._run(
+            "SELECT work_id, SUM(quantity) AS downloads FROM analytics_downloads "
+            "WHERE day >= %s AND work_id <> '' GROUP BY work_id "
+            "ORDER BY downloads DESC LIMIT %s",
+            (from_day, limit),
+        )
+        return [
+            {"work_id": str(row["work_id"]), "downloads": _as_int(row["downloads"])}
+            for row in rows
+        ]
+
     def usage_for_user(self, user_id: str, from_day: str, to_day: str) -> dict[str, object]:
         rows = self._run(
             "SELECT provider, SUM(quantity) AS quantity, SUM(bytes) AS bytes "
