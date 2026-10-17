@@ -22,6 +22,9 @@
 <div class="coral-actions">
   {% if view.download_url %}
   <a class="btn" href="{{ view.download_url }}" rel="nofollow">Descargar</a>
+  {% if view.format in ['MUSICXML', 'MXL', 'XML', 'MEI', 'MIDI'] %}
+  <a class="btn" href="/viewer?rep={{ view.id | urlencode }}{% if view.format == 'MIDI' %}&amp;format=midi{% endif %}">Abrir en el visor</a>
+  {% endif %}
   {% elif view.site %}
   <a class="btn" href="{{ view.site }}" rel="nofollow noopener" target="_blank" title="Abrir en {{ view.provider }}">Abrir en {{ view.provider }}</a>
   {% endif %}
