@@ -4,6 +4,7 @@ import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { useI18n } from "../i18n/I18n";
 import { searchAndGo } from "../state/navigation";
+import { loadRecentSearches, type RecentSearch } from "../state/recentSearches";
 import { useRecentWorks } from "../state/recentWorks";
 import { useSources } from "../state/repositorySources";
 
@@ -24,10 +25,12 @@ export function HomePage() {
   const [catalogue, setCatalogue] = useState("");
   const { list, loadList } = useSources();
   const { list: recent, load: loadRecent } = useRecentWorks();
+  const [recentSearches, setRecentSearches] = useState<RecentSearch[]>([]);
 
   useEffect(() => {
     void loadList();
     void loadRecent();
+    setRecentSearches(loadRecentSearches());
   }, [loadList, loadRecent]);
 
   const submit = (event: React.FormEvent) => {
@@ -158,7 +161,23 @@ export function HomePage() {
       {/* Explorar */}
       <div className="grid gap-4 sm:grid-cols-2">
         <Card title={t("home.recent")}>
-          <p className="text-sm text-osap-muted">{t("home.recentEmpty")}</p>
+          {recentSearches.length === 0 ? (
+            <p className="text-sm text-osap-muted">{t("home.recentEmpty")}</p>
+          ) : (
+            <ul className="space-y-1">
+              {recentSearches.map((row) => (
+                <li key={`${row.label}-${row.at}`}>
+                  <button
+                    type="button"
+                    onClick={() => void searchAndGo(navigate, row.request)}
+                    className="text-left text-sm text-osap-accent hover:underline"
+                  >
+                    {row.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </Card>
         <Card title={t("home.mostAccessed")}>
           <p className="text-sm text-osap-muted">{t("home.mostAccessedEmpty")}</p>

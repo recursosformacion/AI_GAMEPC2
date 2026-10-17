@@ -1,6 +1,7 @@
 import type { NavigateFunction } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { IntentResponse, SearchRequest } from "../api/types";
+import { pushRecentSearch } from "./recentSearches";
 import { useSearches } from "./searches";
 
 // Entity Resolution drives navigation: search → intent → the right entity page.
@@ -8,6 +9,8 @@ import { useSearches } from "./searches";
 // search twice, which made the results flash/reload and doubled the provider work).
 export async function searchAndGo(navigate: NavigateFunction, payload: SearchRequest): Promise<void> {
   const query = payload.composer || payload.catalogue || payload.query || "";
+  // Historial local para el cuadro «Búsquedas recientes» de la portada.
+  pushRecentSearch(payload);
   let intent: IntentResponse = { type: "work", label: query };
   try {
     intent = await apiClient.get<IntentResponse>(`/intent?query=${encodeURIComponent(query)}`);
