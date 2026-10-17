@@ -45,11 +45,20 @@ export function CandidatesPage() {
   if (loading) {
     return <Spinner label={t("states.loading")} />;
   }
-  if (error !== null || data === null) {
+  if (error !== null) {
     return (
       <div className="space-y-1 py-16 text-center">
         <p className="text-osap-ink">{t("empty.noWorksFound")}</p>
         <p className="text-sm text-osap-muted">{t("empty.tryAnother")}</p>
+      </div>
+    );
+  }
+  // Sin búsqueda en memoria (p. ej. tras recargar): no es «no hay obras», es que hay que buscar.
+  if (data === null) {
+    return (
+      <div className="space-y-1 py-16 text-center">
+        <p className="text-osap-ink">{t("candidates.noSearch")}</p>
+        <p className="text-sm text-osap-muted">{t("search.placeholder")}</p>
       </div>
     );
   }
