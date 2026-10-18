@@ -506,3 +506,8 @@ Crea una notificación en la campana de la app (tabla `notifications` de osap_ap
 personal. Lo usa el job semanal de reindexado (`osap-index-full.service`, `ExecStartPost`)
 para pedir el reenvío del sitemap.
 Uso: `python script/notify.py --kind sitemap_resubmit --title "..." --body "..." --link https://app.openmusicrepository.com/sitemap.xml --host 127.0.0.1 --db-user U --password P --database osap_api`
+
+### Sincronización del índice (providers)
+- `osap-index-sync.timer` (cada 30 min) → `omr,cpdl,mutopia` (incremental por `works.id > último`; CPDL usa `index.cpdl.last_work_id`).
+- `osap-index-imslp.timer` (diario 04:00) → `imslp` (pasada completa: la Worklist API no tiene feed de cambios).
+- `osap-index-full.timer` (domingo 03:30) → rebuild completo (propaga bajas) + aviso de sitemap.

@@ -6,7 +6,7 @@
 # ejecutar como root. El estado incremental vive en `sync_state` (osap-api).
 
 [Unit]
-Description=OSAP index incremental sync (IMSLP/OMR/Mutopia)
+Description=OSAP index incremental sync (OMR/CPDL/Mutopia)
 After=network.target mysql.service osap-storage.service osap-api.service
 Wants=osap-api.service osap-storage.service
 
@@ -17,7 +17,7 @@ Group=ocw
 WorkingDirectory=/home/ocw/openmusicrepository.com/osap-api
 Environment=PYTHONPATH=/home/ocw/openmusicrepository.com/osap-api
 EnvironmentFile=/etc/openmusicrepository/osap-weekly-novelties.env
-ExecStart=/home/ocw/openmusicrepository.com/osap-api/.venv/bin/python script/sync_index.py --providers imslp,omr,mutopia --db-host ${OSAP_INDEX_DB_HOST} --db-user ${OSAP_INDEX_DB_USER} --db-password ${OSAP_INDEX_DB_PASSWORD} --db-api ${OSAP_INDEX_DB_API} --db-omr ${OSAP_INDEX_DB_OMR} --omr-base-url https://storage.openmusicrepository.com
+ExecStart=/home/ocw/openmusicrepository.com/osap-api/.venv/bin/python script/sync_index.py --providers omr,cpdl,mutopia --db-host ${OSAP_INDEX_DB_HOST} --db-user ${OSAP_INDEX_DB_USER} --db-password ${OSAP_INDEX_DB_PASSWORD} --db-api ${OSAP_INDEX_DB_API} --db-omr ${OSAP_INDEX_DB_OMR} --omr-base-url https://storage.openmusicrepository.com
 Nice=10
 IOSchedulingClass=idle
 

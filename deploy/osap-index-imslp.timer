@@ -1,0 +1,13 @@
+# OSAP API — timer de la pasada completa de IMSLP (diaria, 04:00).
+# Instalar en /etc/systemd/system/osap-index-imslp.timer y:
+#   sudo systemctl daemon-reload && sudo systemctl enable --now osap-index-imslp.timer
+
+[Unit]
+Description=Run OSAP index IMSLP full pass daily
+
+[Timer]
+OnCalendar=*-*-* 04:00
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target

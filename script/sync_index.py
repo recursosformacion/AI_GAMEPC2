@@ -36,6 +36,7 @@ _KEYS = {
     "imslp": "index.imslp.start",
     "omr": "index.omr.last_work_id",
     "mutopia": "index.mutopia.start_at",
+    "cpdl": "index.cpdl.last_work_id",
 }
 
 
@@ -123,6 +124,22 @@ def main() -> int:
                 # estado: máximo work_id de osap-storage (nuevas obras en la siguiente pasada)
                 with conn.cursor(DictCursor) as cur:
                     cur.execute("SELECT MAX(id) AS mx FROM works")
+                    row = cur.fetchone()
+                if row and row["mx"] is not None:
+                    _set_state(conn, state_key, str(int(row["mx"])))
+            elif provider == "cpdl":
+                # CPDL: corpus en osap-storage (`works_origin='CPDL'`), incremental por id.
+                state_key = _KEYS["cpdl"]
+                from_id = int(_get_state(conn, state_key) or 0)
+                print(f"  reanudando desde work_id={from_id}", flush=True)
+                rc = _run_indexer(args, [
+                    "--providers", "cpdl", "--limit", "0", "--from-id", str(from_id),
+                ])
+                if rc != 0:
+                    print("  error indexando cpdl", flush=True)
+                    continue
+                with conn.cursor(DictCursor) as cur:
+                    cur.execute("SELECT MAX(id) AS mx FROM works WHERE works_origin='CPDL'")
                     row = cur.fetchone()
                 if row and row["mx"] is not None:
                     _set_state(conn, state_key, str(int(row["mx"])))

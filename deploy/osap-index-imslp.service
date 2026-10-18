@@ -1,0 +1,26 @@
+# OSAP API — pasada COMPLETA de IMSLP (diaria).
+# La Worklist API de IMSLP no expone "cambios recientes" de forma fiable: se recorre entera
+# (idempotente: el dedupe actualiza en vez de duplicar). Se separa del sync de 30 min
+# (OMR/CPDL/Mutopia) para no saturar la API ni el servidor.
+# Instalar en /etc/systemd/system/osap-index-imslp.service y habilitar su timer:
+#   sudo systemctl daemon-reload && sudo systemctl enable --now osap-index-imslp.timer
+
+[Unit]
+Description=OSAP index IMSLP full pass (daily)
+After=network.target mysql.service osap-storage.service osap-api.service
+Wants=osap-api.service osap-storage.service
+
+[Service]
+Type=oneshot
+User=ocw
+Group=ocw
+WorkingDirectory=/home/ocw/openmusicrepository.com/osap-api
+Environment=PYTHONPATH=/home/ocw/openmusicrepository.com/osap-api
+EnvironmentFile=/etc/openmusicrepository/osap-weekly-novelties.env
+ExecStart=/home/ocw/openmusicrepository.com/osap-api/.venv/bin/python script/sync_index.py --providers imslp --db-host ${OSAP_INDEX_DB_HOST} --db-user ${OSAP_INDEX_DB_USER} --db-password ${OSAP_INDEX_DB_PASSWORD} --db-api ${OSAP_INDEX_DB_API} --db-omr ${OSAP_INDEX_DB_OMR}
+Nice=15
+IOSchedulingClass=idle
+TimeoutStartSec=12h
+
+[Install]
+WantedBy=multi-user.target
