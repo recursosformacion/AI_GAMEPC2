@@ -1,0 +1,15 @@
+# OSAP API — timer de la sincronización incremental del índice (cada 30 min).
+# Instalar en /etc/systemd/system/osap-index-sync.timer y:
+#   sudo systemctl daemon-reload && sudo systemctl enable --now osap-index-sync.timer
+
+[Unit]
+Description=Run OSAP index incremental sync every 30 minutes
+
+[Timer]
+OnBootSec=10min
+OnUnitActiveSec=30min
+AccuracySec=1min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

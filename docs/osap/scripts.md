@@ -461,3 +461,41 @@ existe el par user+ecosystem+founder se omite, nunca duplica) y con `--dry-run` 
 validar sin escribir. `granted_at` = `MIN(started_at)` de las membresías founder del
 usuario. Requiere la migración `0002` de osap-support (tablas de reconocimientos).
 Uso: `python scripts/backfill_founder.py [--dry-run] [--criterion-id founder-2026]`
+
+---
+
+## Índice y limpieza de pseudo-compositores (2026-10-18)
+
+### script/sql/2026-10-18-works-year-range.sql
+Migración aditiva de `osap_storage.works`: añade `works_year_from` y `works_year_to`
+(rango de fechas por obra; `works_year` se mantiene como año puntual). Idempotente.
+La FK `fk_works_epoch` (`works_epoch_id → epochs.id`, `ON DELETE SET NULL`) ya existía.
+Uso: `sudo mysql osap_storage < script/sql/2026-10-18-works-year-range.sql`
+
+### script/sql/2026-10-18-cleanup-pseudo-dryrun.sql
+Solo lectura: cuenta personas placeholder (anónimo/tradicional/desconocido/varios/rangos de
+fechas y restos de `pseudo_persons_backup`) y las obras/vinculos afectados.
+
+### script/sql/2026-10-18-cleanup-pseudo-apply.sql
+Limpieza con backup: copia a `cleanup_20261018_persons|_wpr|_works`, marca
+`works_attr_type` (ANONIMA/TRADICIONAL/DESCONOCIDO/VARIOS, solo si está NULL), aplica la
+regla «sin compositor y rango > 100 años → ANONIMA», rellena `works_epoch_id` por año y
+**borra** las personas placeholder (cascada; no se desactivan).
+Uso: `sudo mysql osap_storage < script/sql/2026-10-18-cleanup-pseudo-apply.sql`
+
+### script/sql/2026-10-18-normalize-pseudo-index.sql
+Normaliza el índice **sin vaciarlo**: mapea `index_representations.resource_id →
+works_resources.id → works.id` para marcar las obras en storage y sustituye en
+`index_works` el nombre del pseudo-compositor por su etiqueta genérica
+(`Anónimo/Tradicional/Desconocido/Varios`), dejando `person_id = NULL`.
+Uso: `sudo mysql < script/sql/2026-10-18-normalize-pseudo-index.sql`
+
+### deploy/osap-index-sync.service + .timer
+Sincronización **incremental** del índice (`script/sync_index.py`, IMSLP/OMR/Mutopia), cada
+30 min, como `ocw`, leyendo credenciales de `/etc/openmusicrepository/osap-weekly-novelties.env`.
+Instalación: copiar a `/etc/systemd/system/` y `systemctl enable --now osap-index-sync.timer`.
+
+### deploy/osap-index-full.service + .timer
+Reconstrucción **completa** (`script/rebuild_index.py --full`, propaga bajas), domingos a
+las 03:30 (antes del job semanal de novedades). Timeout 6 h, prioridad baja.
+Instalación: copiar a `/etc/systemd/system/` y `systemctl enable --now osap-index-full.timer`.

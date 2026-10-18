@@ -380,6 +380,7 @@ _ATTR_LABELS = {
     "TRADICIONAL": "Tradicional",
     "POPULAR": "Popular",
     "DESCONOCIDO": "Desconocido",
+    "VARIOS": "Varios",
 }
 
 
