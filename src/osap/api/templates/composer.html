@@ -11,7 +11,7 @@
 
 <div class="entity-head">
   <h1>{{ view.name }}</h1>
-  <a class="btn" href="/composers/{{ view.person_id | urlencode }}" title="Ver {{ view.name }} en la aplicación">Ver en la app</a>
+  <a class="btn" href="/app/composers/{{ view.person_id | urlencode }}" title="Ver {{ view.name }} en la aplicación">Ver en la app</a>
 </div>
 <div class="badges">
   {% if view.years %}<span class="badge">{{ view.years }}</span>{% endif %}
@@ -50,5 +50,5 @@
 <p class="muted">Todavía no hay obras indexadas para este compositor.</p>
 {% endif %}
 
-<a class="cta" href="/composers/{{ view.person_id | urlencode }}">Abrir {{ view.name }} en la aplicación</a>
+<a class="cta" href="/app/composers/{{ view.person_id | urlencode }}">Abrir {{ view.name }} en la aplicación</a>
 {% endblock %}

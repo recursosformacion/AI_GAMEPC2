@@ -14,7 +14,7 @@
 
 <div class="entity-head">
   <h1>{{ view.title }}</h1>
-  <a class="btn" href="/obras/{{ view.work_id | replace('index-', '') }}" title="Ver esta obra en la aplicación">Ver en la app</a>
+  <a class="btn" href="/app/obras/{{ view.work_id | replace('index-', '') }}" title="Ver esta obra en la aplicación">Ver en la app</a>
 </div>
 <div class="badges">
   {% if view.composer %}

@@ -150,7 +150,7 @@ def test_pagina_de_obra_tiene_html_real_y_metadatos(client: TestClient) -> None:
     assert "Wolfgang Amadeus Mozart" in resp.text
     assert 'href="/composers/person-1/wolfgang-amadeus-mozart"' in resp.text
     # Acción visible junto al título para abrir la obra en la aplicación.
-    assert 'href="/obras/7"' in resp.text
+    assert 'href="/app/obras/7"' in resp.text
     assert "Ver en la app" in resp.text
     assert "KV 618" in resp.text
     # Recursos: el fichero servible se enlaza; el externo (IMSLP) lleva al sitio del
@@ -290,7 +290,7 @@ def test_pagina_de_compositor_lista_obras_y_json_ld(client: TestClient) -> None:
     assert 'href="/obras/index-8/requiem"' in resp.text
     assert f'<link rel="canonical" href="{_BASE}/composers/person-1/wolfgang-amadeus-mozart" />' in resp.text
     # Acción visible junto al nombre para abrir la ficha en la aplicación.
-    assert 'href="/composers/person-1"' in resp.text
+    assert 'href="/app/composers/person-1"' in resp.text
     assert "Ver en la app" in resp.text
     payload = _json_ld(resp.text)
     graph = payload["@graph"]

@@ -1,8 +1,16 @@
 import { lazy, Suspense } from "react";
-import { Navigate, Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import { Layout } from "../layouts/Layout";
 import { AdminLayout } from "../layouts/AdminLayout";
 import { HomePage } from "../pages/HomePage";
+
+// Alias explícito de la app (`/app/...`): las URLs públicas de entidad (`/obras/...`,
+// `/composers/...`) las sirve el SSR en carga directa; desde la ficha SSR, «Ver en la app»
+// entra por aquí y se navega en cliente a la ruta de la SPA (sin volver a pedir al servidor).
+function AppAlias({ base }: { base: "composers" | "obras" }) {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/${base}/${encodeURIComponent(id ?? "")}`} replace />;
+}
 
 // Las páginas se cargan por chunk (code-splitting): reduce el bundle inicial y mejora LCP/INP.
 // La portada (HomePage) y los layouts van eager (primer render).
@@ -111,6 +119,8 @@ export function AppRoutes() {
           <Route path="/collaborators" element={<CollaboratorsPage />} />
           <Route path="/candidates" element={<CandidatesPage />} />
           <Route path="/obras/:id/:slug?" element={<WorkPage />} />
+          <Route path="/app/obras/:id" element={<AppAlias base="obras" />} />
+          <Route path="/app/composers/:id" element={<AppAlias base="composers" />} />
           <Route path="/representacion/:id" element={<RepresentationPage />} />
           <Route path="/resolution" element={<WorkResolutionPage />} />
           <Route path="/knowledge" element={<Navigate to="/knowledge/observations" replace />} />
