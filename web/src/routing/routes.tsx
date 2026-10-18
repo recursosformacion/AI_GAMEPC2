@@ -101,7 +101,7 @@ export function AppRoutes() {
           <Route path="/instruments" element={<InstrumentsPage />} />
           <Route path="/ensembles" element={<EnsemblesPage />} />
           <Route path="/activity" element={<ActivityPage />} />
-          <Route path="/composers/:personId" element={<ComposerDetailPage />} />
+          <Route path="/composers/:personId/:slug?" element={<ComposerDetailPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/about/how-it-works" element={<HowItWorksPage />} />
           <Route path="/aviso-legal" element={<LegalNoticePage />} />
@@ -110,7 +110,7 @@ export function AppRoutes() {
           <Route path="/viewer" element={<ViewerPage />} />
           <Route path="/collaborators" element={<CollaboratorsPage />} />
           <Route path="/candidates" element={<CandidatesPage />} />
-          <Route path="/obras/:id" element={<WorkPage />} />
+          <Route path="/obras/:id/:slug?" element={<WorkPage />} />
           <Route path="/representacion/:id" element={<RepresentationPage />} />
           <Route path="/resolution" element={<WorkResolutionPage />} />
           <Route path="/knowledge" element={<Navigate to="/knowledge/observations" replace />} />

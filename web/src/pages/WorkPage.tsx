@@ -159,7 +159,7 @@ export function WorkPage() {
       )}
 
       <p className="text-xs text-osap-muted">
-        <a href={`/obra/${canonicalId}`} className="text-osap-accent hover:underline">
+        <a href={`/obras/${canonicalId}`} className="text-osap-accent hover:underline">
           {t("work.publicSheet")}
         </a>
       </p>

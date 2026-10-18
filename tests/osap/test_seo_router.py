@@ -127,28 +127,28 @@ def _json_ld(html: str) -> dict[str, object]:
 
 
 def test_obra_sin_slug_redirige_al_canonico(client: TestClient) -> None:
-    resp = client.get("/obra/index-7", follow_redirects=False)
+    resp = client.get("/obras/index-7", follow_redirects=False)
     assert resp.status_code == 301
-    assert resp.headers["location"] == "/obra/index-7/ave-verum-corpus"
+    assert resp.headers["location"] == "/obras/index-7/ave-verum-corpus"
 
 
 def test_obra_slug_incorrecto_redirige_al_canonico(client: TestClient) -> None:
-    resp = client.get("/obra/index-7/cualquier-cosa", follow_redirects=False)
+    resp = client.get("/obras/index-7/cualquier-cosa", follow_redirects=False)
     assert resp.status_code == 301
-    assert resp.headers["location"] == "/obra/index-7/ave-verum-corpus"
+    assert resp.headers["location"] == "/obras/index-7/ave-verum-corpus"
 
 
 def test_pagina_de_obra_tiene_html_real_y_metadatos(client: TestClient) -> None:
-    resp = client.get("/obra/index-7/ave-verum-corpus")
+    resp = client.get("/obras/index-7/ave-verum-corpus")
     assert resp.status_code == 200
     assert resp.headers["content-type"].startswith("text/html")
     assert "<h1>Ave verum corpus</h1>" in resp.text
     assert (
-        f'<link rel="canonical" href="{_BASE}/obra/index-7/ave-verum-corpus" />'
+        f'<link rel="canonical" href="{_BASE}/obras/index-7/ave-verum-corpus" />'
         in resp.text
     )
     assert "Wolfgang Amadeus Mozart" in resp.text
-    assert 'href="/compositor/person-1/wolfgang-amadeus-mozart"' in resp.text
+    assert 'href="/composers/person-1/wolfgang-amadeus-mozart"' in resp.text
     # Acción visible junto al título para abrir la obra en la aplicación.
     assert 'href="/obras/7"' in resp.text
     assert "Ver en la app" in resp.text
@@ -161,13 +161,23 @@ def test_pagina_de_obra_tiene_html_real_y_metadatos(client: TestClient) -> None:
     assert "Abrir en imslp" in resp.text
 
 
+def test_rutas_antiguas_redirigen_301(client: TestClient) -> None:
+    """Las URLs anteriores (/obra, /compositor) redirigen a las públicas de la app."""
+    work = client.get("/obra/index-7/ave-verum-corpus", follow_redirects=False)
+    assert work.status_code == 301
+    assert work.headers["location"] == "/obras/index-7/ave-verum-corpus"
+    person = client.get("/compositor/person-1/wolfgang-amadeus-mozart", follow_redirects=False)
+    assert person.status_code == 301
+    assert person.headers["location"] == "/composers/person-1/wolfgang-amadeus-mozart"
+
+
 def test_obra_sin_pagina_de_compositor_no_enlaza_404() -> None:
     """Compositores anónimos sin página SSR: se muestra el nombre, sin enlace que dé 404."""
     work = {**_WORK, "composer_id": "anonimo", "composer": "Anónimo"}
     client = _client(_FakeApi(work=work))
-    resp = client.get("/obra/index-7/ave-verum-corpus")
+    resp = client.get("/obras/index-7/ave-verum-corpus")
     assert resp.status_code == 200
-    assert "/compositor/anonimo/" not in resp.text
+    assert "/composers/anonimo/" not in resp.text
     assert "Anónimo" in resp.text
 
 
@@ -180,7 +190,7 @@ def test_representacion_descargable_tiene_canonical_y_descarga(client: TestClien
     )
     assert "https://storage.example/api/download/9" in resp.text
     assert "Descargar" in resp.text
-    assert '<a href="/obra/index-7/' in resp.text
+    assert '<a href="/obras/index-7/' in resp.text
 
 
 def test_representacion_externa_enlaza_al_sitio_del_proveedor(client: TestClient) -> None:
@@ -198,7 +208,7 @@ def test_representacion_inexistente_404(client: TestClient) -> None:
 
 def test_pagina_de_obra_json_ld_es_music_composition(client: TestClient) -> None:
     payload = _json_ld(
-        client.get("/obra/index-7/ave-verum-corpus").text
+        client.get("/obras/index-7/ave-verum-corpus").text
     )
     graph = payload["@graph"]
     assert isinstance(graph, list)
@@ -211,7 +221,7 @@ def test_pagina_de_obra_json_ld_es_music_composition(client: TestClient) -> None
 
 
 def test_obra_desconocida_404_html(client: TestClient) -> None:
-    resp = client.get("/obra/index-999/lo-que-sea")
+    resp = client.get("/obras/index-999/lo-que-sea")
     assert resp.status_code == 404
     assert resp.headers["content-type"].startswith("text/html")
     assert "No encontrado" in resp.text
@@ -225,7 +235,7 @@ def test_titulo_con_script_no_rompe_json_ld() -> None:
     malicious = dict(_WORK)
     malicious["title"] = "Ave </script><script>alert(1)</script>"
     client = _client(_FakeApi(work=malicious))
-    html = client.get("/obra/index-7", follow_redirects=True).text
+    html = client.get("/obras/index-7", follow_redirects=True).text
     assert "</script><script>alert(1)" not in html
     assert "\\u003c/script\\u003e" in html
     payload = _json_ld(html)
@@ -245,12 +255,12 @@ def test_obra_sin_compositor_ni_recursos_genera_html_valido() -> None:
         "representations": [],
     }
     client = _client(_FakeApi(work=lonely, works={"items": [], "total": 0}))
-    resp = client.get("/obra/index-9/anonimo")
+    resp = client.get("/obras/index-9/anonimo")
     assert resp.status_code == 200
     assert "<h1>Anónimo</h1>" in resp.text
     assert "compositor desconocido" in resp.text
     assert "Todavía no hay recursos" in resp.text
-    assert 'href="/compositor/' not in resp.text
+    assert 'href="/composers/' not in resp.text
 
 
 def test_titulos_unicode_y_acentos_no_rompen_el_html() -> None:
@@ -258,27 +268,27 @@ def test_titulos_unicode_y_acentos_no_rompen_el_html() -> None:
     unicode_work["title"] = "Cántico de la Résurrection — Œuvre"
     unicode_work["composer"] = "José Pérez"
     client = _client(_FakeApi(work=unicode_work))
-    resp = client.get("/obra/index-7", follow_redirects=False)
+    resp = client.get("/obras/index-7", follow_redirects=False)
     assert resp.status_code == 301
-    assert resp.headers["location"] == "/obra/index-7/cantico-de-la-resurrection-oeuvre"
+    assert resp.headers["location"] == "/obras/index-7/cantico-de-la-resurrection-oeuvre"
     page = client.get(resp.headers["location"]).text
     assert "Cántico de la Résurrection — Œuvre" in page
     assert "José Pérez" in page
 
 
 def test_compositor_sin_slug_redirige_al_canonico(client: TestClient) -> None:
-    resp = client.get("/compositor/person-1", follow_redirects=False)
+    resp = client.get("/composers/person-1", follow_redirects=False)
     assert resp.status_code == 301
-    assert resp.headers["location"] == "/compositor/person-1/wolfgang-amadeus-mozart"
+    assert resp.headers["location"] == "/composers/person-1/wolfgang-amadeus-mozart"
 
 
 def test_pagina_de_compositor_lista_obras_y_json_ld(client: TestClient) -> None:
-    resp = client.get("/compositor/person-1/wolfgang-amadeus-mozart")
+    resp = client.get("/composers/person-1/wolfgang-amadeus-mozart")
     assert resp.status_code == 200
     assert "<h1>Wolfgang Amadeus Mozart</h1>" in resp.text
-    assert 'href="/obra/index-7/ave-verum-corpus"' in resp.text
-    assert 'href="/obra/index-8/requiem"' in resp.text
-    assert f'<link rel="canonical" href="{_BASE}/compositor/person-1/wolfgang-amadeus-mozart" />' in resp.text
+    assert 'href="/obras/index-7/ave-verum-corpus"' in resp.text
+    assert 'href="/obras/index-8/requiem"' in resp.text
+    assert f'<link rel="canonical" href="{_BASE}/composers/person-1/wolfgang-amadeus-mozart" />' in resp.text
     # Acción visible junto al nombre para abrir la ficha en la aplicación.
     assert 'href="/composers/person-1"' in resp.text
     assert "Ver en la app" in resp.text
@@ -291,6 +301,6 @@ def test_pagina_de_compositor_lista_obras_y_json_ld(client: TestClient) -> None:
 
 
 def test_compositor_desconocido_404_html(client: TestClient) -> None:
-    resp = client.get("/compositor/nadie/quien-sea")
+    resp = client.get("/composers/nadie/quien-sea")
     assert resp.status_code == 404
     assert "No encontrado" in resp.text

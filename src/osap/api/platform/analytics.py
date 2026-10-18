@@ -119,7 +119,7 @@ class AnalyticsMixin(PlatformApiCore):
                     "work_id": canonical_id,
                     "title": title,
                     "composer": composer,
-                    "path": f"/obra/{canonical_id}/{work_canonical_slug(title)}",
+                    "path": f"/obras/{canonical_id}/{work_canonical_slug(title)}",
                 }
             )
         return {"basis": basis, "items": items}

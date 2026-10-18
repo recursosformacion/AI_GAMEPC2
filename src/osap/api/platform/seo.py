@@ -65,7 +65,7 @@ class SeoMixin(PlatformApiCore):
         """Obras incorporadas/actualizadas más recientemente, con su ruta pública.
 
         Lee el índice local (rápido, determinista) y devuelve la ruta canónica
-        `/obra/{work_id}/{slug}` para que la portada enlace sin recomputar el slug en el cliente.
+        `/obras/{work_id}/{slug}` para que la portada enlace sin recomputar el slug en el cliente.
         """
         provider = self._index_provider()
         if provider is None:
@@ -89,7 +89,7 @@ class SeoMixin(PlatformApiCore):
                     "work_id": work_id,
                     "title": title,
                     "composer": row.get("composer"),
-                    "path": f"/obra/{work_id}/{work_canonical_slug(title)}",
+                    "path": f"/obras/{work_id}/{work_canonical_slug(title)}",
                 }
             )
         return items

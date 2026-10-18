@@ -219,7 +219,7 @@ export function AdminWorkPersonAiPage() {
           </div>
 
           <div className="mt-2 flex flex-wrap items-center gap-3 text-sm">
-            <Link to={`/obra/${p.work_id}`} className="text-osap-accent hover:underline">
+            <Link to={`/obras/${p.work_id}`} className="text-osap-accent hover:underline">
               Obra #{p.work_id}
             </Link>
             {p.candidate_person_id ? (

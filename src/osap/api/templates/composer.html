@@ -38,7 +38,7 @@
 <ul class="works">
   {% for work in view.works %}
   <li>
-    <a href="/obra/{{ work.work_id }}/{{ work.slug }}">{{ work.title }}</a>
+    <a href="/obras/{{ work.work_id }}/{{ work.slug }}">{{ work.title }}</a>
     {% if work.catalogue %}<span class="cat">{{ work.catalogue }}</span>{% endif %}
   </li>
   {% endfor %}

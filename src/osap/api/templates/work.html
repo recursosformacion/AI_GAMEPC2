@@ -7,7 +7,7 @@
   <a href="/">Inicio</a> ›
   {% if view.composer and view.composer_id and view.composer_slug and view.composer_page %}
   <a href="/composers">Compositores</a> ›
-  <a href="/compositor/{{ view.composer_id }}/{{ view.composer_slug }}">{{ view.composer }}</a> ›
+  <a href="/composers/{{ view.composer_id }}/{{ view.composer_slug }}">{{ view.composer }}</a> ›
   {% endif %}
   <span>{{ view.title }}</span>
 </nav>
@@ -19,7 +19,7 @@
 <div class="badges">
   {% if view.composer %}
     {% if view.composer_id and view.composer_slug and view.composer_page %}
-    <a class="badge" href="/compositor/{{ view.composer_id }}/{{ view.composer_slug }}">{{ view.composer }}</a>
+    <a class="badge" href="/composers/{{ view.composer_id }}/{{ view.composer_slug }}">{{ view.composer }}</a>
     {% else %}
     <span class="badge">{{ view.composer }}</span>
     {% endif %}
@@ -55,7 +55,7 @@
 <ul class="works">
   {% for work in view.related %}
   <li>
-    <a href="/obra/{{ work.work_id }}/{{ work.slug }}">{{ work.title }}</a>
+    <a href="/obras/{{ work.work_id }}/{{ work.slug }}">{{ work.title }}</a>
     {% if work.catalogue %}<span class="cat">{{ work.catalogue }}</span>{% endif %}
   </li>
   {% endfor %}

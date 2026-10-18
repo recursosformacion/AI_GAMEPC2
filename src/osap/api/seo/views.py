@@ -119,11 +119,11 @@ class PersonView:
 
 
 def canonical_work_url(work_id: str, slug: str) -> str:
-    return f"{public_base_url()}/obra/{work_id}/{slug}"
+    return f"{public_base_url()}/obras/{work_id}/{slug}"
 
 
 def canonical_person_url(person_id: str, slug: str) -> str:
-    return f"{public_base_url()}/compositor/{person_id}/{slug}"
+    return f"{public_base_url()}/composers/{person_id}/{slug}"
 
 
 def _breadcrumb_json_ld(items: list[tuple[str, str | None]]) -> dict[str, object]:
@@ -310,7 +310,7 @@ def build_representation_payload(
         "composer": composer,
         "catalogue": catalogue,
         "work_id": work_id,
-        "work_path": f"/obra/{work_id}/{work_slug}",
+        "work_path": f"/obras/{work_id}/{work_slug}",
         "download_url": download_url,
         "site": site,
         "canonical_url": canonical,

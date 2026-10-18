@@ -14,9 +14,9 @@ _ITEMS = [
         "work_id": "index-9",
         "title": "Ave verum corpus",
         "composer": "Wolfgang Amadeus Mozart",
-        "path": "/obra/index-9/ave-verum-corpus",
+        "path": "/obras/index-9/ave-verum-corpus",
     },
-    {"work_id": "index-8", "title": "Réquiem", "composer": None, "path": "/obra/index-8/requiem"},
+    {"work_id": "index-8", "title": "Réquiem", "composer": None, "path": "/obras/index-8/requiem"},
 ]
 
 
@@ -46,11 +46,11 @@ def test_recent_works_devuelve_items_con_path(client: TestClient) -> None:
     assert resp.status_code == 200
     items = resp.json()["data"]["items"]
     assert [i["work_id"] for i in items] == ["index-9", "index-8"]
-    assert items[0]["path"] == "/obra/index-9/ave-verum-corpus"
+    assert items[0]["path"] == "/obras/index-9/ave-verum-corpus"
 
 
 def test_recent_works_acota_el_limite_a_24() -> None:
-    many = [{"work_id": f"index-{n}", "title": "Obra", "path": f"/obra/index-{n}/obra"} for n in range(30)]
+    many = [{"work_id": f"index-{n}", "title": "Obra", "path": f"/obras/index-{n}/obra"} for n in range(30)]
     resp = _client(many).get("/api/v1/works/recent", params={"limit": 100})
     assert resp.status_code == 200
     assert len(resp.json()["data"]["items"]) == 24

@@ -53,16 +53,16 @@ def _html(body: str, status_code: int = 200) -> HTMLResponse:
 def build_seo_router(ctx: HttpContext) -> APIRouter:
     router: APIRouter = APIRouter()
 
-    @router.get("/obra/{work_id}", include_in_schema=False)
+    @router.get("/obras/{work_id}", include_in_schema=False)
     def work_canonical(work_id: str) -> Response:
         canonical = normalize_work_id(work_id)
         data = ctx.api.seo_work(canonical) if canonical is not None else None
         if data is None:
             return _html(render_not_found(), status_code=404)
         slug = work_canonical_slug(str(data.get("title") or ""))
-        return RedirectResponse(url=f"/obra/{canonical}/{slug}", status_code=301)
+        return RedirectResponse(url=f"/obras/{canonical}/{slug}", status_code=301)
 
-    @router.get("/obra/{work_id}/{slug}", include_in_schema=False)
+    @router.get("/obras/{work_id}/{slug}", include_in_schema=False)
     def work_page(work_id: str, slug: str, request: Request) -> Response:
         canonical = normalize_work_id(work_id)
         data = ctx.api.seo_work(canonical) if canonical is not None else None
@@ -70,7 +70,7 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
             return _html(render_not_found(), status_code=404)
         expected = work_canonical_slug(str(data.get("title") or ""))
         if slug != expected:
-            return RedirectResponse(url=f"/obra/{canonical}/{expected}", status_code=301)
+            return RedirectResponse(url=f"/obras/{canonical}/{expected}", status_code=301)
         related: list[dict[str, object]] = []
         composer_id = data.get("composer_id")
         composer_page = False
@@ -95,24 +95,41 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
             return _html(render_not_found(), status_code=404)
         return _html(render_representation(payload))
 
-    @router.get("/compositor/{person_id}", include_in_schema=False)
+    @router.get("/composers/{person_id}", include_in_schema=False)
     def person_canonical(person_id: str) -> Response:
         detail = ctx.api.seo_person(person_id)
         if detail is None:
             return _html(render_not_found(), status_code=404)
         slug = person_slug(str(detail.get("name") or ""))
-        return RedirectResponse(url=f"/compositor/{person_id}/{slug}", status_code=301)
+        return RedirectResponse(url=f"/composers/{person_id}/{slug}", status_code=301)
 
-    @router.get("/compositor/{person_id}/{slug}", include_in_schema=False)
+    @router.get("/composers/{person_id}/{slug}", include_in_schema=False)
     def person_page(person_id: str, slug: str) -> Response:
         detail = ctx.api.seo_person(person_id)
         if detail is None:
             return _html(render_not_found(), status_code=404)
         expected = person_slug(str(detail.get("name") or ""))
         if slug != expected:
-            return RedirectResponse(url=f"/compositor/{person_id}/{expected}", status_code=301)
+            return RedirectResponse(url=f"/composers/{person_id}/{expected}", status_code=301)
         works = ctx.api.seo_person_works(person_id, 300, 0)
         return _html(render_person(build_person_view(detail, works)))
+
+    # Rutas antiguas (anteriores a la unificación con la app): 301 a las nuevas con slug.
+    @router.get("/obra/{work_id}", include_in_schema=False)
+    def work_legacy_root(work_id: str) -> Response:
+        return RedirectResponse(url=f"/obras/{work_id}", status_code=301)
+
+    @router.get("/obra/{work_id}/{slug}", include_in_schema=False)
+    def work_legacy_page(work_id: str, slug: str) -> Response:
+        return RedirectResponse(url=f"/obras/{work_id}/{slug}", status_code=301)
+
+    @router.get("/compositor/{person_id}", include_in_schema=False)
+    def person_legacy_root(person_id: str) -> Response:
+        return RedirectResponse(url=f"/composers/{person_id}", status_code=301)
+
+    @router.get("/compositor/{person_id}/{slug}", include_in_schema=False)
+    def person_legacy_page(person_id: str, slug: str) -> Response:
+        return RedirectResponse(url=f"/composers/{person_id}/{slug}", status_code=301)
 
     # --- «Los amigos» (grupo y artículo) -------------------------------------
 
