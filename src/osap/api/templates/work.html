@@ -12,7 +12,10 @@
   <span>{{ view.title }}</span>
 </nav>
 
-<h1>{{ view.title }}</h1>
+<div class="entity-head">
+  <h1>{{ view.title }}</h1>
+  <a class="btn" href="/obras/{{ view.work_id | replace('index-', '') }}" title="Ver esta obra en la aplicación">Ver en la app</a>
+</div>
 <div class="badges">
   {% if view.composer %}
     {% if view.composer_id and view.composer_slug and view.composer_page %}
