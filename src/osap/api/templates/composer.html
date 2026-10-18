@@ -9,7 +9,10 @@
   <span>{{ view.name }}</span>
 </nav>
 
-<h1>{{ view.name }}</h1>
+<div class="entity-head">
+  <h1>{{ view.name }}</h1>
+  <a class="btn" href="/composers/{{ view.person_id | urlencode }}" title="Ver {{ view.name }} en la aplicación">Ver en la app</a>
+</div>
 <div class="badges">
   {% if view.years %}<span class="badge">{{ view.years }}</span>{% endif %}
   {% if view.era %}<span class="badge">{{ view.era }}</span>{% endif %}
