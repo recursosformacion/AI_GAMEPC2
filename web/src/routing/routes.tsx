@@ -16,6 +16,7 @@ function AppAlias({ base }: { base: "composers" | "obras" }) {
 // La portada (HomePage) y los layouts van eager (primer render).
 const AboutPage = lazy(() => import("../pages/AboutPage").then((m) => ({ default: m.AboutPage })));
 const ActivityPage = lazy(() => import("../pages/ActivityPage").then((m) => ({ default: m.ActivityPage })));
+const NotificationsPage = lazy(() => import("../pages/NotificationsPage").then((m) => ({ default: m.NotificationsPage })));
 const AdminAmigosGroupsPage = lazy(() => import("../pages/AdminAmigosGroupsPage").then((m) => ({ default: m.AdminAmigosGroupsPage })));
 const AdminAmigosGroupNewPage = lazy(() => import("../pages/AdminAmigosGroupNewPage").then((m) => ({ default: m.AdminAmigosGroupNewPage })));
 const AdminAmigosGroupPage = lazy(() => import("../pages/AdminAmigosGroupPage").then((m) => ({ default: m.AdminAmigosGroupPage })));
@@ -109,6 +110,7 @@ export function AppRoutes() {
           <Route path="/instruments" element={<InstrumentsPage />} />
           <Route path="/ensembles" element={<EnsemblesPage />} />
           <Route path="/activity" element={<ActivityPage />} />
+          <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/composers/:personId/:slug?" element={<ComposerDetailPage />} />
           <Route path="/about" element={<AboutPage />} />
           <Route path="/about/how-it-works" element={<HowItWorksPage />} />

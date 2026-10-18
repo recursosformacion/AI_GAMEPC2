@@ -75,6 +75,21 @@ class _MysqlStore(_MemoryStore):
         )
         self._run(
             """
+            CREATE TABLE IF NOT EXISTS notifications (
+                id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+                user_id CHAR(36) NULL,
+                kind VARCHAR(32) NOT NULL,
+                title VARCHAR(200) NOT NULL,
+                body TEXT NOT NULL,
+                link VARCHAR(500) NULL,
+                created_at VARCHAR(64) NOT NULL,
+                read_at VARCHAR(64) NULL,
+                INDEX idx_notifications_user (user_id, read_at)
+            )
+            """
+        )
+        self._run(
+            """
             CREATE TABLE IF NOT EXISTS providers (
                 provider_id VARCHAR(128) PRIMARY KEY,
                 name VARCHAR(255) NOT NULL,
@@ -1158,6 +1173,62 @@ class _MysqlStore(_MemoryStore):
             "ON DUPLICATE KEY UPDATE value = VALUES(value), updated_at = VALUES(updated_at)",
             (key, value, _now()),
         )
+
+    # --- Notificaciones (campana de la app) ----------------------------------
+
+    def add_notification(
+        self, *, user_id: str | None, kind: str, title: str, body: str, link: str | None = None
+    ) -> dict[str, object]:
+        now = _now()
+        self._run(
+            "INSERT INTO notifications (user_id, kind, title, body, link, created_at) "
+            "VALUES (%s, %s, %s, %s, %s, %s)",
+            (user_id, kind, title, body, link, now),
+        )
+        return {
+            "user_id": user_id,
+            "kind": kind,
+            "title": title,
+            "body": body,
+            "link": link,
+            "created_at": now,
+            "read_at": None,
+        }
+
+    def list_notifications(
+        self, *, user_id: str, include_global: bool, limit: int = 50
+    ) -> list[dict[str, object]]:
+        condition = "(user_id = %s OR user_id IS NULL)" if include_global else "user_id = %s"
+        rows = self._run(
+            "SELECT id, user_id, kind, title, body, link, created_at, read_at "
+            f"FROM notifications WHERE {condition} ORDER BY created_at DESC, id DESC LIMIT %s",
+            (user_id, limit),
+        )
+        return [dict(row) for row in rows]
+
+    def count_unread_notifications(self, *, user_id: str, include_global: bool) -> int:
+        condition = "(user_id = %s OR user_id IS NULL)" if include_global else "user_id = %s"
+        rows = self._run(
+            f"SELECT COUNT(*) AS c FROM notifications WHERE {condition} AND read_at IS NULL",
+            (user_id,),
+        )
+        return int(str(rows[0]["c"])) if rows else 0
+
+    def mark_notification_read(self, *, notification_id: int, user_id: str) -> bool:
+        self._run(
+            "UPDATE notifications SET read_at = %s "
+            "WHERE id = %s AND read_at IS NULL AND (user_id = %s OR user_id IS NULL)",
+            (_now(), notification_id, user_id),
+        )
+        return True
+
+    def mark_all_notifications_read(self, *, user_id: str, include_global: bool) -> bool:
+        condition = "(user_id = %s OR user_id IS NULL)" if include_global else "user_id = %s"
+        self._run(
+            f"UPDATE notifications SET read_at = %s WHERE {condition} AND read_at IS NULL",
+            (_now(), user_id),
+        )
+        return True
 
     # --- «Los amigos»: grupos (MySQL) ----------------------------------------
 

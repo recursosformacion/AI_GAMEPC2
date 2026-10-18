@@ -499,3 +499,10 @@ Instalación: copiar a `/etc/systemd/system/` y `systemctl enable --now osap-ind
 Reconstrucción **completa** (`script/rebuild_index.py --full`, propaga bajas), domingos a
 las 03:30 (antes del job semanal de novedades). Timeout 6 h, prioridad baja.
 Instalación: copiar a `/etc/systemd/system/` y `systemctl enable --now osap-index-full.timer`.
+
+### notify.py
+Crea una notificación en la campana de la app (tabla `notifications` de osap_api). Sin
+`--user` es un **aviso global** que solo ven los administradores; con `--user <uuid>` es
+personal. Lo usa el job semanal de reindexado (`osap-index-full.service`, `ExecStartPost`)
+para pedir el reenvío del sitemap.
+Uso: `python script/notify.py --kind sitemap_resubmit --title "..." --body "..." --link https://app.openmusicrepository.com/sitemap.xml --host 127.0.0.1 --db-user U --password P --database osap_api`

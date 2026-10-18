@@ -30,6 +30,9 @@ class MemoryStore:
         self._contribution_artifacts: list[dict[str, object]] = []
         self._contrib_seq = 0
         self._contrib_rel_seq = 0
+        # Notificaciones (campana de la app).
+        self._notifications: list[dict[str, object]] = []
+        self._notif_seq = 0
         self._contrib_evt_seq = 0
         self._contrib_art_seq = 0
         # «Los amigos»: grupos, membresías, artículos, recursos y auditoría.
@@ -242,6 +245,62 @@ class MemoryStore:
 
     def set_config(self, key: str, value: str) -> None:
         self._config[key] = value
+
+    # --- Notificaciones (campana de la app) ----------------------------------
+
+    def add_notification(
+        self, *, user_id: str | None, kind: str, title: str, body: str, link: str | None = None
+    ) -> dict[str, object]:
+        self._notif_seq += 1
+        row: dict[str, object] = {
+            "id": self._notif_seq,
+            "user_id": user_id,
+            "kind": kind,
+            "title": title,
+            "body": body,
+            "link": link,
+            "created_at": now(),
+            "read_at": None,
+        }
+        self._notifications.append(row)
+        return row
+
+    def _notifications_for(self, user_id: str, include_global: bool) -> list[dict[str, object]]:
+        return [
+            row
+            for row in self._notifications
+            if row["user_id"] == user_id or (include_global and row["user_id"] is None)
+        ]
+
+    def list_notifications(
+        self, *, user_id: str, include_global: bool, limit: int = 50
+    ) -> list[dict[str, object]]:
+        rows = self._notifications_for(user_id, include_global)
+        rows.sort(key=lambda row: str(row["created_at"]), reverse=True)
+        return [dict(row) for row in rows[:limit]]
+
+    def count_unread_notifications(self, *, user_id: str, include_global: bool) -> int:
+        return sum(
+            1 for row in self._notifications_for(user_id, include_global) if row["read_at"] is None
+        )
+
+    def mark_notification_read(self, *, notification_id: int, user_id: str) -> bool:
+        for row in self._notifications:
+            if (
+                int(str(row["id"])) == notification_id
+                and row["read_at"] is None
+                and (row["user_id"] == user_id or row["user_id"] is None)
+            ):
+                row["read_at"] = now()
+                return True
+        return False
+
+    def mark_all_notifications_read(self, *, user_id: str, include_global: bool) -> bool:
+        stamp = now()
+        for row in self._notifications_for(user_id, include_global):
+            if row["read_at"] is None:
+                row["read_at"] = stamp
+        return True
 
     def get_work_selection(self, work_id: str) -> dict[str, object] | None:
         return self._work_selections.get(work_id)

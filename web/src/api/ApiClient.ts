@@ -71,6 +71,7 @@ import type {
   PublicWork,
   RepresentationSheet,
   RepresentationProbe,
+  NotificationList,
 } from "./types";
 import { ApiError } from "./errors";
 
@@ -220,6 +221,19 @@ export class ApiClient {
   /** Ficha pública del índice (obras que no están en el store de compositores). */
   async getPublicWork(workId: string): Promise<PublicWork> {
     return this.get<PublicWork>(`/works/public/${encodeURIComponent(workId)}`);
+  }
+
+  /** Campana: mis notificaciones (y globales si soy admin). */
+  async getNotifications(): Promise<NotificationList> {
+    return this.get<NotificationList>("/notifications");
+  }
+
+  async markNotificationRead(id: number): Promise<{ ok: boolean }> {
+    return this.post<{ ok: boolean }>(`/notifications/${id}/read`, {});
+  }
+
+  async markAllNotificationsRead(): Promise<{ ok: boolean }> {
+    return this.post<{ ok: boolean }>("/notifications/read-all", {});
   }
 
   /** Ficha de una representación (obra, proveedor, formato y acciones). */

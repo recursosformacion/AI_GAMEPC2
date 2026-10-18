@@ -19,6 +19,7 @@ from src.osap.api.platform.corrections import CorrectionsMixin
 from src.osap.api.platform.funnel import FunnelMixin
 from src.osap.api.platform.jobs import JobsMixin
 from src.osap.api.platform.knowledge import KnowledgeMixin
+from src.osap.api.platform.notifications import NotificationsMixin
 from src.osap.api.platform.providers import ProvidersMixin
 from src.osap.api.platform.quota import QuotaMixin
 from src.osap.api.platform.resolution import ResolutionMixin
@@ -71,6 +72,7 @@ class PlatformApi(
     ContributionsMixin,
     AmigosMixin,
     KnowledgeMixin,
+    NotificationsMixin,
     SystemMixin,
     JobsMixin,
     PlatformApiCore,

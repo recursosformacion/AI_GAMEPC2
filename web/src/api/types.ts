@@ -1125,3 +1125,20 @@ export interface AmigosMyPermissions {
 }
 
 
+
+export interface AppNotification {
+  id: number;
+  user_id?: string | null;
+  kind: string;
+  title: string;
+  body: string;
+  link?: string | null;
+  created_at: string;
+  read_at?: string | null;
+}
+
+export interface NotificationList {
+  items: AppNotification[];
+  unread: number;
+}
+
