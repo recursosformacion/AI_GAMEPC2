@@ -116,6 +116,18 @@ class PersonView:
     canonical_url: str = ""
     description: str = ""
     json_ld: str = ""
+    # Campos del formulario de persona (vista de solo lectura en la ficha pública).
+    givenname: str | None = None
+    familyname: str | None = None
+    sortname: str | None = None
+    display_nationality: str | None = None
+    biography_nationality: str | None = None
+    birth_year: str | None = None
+    death_year: str | None = None
+    image_url: str | None = None
+    biography_key_fact: str | None = None
+    biography_references: str | None = None
+    visible: bool = False
 
 
 def canonical_work_url(work_id: str, slug: str) -> str:
@@ -407,4 +419,15 @@ def build_person_view(detail: dict[str, object], works: dict[str, object]) -> Pe
         canonical_url=canonical,
         description=description,
         json_ld=json_ld,
+        givenname=_str_or_none(detail.get("givenname")),
+        familyname=_str_or_none(detail.get("familyname")),
+        sortname=_str_or_none(detail.get("sortname")),
+        display_nationality=_str_or_none(detail.get("nationality")),
+        biography_nationality=nationality,
+        birth_year=_str_or_none(detail.get("birth_year")),
+        death_year=_str_or_none(detail.get("death_year")),
+        image_url=_str_or_none(detail.get("image_url")),
+        biography_key_fact=_str_or_none(detail.get("biography_key_fact")),
+        biography_references=_str_or_none(detail.get("biography_references")),
+        visible=bool(detail.get("visible", True)),
     )

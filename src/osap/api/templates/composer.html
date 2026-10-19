@@ -16,22 +16,53 @@
 <div class="badges">
   {% if view.years %}<span class="badge">{{ view.years }}</span>{% endif %}
   {% if view.era %}<span class="badge">{{ view.era }}</span>{% endif %}
-  {% if view.nationality %}<span class="badge">{{ view.nationality }}</span>{% endif %}
+  {% if view.display_nationality %}<span class="badge">{{ view.display_nationality }}</span>{% endif %}
   <span class="badge">{{ view.works_total }} obras</span>
 </div>
 
-{% if view.summary %}
-<div class="card">
-  <p>{{ view.summary }}</p>
-</div>
+{% if view.image_url %}
+<p><img src="{{ view.image_url }}" alt="{{ view.name }}" style="max-width:180px;height:auto;border-radius:0.5rem" loading="lazy"></p>
 {% endif %}
 
-{% if view.key_works %}
-<h2>Obras clave</h2>
-<div class="badges">
-  {% for key_work in view.key_works %}<span class="badge">{{ key_work }}</span>{% endfor %}
-</div>
-{% endif %}
+<section class="person-view" aria-label="Ficha de la persona">
+  <fieldset>
+    <legend>Identidad y nombre</legend>
+    <dl class="fields">
+      <div><dt>Identificador</dt><dd>{{ view.person_id }}</dd></div>
+      <div><dt>Nombre completo</dt><dd>{{ view.name }}</dd></div>
+      <div><dt>Nombre de pila</dt><dd>{{ view.givenname or '—' }}</dd></div>
+      <div><dt>Apellidos</dt><dd>{{ view.familyname or '—' }}</dd></div>
+      <div><dt>Nombre para ordenar</dt><dd>{{ view.sortname or '—' }}</dd></div>
+      <div><dt>Nacionalidad</dt><dd>{{ view.display_nationality or '—' }}</dd></div>
+    </dl>
+  </fieldset>
+
+  <fieldset>
+    <legend>Años</legend>
+    <dl class="fields">
+      <div><dt>Año de nacimiento</dt><dd>{{ view.birth_year or '—' }}</dd></div>
+      <div><dt>Año de fallecimiento</dt><dd>{{ view.death_year or '—' }}</dd></div>
+    </dl>
+  </fieldset>
+
+  <fieldset>
+    <legend>Biografía</legend>
+    <dl class="fields">
+      <div><dt>Resumen</dt><dd class="multiline">{{ view.summary or '—' }}</dd></div>
+      <div><dt>Época</dt><dd>{{ view.era or '—' }}</dd></div>
+      <div><dt>Nacionalidad (código)</dt><dd>{{ view.biography_nationality or '—' }}</dd></div>
+      <div><dt>Dato clave</dt><dd>{{ view.biography_key_fact or '—' }}</dd></div>
+      <div><dt>Referencias</dt><dd class="multiline">{{ view.biography_references or '—' }}</dd></div>
+    </dl>
+  </fieldset>
+
+  <fieldset>
+    <legend>Publicación</legend>
+    <dl class="fields">
+      <div><dt>Visible públicamente</dt><dd>{{ 'Sí' if view.visible else 'No' }}</dd></div>
+    </dl>
+  </fieldset>
+</section>
 
 <h2>Obras disponibles</h2>
 {% if view.works %}
