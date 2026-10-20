@@ -153,6 +153,7 @@ _TAGS = [
     {"name": "Jobs", "description": "Orchestrate long-running tasks."},
     {"name": "Providers", "description": "Provider state and capabilities."},
     {"name": "Knowledge", "description": "Learned knowledge (read-only)."},
+    {"name": "Notifications", "description": "Bandeja de avisos de la app (campana)."},
     {"name": "Votes", "description": "Votación de obras y estadísticas agregadas."},
     {"name": "System", "description": "Health, version and statistics."},
     {"name": "Composers", "description": "Consulta pública de compositores y catálogos."},
