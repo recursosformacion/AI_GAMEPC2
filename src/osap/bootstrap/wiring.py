@@ -209,14 +209,12 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     config = configuration or load_configuration()
     routes, storage_read_only = _routes(config.deployment, config.dev_mode, config)
     storage_base = routes["storage"]
-    # `dev_auth_bypass` es el conmutador de modo dev: activo → storage local y escritura;
-    # desactivado → el storage configurado (`storage_web_base`, p. ej. producción) y el
-    # `read_only` que dicte el deployment.
+    # `dev_auth_bypass` es exclusivo de dev (nunca se configura en producción): activo →
+    # storage local y escritura. Desactivado → se usan las rutas normales del deployment
+    # (en producción, exactamente igual que antes).
     if config.dev_auth_bypass:
         storage_base = "http://osap-storage"
         storage_read_only = False
-    elif config.storage_web_base:
-        storage_base = config.storage_web_base
     auth_token_url = routes["auth_token"]
     auth_base = routes["auth_base"]
     def _db_value(field: str, fallback: str) -> str:
