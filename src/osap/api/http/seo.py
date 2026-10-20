@@ -126,7 +126,7 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
                         "works_count": counts.get(wid, item.get("works_count", 0)),
                     }
                 )
-        total = int(data.get("total") or 0) if isinstance(data, dict) else 0
+        total = int(str(data.get("total") or 0)) if isinstance(data, dict) else 0
         pages = max(1, (total + per_page - 1) // per_page)
         canonical = f"{public_base_url()}/composers" + (f"?page={current}" if current > 1 else "")
         return _html(render_composers(rows, current, pages, total, canonical))
