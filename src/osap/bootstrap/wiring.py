@@ -209,6 +209,14 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     config = configuration or load_configuration()
     routes, storage_read_only = _routes(config.deployment, config.dev_mode, config)
     storage_base = routes["storage"]
+    # `dev_auth_bypass` es el conmutador de modo dev: activo → storage local y escritura;
+    # desactivado → el storage configurado (`storage_web_base`, p. ej. producción) y el
+    # `read_only` que dicte el deployment.
+    if config.dev_auth_bypass:
+        storage_base = "http://osap-storage"
+        storage_read_only = False
+    elif config.storage_web_base:
+        storage_base = config.storage_web_base
     auth_token_url = routes["auth_token"]
     auth_base = routes["auth_base"]
     def _db_value(field: str, fallback: str) -> str:
@@ -441,7 +449,7 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     )
     container.set_storage_info(target, storage_read_only)
     container.set_dev_auth_bypass(config.dev_auth_bypass)
-    container.set_storage_web_base(config.storage_web_base)
+    container.set_storage_web_base("http://osap-storage" if config.dev_auth_bypass else config.storage_web_base)
     container.set_support_web_base(config.support_web_base)
     composer_client = StorageComposerClient(
         base_url=storage_base,
