@@ -17,6 +17,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from src.osap.api.seo.render import (
     render_amigos_article,
     render_amigos_group,
+    render_composers,
     render_not_found,
     render_person,
     render_representation,
@@ -27,6 +28,7 @@ from src.osap.api.seo.views import (
     build_person_view,
     build_representation_payload,
     build_work_view,
+    public_base_url,
 )
 from src.osap.api.seo.views_amigos import build_article_view, build_group_view
 
@@ -94,6 +96,40 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
         if payload is None:
             return _html(render_not_found(), status_code=404)
         return _html(render_representation(payload))
+
+    @router.get("/composers", include_in_schema=False)
+    def composers_list(page: int = 1) -> Response:
+        per_page = 50
+        current = max(1, page)
+        data = ctx.api.list_composers(None, per_page, (current - 1) * per_page, None, public=True)
+        items = data.get("items") if isinstance(data, dict) else None
+        rows: list[dict[str, object]] = []
+        if isinstance(items, list):
+            ids = [str(i.get("id")) for i in items if isinstance(i, dict) and i.get("id")]
+            counts = ctx.api.index_works_counts(ids)
+            for item in items:
+                if not isinstance(item, dict):
+                    continue
+                name = str(item.get("name") or "").strip()
+                if not name:
+                    continue
+                birth = str(item.get("birth_year") or "").strip()
+                death = str(item.get("death_year") or "").strip()
+                years = f"{birth}–{death}" if birth and death else (birth or death)
+                wid = str(item.get("id") or "")
+                rows.append(
+                    {
+                        "id": wid,
+                        "name": name,
+                        "slug": person_slug(name),
+                        "years": years or None,
+                        "works_count": counts.get(wid, item.get("works_count", 0)),
+                    }
+                )
+        total = int(data.get("total") or 0) if isinstance(data, dict) else 0
+        pages = max(1, (total + per_page - 1) // per_page)
+        canonical = f"{public_base_url()}/composers" + (f"?page={current}" if current > 1 else "")
+        return _html(render_composers(rows, current, pages, total, canonical))
 
     @router.get("/composers/{person_id}", include_in_schema=False)
     def person_canonical(person_id: str) -> Response:

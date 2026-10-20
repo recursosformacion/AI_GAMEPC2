@@ -49,6 +49,22 @@ def render_not_found() -> str:
     return _env().get_template("not_found.html").render()
 
 
+def render_composers(
+    items: list[dict[str, object]],
+    page: int,
+    pages: int,
+    total: int,
+    canonical_url: str,
+) -> str:
+    return _env().get_template("composers.html").render(
+        items=items,
+        page=page,
+        pages=pages,
+        total=total,
+        canonical_url=canonical_url,
+    )
+
+
 def render_amigos_group(view: GroupView) -> str:
     return _env().get_template("amigos_group.html").render(view=view, canonical_url=view.canonical_url)
 

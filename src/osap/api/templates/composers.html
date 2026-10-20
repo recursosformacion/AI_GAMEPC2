@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Compositores — OpenMusicRepository{% endblock %}
+{% block description %}Listado de compositores con obras y partituras disponibles en OpenMusicRepository.{% endblock %}
+{% block content %}
+<nav class="crumbs" aria-label="breadcrumb">
+  <a href="/">Inicio</a> › <span>Compositores</span>
+</nav>
+
+<div class="entity-head">
+  <h1>Compositores</h1>
+</div>
+<p class="muted">{{ total }} compositores</p>
+
+<table class="works-table">
+  <thead><tr><th>Compositor</th><th>Años</th><th>Obras</th></tr></thead>
+  <tbody>
+    {% for c in items %}
+    <tr>
+      <td><a href="/composers/{{ c.id }}/{{ c.slug }}">{{ c.name }}</a></td>
+      <td>{{ c.years or '—' }}</td>
+      <td>{{ c.works_count }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<nav class="pager" aria-label="paginación">
+  {% if page > 1 %}<a href="/composers?page={{ page - 1 }}">← Anterior</a>{% endif %}
+  <span>Página {{ page }} de {{ pages }}</span>
+  {% if page < pages %}<a href="/composers?page={{ page + 1 }}">Siguiente →</a>{% endif %}
+</nav>
+{% endblock %}
