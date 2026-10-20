@@ -11,7 +11,6 @@
 
 <div class="entity-head">
   <h1>{{ view.name }}</h1>
-  <a class="btn" href="/app/composers/{{ view.person_id | urlencode }}" title="Ver {{ view.name }} en la aplicación">Ver en la app</a>
 </div>
 <div class="badges">
   {% if view.years %}<span class="badge">{{ view.years }}</span>{% endif %}
@@ -29,19 +28,10 @@
     <legend>Identidad y nombre</legend>
     <dl class="fields">
       <div><dt>Identificador</dt><dd>{{ view.person_id }}</dd></div>
-      <div><dt>Nombre completo</dt><dd>{{ view.name }}</dd></div>
       <div><dt>Nombre de pila</dt><dd>{{ view.givenname or '—' }}</dd></div>
       <div><dt>Apellidos</dt><dd>{{ view.familyname or '—' }}</dd></div>
       <div><dt>Nombre para ordenar</dt><dd>{{ view.sortname or '—' }}</dd></div>
-      <div><dt>Nacionalidad</dt><dd>{{ view.display_nationality or '—' }}</dd></div>
-    </dl>
-  </fieldset>
-
-  <fieldset>
-    <legend>Años</legend>
-    <dl class="fields">
-      <div><dt>Año de nacimiento</dt><dd>{{ view.birth_year or '—' }}</dd></div>
-      <div><dt>Año de fallecimiento</dt><dd>{{ view.death_year or '—' }}</dd></div>
+      <div><dt>Visible</dt><dd>{{ 'Sí' if view.visible else 'No' }}</dd></div>
     </dl>
   </fieldset>
 
@@ -50,35 +40,32 @@
     <dl class="fields">
       <div><dt>Resumen</dt><dd class="multiline">{{ view.summary or '—' }}</dd></div>
       <div><dt>Época</dt><dd>{{ view.era or '—' }}</dd></div>
+      <div><dt>Nacionalidad</dt><dd>{{ view.display_nationality or '—' }}</dd></div>
+      <div><dt>Año de nacimiento</dt><dd>{{ view.birth_year or '—' }}</dd></div>
+      <div><dt>Año de fallecimiento</dt><dd>{{ view.death_year or '—' }}</dd></div>
       <div><dt>Dato clave</dt><dd>{{ view.biography_key_fact or '—' }}</dd></div>
       <div><dt>Referencias</dt><dd class="multiline">{{ view.biography_references or '—' }}</dd></div>
-    </dl>
-  </fieldset>
-
-  <fieldset>
-    <legend>Publicación</legend>
-    <dl class="fields">
-      <div><dt>Visible públicamente</dt><dd>{{ 'Sí' if view.visible else 'No' }}</dd></div>
     </dl>
   </fieldset>
 </section>
 
 <h2>Obras disponibles</h2>
 {% if view.works %}
-<ul class="works">
-  {% for work in view.works %}
-  <li>
-    <a href="/obras/{{ work.work_id }}/{{ work.slug }}">{{ work.title }}</a>
-    {% if work.catalogue %}<span class="cat">{{ work.catalogue }}</span>{% endif %}
-  </li>
-  {% endfor %}
-</ul>
+<table class="works-table">
+  <thead><tr><th>Obra</th><th>Catálogo</th></tr></thead>
+  <tbody>
+    {% for work in view.works %}
+    <tr>
+      <td><a href="/obras/{{ work.work_id }}/{{ work.slug }}">{{ work.title }}</a></td>
+      <td class="cat">{{ work.catalogue or '—' }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
 {% if view.works_total > view.works | length %}
 <p class="muted">Mostrando {{ view.works | length }} de {{ view.works_total }} obras.</p>
 {% endif %}
 {% else %}
 <p class="muted">Todavía no hay obras indexadas para este compositor.</p>
 {% endif %}
-
-<a class="cta" href="/app/composers/{{ view.person_id | urlencode }}">Abrir {{ view.name }} en la aplicación</a>
 {% endblock %}

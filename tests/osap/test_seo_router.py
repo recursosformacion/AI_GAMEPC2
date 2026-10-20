@@ -289,9 +289,10 @@ def test_pagina_de_compositor_lista_obras_y_json_ld(client: TestClient) -> None:
     assert 'href="/obras/index-7/ave-verum-corpus"' in resp.text
     assert 'href="/obras/index-8/requiem"' in resp.text
     assert f'<link rel="canonical" href="{_BASE}/composers/person-1/wolfgang-amadeus-mozart" />' in resp.text
-    # Acción visible junto al nombre para abrir la ficha en la aplicación.
-    assert 'href="/app/composers/person-1"' in resp.text
-    assert "Ver en la app" in resp.text
+    # Ficha de persona en modo solo lectura (formulario), sin enlaces a la app.
+    assert "<legend>Identidad y nombre</legend>" in resp.text
+    assert "<legend>Biografía</legend>" in resp.text
+    assert "Visible" in resp.text
     payload = _json_ld(resp.text)
     graph = payload["@graph"]
     person = next(node for node in graph if node["@type"] == "Person")
