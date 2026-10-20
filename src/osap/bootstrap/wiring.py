@@ -444,7 +444,7 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     # administrativo separado (storage:admin) — osap-api NO recibe storage:admin por defecto.
     target = (
         "local"
-        if storage_base.startswith("http://127.") or storage_base.startswith("http://localhost")
+        if storage_base.startswith(("http://127.", "http://localhost", "http://osap-storage"))
         else "remote"
     )
     container.set_storage_info(target, storage_read_only)

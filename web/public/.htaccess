@@ -24,6 +24,7 @@ RewriteEngine On
 # de la app); las antiguas redirigen con 301 desde la propia API. En producción nginx las
 # proxya igual (deploy/app…conf). Va antes del modo mantenimiento: estas páginas siguen
 # accesibles.
+RewriteRule ^composers/?$ http://127.0.0.1:8001/composers [P,QSA,L]
 RewriteRule ^(obras|composers|obra|compositor|representacion)/(.*)$ http://127.0.0.1:8001/$1/$2 [P,QSA,L]
 
 # «Los amigos»: la página pública de cada grupo y de cada artículo las sirve osap-api
