@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}{{ view.title }}{% if view.composer %} — {{ view.composer }}{% endif %}{% if view.catalogue %} ({{ view.catalogue }}){% endif %} | OpenMusicRepository{% endblock %}
+{% block title %}{{ view.title }}{% if view.composer %} — {{ view.composer }}{% endif %} | OpenMusicRepository{% endblock %}
 {% block description %}{{ view.description }}{% endblock %}
 {% block json_ld %}<script type="application/ld+json">{{ view.json_ld | safe }}</script>{% endblock %}
 {% block content %}
 <nav class="crumbs" aria-label="breadcrumb">
   <a href="/">Inicio</a> ›
+  <a href="/obras">Obras</a> ›
   {% if view.composer and view.composer_id and view.composer_slug and view.composer_page %}
-  <a href="/composers">Compositores</a> ›
   <a href="/composers/{{ view.composer_id }}/{{ view.composer_slug }}">{{ view.composer }}</a> ›
   {% endif %}
   <span>{{ view.title }}</span>
@@ -26,43 +26,82 @@
   {% endif %}
   {% if view.catalogue %}<span class="badge">{{ view.catalogue }}</span>{% endif %}
   {% if view.year %}<span class="badge">{{ view.year }}</span>{% endif %}
-  {% if view.instrumentation %}<span class="badge">{{ view.instrumentation }}</span>{% endif %}
 </div>
 
-<h2>Partituras y recursos</h2>
-{% if view.representations %}
-<div class="reps">
+<nav class="tabs" aria-label="secciones">
+  <a href="#resumen">Resumen</a>
+  <a href="#paginas">Páginas</a>
+  <a href="#evidencia">Evidencia</a>
+  <a href="#proveedores">Proveedores</a>
+</nav>
+
+<section id="resumen" class="person-view">
+  <fieldset>
+    <legend>Resumen</legend>
+    <dl class="fields">
+      <div><dt>Compositor</dt><dd>{{ view.composer or '—' }}</dd></div>
+      <div><dt>Catálogo</dt><dd>{{ view.catalogue or '—' }}</dd></div>
+      <div><dt>Año</dt><dd>{{ view.year or '—' }}</dd></div>
+      <div><dt>Instrumentación</dt><dd>{{ view.instrumentation or '—' }}</dd></div>
+    </dl>
+  </fieldset>
+</section>
+
+<section id="paginas" class="tab-section">
+  <h2>Páginas</h2>
+  {% if view.representations %}
+  <table class="works-table">
+    <thead><tr><th>Proveedor</th><th>Formato</th><th>Acceso</th><th>Ficha</th></tr></thead>
+    <tbody>
+      {% for rep in view.representations %}
+      <tr>
+        <td>{{ rep.provider }}</td>
+        <td>{{ rep.format }}</td>
+        <td>
+          {% if rep.downloadable and rep.url %}
+          <a href="{{ rep.url }}" rel="nofollow noopener" target="_blank">Descargar</a>
+          {% elif rep.site %}
+          <a href="{{ rep.site }}" rel="nofollow noopener" target="_blank">Abrir en {{ rep.provider }}</a>
+          {% else %}—{% endif %}
+        </td>
+        <td>{% if rep.id %}<a href="/representacion/{{ rep.id | urlencode }}">Ver ficha</a>{% else %}—{% endif %}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted">Sin páginas ni recursos registrados.</p>
+  {% endif %}
+</section>
+
+<section id="evidencia" class="tab-section">
+  <h2>Evidencia</h2>
+  <p class="muted">—</p>
+</section>
+
+<section id="proveedores" class="tab-section">
+  <h2>Proveedores</h2>
+  {% set ns = namespace(providers=[]) %}
   {% for rep in view.representations %}
-  <div class="rep">
-    {% if rep.downloadable and rep.url %}
-    <a href="{{ rep.url }}" rel="nofollow noopener" target="_blank">{{ rep.format or rep.provider }}</a>
-    {% elif rep.site %}
-    <a href="{{ rep.site }}" rel="nofollow noopener" target="_blank" title="Abrir en {{ rep.provider }}">Abrir en {{ rep.provider }}</a>
-    {% else %}
-    <strong>{{ rep.format or rep.provider }}</strong>
+    {% if rep.provider and rep.provider not in ns.providers %}
+      {% set ns.providers = ns.providers + [rep.provider] %}
     {% endif %}
-    <span>{{ rep.provider }} · {{ rep.format }}{% if rep.downloadable %} · descargable{% endif %}</span>
-    {% if rep.id %}<a href="/representacion/{{ rep.id | urlencode }}">Ver ficha</a>{% endif %}
-  </div>
   {% endfor %}
-</div>
-{% else %}
-<p class="muted">Todavía no hay recursos digitales registrados para esta obra.</p>
-{% endif %}
+  {% if ns.providers %}
+  <div class="badges">{% for provider in ns.providers %}<span class="badge">{{ provider }}</span>{% endfor %}</div>
+  {% else %}
+  <p class="muted">—</p>
+  {% endif %}
+</section>
 
 {% if view.related %}
-<h2>Más obras de {{ view.composer }}</h2>
-<ul class="works">
-  {% for work in view.related %}
-  <li>
-    <a href="/obras/{{ work.work_id }}/{{ work.slug }}">{{ work.title }}</a>
-    {% if work.catalogue %}<span class="cat">{{ work.catalogue }}</span>{% endif %}
-  </li>
-  {% endfor %}
-</ul>
-{% endif %}
-
-{% if view.composer_id %}
-<a class="cta" href="/composers/{{ view.composer_id | urlencode }}">Abrir en la aplicación</a>
+<section class="tab-section">
+  <h2>Otras obras del compositor</h2>
+  <ul class="works">
+    {% for work in view.related %}
+    <li><a href="/obras/{{ work.work_id }}/{{ work.slug }}">{{ work.title }}</a></li>
+    {% endfor %}
+  </ul>
+</section>
 {% endif %}
 {% endblock %}
