@@ -190,6 +190,30 @@ def build_composers_router(ctx: HttpContext) -> APIRouter:
         except StorageComposerError:
             return ctx.fail(503, response, "SERVICE_UNAVAILABLE", "Composer service is not configured")
 
+    @router.get(
+        "/api/v1/composers/{person_id}/index-works",
+        tags=["Composers"],
+        summary="Composer works in the public index",
+        description="Obras ya indexadas de un compositor (ids `index-*`), con catálogo. Es la "
+        "fuente de la lista pública y de los enlaces a la ficha HTML de obra.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("Index works", _shared._example({})),
+            404: _shared._NOT_FOUND_404,
+            **_shared._standard_errors(),
+        },
+    )
+    def composer_index_works(
+        response: Response,
+        person_id: str,
+        limit: int = Query(300, ge=1, le=500),
+        offset: int = Query(0, ge=0),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        detail = ctx.api.seo_person(person_id)
+        if detail is None:
+            return ctx.fail(404, response, "NOT_FOUND", "Composer not found")
+        return ctx.ok(ctx.api.seo_person_works(person_id, limit, offset))
+
     @router.post(
         "/api/v1/composers/resolve",
         status_code=200,

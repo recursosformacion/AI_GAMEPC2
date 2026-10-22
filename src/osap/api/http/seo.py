@@ -9,6 +9,7 @@ canónico, de modo que el enlace permanente nunca se rompe.
 from __future__ import annotations
 
 import re
+import urllib.parse
 from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Request, Response
@@ -22,6 +23,7 @@ from src.osap.api.seo.render import (
     render_person,
     render_representation,
     render_work,
+    set_render_flags,
 )
 from src.osap.api.seo.slug import normalize_work_id, person_slug, work_canonical_slug
 from src.osap.api.seo.views import (
@@ -36,6 +38,7 @@ if TYPE_CHECKING:
     from src.osap.api.http.context import HttpContext
 
 _CACHE_CONTROL = "public, max-age=3600, stale-while-revalidate=86400"
+_NO_STORE = False
 
 # Las consultas de ficha se cuentan solo para personas: los rastreadores no inflan el ranking.
 _BOT_UA = re.compile(
@@ -45,15 +48,25 @@ _BOT_UA = re.compile(
 
 
 def _html(body: str, status_code: int = 200) -> HTMLResponse:
+    cache = "no-store, no-cache, must-revalidate" if _NO_STORE else _CACHE_CONTROL
     return HTMLResponse(
         content=body,
         status_code=status_code,
-        headers={"Cache-Control": _CACHE_CONTROL},
+        headers={"Cache-Control": cache},
     )
 
 
 def build_seo_router(ctx: HttpContext) -> APIRouter:
+    global _NO_STORE
     router: APIRouter = APIRouter()
+    storage_info = getattr(ctx.api, "storage_info", None)
+    read_only = bool(storage_info()[1]) if callable(storage_info) else False
+    mode_fn = getattr(ctx.api, "mode", None)
+    mode = mode_fn() if callable(mode_fn) else "unknown"
+    # En desarrollo el HTML no se cachea: si no, el navegador sigue mostrando la
+    # plantilla anterior durante una hora tras cada cambio.
+    _NO_STORE = mode != "prod"
+    set_render_flags(read_only=read_only)
 
     @router.get("/obras/{work_id}", include_in_schema=False)
     def work_canonical(work_id: str) -> Response:
@@ -98,10 +111,11 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
         return _html(render_representation(payload))
 
     @router.get("/composers", include_in_schema=False)
-    def composers_list(page: int = 1) -> Response:
-        per_page = 50
+    def composers_list(page: int = 1, q: str | None = None) -> Response:
+        per_page = 30
         current = max(1, page)
-        data = ctx.api.list_composers(None, per_page, (current - 1) * per_page, None, public=True)
+        term = (q or "").strip() or None
+        data = ctx.api.list_composers(term, per_page, (current - 1) * per_page, None, public=True)
         items = data.get("items") if isinstance(data, dict) else None
         rows: list[dict[str, object]] = []
         if isinstance(items, list):
@@ -116,6 +130,12 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
                 birth = str(item.get("birth_year") or "").strip()
                 death = str(item.get("death_year") or "").strip()
                 years = f"{birth}–{death}" if birth and death else (birth or death)
+                nationality = str(
+                    item.get("nationality") or item.get("biography_nationality") or ""
+                ).strip()
+                meta = " · ".join(part for part in (nationality, years) if part)
+                words = name.split()
+                initials = (words[0][0] + (words[-1][0] if len(words) > 1 else "")).upper()
                 wid = str(item.get("id") or "")
                 rows.append(
                     {
@@ -123,13 +143,21 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
                         "name": name,
                         "slug": person_slug(name),
                         "years": years or None,
+                        "meta": meta or None,
+                        "initials": initials,
                         "works_count": counts.get(wid, item.get("works_count", 0)),
                     }
                 )
         total = int(str(data.get("total") or 0)) if isinstance(data, dict) else 0
         pages = max(1, (total + per_page - 1) // per_page)
-        canonical = f"{public_base_url()}/composers" + (f"?page={current}" if current > 1 else "")
-        return _html(render_composers(rows, current, pages, total, canonical))
+        params: list[str] = []
+        if current > 1:
+            params.append(f"page={current}")
+        if term:
+            params.append(f"q={urllib.parse.quote(term)}")
+        canonical = f"{public_base_url()}/composers" + (f"?{'&'.join(params)}" if params else "")
+        return _html(render_composers(rows, current, pages, total, canonical, term))
+
 
     @router.get("/composers/{person_id}", include_in_schema=False)
     def person_canonical(person_id: str) -> Response:

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import type { RepresentationInfo, SearchResultItem } from "../api/types";
 import { Spinner } from "../components/Spinner";
 import { WorkDetailTabs } from "../components/WorkDetailTabs";
@@ -13,6 +14,14 @@ interface Candidate {
 
 function allRepresentations(candidate: Candidate): RepresentationInfo[] {
   return candidate.items[0]?.representations ?? candidate.items.map((i) => i.representation);
+}
+
+function indexWorkId(reps: RepresentationInfo[]): string | null {
+  for (const rep of reps) {
+    const match = /^idx-(\d+)-/.exec(rep.id ?? "");
+    if (match) return `index-${match[1]}`;
+  }
+  return null;
 }
 
 function stars(score: number): string {
@@ -146,6 +155,7 @@ export function CandidatesPage() {
           const reps = allRepresentations(c);
           const providers = new Set(reps.map((r) => r.provider));
           const isOpen = open === c.work.work_id;
+          const fichaId = indexWorkId(reps);
           return (
             <li key={c.work.work_id}>
               <div className="flex items-center rounded-lg border border-osap-border bg-osap-surface">
@@ -165,6 +175,11 @@ export function CandidatesPage() {
                     {reps.length} representations · {providers.size} providers
                   </span>
                 </button>
+                {fichaId ? (
+                  <Link to={`/obras/${encodeURIComponent(fichaId)}`} className="px-3 text-sm text-osap-accent hover:underline">
+                    Ficha
+                  </Link>
+                ) : null}
                 <button
                   type="button"
                   aria-label="expand"

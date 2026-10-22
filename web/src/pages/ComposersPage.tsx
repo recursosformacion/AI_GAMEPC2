@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Envelope } from "../components/Envelope";
 import { WorksListModule, groupWorks } from "../components/WorksListModule";
@@ -43,7 +43,13 @@ export function ComposersPage() {
   const [offset, setOffset] = useState(0);
   const [openWorks, setOpenWorks] = useState<string | null>(null);
 
+  // Con SSR, la lista ya viene cargada: no repetir la petición en el primer efecto.
+  const preloaded = useRef(list !== null);
   useEffect(() => {
+    if (preloaded.current) {
+      preloaded.current = false;
+      return;
+    }
     void fetchList(q, LIMIT, offset, review);
   }, [fetchList, q, offset, review]);
 
@@ -120,7 +126,8 @@ export function ComposersPage() {
                   <div className="flex items-center gap-4">
                     <span
                       aria-hidden="true"
-                      className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-osap-accent-soft font-display text-sm font-semibold text-osap-accent"
+                      translate="no"
+                      className="notranslate grid h-11 w-11 shrink-0 place-items-center rounded-full bg-osap-accent-soft font-display text-sm font-semibold text-osap-accent"
                     >
                       {initials(c.name)}
                     </span>

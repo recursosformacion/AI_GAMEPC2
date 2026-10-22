@@ -19,13 +19,12 @@
 ErrorDocument 503 /maintenance.html
 RewriteEngine On
 
-# Capa pública SEO: /obra, /compositor y /representacion los sirve osap-api (uvicorn 8001)
-# también en desarrollo (XAMPP). Las URLs públicas son `/obras/...` y `/composers/...` (las
-# de la app); las antiguas redirigen con 301 desde la propia API. En producción nginx las
-# proxya igual (deploy/app…conf). Va antes del modo mantenimiento: estas páginas siguen
-# accesibles.
-RewriteRule ^composers/?$ http://127.0.0.1:8001/composers [P,QSA,L]
-RewriteRule ^(obras|composers|obra|compositor|representacion)/(.*)$ http://127.0.0.1:8001/$1/$2 [P,QSA,L]
+# Fichas públicas: compositores y obras las renderiza la app React en el servidor (3000),
+# con los mismos componentes que la SPA. Las URLs antiguas (/compositor, /obra,
+# /representacion) siguen en osap-api (8001), que responde 301 a las URLs nuevas.
+RewriteRule ^composers/?$ http://127.0.0.1:3000/composers [P,QSA,L]
+RewriteRule ^(composers|obras)/(.*)$ http://127.0.0.1:3000/$1/$2 [P,QSA,L]
+RewriteRule ^(obra|compositor|representacion)/(.*)$ http://127.0.0.1:8001/$1/$2 [P,QSA,L]
 
 # «Los amigos»: la página pública de cada grupo y de cada artículo las sirve osap-api
 # (HTML server-rendered con metadatos sociales). Los índices /amigos y /amigos/corales

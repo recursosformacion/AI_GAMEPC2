@@ -216,6 +216,9 @@ class SystemMixin(PlatformApiCore):
     def storage_info(self) -> tuple[str, bool]:
         return self._container.storage_info()
 
+    def mode(self) -> str:
+        return self._container.mode()
+
     # --- bypass de desarrollo (SOLO dev; activado por OSAP_DEV_AUTH_BYPASS=1) ---
 
     def dev_auth_bypass(self) -> bool:

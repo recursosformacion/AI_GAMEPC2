@@ -1,5 +1,6 @@
 import logging
 import os
+import socket
 from pathlib import Path
 from typing import Any
 
@@ -183,6 +184,35 @@ def _config_from_provider_row(row: dict[str, object]) -> dict[str, object] | Non
     return out
 
 
+def _mode(config: Configuration) -> str:
+    """Modo efectivo del servicio, expuesto en `/api/v1/system/health`."""
+    if config.deployment == "prod":
+        return "prod"
+    return "dev-real" if config.dev_mode == 1 else "dev-local"
+
+
+def _assert_db_reachable(host: str, port: int) -> None:
+    """Falla rápido si dev_mode=1 y el túnel SSH a la BD real no está abierto.
+
+    Con `dev_mode=1` la BD operativa es la de producción, accesible solo por el túnel
+    (`ssh -N -L 3307:127.0.0.1:3306 RemoteIA`). Sin él, el servicio arrancaría contra
+    memoria/local y daría resultados incoherentes: mejor no arrancar y decirlo.
+    """
+    try:
+        with socket.create_connection((host, port), timeout=2):
+            return
+    except OSError as exc:
+        raise ConfigurationError(
+            service="osap-api",
+            message=(
+                f"No hay conexión a la BD operativa en {host}:{port} ({exc}). "
+                "Con dev_mode=1 la BD es la real (solo lectura por osap_ro) y se accede "
+                "por túnel SSH. Abre el túnel y reintenta:\n"
+                f"  ssh -N -L {port}:127.0.0.1:3306 RemoteIA"
+            ),
+        ) from exc
+
+
 def _db_provider_metadata(container: Container) -> list[tuple[str, str, str | None, bool]]:
     try:
         store = build_op_store(**container.op_store_config())
@@ -227,13 +257,19 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
             message=f"Configuración requerida faltante: {field}. Defínala en osap.toml o por variable de entorno.",
         )
 
-    db_config = {
+    db_config: dict[str, Any] = {
         "host": _db_value("osap_api_db_host", "127.0.0.1"),
         "user": _db_value("osap_api_db_user", "osap2027"),
         "password": _db_value("osap_api_db_password", "2027osapdb"),
         "database": _db_value("osap_api_db_name", "osap-api"),
+        "port": config.osap_api_db_port,
+        # Solo lectura: osap_ro no tiene DDL, así que los stores no crean tablas.
+        "read_only": storage_read_only,
     }
+    if config.deployment != "prod" and config.dev_mode == 1:
+        _assert_db_reachable(db_config["host"], db_config["port"])
     container.set_op_store_config(db_config)
+    container.set_mode(_mode(config))
 
     github = GitHubClient(
         token=config.github_token,
@@ -373,6 +409,7 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
             user=db_config["user"],
             password=db_config["password"],
             database=db_config["database"],
+            port=db_config["port"],
             name="index",
         )
     )

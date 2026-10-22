@@ -38,6 +38,7 @@ def build_system_router(ctx: HttpContext) -> APIRouter:
                 storage_target=storage_target,
                 read_only=read_only,
                 dev_auth_bypass=ctx.api.dev_auth_bypass(),
+                mode=ctx.api.mode(),
             )
         )
 

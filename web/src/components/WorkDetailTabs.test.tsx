@@ -20,7 +20,7 @@ function reps(available: boolean[]): RepresentationInfo[] {
     confidence: 0.9,
     available: a,
     title: `Representation ${i}`,
-    url: a ? `https://storage.example/download/${i}.mxl` : undefined,
+    url: a ? `/api/download/${i}.mxl` : undefined,
   }));
 }
 
@@ -90,7 +90,7 @@ describe("WorkDetailTabs — select best known representation", () => {
   });
 
   it("shows the selection action", () => {
-    renderTabs(baseWork, reps([true, false]));
+    renderTabs(baseWork, reps([true, true]));
     fireEvent.click(screen.getByRole("button", { name: "Representations" }));
     expect(screen.getByRole("button", { name: "Find better representations" })).toBeInTheDocument();
     expect(screen.getByText(/No selected representation/)).toBeInTheDocument();
@@ -132,6 +132,22 @@ describe("WorkDetailTabs — select best known representation", () => {
   it("oculta 'Buscar mejores representaciones' cuando solo hay una representación", () => {
     mockFetch({} as RepresentationSelection);
     renderTabs(baseWork, reps([true]));
+    fireEvent.click(screen.getByRole("button", { name: "Representations" }));
+    expect(screen.queryByRole("button", { name: "Find better representations" })).toBeNull();
+  });
+
+  it("oculta 'Buscar mejores representaciones' si solo una es accesible", () => {
+    mockFetch({} as RepresentationSelection);
+    const external: RepresentationInfo = {
+      id: "idx-554810-cpdl-391919-musicxml",
+      provider: "cpdl",
+      format: "musicxml",
+      confidence: 0.7,
+      available: false,
+      url: "https://www.cpdl.org/wiki/index.php/Special:FilePath/ave_verum.mxl",
+      title: "Ave verum corpus",
+    };
+    renderTabs(baseWork, [...reps([true]), external]);
     fireEvent.click(screen.getByRole("button", { name: "Representations" }));
     expect(screen.queryByRole("button", { name: "Find better representations" })).toBeNull();
   });

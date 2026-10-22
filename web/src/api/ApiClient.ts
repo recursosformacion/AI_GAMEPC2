@@ -38,6 +38,7 @@ import type {
   ComposerList,
   ComposerStatistics,
   ComposerSummary,
+  ComposerIndexWorks,
   ComposerWorks,
   AdminOverview,
   Alias,
@@ -69,6 +70,7 @@ import type {
   RecentWorkList,
   PopularWorkList,
   PublicWork,
+  OsapWorkDetails,
   RepresentationSheet,
   RepresentationProbe,
   NotificationList,
@@ -221,6 +223,10 @@ export class ApiClient {
   /** Ficha pública del índice (obras que no están en el store de compositores). */
   async getPublicWork(workId: string): Promise<PublicWork> {
     return this.get<PublicWork>(`/works/public/${encodeURIComponent(workId)}`);
+  }
+
+  async getOsapWorkDetails(workId: string): Promise<OsapWorkDetails> {
+    return this.get<OsapWorkDetails>(`/works/public/${encodeURIComponent(workId)}/details`);
   }
 
   /** Campana: mis notificaciones (y globales si soy admin). */
@@ -545,6 +551,17 @@ export class ApiClient {
   async getComposerWorks(personId: string, limit: number, offset: number): Promise<ComposerWorks> {
     const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
     return this.get<ComposerWorks>(`/composers/${encodeURIComponent(personId)}/works?${params.toString()}`);
+  }
+
+  async getComposerIndexWorks(
+    personId: string,
+    limit: number,
+    offset: number,
+  ): Promise<ComposerIndexWorks> {
+    const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+    return this.get<ComposerIndexWorks>(
+      `/composers/${encodeURIComponent(personId)}/index-works?${params.toString()}`,
+    );
   }
 
   async createResolutionSession(req: ResolutionSessionCreateRequest): Promise<ResolutionSession> {

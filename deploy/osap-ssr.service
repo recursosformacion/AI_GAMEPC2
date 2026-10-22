@@ -1,0 +1,30 @@
+[Unit]
+Description=OSAP SSR (React) — HTML público de compositores y obras
+Documentation=file:/home/ocw/openmusicrepository.com/osap-api/docs/osap/prod-ssr-plan.md
+After=network.target osap-api.service
+Wants=osap-api.service
+
+[Service]
+Type=simple
+User=ocw
+Group=ocw
+WorkingDirectory=/home/ocw/openmusicrepository.com/osap-api/web
+Environment=NODE_ENV=production
+Environment=OSAP_SSR_PORT=3000
+Environment=OSAP_API_ORIGIN=http://127.0.0.1:8001
+Environment=OSAP_PUBLIC_ORIGIN=https://app.openmusicrepository.com
+Environment=OSAP_WEB_DIST=/home/ocw/openmusicrepository.com/app
+Environment=OSAP_SSR_TTL=60
+Environment=OSAP_SSR_STALE=600
+EnvironmentFile=-/home/ocw/openmusicrepository.com/osap-api/web/ssr.env
+ExecStart=/usr/bin/node ssr/server.mjs
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ocw/openmusicrepository.com/osap-api/web
+
+[Install]
+WantedBy=multi-user.target

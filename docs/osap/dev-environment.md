@@ -40,6 +40,62 @@ Todos apuntan a `127.0.0.1`.
 
 ---
 
+## Modo túnel: desarrollo contra la BD real (solo lectura)
+
+Con `[osap] dev_mode = 1` la API y la SPA trabajan con los **datos reales** de la BD
+operativa y se garantiza el **solo lectura**. Los servicios HTTP (storage y auth) siguen
+siendo **locales**: no se llama al storage de producción ni se necesitan credenciales de
+servicio.
+
+- **BD**: `[db]` de `osap.toml` apunta al túnel, no al MySQL local:
+
+  ```toml
+  [db]
+  host = "127.0.0.1"
+  port = 3307
+  name = "osap_api"
+  user = "osap_ro"
+  password = "<clave de osap_ro>"
+  ```
+
+  `db.port` permite convivir con el MySQL local en 3306 (dev_mode = 0).
+
+- **Túnel**: `ssh -N -L 3307:127.0.0.1:3306 RemoteIA`. La tarea programada
+  «OSAP tunel produccion» lo levanta al iniciar sesión (`ssh -N -o ExitOnForwardFailure=yes`).
+  Comprobar: `Test-NetConnection 127.0.0.1 -Port 3307`.
+
+- **Servicios locales**: osap-storage (`config.yaml` con `name: osap_storage`, `user: osap_ro`,
+  `port: 3307`) y osap-auth escuchan en `127.0.0.1:8000` y `127.0.0.1:8200`. `osap.toml`
+  fuerza que la API use esas rutas:
+
+  ```toml
+  [osap]
+  dev_mode = "1"
+  storage_base_url = "http://127.0.0.1:8000"
+  storage_web_base = "http://127.0.0.1:8000"
+  auth_token_url = "http://127.0.0.1:8200/oauth/token"
+  auth_base_url = "http://127.0.0.1:8200"
+  ```
+
+  Así el comportamiento es local y **no hay `[service]`** ni secretos de producción.
+
+- **Fallo rápido**: si `dev_mode = 1` y el puerto de `[db]` no acepta conexión, `wire()`
+  aborta el arranque con un `ConfigurationError` que recuerda el comando del túnel. No se
+  degrada en silencio a memoria ni a la BD local.
+
+- **Solo lectura**: el usuario `osap_ro` solo tiene `SELECT` sobre `osap_api` y
+  `osap_storage`. Los stores MySQL reciben `read_only=True` y **no ejecutan DDL**
+  (`CREATE TABLE IF NOT EXISTS` daría error 1142 y la factoría caería a memoria perdiendo
+  la configuración real).
+
+- **Aviso**: `/api/v1/system/health` devuelve `"mode": "dev-real"`,
+  `"storage_target": "local"` y `read_only: true`; la SPA muestra el banner
+  «Producción · solo lectura».
+
+Para volver al modo local: `dev_mode = 0` y `[db]` con el MySQL local (`port = 3306`).
+
+---
+
 ## Flujo de trabajo (siempre)
 
 ### 1. Backend (Python) — uvicorn en el puerto 8001

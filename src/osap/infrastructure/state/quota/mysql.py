@@ -67,11 +67,26 @@ _DDL: tuple[str, ...] = (
 class _MysqlStore(MemoryStore):
     """Cuotas en MySQL. `consume` es atómico (incremento + registro en una transacción)."""
 
-    def __init__(self, host: str, user: str, password: str, database: str) -> None:
+    def __init__(
+        self,
+        host: str,
+        user: str,
+        password: str,
+        database: str,
+        port: int = 3306,
+        read_only: bool = False,
+    ) -> None:
         super().__init__()
-        self._params = {"host": host, "user": user, "password": password, "database": database}
-        for statement in _DDL:
-            self._run(statement)
+        self._port = port
+        self._params = {
+            "host": host,
+            "user": user,
+            "password": password,
+            "database": database,
+        }
+        if not read_only:
+            for statement in _DDL:
+                self._run(statement)
 
     def _conn(self, *, autocommit: bool = True) -> pymysql.connections.Connection:
         return pymysql.connect(
@@ -79,6 +94,7 @@ class _MysqlStore(MemoryStore):
             user=self._params["user"],
             password=self._params["password"],
             database=self._params["database"],
+            port=self._port,
             charset="utf8mb4",
             cursorclass=DictCursor,
             autocommit=autocommit,

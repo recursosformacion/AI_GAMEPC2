@@ -17,13 +17,21 @@ def build_op_store(
     user: str = "osap2027",
     password: str = "2027osapdb",
     database: str = "osap-api",
+    port: int = 3306,
+    read_only: bool = False,
 ) -> _MemoryStore:
     """Factoría: MySQL con fallback a memoria si no está disponible."""
-    params = {"host": host, "user": user, "password": password, "database": database}
     try:
         # __init__ crea tablas (`CREATE TABLE IF NOT EXISTS`); el DDL de migración va
         # aparte: `script/migrate_index_schema.py` (una vez por despliegue).
-        store = _MysqlStore(**params)
+        store = _MysqlStore(
+            host=host,
+            user=user,
+            password=password,
+            database=database,
+            port=port,
+            read_only=read_only,
+        )
         return store
     except pymysql.err.OperationalError as exc:
         _LOGGER.warning("MySQL operativo no disponible (%s); usando almacén en memoria", exc)

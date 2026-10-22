@@ -55,6 +55,29 @@ class StorageWorkStore(IWorkStore):
         return None
 
 
+    def search_works(self, query: str, limit: int = 10) -> list[dict[str, object]]:
+        """Busca obras en OSAP (Storage) por título/compositor. Sin JOIN ni mapeo previo.
+
+        Devuelve la lista tal cual la entrega el contrato HTTP de Storage; el llamador
+        decide si hay una coincidencia exacta.
+        """
+        if not query.strip():
+            return []
+        params = urllib.parse.urlencode({"q": query.strip(), "limit": max(1, min(limit, 50))})
+        url = f"{self._base_url}/api/v1/works?{params}"
+        headers: dict[str, str] = {"User-Agent": _USER_AGENT, "Accept": "application/json"}
+        if self._token_provider is not None:
+            headers["Authorization"] = f"Bearer {self._token_provider.token(('storage:read',))}"
+        request = urllib.request.Request(url, headers=headers)
+        try:
+            with urllib.request.urlopen(request, timeout=self._timeout) as response:  # noqa: S310
+                doc: object = json.loads(response.read())
+        except Exception:
+            return []
+        if not isinstance(doc, list):
+            return []
+        return [item for item in doc if isinstance(item, dict)]
+
 class MemoryWorkStore(IWorkStore):
     """Mapa en memoria work_id -> person_id (tests / sin Storage)."""
 

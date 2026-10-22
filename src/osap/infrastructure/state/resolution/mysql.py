@@ -17,9 +17,24 @@ _LOGGER = logging.getLogger("osap.resolution")
 class _MysqlStore(_MemoryStore):
     """Almacén de resolución respaldado por MySQL."""
 
-    def __init__(self, host: str, user: str, password: str, database: str) -> None:
-        self._params = {"host": host, "user": user, "password": password, "database": database}
-        self._init()
+    def __init__(
+        self,
+        host: str,
+        user: str,
+        password: str,
+        database: str,
+        port: int = 3306,
+        read_only: bool = False,
+    ) -> None:
+        self._port = port
+        self._params = {
+            "host": host,
+            "user": user,
+            "password": password,
+            "database": database,
+        }
+        if not read_only:
+            self._init()
 
     def _conn(self) -> pymysql.connections.Connection:
         return pymysql.connect(
@@ -27,6 +42,7 @@ class _MysqlStore(_MemoryStore):
             user=self._params["user"],
             password=self._params["password"],
             database=self._params["database"],
+            port=self._port,
             charset="utf8mb4",
             cursorclass=DictCursor,
             autocommit=True,

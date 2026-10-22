@@ -31,6 +31,11 @@ def _env() -> Environment:
     return _ENV
 
 
+def set_render_flags(*, read_only: bool) -> None:
+    """Fija banderas de proceso que usan las plantillas (avisos de solo lectura)."""
+    _env().globals["read_only"] = read_only
+
+
 def render_work(view: WorkView) -> str:
     return _env().get_template("work.html").render(view=view, canonical_url=view.canonical_url)
 
@@ -55,6 +60,7 @@ def render_composers(
     pages: int,
     total: int,
     canonical_url: str,
+    query: str | None = None,
 ) -> str:
     return _env().get_template("composers.html").render(
         items=items,
@@ -62,6 +68,7 @@ def render_composers(
         pages=pages,
         total=total,
         canonical_url=canonical_url,
+        q=query or "",
     )
 
 

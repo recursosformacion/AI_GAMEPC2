@@ -3,6 +3,8 @@ import { useLocation } from "react-router-dom";
 import { LANGUAGES } from "../i18n/translations";
 import { SITE_URL, seoMetaForPath } from "./seoMeta";
 
+let ssrConsumed = false;
+
 function upsertMeta(key: string, content: string): void {
   let el = document.head.querySelector<HTMLMetaElement>(`meta[name="${key}"]`);
   if (!el) {
@@ -46,6 +48,13 @@ function setHreflangs(path: string, indexable: boolean): void {
 export function useSeo(): void {
   const location = useLocation();
   useEffect(() => {
+    // En la primera carga de una página SSR, los metadatos ya vienen del servidor con los
+    // datos reales (nombre, biografía…). No sobrescribirlos con los genéricos de la SPA.
+    if (!ssrConsumed && window.__OSAP_SSR_PATH__ === location.pathname) {
+      ssrConsumed = true;
+      return;
+    }
+    ssrConsumed = true;
     const meta = seoMetaForPath(location.pathname, location.search);
     document.title = meta.title;
     upsertMeta("description", meta.description);

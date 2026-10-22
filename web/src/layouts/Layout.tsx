@@ -138,6 +138,8 @@ interface NavItem {
   to: string;
   key: TKey;
   icon: IconName;
+  /** Navegación completa: la página la sirve el HTML del servidor (SSR), no React. */
+  external?: boolean;
 }
 
 interface NavGroupItem {
@@ -264,6 +266,7 @@ function SidebarSection({
   onNavigate: () => void;
 }) {
   const { t } = useI18n();
+  const location = useLocation();
   return (
     <div className="mt-5">
       <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-osap-muted">{title}</p>
@@ -273,21 +276,36 @@ function SidebarSection({
             <NavGroup key={entry.key} entry={entry} onNavigate={onNavigate} />
           ) : (
             <li key={entry.to}>
-              <NavLink
-                to={entry.to}
-                end={entry.to === "/"}
-                onClick={onNavigate}
-                className={({ isActive }) =>
-                  `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-bold ${
-                    isActive
+              {entry.external ? (
+                <a
+                  href={entry.to}
+                  onClick={onNavigate}
+                  className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-bold ${
+                    location.pathname === entry.to
                       ? "bg-osap-accent-soft text-osap-accent"
                       : "text-osap-ink hover:bg-osap-accent-soft/60"
-                  }`
-                }
-              >
-                <Icon name={entry.icon} />
-                {t(entry.key)}
-              </NavLink>
+                  }`}
+                >
+                  <Icon name={entry.icon} />
+                  {t(entry.key)}
+                </a>
+              ) : (
+                <NavLink
+                  to={entry.to}
+                  end={entry.to === "/"}
+                  onClick={onNavigate}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 rounded-md px-3 py-2 text-sm font-bold ${
+                      isActive
+                        ? "bg-osap-accent-soft text-osap-accent"
+                        : "text-osap-ink hover:bg-osap-accent-soft/60"
+                    }`
+                  }
+                >
+                  <Icon name={entry.icon} />
+                  {t(entry.key)}
+                </NavLink>
+              )}
             </li>
           ),
         )}
@@ -567,8 +585,8 @@ export function StorageBanner() {
   const health = useSystem((s) => s.health);
   const load = useSystem((s) => s.load);
   useEffect(() => {
-    void load();
-  }, [load]);
+    if (!health) void load();
+  }, [health, load]);
   // Solo hay aviso cuando osap-api en desarrollo está conectado a un storage real
   // (read_only). El resto del tiempo no se muestra ningún aviso.
   if (!health || !health.read_only) return null;

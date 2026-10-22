@@ -122,6 +122,7 @@ class IndexCatalogProvider(ICatalogProvider):
         user: str = "osap2027",
         password: str = "2027osapdb",
         database: str = "osap-api",
+        port: int = 3306,
         name: str = "index",
         max_results: int = 400,
     ) -> None:
@@ -130,6 +131,7 @@ class IndexCatalogProvider(ICatalogProvider):
         self._user = user
         self._password = password
         self._database = database
+        self._port = port
         self._max_results = max_results
         self._fulltext_available: bool | None = None
 
@@ -203,6 +205,7 @@ class IndexCatalogProvider(ICatalogProvider):
                 user=self._user,
                 password=self._password,
                 database=self._database,
+                port=self._port,
                 cursorclass=DictCursor,
             )
             with conn.cursor() as cur:
@@ -255,6 +258,7 @@ class IndexCatalogProvider(ICatalogProvider):
                 user=self._user,
                 password=self._password,
                 database=self._database,
+                port=self._port,
                 charset="utf8mb4",
                 cursorclass=DictCursor,
                 autocommit=True,
@@ -288,6 +292,7 @@ class IndexCatalogProvider(ICatalogProvider):
                 user=self._user,
                 password=self._password,
                 database=self._database,
+                port=self._port,
                 charset="utf8mb4",
                 cursorclass=DictCursor,
                 autocommit=True,
@@ -327,6 +332,7 @@ class IndexCatalogProvider(ICatalogProvider):
                 user=self._user,
                 password=self._password,
                 database=self._database,
+                port=self._port,
                 charset="utf8mb4",
                 cursorclass=DictCursor,
                 autocommit=True,
@@ -341,7 +347,7 @@ class IndexCatalogProvider(ICatalogProvider):
                 if work is None:
                     return None
                 cur.execute(
-                    "SELECT provider, format, download_url, available, resource_id "
+                    "SELECT provider, format, download_url, available, resource_id, title_provider, xml_title "
                     "FROM index_representations WHERE work_id = %s ORDER BY provider, format",
                     (work_ref,),
                 )
@@ -363,6 +369,7 @@ class IndexCatalogProvider(ICatalogProvider):
                 ),
                 "provider": str(row.get("provider") or ""),
                 "format": str(row.get("format") or ""),
+                "title": str(row.get("title_provider") or row.get("xml_title") or "") or None,
                 "url": str(row.get("download_url") or "") or None,
                 "downloadable": bool(row.get("download_url"))
                 and str(row.get("provider") or "") in ("omr", "mutopia"),
@@ -398,6 +405,7 @@ class IndexCatalogProvider(ICatalogProvider):
                 user=self._user,
                 password=self._password,
                 database=self._database,
+                port=self._port,
                 charset="utf8mb4",
                 cursorclass=DictCursor,
                 autocommit=True,
@@ -443,6 +451,7 @@ class IndexCatalogProvider(ICatalogProvider):
                 user=self._user,
                 password=self._password,
                 database=self._database,
+                port=self._port,
                 charset="utf8mb4",
                 cursorclass=DictCursor,
                 autocommit=True,
@@ -470,6 +479,7 @@ class IndexCatalogProvider(ICatalogProvider):
                 user=self._user,
                 password=self._password,
                 database=self._database,
+                port=self._port,
                 charset="utf8mb4",
                 cursorclass=DictCursor,
                 autocommit=True,
@@ -511,6 +521,7 @@ class IndexCatalogProvider(ICatalogProvider):
                 user=self._user,
                 password=self._password,
                 database=self._database,
+                port=self._port,
                 charset="utf8mb4",
                 cursorclass=DictCursor,
                 autocommit=True,
@@ -556,6 +567,7 @@ class IndexCatalogProvider(ICatalogProvider):
                 user=self._user,
                 password=self._password,
                 database=self._database,
+                port=self._port,
                 charset="utf8mb4",
                 cursorclass=DictCursor,
                 autocommit=True,

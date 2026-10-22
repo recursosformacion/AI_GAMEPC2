@@ -7,11 +7,19 @@ persona, igual que el resto de la API pública.
 
 from __future__ import annotations
 
+import re
+import unicodedata
 from typing import cast
 
 from src.osap.api.platform.core import PlatformApiCore
 from src.osap.api.seo.slug import work_canonical_slug
 from src.osap.infrastructure.storage.storage_composer_client import StorageComposerError
+
+
+def _norm_title(value: str) -> str:
+    """Normaliza título/compositor para comparar sin acentos, mayúsculas ni puntuación."""
+    text = unicodedata.normalize("NFKD", value).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]+", " ", text.lower()).strip()
 
 
 class SeoMixin(PlatformApiCore):
@@ -24,6 +32,41 @@ class SeoMixin(PlatformApiCore):
         if not callable(getter):
             return None
         return cast("dict[str, object] | None", getter(work_id))
+
+    def osap_work_details(self, work_id: str) -> dict[str, object] | None:
+        """Pide a OSAP (osap-storage) los datos ricos de la obra al abrir la ficha.
+
+        No hay tabla de correspondencias ni JOIN: se busca por título en el contrato HTTP de
+        Storage y solo se devuelve si título y compositor coinciden exactamente (normalizados).
+        Si no hay coincidencia, se devuelve None y la ficha mantiene los datos del índice.
+        """
+        sheet = self.seo_work(work_id)
+        if not sheet:
+            return None
+        store = self._container.work_store()
+        search = getattr(store, "search_works", None)
+        if not callable(search):
+            return None
+        title = str(sheet.get("title") or "").strip()
+        composer = str(sheet.get("composer") or "").strip()
+        if not title:
+            return None
+        try:
+            rows = search(title, 10)
+        except Exception:  # noqa: BLE001 — la ficha no debe caer por Storage
+            return None
+        target_title = _norm_title(title)
+        target_composer = _norm_title(composer)
+        for row in rows or []:
+            if not isinstance(row, dict):
+                continue
+            if _norm_title(str(row.get("title") or "")) != target_title:
+                continue
+            row_composer = str(row.get("composer") or "").strip()
+            if target_composer and _norm_title(row_composer) != target_composer:
+                continue
+            return row
+        return None
 
     def seo_person(self, person_id: str) -> dict[str, object] | None:
         """Ficha pública de una persona (con biografía). None si no es visible o falla."""

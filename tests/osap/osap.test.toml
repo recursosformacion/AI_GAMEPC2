@@ -1,0 +1,14 @@
+[db]
+# Credenciales inexistentes a propósito: la conexión se rechaza en ~0,3 s (rápido, contra
+# el MySQL local si está levantado) y las factorías degradan a memoria. Nunca se escribe
+# en una BD real ni se esperan timeouts de red.
+host = "127.0.0.1"
+port = 3306
+name = "osap_test"
+user = "osap_test"
+password = "osap_test"
+
+[osap]
+deployment = "dev"
+dev_mode = 0
+dev_auth_bypass = "False"

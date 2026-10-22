@@ -79,6 +79,18 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.6.0 (B)** — **ficha de obra rediseñada**: una sola caja con pestañas
+  **Resumen / Evidencia / Proveedores**; fieldsets de **Datos de la obra** (compositor,
+  atribución, catálogo, año, tonalidad, época, descripción), **Características** (duración,
+  compases, páginas, partes, complejidad, licencia, géneros, tags, instrumentación),
+  **Ensembles** y **Estadísticas** (actualización, representaciones, proveedores, accesos,
+  votos); lista de **Representaciones** con proveedor, formato y enlaces Ver/Descargar/Web.
+  Los campos que el índice público aún no expone se muestran como «—» (pendiente de mapear
+  el trabajo del índice con el registro rico de osap-storage). Sin cambios de esquema.
+  - Evidencia: SPA `tsc --noEmit` + build OK; `check-versions` **5.6.0** OK; despliegue con
+    mantenimiento y verificación por `?preview`.
+  - Alcance: `osap-api` (frontend) + versión del conjunto.
+
 - **5.5.0 (B)** — **«Los amigos»** (sección nueva): grupos de agrupaciones musicales con
   categoría/tipo (`coral` hoy, aditivo), **membresías y permisos por grupo**, artículos con flujo
   editorial (borrador/pendiente/publicado/retirado y **publicación directa o moderada por
@@ -89,9 +101,16 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
   (metadatos `og`/`twitter` + sitemap) con URL estable, rediseñadas con el Design System de la app.
   - Incluye además, ya aplicados: corrección de los *gates* nginx de `osap-auth`/`osap-storage`
     (5.3.0) y el **alta de obras** del panel de `osap-storage`.
-  - Evidencia: `pytest tests/osap/test_amigos.py` (**39**); circuito integrado en Dev 16/16;
-    `ruff`+`mypy` limpios; `check-versions` 5.5.0 OK; migración aditiva
-    (`script/migrate_amigos_schema.py`, dry-run) en la BD `osap-api`.
+  - Incluye además la **ficha pública y administración** de esta entrega:
+    `GET /composers/{id}/index-works`, enlaces «Ficha» desde búsqueda y compositor, ficha de
+    obra con todos los datos del índice y proveedores, ficha de compositor en fieldsets,
+    correcciones solo con sesión, bloque de «buscar mejores» solo con ≥2 ficheros accesibles,
+    etiquetas «Ver»/«Descargar», email verificado en el listado de admin y nickname propuesto
+    desde el nombre en el onboarding. El código del SSR React (`web/ssr`) queda incluido pero
+    **no se despliega**: nginx sigue sirviendo las fichas con osap-api (Jinja).
+  - Evidencia: `pytest tests/osap` **913** OK; `ruff` + `mypy` (347 ficheros) OK; SPA
+    `tsc --noEmit` y **148** tests OK; web de auth `tsc` + build OK; `check-versions` 5.5.0
+    OK; migración aditiva (`script/migrate_amigos_schema.py`, dry-run) en la BD `osap-api`.
   - Alcance: `osap-api` + `osap-auth` + `osap-storage` (+ versión del conjunto).
 
 - **5.4.0 (B)** — **SEO técnico**: datos estructurados site-wide (`Organization` + `WebSite`,

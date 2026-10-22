@@ -17,11 +17,19 @@ def build_analytics_store(
     user: str = "osap2027",
     password: str = "2027osapdb",
     database: str = "osap-api",
+    port: int = 3306,
+    read_only: bool = False,
 ) -> _MemoryStore:
     """Factoría: MySQL con fallback a memoria si no está disponible."""
-    params = {"host": host, "user": user, "password": password, "database": database}
     try:
-        return _MysqlStore(**params)
+        return _MysqlStore(
+            host=host,
+            user=user,
+            password=password,
+            database=database,
+            port=port,
+            read_only=read_only,
+        )
     except pymysql.err.OperationalError as exc:
         _LOGGER.warning("MySQL de analítica no disponible (%s); usando almacén en memoria", exc)
         return _MemoryStore()

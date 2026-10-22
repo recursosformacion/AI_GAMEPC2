@@ -1,32 +1,51 @@
 {% extends "base.html" %}
+{% set active = "/composers" %}
 {% block title %}Compositores — OpenMusicRepository{% endblock %}
 {% block description %}Listado de compositores con obras y partituras disponibles en OpenMusicRepository.{% endblock %}
 {% block content %}
-<nav class="crumbs" aria-label="breadcrumb">
-  <a href="/">Inicio</a> › <span>Compositores</span>
-</nav>
-
-<div class="entity-head">
+<div class="page-head">
+  <p class="eyebrow">Índice de compositores</p>
   <h1>Compositores</h1>
+  <p>Compositores con obras y partituras disponibles en el catálogo. Busca por nombre y abre la ficha para ver su biografía y sus obras.</p>
 </div>
-<p class="muted">{{ total }} compositores</p>
 
-<table class="works-table">
-  <thead><tr><th>Compositor</th><th>Años</th><th>Obras</th></tr></thead>
-  <tbody>
-    {% for c in items %}
-    <tr>
-      <td><a href="/composers/{{ c.id }}/{{ c.slug }}">{{ c.name }}</a></td>
-      <td>{{ c.years or '—' }}</td>
-      <td>{{ c.works_count }}</td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+<div class="toolbar">
+  <form class="searchbox" action="/composers" method="get" role="search">
+    <input type="search" name="q" value="{{ q }}" placeholder="Buscar compositor…" aria-label="Buscar compositor" />
+    <button type="submit">Buscar</button>
+  </form>
+  <span class="muted" style="font-size:0.875rem">{{ total }} compositores</span>
+</div>
 
-<nav class="pager" aria-label="paginación">
-  {% if page > 1 %}<a href="/composers?page={{ page - 1 }}">← Anterior</a>{% endif %}
-  <span>Página {{ page }} de {{ pages }}</span>
-  {% if page < pages %}<a href="/composers?page={{ page + 1 }}">Siguiente →</a>{% endif %}
+{% if items %}
+<ul class="list-card">
+  {% for c in items %}
+  <li>
+    <span class="avatar notranslate" translate="no" aria-hidden="true">{{ c.initials }}</span>
+    <div class="row-main">
+      <a class="row-name" href="/composers/{{ c.id }}/{{ c.slug }}">{{ c.name }}</a>
+      {% if c.meta %}<p class="row-meta">{{ c.meta }}</p>{% endif %}
+    </div>
+    <span class="row-count">{{ c.works_count }} obras</span>
+    <a class="chev" href="/composers/{{ c.id }}/{{ c.slug }}" aria-label="Abrir ficha de {{ c.name }}">›</a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="muted">No hay compositores que coincidan con la búsqueda.</p>
+{% endif %}
+
+<nav class="pager-bar" aria-label="paginación">
+  <span>
+    {% if page > 1 %}
+    <a class="btn" href="/composers?page={{ page - 1 }}{% if q %}&q={{ q|urlencode }}{% endif %}">← Anterior</a>
+    {% endif %}
+  </span>
+  <span class="muted">Página {{ page }} de {{ pages }} · {{ total }} compositores</span>
+  <span>
+    {% if page < pages %}
+    <a class="btn" href="/composers?page={{ page + 1 }}{% if q %}&q={{ q|urlencode }}{% endif %}">Siguiente →</a>
+    {% endif %}
+  </span>
 </nav>
 {% endblock %}

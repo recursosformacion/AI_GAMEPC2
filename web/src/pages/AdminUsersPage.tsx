@@ -157,7 +157,7 @@ export function AdminUsersPage() {
               <th className="px-3 py-2">{t("adminUsers.email")}</th>
               <th className="px-3 py-2">Rol</th>
               <th className="px-3 py-2 text-center">{t("adminUsers.status")}</th>
-              <th className="px-3 py-2 text-center">Visibilidad</th>
+              <th className="px-3 py-2 text-center" title="Nickname público/privado">Público</th>
               <th className="px-3 py-2 text-right">{t("adminUsers.actions")}</th>
             </tr>
           </thead>
@@ -165,12 +165,31 @@ export function AdminUsersPage() {
             {visibleUsers.map((user) => (
               <tr key={user.user_id} className="border-b border-osap-border last:border-0">
                 <td className="px-3 py-2">
-                  {user.name ?? "—"}
-                  {user.nickname ? (
-                    <span className="ml-2 text-xs text-osap-muted">@{user.nickname}</span>
-                  ) : null}
+                  <div className="max-w-[16rem] truncate" title={user.name ?? undefined}>
+                    {user.name ?? "—"}
+                    {user.nickname ? (
+                      <span className="ml-2 text-xs text-osap-muted">@{user.nickname}</span>
+                    ) : null}
+                  </div>
                 </td>
-                <td className="px-3 py-2">{user.email}</td>
+                <td className="px-3 py-2">
+                  <div className="flex items-center gap-1">
+                    <span className="max-w-[18rem] truncate" title={user.email}>
+                      {user.email}
+                    </span>
+                    {user.email_verified ? (
+                      <span
+                        className="shrink-0 text-emerald-600"
+                        title={t("adminUsers.emailVerified")}
+                      >
+                        <Icon title={t("adminUsers.emailVerified")}>
+                          <circle cx="12" cy="12" r="9" />
+                          <path d="M8 12l3 3 5-6" />
+                        </Icon>
+                      </span>
+                    ) : null}
+                  </div>
+                </td>
                 <td className="px-3 py-2">
                   <span className="rounded bg-osap-accent-soft px-2 py-0.5 text-xs">
                     {ROLE_LABEL[highestRole(user.roles)] ?? highestRole(user.roles)}

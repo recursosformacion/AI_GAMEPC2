@@ -157,11 +157,11 @@ function KnownSelectionBlock({
                     href={_viewHref(sel.source_id, sel.format, workTitle)}
                     target="_blank"
                     rel="noreferrer"
-                    title={t("actions.viewScore")}
-                    aria-label={t("actions.viewScore")}
+                    title={t("work.view")}
+                    aria-label={t("work.view")}
                     className="inline-block rounded border border-osap-accent px-2 py-0.5 text-xs text-osap-accent"
                   >
-                    {t("actions.viewScore")}
+                    {t("work.view")}
                   </a>
                   <a
                     href={`/api/v1/representations/${encodeURIComponent(sel.source_id)}/download`}
@@ -279,7 +279,7 @@ export function WorkDetailTabs({
           byProvider={byProvider}
           workTitle={work.title}
           workId={work.work_id}
-          allowWorkCorrections={allowWorkCorrections}
+          allowWorkCorrections={allowWorkCorrections && isAuthenticated}
         />
       ) : null}
 
@@ -334,6 +334,12 @@ function RepresentationsTab({
 }) {
   const { t } = useI18n();
   const [selected, setSelected] = useState<string | null>(null);
+  // Solo cuentan las representaciones con fichero accesible: las externas (CPDL/IMSLP)
+  // se abren en su web y no justifican el bloque de «buscar mejores».
+  const accessibleCount = representations.filter((rep) => {
+    const external = rep.url && !_isStorageUrl(rep.url);
+    return !external && rep.available !== false;
+  }).length;
 
   return (
     <div className="p-3">
@@ -374,6 +380,7 @@ function RepresentationsTab({
                     href={_viewHref(rep.id, rep.format, workTitle)}
                     target="_blank"
                     rel="noreferrer"
+                    translate="no"
                     title={(rep.format ?? "").toLowerCase() === "midi" ? t("actions.playPause") : t("work.view")}
                     aria-label={(rep.format ?? "").toLowerCase() === "midi" ? t("actions.playPause") : t("work.view")}
                     onClick={(e) => e.stopPropagation()}
@@ -387,6 +394,7 @@ function RepresentationsTab({
                     download={downloadFileName(rep, workTitle)}
                     target="_blank"
                     rel="noreferrer"
+                    translate="no"
                     title={t("work.download")}
                     aria-label={t("work.download")}
                     onClick={(e) => e.stopPropagation()}
@@ -427,7 +435,7 @@ function RepresentationsTab({
         })}
       </ul>
       <p className="mt-2 text-xs text-osap-muted">{t("work.titlesFromSources")}</p>
-      {representations.length > 1 ? (
+      {accessibleCount > 1 ? (
         <KnownSelectionBlock
           workId={workId}
           representations={representations}

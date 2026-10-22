@@ -1,16 +1,17 @@
 // Estado de Compositores (consulta pública + fusión admin).
 // Todo pasa por osap-api; la UI nunca accede directamente a osap-storage.
 
-import { create } from "zustand";
+import { createSsrStore } from "./createSsrStore";
 import { apiClient } from "../api/ApiClient";
 import { ApiError } from "../api/errors";
-import type { ComposerDetail, ComposerList, ComposerSummary, ComposerWorks, MergeComposersResult } from "../api/types";
+import type { ComposerDetail, ComposerIndexWorks, ComposerList, ComposerSummary, ComposerWorks, MergeComposersResult } from "../api/types";
 
 interface ComposersState {
   list: ComposerList | null;
   detail: ComposerDetail | null;
   biography: ComposerDetail | null;
   works: ComposerWorks | null;
+  indexWorks: ComposerIndexWorks | null;
   loading: boolean;
   error: ApiError | null;
   q: string;
@@ -18,6 +19,12 @@ interface ComposersState {
   offset: number;
   review: string | null;
   visible: string;
+  /** Última consulta cargada (para no repetirla tras la hidratación del SSR). */
+  lastQuery: string | null;
+  lastOffset: number | null;
+  /** Persona cuyas obras están en `works` (idempotencia del SSR). */
+  worksFor: string | null;
+  indexWorksFor: string | null;
   setQuery: (q: string) => void;
   setReview: (review: string | null) => void;
   setVisible: (visible: string) => void;
@@ -25,6 +32,7 @@ interface ComposersState {
   fetchDetail: (id: string) => Promise<void>;
   fetchBiography: (id: string) => Promise<void>;
   fetchWorks: (id: string, limit: number, offset: number) => Promise<void>;
+  fetchIndexWorks: (id: string, limit: number, offset: number) => Promise<void>;
   merge: (targetId: string, sourceIds: string[]) => Promise<void>;
   createComposer: (name: string) => Promise<ComposerSummary>;
   reviewComposer: (personId: string, reviewStatus: string) => Promise<void>;
@@ -34,11 +42,12 @@ interface ComposersState {
   setAttribution: (personIds: string[], attributionType: string) => Promise<number>;
 }
 
-export const useComposers = create<ComposersState>((set, get) => ({
+export const useComposers = createSsrStore<ComposersState>((set, get) => ({
   list: null,
   detail: null,
   biography: null,
   works: null,
+  indexWorks: null,
   loading: false,
   error: null,
   q: "",
@@ -46,6 +55,10 @@ export const useComposers = create<ComposersState>((set, get) => ({
   offset: 0,
   review: null,
   visible: "visible",
+  lastQuery: null,
+  lastOffset: null,
+  worksFor: null,
+  indexWorksFor: null,
   setQuery: (q) => set({ q }),
   setReview: (review) => set({ review }),
   setVisible: (visible) => set({ visible }),
@@ -53,7 +66,7 @@ export const useComposers = create<ComposersState>((set, get) => ({
     set({ loading: true, error: null });
     try {
       const list = await apiClient.getComposers(q, limit, offset, review ?? undefined, visible);
-      set({ list, loading: false, error: null });
+      set({ list, loading: false, error: null, lastQuery: q, lastOffset: offset });
     } catch (e) {
       set({ loading: false, error: e instanceof ApiError ? e : new ApiError("UNKNOWN", String(e)) });
     }
@@ -79,7 +92,15 @@ export const useComposers = create<ComposersState>((set, get) => ({
   fetchWorks: async (id, limit, offset) => {
     try {
       const works = await apiClient.getComposerWorks(id, limit, offset);
-      set({ works });
+      set({ works, worksFor: id });
+    } catch (e) {
+      set({ error: e instanceof ApiError ? e : new ApiError("UNKNOWN", String(e)) });
+    }
+  },
+  fetchIndexWorks: async (id, limit, offset) => {
+    try {
+      const indexWorks = await apiClient.getComposerIndexWorks(id, limit, offset);
+      set({ indexWorks, indexWorksFor: id });
     } catch (e) {
       set({ error: e instanceof ApiError ? e : new ApiError("UNKNOWN", String(e)) });
     }

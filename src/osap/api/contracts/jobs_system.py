@@ -65,6 +65,7 @@ class SystemHealthResponse(_Frozen):
     storage_target: str | None = None
     read_only: bool = False
     dev_auth_bypass: bool = False
+    mode: str = "unknown"
 
 
 class SystemVersionResponse(_Frozen):

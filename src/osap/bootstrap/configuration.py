@@ -55,6 +55,9 @@ class Configuration:
     osap_api_db_user: str | None = None
     osap_api_db_password: str | None = None
     osap_api_db_name: str | None = None
+    # Puerto de la BD operativa. 3307 permite usar un túnel SSH a producción sin
+    # chocar con un MySQL local en 3306.
+    osap_api_db_port: int = 3306
     dev_auth_bypass: bool = False
     storage_web_base: str | None = None
     support_web_base: str | None = None
@@ -192,6 +195,15 @@ def _coerce(field: str, raw: Any) -> Any:
     return str(raw)
 
 
+def _as_db_port(raw: Any, default: int = 3306) -> int:
+    """Convierte el puerto de la BD a int válido; nunca lanza (cae al default)."""
+    try:
+        port = int(str(raw))
+    except (TypeError, ValueError):
+        return default
+    return port if 0 < port < 65536 else default
+
+
 def _load_db_overrides(cfg: Configuration) -> dict[str, Any]:
     """Lee los overrides de config persistidos en la BD operativa (app_config)."""
     try:
@@ -202,6 +214,8 @@ def _load_db_overrides(cfg: Configuration) -> dict[str, Any]:
             user=cfg.osap_api_db_user or "osap2027",
             password=cfg.osap_api_db_password or "2027osapdb",
             database=cfg.osap_api_db_name or "osap-api",
+            port=cfg.osap_api_db_port,
+            read_only=True,
         )
         out: dict[str, Any] = {}
         for field in _CONFIG_FIELDS:
@@ -245,6 +259,7 @@ def load_configuration(path: str | Path | None = None, service_name: str | None 
         osap_api_db_user=conn("OSAP_API_DB_USER", "user"),
         osap_api_db_password=conn("OSAP_API_DB_PASSWORD", "password"),
         osap_api_db_name=conn("OSAP_API_DB_NAME", "name"),
+        osap_api_db_port=_as_db_port(os.environ.get("OSAP_API_DB_PORT") or db.get("port")),
     )
 
     overrides: dict[str, Any] = _load_db_overrides(base)

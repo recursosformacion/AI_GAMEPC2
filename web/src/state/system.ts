@@ -1,4 +1,4 @@
-import { create } from "zustand";
+import { createSsrStore } from "./createSsrStore";
 import { apiClient } from "../api/ApiClient";
 import type { SystemHealth } from "../api/types";
 
@@ -7,7 +7,7 @@ interface SystemState {
   load: () => Promise<void>;
 }
 
-export const useSystem = create<SystemState>((set) => ({
+export const useSystem = createSsrStore<SystemState>((set) => ({
   health: null,
   load: async () => {
     try {

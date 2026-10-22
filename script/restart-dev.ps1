@@ -5,7 +5,8 @@
 # responda en su healthcheck. Pensado para lanzarse desde el escritorio antes de probar.
 #
 # Servicios (host 127.0.0.1): osap-storage 8000, osap-api 8001, osap-auth 8200,
-# osap-support 8300. Apache (osap-app) NO se toca: sirve la SPA y hace de proxy.
+# osap-support 8300 y osap-ssr 3000 (Node: HTML SSR de compositores y obras).
+# Apache (osap-app) NO se toca: sirve la SPA y hace de proxy.
 #
 # Uso:
 #   pwsh script/restart-dev.ps1              # se autoeleva (necesario para matar procesos
@@ -43,7 +44,8 @@ $services = @(
     [pscustomobject]@{ Name = "osap-storage"; Repo = "osap-storage"; Port = 8000; App = "api.main:app"; Factory = $false; Health = "http://127.0.0.1:8000/api/v1/health"; Env = @{ OSAP_CONFIG = "config.yaml" } },
     [pscustomobject]@{ Name = "osap-api"; Repo = "osap-api"; Port = 8001; App = "src.osap.api.platform_app:create_platform_app"; Factory = $true; Health = "http://127.0.0.1:8001/api/v1/system/health"; Env = @{} },
     [pscustomobject]@{ Name = "osap-auth"; Repo = "osap-auth"; Port = 8200; App = "api.main:create_app_from_settings"; Factory = $true; Health = "http://127.0.0.1:8200/health"; Env = @{} },
-    [pscustomobject]@{ Name = "osap-support"; Repo = "osap-support"; Port = 8300; App = "api.main:create_app_from_settings"; Factory = $true; Health = "http://127.0.0.1:8300/health"; Env = @{} }
+    [pscustomobject]@{ Name = "osap-support"; Repo = "osap-support"; Port = 8300; App = "api.main:create_app_from_settings"; Factory = $true; Health = "http://127.0.0.1:8300/health"; Env = @{} },
+    [pscustomobject]@{ Name = "osap-ssr"; Repo = "osap-api\web"; Port = 3000; Node = $true; Health = "http://127.0.0.1:3000/health"; Env = @{ OSAP_SSR_DEV = "1"; OSAP_API_ORIGIN = "http://127.0.0.1:8001"; OSAP_PUBLIC_ORIGIN = "http://osap-app" } }
 )
 
 function Test-Admin {
@@ -166,6 +168,19 @@ foreach ($service in $services) {
         continue
     }
     $repoPath = Join-Path $Root $service.Repo
+    if ($service.PSObject.Properties.Name -contains "Node" -and $service.Node) {
+        foreach ($key in $service.Env.Keys) { Set-Item -Path "Env:$key" -Value $service.Env[$key] }
+        try {
+            Start-Process -FilePath "node" -ArgumentList "ssr/server.mjs" -WorkingDirectory $repoPath -WindowStyle Hidden `
+                -RedirectStandardOutput (Join-Path $logDir "$($service.Name).out.log") `
+                -RedirectStandardError (Join-Path $logDir "$($service.Name).err.log")
+            $started += $service
+            Write-Status "  $($service.Name) -> puerto $($service.Port) (node)"
+        } finally {
+            foreach ($key in $service.Env.Keys) { Remove-Item -Path "Env:$key" -ErrorAction SilentlyContinue }
+        }
+        continue
+    }
     $python = Resolve-Python $repoPath
     $arguments = @("-m", "uvicorn")
     if ($service.Factory) { $arguments += @("--factory", $service.App) } else { $arguments += @($service.App) }
@@ -194,6 +209,12 @@ if ($NoWait) {
         $apiCode = Wait-Health "http://127.0.0.1:8001/api/v1/system/health" $TimeoutSeconds
         if ($apiCode) { Write-Status "  OK  osap-api ($apiCode)" }
         else { Write-Status "  FALLO osap-api (ver $logDir\osap-api.err.log)" }
+    }
+    if ($started | Where-Object { $_.Name -eq "osap-ssr" }) {
+        Write-Status "  esperando osap-ssr (HTML de compositores/obras)..."
+        $ssrCode = Wait-Health "http://127.0.0.1:3000/health" $TimeoutSeconds
+        if ($ssrCode) { Write-Status "  OK  osap-ssr ($ssrCode)" }
+        else { Write-Status "  FALLO osap-ssr (ver $logDir\osap-ssr.err.log)" }
     }
     $startedNames = @($started | ForEach-Object { $_.Name })
     Write-Host ""

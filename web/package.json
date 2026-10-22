@@ -1,11 +1,14 @@
 {
   "name": "osap-web",
   "private": true,
-  "version": "5.5.0",
+  "version": "5.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
+    "build:ssr": "node -e \"require('node:fs').rmSync('dist-ssr',{recursive:true,force:true})\" && vite build --config vite.ssr.config.ts",
+    "build:all": "npm run build:ssr && npm run build",
+    "ssr": "node ssr/server.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

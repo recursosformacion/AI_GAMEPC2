@@ -96,7 +96,7 @@ export function ViewerPage() {
         if (!showAll) {
           const limited = limitMeasures(xml, page * PAGE_MEASURES, PAGE_MEASURES);
           toLoad = limited.xml;
-          setPagination({ start: limited.start, kept: limited.kept, total: limited.total });
+          setPagination(limited.truncated ? { start: limited.start, kept: limited.kept, total: limited.total } : null);
         } else {
           setPagination(null);
         }

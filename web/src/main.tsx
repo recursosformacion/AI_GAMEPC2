@@ -1,7 +1,8 @@
 import { Component, StrictMode, type ErrorInfo, type ReactNode } from "react";
-import { createRoot } from "react-dom/client";
+import { createRoot, hydrateRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
+import { applySsrState } from "./ssr/applyState";
 import "./design-system/tokens.css";
 
 // Tras un despliegue, una pestaña abierta con el bundle anterior pide chunks que ya no
@@ -85,12 +86,21 @@ class ErrorBoundary extends Component<
   }
 }
 
-createRoot(document.getElementById("root")!).render(
+const root = document.getElementById("root")!;
+// El SSR deja el estado ya cargado en `window.__OSAP_STATE__`; se aplica antes de hidratar
+// para que el primer render del cliente sea idéntico al HTML del servidor.
+applySsrState(window.__OSAP_STATE__);
+const tree = (
   <StrictMode>
     <ErrorBoundary>
       <BrowserRouter>
         <App />
       </BrowserRouter>
     </ErrorBoundary>
-  </StrictMode>,
+  </StrictMode>
 );
+if (root.hasChildNodes()) {
+  hydrateRoot(root, tree);
+} else {
+  createRoot(root).render(tree);
+}

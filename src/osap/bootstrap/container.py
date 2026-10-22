@@ -1,3 +1,5 @@
+from typing import Any
+
 from src.osap.application.catalog_manager import CatalogManager
 from src.osap.application.collaborators import ComposePublicCollaboratorsUseCase
 from src.osap.application.composer_resolution_engine import ComposerResolutionEngine, WorkMatcher
@@ -76,7 +78,8 @@ class Container:
         self._dev_auth_bypass: bool = False
         self._storage_web_base: str | None = None
         self._support_web_base: str | None = None
-        self._op_store_config: dict[str, str] | None = None
+        self._op_store_config: dict[str, Any] | None = None
+        self._mode: str = "unknown"
         self._collaborators: ComposePublicCollaboratorsUseCase | None = None
         self._support_admin_recognitions: SupportAdminRecognitionsClient | None = None
         self._storage_contributions: StorageContributionClient | None = None
@@ -168,11 +171,18 @@ class Container:
     def storage_info(self) -> tuple[str, bool]:
         return self._storage_target or "unknown", self._storage_read_only
 
-    def set_op_store_config(self, config: dict[str, str]) -> None:
+    def set_op_store_config(self, config: dict[str, Any]) -> None:
         self._op_store_config = config
 
-    def op_store_config(self) -> dict[str, str]:
+    def op_store_config(self) -> dict[str, Any]:
         return self._op_store_config or {}
+
+    def set_mode(self, mode: str) -> None:
+        self._mode = mode
+
+    def mode(self) -> str:
+        """Modo efectivo: `prod`, `dev-real` (solo lectura) o `dev-local`."""
+        return self._mode
 
     def auth_proxy(self) -> AuthProxyClient:
         if self._auth_proxy is None:

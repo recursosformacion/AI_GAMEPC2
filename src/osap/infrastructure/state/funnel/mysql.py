@@ -33,10 +33,25 @@ _DDL: tuple[str, ...] = (
 class _MysqlStore(MemoryStore):
     """Append-only en MySQL: solo INSERT (no hay UPDATE/DELETE en esta clase)."""
 
-    def __init__(self, host: str, user: str, password: str, database: str) -> None:
+    def __init__(
+        self,
+        host: str,
+        user: str,
+        password: str,
+        database: str,
+        port: int = 3306,
+        read_only: bool = False,
+    ) -> None:
         super().__init__()
-        self._params = {"host": host, "user": user, "password": password, "database": database}
-        self._run(_DDL[0])
+        self._port = port
+        self._params = {
+            "host": host,
+            "user": user,
+            "password": password,
+            "database": database,
+        }
+        if not read_only:
+            self._run(_DDL[0])
 
     def _conn(self, *, autocommit: bool = True) -> pymysql.connections.Connection:
         return pymysql.connect(
@@ -44,6 +59,7 @@ class _MysqlStore(MemoryStore):
             user=self._params["user"],
             password=self._params["password"],
             database=self._params["database"],
+            port=self._port,
             charset="utf8mb4",
             cursorclass=DictCursor,
             autocommit=autocommit,

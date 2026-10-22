@@ -128,10 +128,33 @@ def build_works_router(ctx: HttpContext) -> APIRouter:
                     "catalogue": data.get("catalogue"),
                     "year": data.get("year"),
                     "instrumentation": data.get("instrumentation"),
+                    "updated_at": data.get("updated_at"),
                 },
                 "representations": data.get("representations") or [],
             }
         )
+
+    @router.get(
+        "/api/v1/works/public/{work_id}/details",
+        tags=["Works"],
+        summary="Public work details (on demand)",
+        description="Datos ricos de la obra desde el contrato HTTP de osap-storage, buscados "
+        "por título/compositor al abrir la ficha. Sin tabla de correspondencias ni JOIN; "
+        "requiere coincidencia exacta normalizada.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("OSAP work details", _shared._example({})),
+            404: _shared._NOT_FOUND_404,
+            **_shared._standard_errors(),
+        },
+    )
+    def public_work_osap(
+        response: Response, work_id: str
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        data = ctx.api.osap_work_details(work_id)
+        if data is None:
+            return ctx.fail(404, response, "NOT_FOUND", "OSAP work not found")
+        return ctx.ok(data)
 
     @router.get(
         "/api/v1/works/{work_id}",

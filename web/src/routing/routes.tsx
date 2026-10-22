@@ -12,6 +12,7 @@ function AppAlias({ base }: { base: "composers" | "obras" }) {
   return <Navigate to={`/${base}/${encodeURIComponent(id ?? "")}`} replace />;
 }
 
+
 // Las páginas se cargan por chunk (code-splitting): reduce el bundle inicial y mejora LCP/INP.
 // La portada (HomePage) y los layouts van eager (primer render).
 const AboutPage = lazy(() => import("../pages/AboutPage").then((m) => ({ default: m.AboutPage })));
@@ -46,10 +47,15 @@ const AuthCallbackPage = lazy(() => import("../pages/AuthCallbackPage").then((m)
 const CollaboratorsPage = lazy(() => import("../pages/CollaboratorsPage").then((m) => ({ default: m.CollaboratorsPage })));
 const HowItWorksPage = lazy(() => import("../pages/HowItWorksPage").then((m) => ({ default: m.HowItWorksPage })));
 const CandidatesPage = lazy(() => import("../pages/CandidatesPage").then((m) => ({ default: m.CandidatesPage })));
-const ComposerDetailPage = lazy(() => import("../pages/ComposerDetailPage").then((m) => ({ default: m.ComposerDetailPage })));
 const ComposerPage = lazy(() => import("../pages/ComposerPage").then((m) => ({ default: m.ComposerPage })));
+const ComposerDetailPage = lazy(() =>
+  import("../pages/ComposerDetailPage").then((m) => ({ default: m.ComposerDetailPage })),
+);
+const ComposersPage = lazy(() =>
+  import("../pages/ComposersPage").then((m) => ({ default: m.ComposersPage })),
+);
+const WorkPage = lazy(() => import("../pages/WorkPage").then((m) => ({ default: m.WorkPage })));
 const CataloguesPage = lazy(() => import("../pages/CataloguesPage").then((m) => ({ default: m.CataloguesPage })));
-const ComposersPage = lazy(() => import("../pages/ComposersPage").then((m) => ({ default: m.ComposersPage })));
 const DiscoverPage = lazy(() => import("../pages/DiscoverPage").then((m) => ({ default: m.DiscoverPage })));
 const EnsemblesPage = lazy(() => import("../pages/EnsemblesPage").then((m) => ({ default: m.EnsemblesPage })));
 const EpochsPage = lazy(() => import("../pages/EpochsPage").then((m) => ({ default: m.EpochsPage })));
@@ -68,7 +74,6 @@ const SourcesPage = lazy(() => import("../pages/SourcesPage").then((m) => ({ def
 const SupportOsapPage = lazy(() => import("../pages/SupportOsapPage").then((m) => ({ default: m.SupportOsapPage })));
 const CorrectionsPage = lazy(() => import("../pages/CorrectionsPage").then((m) => ({ default: m.CorrectionsPage })));
 const WorkResolutionPage = lazy(() => import("../pages/WorkResolutionPage").then((m) => ({ default: m.WorkResolutionPage })));
-const WorkPage = lazy(() => import("../pages/WorkPage").then((m) => ({ default: m.WorkPage })));
 const RepresentationPage = lazy(() =>
   import("../pages/RepresentationPage").then((m) => ({ default: m.RepresentationPage })),
 );

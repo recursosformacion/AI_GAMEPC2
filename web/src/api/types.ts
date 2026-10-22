@@ -402,6 +402,9 @@ export interface ComposerDetail {
   review_status: string | null;
   reviewed_at: string | null;
   visible?: boolean;
+  given_name?: string | null;
+  family_name?: string | null;
+  sort_name?: string | null;
   birth_year?: string | null;
   death_year?: string | null;
   biography_summary?: string | null;
@@ -423,6 +426,18 @@ export interface ComposerWorkRef {
   tags: string | null;
 }export interface ComposerWorks {
   items: ComposerWorkRef[];
+  total: number;
+}
+
+export interface ComposerIndexWork {
+  work_id: string;
+  title: string;
+  catalogue?: string | null;
+  year?: number | null;
+}
+
+export interface ComposerIndexWorks {
+  items: ComposerIndexWork[];
   total: number;
 }
 
@@ -530,6 +545,7 @@ export interface SystemHealth {
   storage_target: string | null;
   read_only: boolean;
   dev_auth_bypass?: boolean;
+  mode?: string;
 }
 
 export interface SourcePreview {
@@ -869,6 +885,7 @@ export interface PublicWorkRepresentation {
   id?: string | null;
   provider: string;
   format: string;
+  title?: string | null;
   url?: string | null;
   downloadable: boolean;
 }
@@ -881,8 +898,42 @@ export interface PublicWork {
     catalogue?: string | null;
     year?: number | null;
     instrumentation?: string | null;
+    updated_at?: string | null;
   };
   representations: PublicWorkRepresentation[];
+}
+
+export interface OsapWorkDetails {
+  id: number;
+  composer?: string | null;
+  person_id?: string | null;
+  title: string;
+  subtitle?: string | null;
+  artist?: string | null;
+  song_name?: string | null;
+  genre?: string | null;
+  opus?: string | null;
+  catalogue?: string | null;
+  musical_key?: string | null;
+  year?: number | null;
+  instrumentation?: string | null;
+  language?: string | null;
+  tags?: string | null;
+  duration?: string | null;
+  measures?: number | null;
+  pages?: number | null;
+  parts?: number | null;
+  complexity?: string | null;
+  license?: string | null;
+  public_domain?: boolean | null;
+  description?: string | null;
+  attribution_type?: string | null;
+  attribution_note?: string | null;
+  genres?: string[];
+  instruments?: string[];
+  parts_names?: string[];
+  created_at?: string | null;
+  updated_at?: string | null;
 }
 
 // --- «Los amigos» (grupos, artículos y recursos) -----------------------------

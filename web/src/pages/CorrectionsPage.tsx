@@ -3,6 +3,8 @@ import { Link, useSearchParams } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { CorrectionRequestRead } from "../api/types";
 import { Button } from "../components/Button";
+import { useOidcLogin } from "../components/useOidcLogin";
+import { useAuth } from "../state/auth";
 
 type Kind = "contact" | "source" | "composer" | "work" | "representation";
 
@@ -35,8 +37,15 @@ export function CorrectionsPage() {
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
   const [result, setResult] = useState<CorrectionRequestRead | null>(null);
   const [error, setError] = useState("");
+  const isAuthenticated = useAuth((s) => s.isAuthenticated());
+  const { start: startLogin } = useOidcLogin();
 
   const submit = async () => {
+    if (kind !== "contact" && !isAuthenticated) {
+      setError("Inicia sesión para proponer una corrección.");
+      setStatus("error");
+      return;
+    }
     if (!message.trim()) {
       setError("Escribe un mensaje con la corrección que propones.");
       setStatus("error");
@@ -65,6 +74,27 @@ export function CorrectionsPage() {
       setStatus("error");
     }
   };
+
+  if (kind !== "contact" && !isAuthenticated) {
+    return (
+      <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
+        <Link to="/" className="text-sm text-osap-accent hover:underline">
+          ← Volver
+        </Link>
+        <header>
+          <h1 className="text-2xl font-semibold">Contacto y correcciones</h1>
+          <p className="mt-2 text-sm text-osap-muted">
+            Para proponer una corrección de datos del catálogo necesitas una cuenta. El
+            contacto general está disponible en el menú.
+          </p>
+        </header>
+        <section className="space-y-4 rounded-lg border border-osap-border bg-white p-5">
+          <p className="text-sm text-osap-muted">Inicia sesión para continuar.</p>
+          <Button onClick={() => void startLogin()}>Iniciar sesión</Button>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">

@@ -1,31 +1,51 @@
-import { useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useEffect, type ReactNode } from "react";
+import { Link, useParams } from "react-router-dom";
 import { Card } from "../components/Card";
 import { Spinner } from "../components/Spinner";
 import { WorksListModule, groupWorks } from "../components/WorksListModule";
-import { useI18n } from "../i18n/I18n";
+import { useAuth } from "../state/auth";
 import { useComposers } from "../state/composers";
 import { useSearches } from "../state/searches";
 
-// Detalle de un compositor en pantalla propia (estudio): panel con toda la información
-// disponible del compositor + todas sus obras con el MISMO módulo de fusión/resultados
-// que la búsqueda.
+// Ficha del compositor. Es la misma vista para el público y para el área de admin: aquí
+// siempre es de solo lectura; si el usuario es admin se ofrece el acceso a la edición.
+// Replica la ficha HTML que servía /compositor/<id>/<slug>.
+function Field({ label, value }: { label: string; value: ReactNode }) {
+  return (
+    <div className="min-w-0">
+      <dt className="text-[11px] font-semibold uppercase tracking-wide text-osap-muted">{label}</dt>
+      <dd className="mt-0.5 whitespace-pre-line break-words text-sm text-osap-ink">{value || "—"}</dd>
+    </div>
+  );
+}
+
 export function ComposerDetailPage() {
   const { personId = "" } = useParams<{ personId: string }>();
-  const { t } = useI18n();
   const biography = useComposers((s) => s.biography);
   const works = useComposers((s) => s.works);
+  const worksFor = useComposers((s) => s.worksFor);
   const fetchBiography = useComposers((s) => s.fetchBiography);
   const fetchWorks = useComposers((s) => s.fetchWorks);
+  const indexWorks = useComposers((s) => s.indexWorks);
+  const indexWorksFor = useComposers((s) => s.indexWorksFor);
+  const fetchIndexWorks = useComposers((s) => s.fetchIndexWorks);
+  const isAdmin = useAuth((s) => s.isAdmin());
   const pipeline = useSearches((s) => s.data);
   const searchLoading = useSearches((s) => s.loading);
   const searchPolling = useSearches((s) => s.polling);
   const loading = useComposers((s) => s.loading);
 
   useEffect(() => {
-    void fetchBiography(personId);
-    void fetchWorks(personId, 200, 0);
-  }, [fetchBiography, fetchWorks, personId]);
+    if (biography?.id !== personId) void fetchBiography(personId);
+  }, [biography?.id, fetchBiography, personId]);
+
+  useEffect(() => {
+    if (worksFor !== personId) void fetchWorks(personId, 200, 0);
+  }, [fetchWorks, personId, worksFor]);
+
+  useEffect(() => {
+    if (indexWorksFor !== personId) void fetchIndexWorks(personId, 300, 0);
+  }, [fetchIndexWorks, indexWorksFor, personId]);
 
   // Igual que una búsqueda con ese compositor (sistema de fusión compartido).
   useEffect(() => {
@@ -34,158 +54,123 @@ export function ComposerDetailPage() {
     }
   }, [biography?.name]);
 
-  const storedWorks = (works?.items ?? []).filter((w) => w.title);
+  const indexRows = indexWorks?.items ?? [];
+  const normalizeTitle = (value: string) =>
+    value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, " ")
+      .trim();
+  const indexByTitle = new Map(indexRows.map((w) => [normalizeTitle(w.title), w.work_id]));
+  // Las obras que vienen de la búsqueda llevan `work-<uuid>`; la ficha pública usa
+  // `index-<n>`. Solo se enlaza cuando hay una obra indexada con el mismo título.
+  const fichaIdFor = (workId: string, title: string): string | null => {
+    if (workId.startsWith("index-")) return workId;
+    const exact = indexByTitle.get(normalizeTitle(title));
+    if (exact) return exact;
+    const head = title.split(" - ")[0] ?? title;
+    return indexByTitle.get(normalizeTitle(head)) ?? null;
+  };
   const pipelineWorks = pipeline?.results ? groupWorks(pipeline.results) : [];
   const showPipeline = pipelineWorks.length > 0;
-  // Mientras se cargan/buscan las obras y aún no hay resultados, mostramos un
-  // indicador para que la pantalla no parezca vacía.
   const worksLoading =
-    loading || searchLoading || searchPolling || (!showPipeline && storedWorks.length === 0 && !works);
+    loading || searchLoading || searchPolling || (!showPipeline && indexRows.length === 0 && !works);
+
+  if (biography === null) return <Spinner label="Cargando ficha…" />;
 
   const b = biography;
-  const reviewLabel = b?.review_status ?? "";
-  const periods = [
-    b?.birth_year ? `${b.birth_year}–${b.death_year ?? "…"}` : null,
-    b?.biography_era ?? null,
-    b?.biography_nationality ?? null,
-  ].filter(Boolean);
+  const years =
+    b.birth_year || b.death_year
+      ? `${b.birth_year ?? "?"}–${b.death_year ?? "?"}`
+      : null;
+  const references = (b.biography_references ?? []).filter(Boolean);
 
   return (
-    <div className="space-y-6">
-      {/* Cabecera del compositor */}
-      <div className="rounded-lg border border-osap-border bg-osap-surface p-5 shadow-sm">
+    <div className="space-y-4">
+      <nav className="text-xs text-osap-muted" aria-label="breadcrumb">
+        <Link to="/" className="hover:text-osap-accent">Inicio</Link> ›{" "}
+        <Link to="/composers" className="hover:text-osap-accent">Compositores</Link> ›{" "}
+        <span>{b.name}</span>
+      </nav>
+
+      <header className="border-b border-osap-border pb-3">
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold">{b?.name ?? t("composers.detail")}</h1>
-            {periods.length > 0 ? (
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-osap-muted">
-                {periods.map((p) => (
-                  <span key={p} className="rounded bg-osap-accent-soft px-2 py-0.5 text-xs">
-                    {p}
-                  </span>
-                ))}
-              </div>
-            ) : null}
-          </div>
-          <div className="flex flex-col items-end gap-1 text-xs">
-            {b?.status ? (
-              <span className="rounded bg-osap-surface px-2 py-0.5 text-osap-muted">{b.status}</span>
-            ) : null}
-            {b?.visible !== undefined ? (
-              <span
-                className={
-                  b.visible
-                    ? "rounded bg-osap-success/20 px-2 py-0.5 text-osap-success"
-                    : "rounded bg-osap-danger/20 px-2 py-0.5 text-osap-danger"
-                }
-              >
-                {b.visible ? "visible" : "hidden"}
-              </span>
-            ) : null}
-            {reviewLabel ? (
-              <span className="rounded bg-osap-surface px-2 py-0.5 text-osap-muted">
-                {t("composers.reviewFilter")}: {reviewLabel}
-              </span>
-            ) : null}
-            <span className="text-osap-muted">
-              {b?.works_count ?? works?.total ?? 0} {t("composers.worksTitle")}
-            </span>
+          <h1 className="font-display text-3xl font-semibold text-osap-ink">{b.name}</h1>
+          {isAdmin ? (
             <Link
-              to={`/corrections?kind=composer&entity_id=${encodeURIComponent(personId)}`}
-              className="inline-block rounded border border-osap-accent/40 px-2 py-0.5 text-xs font-medium text-osap-accent transition-colors hover:border-osap-accent hover:bg-osap-accent-soft"
+              to={`/admin/composers/${encodeURIComponent(personId)}`}
+              className="rounded border border-osap-border px-3 py-1 text-sm text-osap-accent hover:bg-osap-surface"
             >
-              {t("corrections.propose")}
+              Editar
             </Link>
-          </div>
+          ) : null}
         </div>
+        <div className="mt-2 flex flex-wrap gap-2 text-xs">
+          {years ? <span className="rounded bg-osap-accent-soft px-2 py-0.5">{years}</span> : null}
+          {b.biography_era ? <span className="rounded bg-osap-accent-soft px-2 py-0.5">{b.biography_era}</span> : null}
+          {b.biography_nationality ? (
+            <span className="rounded bg-osap-accent-soft px-2 py-0.5">{b.biography_nationality}</span>
+          ) : null}
+          <span className="rounded bg-osap-accent-soft px-2 py-0.5">{b.works_count ?? works?.total ?? 0} obras</span>
+        </div>
+      </header>
 
-        {b?.aliases && b.aliases.length > 0 ? (
-          <div className="mt-3 flex flex-wrap items-center gap-1">
-            <span className="text-xs font-semibold uppercase text-osap-muted">{t("composers.aliases")}:</span>
-            {b.aliases.map((a) => (
-              <span key={a} className="rounded bg-osap-accent-soft px-2 py-0.5 text-xs">
-                {a}
-              </span>
-            ))}
+      <fieldset className="rounded-lg border border-osap-border bg-osap-surface p-5 shadow-sm">
+        <legend className="px-2 font-display text-lg font-semibold text-osap-ink">
+          Identidad y nombre
+        </legend>
+        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Field label="Identificador" value={b.id} />
+          <Field label="Nombre completo" value={b.name} />
+          <Field label="Nombre de pila" value={b.given_name} />
+          <Field label="Apellidos" value={b.family_name} />
+          <Field label="Nombre para ordenar" value={b.sort_name} />
+          <Field label="Visible" value={b.visible ? "Sí" : "No"} />
+        </dl>
+      </fieldset>
+
+      <fieldset className="rounded-lg border border-osap-border bg-osap-surface p-5 shadow-sm">
+        <legend className="px-2 font-display text-lg font-semibold text-osap-ink">
+          Biografía
+        </legend>
+        <dl className="space-y-4">
+          <Field label="Resumen" value={b.biography_summary} />
+          <Field label="Época" value={b.biography_era} />
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Nacionalidad" value={b.biography_nationality} />
+            <Field label="Año de nacimiento" value={b.birth_year} />
+            <Field label="Año de fallecimiento" value={b.death_year} />
           </div>
-        ) : null}
+          <Field label="Dato clave" value={b.biography_key_fact} />
+          <Field
+            label="Referencias"
+            value={
+              references.length > 0 ? (
+                <ul className="list-inside list-disc">
+                  {references.map((ref) => (
+                    <li key={ref}>{ref}</li>
+                  ))}
+                </ul>
+              ) : null
+            }
+          />
+        </dl>
+      </fieldset>
 
-        {b?.identifiers && b.identifiers.length > 0 ? (
-          <div className="mt-2 flex flex-wrap items-center gap-1">
-            <span className="text-xs font-semibold uppercase text-osap-muted">IDs:</span>
-            {b.identifiers.map((idf) => (
-              <span key={`${idf.type}-${idf.value}`} className="rounded border border-osap-border px-2 py-0.5 text-xs text-osap-muted">
-                {idf.type}: {idf.value}
-              </span>
-            ))}
-          </div>
-        ) : null}
-      </div>
-
-      {/* Biografía (panel principal del estudio) */}
-      {b?.biography_summary ? (
-        <Card title={t("composers.biography")}>
-          <p className="text-sm leading-relaxed">{b.biography_summary}</p>
-          {b.biography_key_fact ? (
-            <p className="mt-3 rounded border-l-2 border-osap-accent bg-osap-accent-soft/40 px-3 py-2 text-sm italic text-osap-muted">
-              "{b.biography_key_fact}"
-            </p>
-          ) : null}
-          {b.biography_key_works && b.biography_key_works.length > 0 ? (
-            <div className="mt-3">
-              <h3 className="text-xs font-semibold uppercase text-osap-muted">{t("composers.keyWorks")}</h3>
-              <div className="mt-1 flex flex-wrap gap-1">
-                {b.biography_key_works.map((k) => (
-                  <span key={k} className="rounded bg-osap-accent-soft px-2 py-0.5 text-xs">
-                    {k}
-                  </span>
-                ))}
-              </div>
-            </div>
-          ) : null}
-          {b.biography_references && b.biography_references.length > 0 ? (
-            <div className="mt-3">
-              <h3 className="text-xs font-semibold uppercase text-osap-muted">{t("composers.references")}</h3>
-              <ul className="mt-1 list-inside list-disc space-y-0.5 text-xs text-osap-muted">
-                {b.biography_references.map((r) => (
-                  <li key={r}>{r}</li>
-                ))}
-              </ul>
-            </div>
-          ) : null}
-        </Card>
-      ) : null}
-
-      {/* Evidencia de identidad */}
-      {b?.evidence && b.evidence.length > 0 ? (
-        <Card title={t("composers.evidence")}>
-          <ul className="space-y-1 text-sm">
-            {b.evidence.map((e, i) => (
-              <li key={i} className="flex items-center gap-2">
-                <span className="text-osap-accent">{e.source ?? "—"}</span>
-                <span className="font-mono text-xs text-osap-muted">{e.code ?? ""}</span>
-                {e.score != null ? (
-                  <span className="text-xs text-osap-muted">· score {e.score}</span>
-                ) : null}
-              </li>
-            ))}
-          </ul>
-        </Card>
-      ) : null}
-
-      {/* Obras del compositor */}
-      <Card title={t("composers.worksTitle")}>
+      <Card title="Obras disponibles">
         {showPipeline ? (
-          <WorksListModule works={pipelineWorks} />
-        ) : storedWorks.length > 0 ? (
+          <WorksListModule works={pipelineWorks} fichaIdFor={fichaIdFor} />
+        ) : indexRows.length > 0 ? (
           <WorksListModule
             works={[]}
-            fallbackWorks={storedWorks.map((w) => ({ work_id: w.work_id, title: w.title }))}
+            fichaIdFor={fichaIdFor}
+            fallbackWorks={indexRows.map((w) => ({ work_id: w.work_id, title: w.title, catalogue: w.catalogue ?? null }))}
           />
         ) : worksLoading ? (
-          <Spinner label={t("composers.searching")} />
+          <Spinner label="Buscando obras…" />
         ) : (
-          <p className="text-sm text-osap-muted">{t("states.empty")}</p>
+          <p className="text-sm text-osap-muted">Todavía no hay obras indexadas para este compositor.</p>
         )}
       </Card>
     </div>

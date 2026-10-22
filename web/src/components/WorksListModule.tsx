@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { RepresentationInfo, SearchResultItem, WorkDetail, WorkInfo } from "../api/types";
 import { Spinner } from "./Spinner";
@@ -13,6 +14,17 @@ export interface WorksListWork {
 
 function allRepresentations(work: WorksListWork): RepresentationInfo[] {
   return work.items[0]?.representations ?? work.items.map((i) => i.representation);
+}
+
+// Los ids de representación del índice son `idx-<idObra>-<proveedor>-…`; de ahí sale el
+// id estable de la ficha pública (`index-<idObra>`). Es la única correspondencia fiable
+// entre un resultado de búsqueda (`work-<hash>`) y la ficha HTML.
+function indexWorkIdFromRepresentations(reps: RepresentationInfo[]): string | null {
+  for (const rep of reps) {
+    const match = /^idx-(\d+)-/.exec(rep.id ?? "");
+    if (match) return `index-${match[1]}`;
+  }
+  return null;
 }
 
 function stars(score: number): string {
@@ -79,9 +91,12 @@ function mergeRepresentations(
 export function WorksListModule({
   works,
   fallbackWorks,
+  fichaIdFor,
 }: {
   works: WorksListWork[];
-  fallbackWorks?: Array<{ work_id: number; title: string | null }>;
+  fallbackWorks?: Array<{ work_id: string | number; title: string | null; catalogue?: string | null }>;
+  /** Devuelve el id `index-*` de la ficha pública, o null si no hay correspondencia. */
+  fichaIdFor?: (workId: string, title: string) => string | null;
 }) {
   const { t } = useI18n();
   const [openId, setOpenId] = useState<string | null>(null);
@@ -119,6 +134,10 @@ export function WorksListModule({
         const reps = allRepresentations(w);
         const providers = new Set(reps.map((r) => r.provider));
         const isOpen = openId === String(w.work.work_id);
+        const rawId = String(w.work.work_id);
+        const fichaId =
+          fichaIdFor?.(rawId, w.work.title) ??
+          (rawId.startsWith("index-") ? rawId : indexWorkIdFromRepresentations(reps));
         return (
           <li key={w.work.work_id} className="py-1">
             <div className="flex items-center gap-2">
@@ -141,6 +160,14 @@ export function WorksListModule({
                   <span className="text-osap-muted">{isOpen ? "▲" : "▼"}</span>
                 </span>
               </button>
+              {fichaId ? (
+                <Link
+                  to={`/obras/${encodeURIComponent(fichaId)}`}
+                  className="shrink-0 rounded border border-osap-border px-2 py-1 text-xs font-medium text-osap-accent hover:bg-osap-accent-soft"
+                >
+                  Ficha
+                </Link>
+              ) : null}
             </div>
             {isOpen ? (
               <div className="mb-2 overflow-hidden rounded bg-osap-surface">
@@ -171,16 +198,34 @@ export function WorksListModule({
         );
       })}
       {fallbackWorks && fallbackWorks.length > 0 && works.length === 0 ? (
-        fallbackWorks.map((w) => (
+        fallbackWorks.map((w) => {
+          const rawId = String(w.work_id);
+          const fichaId =
+            fichaIdFor?.(rawId, w.title ?? "") ??
+            (rawId.startsWith("index-") ? rawId : null);
+          return (
           <li key={w.work_id} className="py-1">
-            <button
-              type="button"
-              onClick={() => toggleWork(String(w.work_id))}
-              className="flex w-full items-center justify-between rounded px-1 py-2 text-left text-sm hover:bg-osap-accent-soft"
-            >
-              <span className="font-display">{w.title}</span>
-              <span className="text-osap-muted">{openId === String(w.work_id) ? "▲" : "▼"}</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => toggleWork(String(w.work_id))}
+                className="flex flex-1 items-center justify-between rounded px-1 py-2 text-left text-sm hover:bg-osap-accent-soft"
+              >
+                <span className="font-display">
+                  {w.title}
+                  {w.catalogue ? <span className="ml-2 text-xs text-osap-muted">{w.catalogue}</span> : null}
+                </span>
+                <span className="text-osap-muted">{openId === String(w.work_id) ? "▲" : "▼"}</span>
+              </button>
+              {fichaId ? (
+                <Link
+                  to={`/obras/${encodeURIComponent(fichaId)}`}
+                  className="shrink-0 rounded border border-osap-border px-2 py-1 text-xs font-medium text-osap-accent hover:bg-osap-accent-soft"
+                >
+                  Ficha
+                </Link>
+              ) : null}
+            </div>
             {openId === String(w.work_id) ? (
               <div className="mb-2 overflow-hidden rounded bg-osap-surface">
                 {loadingDetail ? (
@@ -201,7 +246,8 @@ export function WorksListModule({
               </div>
             ) : null}
           </li>
-        ))
+          );
+        })
       ) : null}
     </ul>
   );

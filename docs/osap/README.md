@@ -46,6 +46,16 @@ Chorus (producto independiente): `docs/chorus-vision.md` (visión),
 
 ## Mejoras pendientes (anotadas)
 
+- **Pendientes 2026-10-21** (`pending.md`): integración del módulo externo
+  `ai-recogeYouTube` (búsqueda global + valoraciones, correspondencia de obras y cuota) y
+  estado de las fuentes externas de partituras (BNE, BnF, BL, DNB, LOC, Europeana, Cantorion,
+  Gallica).
+- **Ficha de PROD SSR** (`prod-ssr-plan.md`): runbook completo para desplegar el HTML SSR
+  React (Node 3000, systemd, nginx, caché, verificación y rollback), con fechas y versión
+  pendientes de rellenar.
+- **Subida 5.5.0** (`release-5.5.0.md`): checklist de la entrega actual con mantenimiento en
+  servidor, verificación por `?preview` y rollback; **no** incluye el SSR de React.
+
 - **Catálogo de formaciones vocales (voicings)**: además de los términos normalizados de
   búsqueda (`SATB`, `STTB`, `AATB`, `ATTB`, …), valorar una tabla/catálogo de voicings con
   pequeña descripción de cada formación (voces, uso típico) para filtros/presentación.
