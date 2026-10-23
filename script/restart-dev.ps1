@@ -201,24 +201,19 @@ foreach ($service in $services) {
 Write-Status "[4/4] Esperando healthchecks..."
 $failed = @($busyNames)
 if ($NoWait) {
-    Write-Host "  (-NoWait: no se esperan todos, pero SÍ osap-api, backend del proxy Apache)" -ForegroundColor DarkGray
-    # Aunque no se esperen todos los healthchecks, osap-api es el que proxya Apache: si
-    # devolvemos antes de que escuche, la web da 503 unos segundos. Se espera siempre.
-    if ($started | Where-Object { $_.Name -eq "osap-api" }) {
-        Write-Status "  esperando osap-api (backend del proxy Apache)..."
-        $apiCode = Wait-Health "http://127.0.0.1:8001/api/v1/system/health" $TimeoutSeconds
-        if ($apiCode) { Write-Status "  OK  osap-api ($apiCode)" }
-        else { Write-Status "  FALLO osap-api (ver $logDir\osap-api.err.log)" }
+    Write-Host "  (-NoWait: se esperan TODOS los healthchecks; sin esto la primera petición de compositores puede dar 503)" -ForegroundColor DarkGray
+    foreach ($service in $started) {
+        Write-Status "  esperando $($service.Name)..."
+        $code = Wait-Health $service.Health $TimeoutSeconds
+        if ($code) { Write-Status "  OK  $($service.Name) ($code)" }
+        else { Write-Status "  FALLO $($service.Name)  (ver $logDir\$($service.Name).err.log)" }
     }
-    if ($started | Where-Object { $_.Name -eq "osap-ssr" }) {
-        Write-Status "  esperando osap-ssr (HTML de compositores/obras)..."
-        $ssrCode = Wait-Health "http://127.0.0.1:3000/health" $TimeoutSeconds
-        if ($ssrCode) { Write-Status "  OK  osap-ssr ($ssrCode)" }
-        else { Write-Status "  FALLO osap-ssr (ver $logDir\osap-ssr.err.log)" }
-    }
+    $appCode = Wait-Health "http://osap-app/api/v1/system/health" 20
+    if ($appCode) { Write-Status "  OK  osap-app (proxy Apache -> osap-api)" }
+    else { Write-Status "  AVISO osap-app no responde (¿Apache/XAMPP arrancado?)" }
     $startedNames = @($started | ForEach-Object { $_.Name })
     Write-Host ""
-    Write-Host "Arrancados en segundo plano: $($startedNames -join ', ')" -ForegroundColor Cyan
+    Write-Host "Arrancados: $($startedNames -join ', ')" -ForegroundColor Cyan
     Write-Host "Web dev:  http://osap-app" -ForegroundColor Cyan
     Write-Host "Logs:     $logDir" -ForegroundColor Cyan
     exit 0
