@@ -44,6 +44,8 @@ def _merge_index_resources(ctx: HttpContext, doc: dict[str, object]) -> None:
         extra = ctx.api.index_representations_for(title, composer)
     except Exception:  # noqa: BLE001 — el detalle nunca debe fallar por el índice
         return
+    from src.osap.api.http import shared as _shared
+    base = ctx.container.storage_web_base()
     for rep in extra:
         match = _FILE_ID_RE.search(str(rep.get("download_url") or ""))
         if match is None:
@@ -58,7 +60,7 @@ def _merge_index_resources(ctx: HttpContext, doc: dict[str, object]) -> None:
                 "format": str(rep.get("format") or "MusicXML"),
                 "file_id": file_id,
                 "available": True,
-                "url": str(rep.get("download_url") or ""),
+                "url": _shared._storage_public_url(str(rep.get("download_url") or ""), base),
             }
         )
 
@@ -133,7 +135,18 @@ def build_works_router(ctx: HttpContext) -> APIRouter:
                     "stats": data.get("stats")
                     or {"consults": 0, "downloads": 0, "download_bytes": 0, "last_day": None},
                 },
-                "representations": data.get("representations") or [],
+                "representations": [
+                    {
+                        **rep,
+                        "url": _shared._storage_public_url(
+                            str(rep.get("url") or ""), ctx.container.storage_web_base()
+                        ),
+                    }
+                    for rep in cast(
+                        "list[dict[str, object]]", data.get("representations") or []
+                    )
+                    if isinstance(rep, dict)
+                ],
             }
         )
 

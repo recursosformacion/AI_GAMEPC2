@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 import uuid
 from typing import TYPE_CHECKING, Any, cast
+from urllib.parse import urlsplit
 
 from src.osap.api.contracts import (
     ComposerCreationEvidenceResponse,
@@ -39,6 +40,20 @@ if TYPE_CHECKING:
     from src.osap.application.composer_resolution_engine import ResolutionDecision, ResolvedComposer
 
 _EXTENSION = {"musicxml": ".musicxml", "pdf": ".pdf", "midi": ".mid"}
+
+
+def _storage_public_url(url: str, base: str | None) -> str:
+    """Reescribe el host de un fichero de storage usando la base configurada.
+
+    La BD puede guardar la URL de producción; el host depende del entorno (storage local,
+    dominio público o CDN). Así no se reescribe la BD al cambiar de entorno.
+    """
+    if not url or not base:
+        return url
+    path = urlsplit(url).path
+    if path.startswith("/api/download/"):
+        return base.rstrip("/") + path
+    return url
 
 
 def _download_filename(info: dict[str, object]) -> str:

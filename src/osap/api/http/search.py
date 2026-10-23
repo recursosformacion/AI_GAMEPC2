@@ -209,7 +209,7 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
         info = ctx.api.get_representation_download(representation_id)
         if info is None:
             return ctx.fail(404, response, "NOT_FOUND", "Representation not found")
-        url = str(info.get("download_url") or "")
+        url = _shared._storage_public_url(str(info.get("download_url") or ""), ctx.container.storage_web_base())
         # Vista de un fichero externo (CPDL/IMSLP): se intenta proxear para el visor; si el
         # proveedor pone un reto anti-bot (Cloudflare) se redirige y lo resuelve el navegador.
         proxy_external = False
