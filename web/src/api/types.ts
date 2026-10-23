@@ -890,6 +890,13 @@ export interface PublicWorkRepresentation {
   downloadable: boolean;
 }
 
+export interface PublicWorkStats {
+  consults: number;
+  downloads: number;
+  download_bytes: number;
+  last_day?: string | null;
+}
+
 export interface PublicWork {
   work: {
     work_id: string;
@@ -899,6 +906,8 @@ export interface PublicWork {
     year?: number | null;
     instrumentation?: string | null;
     updated_at?: string | null;
+    source_count?: number | null;
+    stats?: PublicWorkStats | null;
   };
   representations: PublicWorkRepresentation[];
 }

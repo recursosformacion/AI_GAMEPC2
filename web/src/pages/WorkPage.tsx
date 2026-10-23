@@ -45,14 +45,14 @@ function Field({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="min-w-0">
       <dt className="text-[11px] font-semibold uppercase tracking-wide text-osap-muted">{label}</dt>
-      <dd className="mt-0.5 break-words text-sm text-osap-ink">{value || "—"}</dd>
+      <dd className="mt-0.5 break-words text-sm text-osap-ink">{value === 0 ? "0" : value || "—"}</dd>
     </div>
   );
 }
 
 function Fieldset({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <fieldset className="rounded-lg border border-osap-border bg-osap-surface p-4">
+    <fieldset className="rounded-lg border border-osap-border-strong bg-osap-surface p-4">
       <legend className="px-2 font-display text-base font-semibold text-osap-ink">{title}</legend>
       {children}
     </fieldset>
@@ -120,15 +120,22 @@ export function WorkPage() {
   // Datos ricos pedidos a OSAP al abrir la ficha; el índice queda como respaldo.
   const d = osap;
   const year = d?.year ?? work.year;
+  const composerText = d?.composer ?? work.composer;
   const catalogue = d?.catalogue ?? work.catalogue;
   const musicalKey = d?.musical_key ?? work.musical_key;
   const description = d?.description ?? work.description;
+  const formatCount = new Set(sheet.representations.map((r) => r.format)).size;
+  const workId = d?.id;
+  const stats = work.stats;
+
   const attribution = [
     d?.attribution_type ?? work.attr_type,
     d?.attribution_note ?? work.attribution_note,
   ]
     .filter(Boolean)
     .join(" · ");
+  const composerField = composerText || attribution;
+  const attributionExtra = composerText && attribution ? attribution : null;
   const duration = d?.duration ?? work.duration;
   const measures = d?.measures ?? work.measures;
   const pages = d?.pages ?? work.pages;
@@ -166,7 +173,7 @@ export function WorkPage() {
         </div>
       </header>
 
-      <section className="rounded-lg border border-osap-border bg-osap-surface shadow-sm">
+      <section className="rounded-lg border border-osap-border-strong bg-osap-surface shadow-sm">
         <div className="flex flex-wrap gap-1 border-b border-osap-border p-2" role="tablist">
           {([
             ["resumen", "Resumen"],
@@ -193,14 +200,16 @@ export function WorkPage() {
             <>
               <Fieldset title="Datos de la obra">
                 <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  <Field label="Compositor" value={d?.composer ?? work.composer} />
-                  <Field label="Atribución" value={attribution} />
+                  <Field label={composerText ? "Compositor" : "Compositor / atribución"} value={composerField} />
+                  {attributionExtra ? <Field label="Atribución / notas" value={attributionExtra} /> : null}
+                  
                   <Field label="Catálogo" value={catalogue} />
                   <Field label="Año" value={year} />
                   <Field label="Tonalidad" value={musicalKey} />
                   <Field label="Época" value={work.epoch} />
                   <Field label="Descripción" value={description} />
-                  <Field label="ID de obra" value={work.work_id} />
+                  <Field label="ID de obra" value={workId} />
+                  <Field label="ID de índice" value={work.work_id} />
                 </dl>
               </Fieldset>
 
@@ -230,8 +239,12 @@ export function WorkPage() {
                   <Field label="Actualizado" value={updated} />
                   <Field label="Representaciones" value={sheet.representations.length} />
                   <Field label="Proveedores" value={providers.length} />
-                  <Field label="Accesos" value={work.access_count} />
-                  <Field label="Votos" value={work.votes} />
+                  <Field label="Fuentes" value={work.source_count} />
+                  <Field label="Consultas" value={stats?.consults} />
+                  <Field label="Descargas" value={stats?.downloads} />
+                  <Field label="Última actividad" value={stats?.last_day} />
+                  <Field label="Formatos" value={formatCount} />
+                  
                 </dl>
               </Fieldset>
             </>
@@ -268,7 +281,7 @@ export function WorkPage() {
               return (
                 <li
                   key={rep.id ?? `${rep.provider}-${rep.format}-${index}`}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded border border-osap-border bg-osap-surface px-3 py-2 text-sm"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded border border-osap-border-strong bg-osap-surface px-3 py-2 text-sm"
                 >
                   <span className="min-w-0">
                     <span className="block truncate font-medium text-osap-ink">

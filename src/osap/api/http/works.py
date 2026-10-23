@@ -129,6 +129,9 @@ def build_works_router(ctx: HttpContext) -> APIRouter:
                     "year": data.get("year"),
                     "instrumentation": data.get("instrumentation"),
                     "updated_at": data.get("updated_at"),
+                    "source_count": data.get("source_count"),
+                    "stats": data.get("stats")
+                    or {"consults": 0, "downloads": 0, "download_bytes": 0, "last_day": None},
                 },
                 "representations": data.get("representations") or [],
             }

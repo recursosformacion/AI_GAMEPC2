@@ -52,7 +52,7 @@ function isActive(sponsor: Sponsor, now: Date): boolean {
 function House({ house }: { house: NonNullable<SponsorsConfig["house"]> }) {
   return (
     <aside
-      className="rounded-lg border border-dashed border-osap-border bg-osap-surface/70 p-4"
+      className="rounded-lg border border-dashed border-osap-border-strong bg-osap-surface p-4"
       aria-label="Espacio para anunciantes"
     >
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-osap-muted">Publicidad</p>
@@ -98,7 +98,7 @@ export function SponsorSlot({ placement }: { placement: string }) {
   const current = sponsors[index] ?? sponsors[0];
   const visible = mode === "stack" ? sponsors : current ? [current] : [];
   return (
-    <aside className="rounded-lg border border-osap-border bg-osap-surface p-4" aria-label="Patrocinadores">
+    <aside className="rounded-lg border border-osap-border-strong bg-osap-surface p-4" aria-label="Patrocinadores">
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-osap-muted">
         {slot.label ?? "Patrocinado por"}
       </p>

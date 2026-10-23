@@ -316,6 +316,43 @@ class IndexCatalogProvider(ICatalogProvider):
             conn.close()
         return {str(row["person_id"]): int(row["total"]) for row in rows}
 
+    def _analytics_stats(self, work_ref: str) -> dict[str, object]:
+        """Consultas/descargas acumuladas de la obra (tablas de analytics de osap-api)."""
+        stats: dict[str, object] = {"consults": 0, "downloads": 0, "download_bytes": 0, "last_day": None}
+        conn = None
+        try:
+            conn = pymysql.connect(
+                host=self._host, user=self._user, password=self._password,
+                database=self._database, port=self._port, charset="utf8mb4",
+                cursorclass=DictCursor, autocommit=True,
+            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT COALESCE(SUM(consults), 0) AS consults, MAX(day) AS last_day "
+                    "FROM analytics_consults_daily WHERE work_id IN (%s, %s)",
+                    (f"index-{work_ref}", work_ref),
+                )
+                consult = cur.fetchone() or {}
+                cur.execute(
+                    "SELECT COALESCE(SUM(quantity), 0) AS downloads, "
+                    "COALESCE(SUM(bytes), 0) AS bytes, MAX(day) AS last_day "
+                    "FROM analytics_downloads WHERE work_id IN (%s, %s)",
+                    (f"index-{work_ref}", work_ref),
+                )
+                download = cur.fetchone() or {}
+            stats = {
+                "consults": int(consult.get("consults") or 0),
+                "downloads": int(download.get("downloads") or 0),
+                "download_bytes": int(download.get("bytes") or 0),
+                "last_day": consult.get("last_day") or download.get("last_day"),
+            }
+        except Exception:  # noqa: BLE001 — estadísticas opcionales
+            pass
+        finally:
+            if conn is not None:
+                conn.close()
+        return stats
+
     def get_work_with_representations(self, work_id: str) -> dict[str, object] | None:
         """Ficha de una obra del índice (por `index-<id>` o `<id>`) + sus representaciones.
 
@@ -339,8 +376,8 @@ class IndexCatalogProvider(ICatalogProvider):
             )
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT id, title, composer_name, person_id, catalogue, year, "
-                    "instrumentation, updated_at FROM index_works WHERE id = %s LIMIT 1",
+                "SELECT id, title, composer_name, person_id, catalogue, year, "
+                "instrumentation, source_count, updated_at FROM index_works WHERE id = %s LIMIT 1",
                     (work_ref,),
                 )
                 work = cur.fetchone()
@@ -378,6 +415,7 @@ class IndexCatalogProvider(ICatalogProvider):
         ]
         year = work.get("year")
         year_str = str(year or "").strip()
+        stats = self._analytics_stats(str(work_ref))
         return {
             "work_id": f"index-{int(str(work.get('id') or 0))}",
             "title": str(work.get("title") or ""),
@@ -386,7 +424,9 @@ class IndexCatalogProvider(ICatalogProvider):
             "catalogue": str(work.get("catalogue") or "") or None,
             "year": int(year_str) if year_str.isdigit() else None,
             "instrumentation": str(work.get("instrumentation") or "") or None,
+            "source_count": int(work.get("source_count") or 0),
             "updated_at": str(work.get("updated_at") or "") or None,
+            "stats": stats,
             "representations": representations,
         }
 

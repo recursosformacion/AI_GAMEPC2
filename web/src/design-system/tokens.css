@@ -14,13 +14,13 @@ html {
   --color-osap-bg-transparent: #f3e2c7; /* para el fondo de la app con partitura, que se mezcla con la tesela */
   --color-osap-surface: #ffffff;
   --color-osap-ink: #1c1c1e;
-  --color-osap-muted: #6b7280;
+  --color-osap-muted: #4b5563;
   --color-osap-accent: #5b2d90;
   --color-osap-accent-soft: #f0eaf7;
   --color-osap-accent-2: #0f7b6c; /* verde azulado para acentos secundarios */
   --color-osap-gold: #b08d57;
-  --color-osap-border: #e5e5ea;
-  --color-osap-border-strong: #d6d3ce; /* líneas del shell (sidebar/top bar) */
+  --color-osap-border: #d3cec6;
+  --color-osap-border-strong: #b8b1a6; /* líneas del shell (sidebar/top bar) */
   --color-osap-danger: #b42318;
   --color-osap-success: #067647;
 
@@ -45,7 +45,7 @@ html {
   --color-osap-bg-transparent:#16151a; /* para el fondo de la app con partitura, que se mezcla con la tesela */
   --color-osap-surface: #1f1e24;
   --color-osap-ink: #e6e3ea;
-  --color-osap-muted: #9a95a3;
+  --color-osap-muted: #c3bdcc;
   --color-osap-accent: #c3a8ef;
   --color-osap-accent-soft: #2a2740;
   --color-osap-accent-2: #6ee7d8;
