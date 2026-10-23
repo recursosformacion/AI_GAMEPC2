@@ -57,6 +57,10 @@ Chorus (producto independiente): `docs/chorus-vision.md` (visión),
   servidor, verificación por `?preview` y rollback; **no** incluye el SSR de React.
 - **Mantenimiento y token de revisión** (`maintenance.md`): cómo activar/desactivar y dónde
   está el enlace `?preview=<TOKEN>` (impreso por el script y en `web/dist/maintenance.token`).
+- **V6 — Work/Resource/File** (`v6-work-resource-model.md`): plan para sustituir los tres
+  niveles actuales (storage works, índice index_works, representaciones/ficheros) por un
+  modelo con Work + Resource + File, reparto de campos, IDs estables, migración y preguntas
+  abiertas. Es un cambio **A (major)**: exige punto de control antes de empezar.
 
 - **Catálogo de formaciones vocales (voicings)**: además de los términos normalizados de
   búsqueda (`SATB`, `STTB`, `AATB`, `ATTB`, …), valorar una tabla/catálogo de voicings con
