@@ -514,3 +514,5 @@ Uso: `python script/notify.py --kind sitemap_resubmit --title "..." --body "..."
 - `osap-index-sync.timer` (cada 30 min) → `omr,cpdl,mutopia` (incremental por `works.id > último`; CPDL usa `index.cpdl.last_work_id`).
 - `osap-index-imslp.timer` (diario 04:00) → `imslp` (pasada completa: la Worklist API no tiene feed de cambios).
 - `osap-index-full.timer` (domingo 03:30) → rebuild completo (propaga bajas) + aviso de sitemap.
+| `persons_ai_runner.py` (osap-storage) | Genera lotes de 20 personas con hasta 5 titulos de obras (`works`) y los envia a Gemini; guarda respuestas en `data/ai_out/json_personas_lote_NNN.json`. Reanudable, rota claves y solo lee la BD local. Uso: `python scripts/persons_ai_runner.py --start 6`. |
+| `apply_persons_ai_json.py` (osap-storage) | Lee las respuestas JSON y aplica a la BD solo cambios seguros (`person=sí`, sin comentarios de fusion/division/duplicado); los casos delicados van a `docs/ai/persons_ai_apply_report.csv`. `--dry-run` por defecto; `--apply`; `--allow-prod` en servidor. |
