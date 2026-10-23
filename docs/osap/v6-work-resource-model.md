@@ -23,7 +23,9 @@ entorno, joins distintos según la pantalla y dificultad para saber qué dato ma
 
 - `work_id` estable (UUID), independiente del proveedor y del índice.
 - Título, subtítulo, compositor(es) por rol, catálogo/opus, año, tonalidad.
-- Géneros, instrumentación, ensembles, idioma, época, descripción, atribución.
+- Géneros, época, descripción. Atribución: pendiente de definir.
+- Instrumentación, ensembles e idioma pasan a **Resource**.
+- Duración/compases: a decidir si Work o Resource.
 - Campos de obra que no cambian entre ediciones: duración/compases si son de la obra, no de
   una edición concreta.
 - Estadísticas agregadas de la obra.
@@ -54,7 +56,8 @@ claves, no IDs sintéticos `index-*`.
 | compositor/roles | sí | — | — |
 | catálogo/opus/año | sí | — | — |
 | tonalidad/época | sí | — | — |
-| géneros/instrumentación/ensembles/idioma | sí | — | — |
+| géneros | sí | — | — |
+| instrumentación/ensembles/idioma | — | sí | — |
 | descripción/atribución | sí | notas si son de la fuente | — |
 | duración/compases | sí (si son de la obra) | si la edición difiere | — |
 | páginas/partes | — | sí | — |
