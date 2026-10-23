@@ -2,6 +2,7 @@ import { useEffect, type ReactNode } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Card } from "../components/Card";
 import { Spinner } from "../components/Spinner";
+import { SponsorSlot } from "../components/SponsorSlot";
 import { WorksListModule, groupWorks } from "../components/WorksListModule";
 import { useAuth } from "../state/auth";
 import { useComposers } from "../state/composers";
@@ -173,6 +174,8 @@ export function ComposerDetailPage() {
           <p className="text-sm text-osap-muted">Todavía no hay obras indexadas para este compositor.</p>
         )}
       </Card>
+      <SponsorSlot placement="composer" />
     </div>
   );
 }
+

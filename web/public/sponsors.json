@@ -1,0 +1,28 @@
+{
+  "house": {
+    "title": "Espacio para anunciantes y patrocinadores",
+    "text": "¿Tienes una tienda de partituras, una editorial, un coro, un festival o un proyecto musical? Este espacio puede ser tuyo.",
+    "cta": "Contacta con nosotros",
+    "url": "/corrections?kind=contact"
+  },
+  "placements": {
+    "work": {
+      "label": "Patrocinado por",
+      "mode": "rotate",
+      "rotateSeconds": 8,
+      "sponsors": []
+    },
+    "composer": {
+      "label": "Patrocinado por",
+      "mode": "rotate",
+      "rotateSeconds": 8,
+      "sponsors": []
+    },
+    "composers": {
+      "label": "Patrocinado por",
+      "mode": "stack",
+      "rotateSeconds": 0,
+      "sponsors": []
+    }
+  }
+}

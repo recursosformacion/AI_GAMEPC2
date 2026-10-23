@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { OsapWorkDetails, PublicWorkRepresentation } from "../api/types";
 import { Spinner } from "../components/Spinner";
+import { SponsorSlot } from "../components/SponsorSlot";
 import { useI18n } from "../i18n/I18n";
 import { usePublicWork } from "../state/publicWork";
 
@@ -304,6 +305,8 @@ export function WorkPage() {
           </ul>
         )}
       </section>
+      <SponsorSlot placement="work" />
     </div>
   );
 }
+
