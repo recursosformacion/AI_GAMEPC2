@@ -42,6 +42,13 @@ if ($code -ne 0) {
 
 Write-Host ""
 Write-Host "Despliegue terminado. EL MANTENIMIENTO SIGUE ACTIVO." -ForegroundColor Yellow
-Write-Host "Revisa la web con el enlace ?preview=<TOKEN> que imprimió el paso 1." -ForegroundColor Yellow
+$tokenFile = Join-Path $root "web\dist\maintenance.token"
+if (Test-Path -LiteralPath $tokenFile) {
+    $token = (Get-Content -LiteralPath $tokenFile -Raw).Trim()
+    if ($token) {
+        Write-Host "Preview de revisión:" -ForegroundColor Yellow
+        Write-Host "  https://app.openmusicrepository.com/?preview=$token" -ForegroundColor White
+    }
+}
 Write-Host "Si todo está bien, publica con:" -ForegroundColor Yellow
 Write-Host "  pwsh web/scripts/maintenance.ps1 -RemoteOnly -Off" -ForegroundColor White

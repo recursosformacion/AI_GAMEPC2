@@ -21,6 +21,23 @@ function viewerHref(rep: PublicWorkRepresentation): string | null {
   return null;
 }
 
+function EyeIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function DownloadIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M4 21h16" />
+    </svg>
+  );
+}
+
 function ExternalIcon() {
   return (
     <svg
@@ -291,13 +308,27 @@ export function WorkPage() {
                       {rep.provider} · {rep.format}
                     </span>
                   </span>
-                  <span className="flex shrink-0 items-center gap-3">
+                  <span className="flex shrink-0 items-center gap-1">
                     {viewer ? (
-                      <Link to={viewer} className="text-osap-accent hover:underline">Ver</Link>
+                      <Link
+                        to={viewer}
+                        aria-label="Ver"
+                        title="Ver"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded border border-osap-border-strong text-osap-accent hover:bg-osap-accent-soft"
+                      >
+                        <EyeIcon />
+                      </Link>
                     ) : null}
                     {rep.downloadable && rep.url ? (
-                      <a href={rep.url} target="_blank" rel="noopener noreferrer" className="text-osap-accent hover:underline">
-                        Descargar
+                      <a
+                        href={rep.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        aria-label="Descargar"
+                        title="Descargar"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded border border-osap-border-strong text-osap-accent hover:bg-osap-accent-soft"
+                      >
+                        <DownloadIcon />
                       </a>
                     ) : null}
                     {rep.url ? (
@@ -305,10 +336,11 @@ export function WorkPage() {
                         href={rep.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center gap-1 text-osap-accent hover:underline"
+                        aria-label="Web"
                         title={`Abrir en ${rep.provider}`}
+                        className="inline-flex h-9 w-9 items-center justify-center rounded border border-osap-border-strong text-osap-accent hover:bg-osap-accent-soft"
                       >
-                        Web <ExternalIcon />
+                        <ExternalIcon />
                       </a>
                     ) : null}
                   </span>

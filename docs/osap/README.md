@@ -55,6 +55,8 @@ Chorus (producto independiente): `docs/chorus-vision.md` (visión),
   pendientes de rellenar.
 - **Subida 5.5.0** (`release-5.5.0.md`): checklist de la entrega actual con mantenimiento en
   servidor, verificación por `?preview` y rollback; **no** incluye el SSR de React.
+- **Mantenimiento y token de revisión** (`maintenance.md`): cómo activar/desactivar y dónde
+  está el enlace `?preview=<TOKEN>` (impreso por el script y en `web/dist/maintenance.token`).
 
 - **Catálogo de formaciones vocales (voicings)**: además de los términos normalizados de
   búsqueda (`SATB`, `STTB`, `AATB`, `ATTB`, …), valorar una tabla/catálogo de voicings con
