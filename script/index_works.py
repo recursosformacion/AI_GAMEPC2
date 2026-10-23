@@ -22,7 +22,7 @@ CPDL SÍ se indexa aquí: su corpus ya está materializado en `osap-storage.work
 por canción y la ficha de compositor devuelven el mismo conjunto y `works_count` cuadra.
 El voicing son las formaciones de `ensembles` vía `work_ensembles` (fuente única: storage).
 
-OMR construye `download_url` como `{storage}/api/download/{file_id}` (el endpoint de
+OMR guarda `download_url` como ruta relativa `/api/download/{file_id}` (el endpoint de
 osap-storage redirige 302 al CDN/R2) y marca `available=1`. MusicBrainz por defecto solo
 indexa tipos de música artística (`--mb-types art`); usa `--mb-types all` para todo.
 
@@ -391,7 +391,7 @@ def _iter_omr(
 
     CPDL tiene su propio proveedor (`_iter_cpdl`): NO se indexa aquí para no duplicar
     la obra bajo dos proveedores. Construye `download_url` como
-    ``{storage_base}/api/download/{file_id}`` (el endpoint de storage redirige 302 al
+    ``/api/download/{file_id}`` (el endpoint de storage redirige 302 al
     CDN/R2) y marca `available=1` cuando hay fichero. Pagina por PK.
     """
     base = storage_base.rstrip("/")
@@ -482,7 +482,7 @@ def _iter_omr(
             file_id = file_entry[1] if file_entry else None
             res_id = file_entry[2] if file_entry else 0
             genre_names, genre_id = genres.get(int(w["id"]), ("", 0))
-            download_url = f"{base}/api/download/{file_id}" if file_id is not None else None
+            download_url = f"/api/download/{file_id}" if file_id is not None else None
             yield {
                 "title": title,
                 "composer": composer or None,
@@ -1331,7 +1331,7 @@ def main() -> int:
     parser.add_argument("--mb-types", choices=("art", "all"), default="art",
                         help="MusicBrainz: solo tipos de música artística (art) o todas (all)")
     parser.add_argument("--omr-base-url", default="http://127.0.0.1:8000",
-                        help="OMR: base de storage para download_url (/api/download/{id})")
+                        help="OMR: ya no se usa; download_url se guarda relativo (/api/download/{id})")
     parser.add_argument("--db-host", default="127.0.0.1")
     parser.add_argument("--db-user", default="osap2027")
     parser.add_argument("--db-password", default="2027osapdb")
