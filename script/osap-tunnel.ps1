@@ -1,7 +1,14 @@
-# Resumen: mantiene abierto el túnel SSH 3307 -> MySQL de producción (modo dev_mode=1).
-# Uso: powershell -NoProfile -ExecutionPolicy Bypass -File script/osap-tunnel.ps1
-# Lo lanza la tarea programada «OSAP tunel produccion» al iniciar sesión. Si ssh cae,
-# reintenta cada 10 s y deja traza en %LOCALAPPDATA%\osap-tunnel.log.
+# Resumen: abre manualmente el túnel SSH 3307 -> MySQL de producción cuando se quiere
+# conectar dev a remoto. Por defecto NO hace nada, para que dev trabaje con la BD local.
+# Uso: powershell -File script/osap-tunnel.ps1 -Start
+# La tarea programada «OSAP tunel produccion» lo ejecuta sin -Start: queda cerrado.
+
+param([switch]$Start)
+
+if (-not $Start) {
+    Write-Output "Túnel 3307 cerrado. Dev usa la BD local. Para conectar a remoto: -Start"
+    exit 0
+}
 
 $ErrorActionPreference = "Continue"
 $log = Join-Path $env:LOCALAPPDATA "osap-tunnel.log"

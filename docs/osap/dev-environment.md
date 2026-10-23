@@ -60,8 +60,9 @@ servicio.
 
   `db.port` permite convivir con el MySQL local en 3306 (dev_mode = 0).
 
-- **Túnel**: `ssh -N -L 3307:127.0.0.1:3306 RemoteIA`. La tarea programada
-  «OSAP tunel produccion» lo levanta al iniciar sesión (`ssh -N -o ExitOnForwardFailure=yes`).
+- **Túnel**: `ssh -N -L 3307:127.0.0.1:3306 RemoteIA`. Se abre **a mano** con
+  `script/osap-tunnel.ps1 -Start` solo cuando se quiere conectar dev a remoto. La tarea
+  programada ya no lo abre por defecto.
   Comprobar: `Test-NetConnection 127.0.0.1 -Port 3307`.
 
 - **Servicios locales**: osap-storage (`config.yaml` con `name: osap_storage`, `user: osap_ro`,
