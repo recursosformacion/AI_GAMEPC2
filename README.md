@@ -1,8 +1,36 @@
-# Chorus Study Generator
+# OSAP — Open Score Acquisition Platform
 
-Generador de materiales de estudio para coros, construido sobre OSAP.
+**OpenMusicRepository** is the public music catalogue and resource-discovery platform powered by OSAP.  
+Website: [openmusicrepository.com](https://openmusicrepository.com)
 
-## OSAP — Open Score Acquisition Platform
+OSAP helps musicians, choirs, educators and researchers discover musical works, explore catalogue information, and locate scores and related resources. Its core resolves resources for a requested musical work; separate open-source repositories provide tools and services for importing and discovering material, authentication, storage, and community support.
+
+## Project repositories
+
+The OSAP ecosystem is developed across these public repositories:
+
+| Repository | Purpose |
+|---|---|
+| **[AI_GAMEPC2](https://github.com/recursosformacion/AI_GAMEPC2)** (this repository) | OSAP core and resource-resolution engine, alongside the Chorus Study Generator codebase. |
+| **[ai-importacion](https://github.com/recursosformacion/ai-importacion)** | Independent tool to discover, catalogue and review music materials from Internet Archive. It maintains its own database and does not write directly to OSAP production data. |
+| **[ai_recogeYouTube](https://github.com/recursosformacion/ai_recogeYouTube)** | Tool to discover, classify and review YouTube recordings associated with musical works, including choir practice tracks and individual vocal parts. |
+| **[AI_osap-auth](https://github.com/recursosformacion/AI_osap-auth)** | Authentication and identity service for the OSAP ecosystem. |
+| **[AI_osap-storage](https://github.com/recursosformacion/AI_osap-storage)** | Storage service for OSAP resources and files. |
+| **[AI_osap-support](https://github.com/recursosformacion/AI_osap-support)** | Support services, including donations and recurring memberships. |
+
+These repositories have distinct responsibilities and are maintained as separate projects. Their integration and maturity differ; tools for importing and discovering external resources are designed to support review and traceability rather than silently modifying production catalogue data.
+
+## Public reach
+
+Google Analytics recorded approximately **18,000 page views over a 28-day period in October 2026**. This figure represents page views, not unique users.
+
+## Maintainer
+
+Maintained by [Miguel García](https://www.linkedin.com/in/miguel-garcia-rf/).
+
+---
+
+## Core architecture
 
 > **OSAP no busca partituras. Construye conocimiento fiable sobre las obras musicales.**
 
