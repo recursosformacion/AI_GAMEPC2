@@ -1,9 +1,9 @@
-# OpenMusicRepository (OSAP)
+# OSAP — Open Score Acquisition Platform
 
-**An open-source music catalogue and resource-discovery platform**  
+**OpenMusicRepository** is the public music catalogue and resource-discovery platform powered by OSAP.  
 Website: [openmusicrepository.com](https://openmusicrepository.com)
 
-OpenMusicRepository (OSAP) helps musicians, choirs, educators and researchers discover musical works, explore reliable catalogue information, and locate scores and related resources. The project combines a core resource-resolution engine with separate tools and services for resource discovery, authentication, storage and community support.
+OSAP helps musicians, choirs, educators and researchers discover musical works, explore catalogue information, and locate scores and related resources. Its core resolves resources for a requested musical work; separate open-source repositories provide tools and services for importing and discovering material, authentication, storage, and community support.
 
 ## Project repositories
 
@@ -30,7 +30,7 @@ Maintained by [Miguel García](https://www.linkedin.com/in/miguel-garcia-rf/).
 
 ---
 
-## OSAP — Open Score Acquisition Platform
+## Core architecture
 
 > **OSAP no busca partituras. Construye conocimiento fiable sobre las obras musicales.**
 
