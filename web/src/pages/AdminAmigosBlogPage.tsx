@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { AmigosArticle, AmigosArticleCreateInput, AmigosArticleList } from "../api/types";
 import { AmigosImageField } from "../components/AmigosImageField";
+import { AlertDialog } from "../components/AlertDialog";
 import { Card } from "../components/Card";
 import { useBodyMode } from "../components/useBodyMode";
 import { useI18n } from "../i18n/I18n";
@@ -25,7 +26,7 @@ export function AdminAmigosBlogPage({ mine = false }: { mine?: boolean } = {}) {
   const [summary, setSummary] = useState("");
   const [cover, setCover] = useState("");
   const { body, setBody, mode: bodyMode, toggle: toggleBody } = useBodyMode("");
-  const [error, setError] = useState<string | null>(null);
+  const [dialogMessage, setDialogMessage] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -44,14 +45,14 @@ export function AdminAmigosBlogPage({ mine = false }: { mine?: boolean } = {}) {
   }, [load]);
 
   const create = async (action: "draft" | "publish") => {
-    setError(null);
+    setDialogMessage(null);
     setMessage(null);
     if (title.trim() === "") {
-      setError(t("friends.titleRequired"));
+      setDialogMessage(t("friends.titleRequired"));
       return;
     }
     if (eventDate === "" || body.trim() === "") {
-      setError(t("friends.requiredFields"));
+      setDialogMessage(t("friends.requiredFields"));
       return;
     }
     const payload: AmigosArticleCreateInput = {
@@ -71,7 +72,7 @@ export function AdminAmigosBlogPage({ mine = false }: { mine?: boolean } = {}) {
       setMessage(t("friends.saved"));
       await load();
     } catch {
-      setError(t("friends.errorSaving"));
+      setDialogMessage(t("friends.errorSaving"));
     }
   };
 
@@ -80,7 +81,7 @@ export function AdminAmigosBlogPage({ mine = false }: { mine?: boolean } = {}) {
       await apiClient.approveAmigosBlogArticle(id);
       await load();
     } catch {
-      setError(t("friends.errorSaving"));
+      setDialogMessage(t("friends.errorSaving"));
     }
   };
 
@@ -91,7 +92,6 @@ export function AdminAmigosBlogPage({ mine = false }: { mine?: boolean } = {}) {
       </h1>
 
       <Card title={t("friends.newArticle")}>
-        {error ? <p className="mb-2 text-sm text-osap-danger" role="alert">{error}</p> : null}
         {message ? <p className="mb-2 text-sm text-osap-success">{message}</p> : null}
         <div className="grid gap-2 sm:grid-cols-3">
           <label className="text-xs text-osap-muted sm:col-span-2">
@@ -175,6 +175,13 @@ export function AdminAmigosBlogPage({ mine = false }: { mine?: boolean } = {}) {
           <li className="px-4 py-4 text-sm text-osap-muted">{t("friends.blogEmpty")}</li>
         ) : null}
       </ul>
+      <AlertDialog
+        open={dialogMessage !== null}
+        title={t("friends.publishErrorTitle")}
+        message={dialogMessage ?? ""}
+        closeLabel={t("friends.close")}
+        onClose={() => setDialogMessage(null)}
+      />
     </div>
   );
 }

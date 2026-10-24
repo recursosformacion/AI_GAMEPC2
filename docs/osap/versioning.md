@@ -79,6 +79,12 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.7.2 (C)** — **error de publicación visible**: los errores de validación del blog
+  (fecha/cuerpo/título) se muestran en un diálogo modal centrado, con cierre por botón,
+  Escape o fondo. Corrige la pista visual que quedaba al final del formulario. Evidencia:
+  `tsc --noEmit`, build SSR + SPA y chunk desplegado (`AdminAmigosBlogPage…` con
+  `role="alertdialog"`).
+
 - **5.7.1 (C)** — **publicar artículo**: el formulario del blog exigía título, fecha y cuerpo,
   pero solo avisaba «el título es obligatorio», y la fecha nacía vacía. Se prefija la fecha de
   hoy, se distingue el error de campos obligatorios y se muestra confirmación al guardar. No
