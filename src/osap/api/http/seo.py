@@ -178,14 +178,27 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
         works = ctx.api.seo_person_works(person_id, 300, 0)
         return _html(render_person(build_person_view(detail, works)))
 
-    # Rutas antiguas (anteriores a la unificación con la app): 301 a las nuevas con slug.
+    # Rutas antiguas (anteriores a la unificación con la app): 301 directo a la nueva
+    # URL canónica, resolviendo el id y el slug de una sola vez (sin cadena de redirects).
     @router.get("/obra/{work_id}", include_in_schema=False)
     def work_legacy_root(work_id: str) -> Response:
-        return RedirectResponse(url=f"/obras/{work_id}", status_code=301)
+        canonical = normalize_work_id(work_id)
+        data = ctx.api.seo_work(canonical) if canonical is not None else None
+        if data is None:
+            return RedirectResponse(url=f"/obras/{work_id}", status_code=301)
+        title = str(data.get("title") or "")
+        expected = work_canonical_slug(title) or "obra"
+        return RedirectResponse(url=f"/obras/{canonical}/{expected}", status_code=301)
 
     @router.get("/obra/{work_id}/{slug}", include_in_schema=False)
     def work_legacy_page(work_id: str, slug: str) -> Response:
-        return RedirectResponse(url=f"/obras/{work_id}/{slug}", status_code=301)
+        canonical = normalize_work_id(work_id)
+        data = ctx.api.seo_work(canonical) if canonical is not None else None
+        if data is None:
+            return RedirectResponse(url=f"/obras/{work_id}/{slug}", status_code=301)
+        title = str(data.get("title") or "")
+        expected = work_canonical_slug(title) or "obra"
+        return RedirectResponse(url=f"/obras/{canonical}/{expected}", status_code=301)
 
     @router.get("/compositor/{person_id}", include_in_schema=False)
     def person_legacy_root(person_id: str) -> Response:

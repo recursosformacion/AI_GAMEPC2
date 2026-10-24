@@ -79,6 +79,12 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.7.5 (C)** — **redirecciones antiguas de obra**: `/obra/<id>` y `/obra/<id>/<slug>`
+  resuelven el id y el slug canónicos y hacen un único 301 directo a `/obras/<id>/<slug>`
+  esperado, sin cadena de redirecciones. No cambia el contenido ni el esquema. Evidencia:
+  `pytest tests/osap/test_seo_router.py` (16), producción devuelve 301 directo a
+  `/obras/index-494109/haydn-joseph-haydn` y `/obras/index-379679/qui-habet-...`.
+
 - **5.7.4 (C)** — **SEO de idioma y canónicas**: las variantes `?lang=es|ca|fr|en|de` de
   compositores y obras son ahora autorreferentes, con `hreflang` para los cinco idiomas y
   `x-default`; las obras antiguas canonizan a su id de índice. Las rutas privadas/de consulta

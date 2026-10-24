@@ -166,6 +166,9 @@ def test_rutas_antiguas_redirigen_301(client: TestClient) -> None:
     work = client.get("/obra/index-7/ave-verum-corpus", follow_redirects=False)
     assert work.status_code == 301
     assert work.headers["location"] == "/obras/index-7/ave-verum-corpus"
+    legacy_bad_slug = client.get("/obra/index-7/otro-slug", follow_redirects=False)
+    assert legacy_bad_slug.status_code == 301
+    assert legacy_bad_slug.headers["location"] == "/obras/index-7/ave-verum-corpus"
     person = client.get("/compositor/person-1/wolfgang-amadeus-mozart", follow_redirects=False)
     assert person.status_code == 301
     assert person.headers["location"] == "/composers/person-1/wolfgang-amadeus-mozart"
