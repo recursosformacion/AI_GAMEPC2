@@ -17,6 +17,20 @@ módulo (esta queda para pruebas).
 5. Orden de resultados: primero los que tienen votos, después por semejanza con la búsqueda y,
    por último, orden del módulo/título.
 6. Buscar y ver vídeos puede ser anónimo; **votar exige sesión de OSAP**.
+7. El aplicativo se despliega en **`videos.openmusicrepository.com`** (subdominio propio),
+   con frontend, backend y MySQL independientes; puede moverse a otra máquina sin tocar OSAP
+   más que la URL y el token.
+8. Hay **dos entradas**:
+   - **Desde una representación** (botón en su fila): `resource_id` fijo; se conoce ensemble/voz;
+     permite asociar y votar.
+   - **Desde la ficha de obra** (cabecera): búsqueda genérica por título/compositor, sin
+     ensemble ni recurso; solo búsqueda/visualización. **No se selecciona recurso ni se vota**
+     desde aquí; para votar se entra por la representación.
+9. El **token se pasa con el mismo mecanismo que storage/support**: `Authorization: Bearer` de
+   OSAP. El aplicativo valida el token/JWKS de osap-auth; no hay login nuevo. Para leer datos
+   públicos de OSAP usa el mismo patrón de token de servicio.
+10. Se simplifica: sin catálogo del módulo, sin SQLite en producción, sin selector de recurso en
+    la entrada de obra y sin identidades inventadas.
 
 ## 1. Estado actual del módulo
 
@@ -88,52 +102,61 @@ resource_youtube_votes (
 
 ```
 OSAP (ficha de obra)
-  └─ botón «Explorar en YouTube» -> abre el aplicativo independiente
-        URL: https://youtube.<dominio>/<work_id>?resource=<resource_id>
+  ├─ botón por representación -> https://videos.openmusicrepository.com/<work_id>?resource=<resource_id>
+  └─ botón de obra (genérico) -> https://videos.openmusicrepository.com/<work_id>
 
-Aplicativo YouTube
+Aplicativo YouTube (videos.openmusicrepository.com, despliegue independiente)
   ├─ frontend con la misma estructura/estilo de OSAP
-  ├─ backend propio
+  ├─ backend propio (API /api/youtube/...)
   ├─ MySQL propio (vídeos, relaciones y votos)
   ├─ ai_recogeyoutube.search_global (solo búsqueda)
-  └─ validación de identidad contra OSAP auth (token/JWKS)
-        └─ YouTube Data API (clave solo servidor)
+  ├─ validación del Bearer/JWKS de osap-auth
+  └─ YouTube Data API (clave solo servidor)
 ```
 
-- OSAP no escribe ni lee estas tablas; solo aporta contexto y enlaza.
-- El aplicativo puede obtener título/compositor y lista de representaciones de la API pública
-  de OSAP, o recibirlos por query; el usuario puede corregir título/compositor antes de buscar.
-- La identidad se toma del token de OSAP (usuario ya autenticado). No se pide un identificador
-  ni se implementa otro login.
-- Si el aplicativo se despliega en otro dominio, hay que definir CORS y el paso del token
-  (Authorization) desde OSAP; no se exponen secretos al navegador.
+- OSAP no escribe ni lee estas tablas; solo enlaza con `work_id`/`resource_id`.
+- El aplicativo obtiene título/compositor y la representación de la API pública de OSAP (con
+  token de servicio) o de los parámetros de entrada; el usuario puede corregir título y
+  compositor antes de buscar.
+- El token de usuario se pasa como a storage/support (`Authorization`); no se implementa otro
+  login ni se pide identificador.
+- Al estar en otro subdominio/máquina: HTTPS, CORS explícito y token en cabecera; secretos
+  (YouTube, MySQL) solo en el servidor del aplicativo.
+- El frontend puede reutilizar los tokens de diseño/estructura de OSAP, pero se despliega y
+  versiona aparte.
 
 ### API del aplicativo
 
 - `POST /api/youtube/search`
-  `{work_id, resource_id, song, author, voice, limit}` → resultados + votos/semejanza.
+  `{work_id, resource_id?, song, author, voice, limit}` → resultados + votos/semejanza.
+  Sin `resource_id` devuelve `votable: false`.
 - `POST /api/youtube/votes`
   `{work_id, resource_id, video_id, voice, decision, title, url, channel, material_type}`.
-- `GET /api/youtube/works/{work_id}/resources` (opcional): representaciones de OSAP para el
-  selector, si no se pasan desde OSAP.
+  Exige `resource_id` y usuario autenticado.
+- `GET /api/youtube/work/{work_id}` (opcional): datos de obra/representaciones desde OSAP.
 - Autenticación: Bearer token de OSAP; el backend resuelve `user_id`/`display_name`.
 
 ## 4. Flujo de usuario
 
-1. Ficha de obra en OSAP: botón **«Explorar en YouTube»**.
-2. Se abre el aplicativo independiente con `work_id` (y `resource_id` si se pulsó desde una
-   representación concreta).
-3. Cabecera: obra, compositor, volver a OSAP. Selector de **representación** (obligatorio para
-   votar; opcional para buscar/ver).
+1. **Entrada por representación** (principal): en cada fila de representación de la ficha,
+   botón **«Buscar vídeos»**. Abre `videos.../<work_id>?resource=<resource_id>`.
+   - ensemble/voz de la representación precargados y editables;
+   - sí permite asociar y votar.
+2. **Entrada por obra** (cabecera de la ficha): botón **«Explorar vídeos»**. Abre
+   `videos.../<work_id>` sin recurso.
+   - búsqueda genérica por título/compositor;
+   - sin ensemble y sin selección de recurso;
+   - solo ver/reproducir; **no votar**; se indica «entra por una representación para asociar».
+3. Cabecera del aplicativo: obra, compositor, volver a OSAP.
 4. Formulario precargado y editable: título, compositor, voz (Todas/Canción completa/SATB) y
-   límite.
+   límite. En entrada por representación se muestra el ensemble de esa representación.
 5. **Buscar** solo a petición; se mezclan resultados del módulo con relaciones/votos del
-   aplicativo para esa representación.
+   aplicativo para esa representación (si existe).
 6. Resultados: título, canal, enlace, voz estimada, tipo, semejanza y votos. Abrir/reproducir.
-7. Con sesión: seleccionar vídeo, elegir voz si procede y **Aprobar/Rechazar**; se crea la
-   relación con `resource_id` y se guarda el voto.
+7. Con sesión y `resource_id`: seleccionar vídeo, elegir voz si procede y **Aprobar/Rechazar**;
+   se crea la relación resource↔vídeo y se guarda/actualiza el voto.
 8. Sin sesión: buscar/ver libre; votar muestra «Inicia sesión en OSAP para valorar».
-9. Sin representación seleccionada: se puede ver, pero no votar.
+9. Sin `resource_id`: se puede ver, pero no votar ni asociar.
 
 ## 5. Orden de resultados
 
@@ -167,10 +190,13 @@ MVP: 5–7 días. No incluye análisis de audio ni V6.
 
 ## 8. Decisiones abiertas
 
-- Dominio/subdominio del aplicativo y si el frontend es una ruta de OSAP o app separada.
-- Cómo se pasa el token de OSAP al aplicativo (Authorization desde OSAP o SSO).
+- Cómo se entrega el token de usuario al frontend del subdominio `videos`: handoff de un solo
+  uso recomendado (código canjeado por el backend) frente a fragmento de URL con el access
+  token. En ambos casos se usa `Authorization`/JWKS, no un login nuevo.
+- ¿La entrada genérica de obra permite elegir representación después? Propuesta: no; solo
+  ver/reproducir. Para asociar/votar se entra por la representación.
 - ¿El voto se agrega a nivel de obra además de representación? Propuesta: por representación.
 - ¿Embed de YouTube o solo enlace? Privacidad/consentimiento.
-- ¿Qué representación se preselecciona si hay varias? Primera disponible, confirmada por el
-  usuario antes de votar.
-- Estrategia de migraciones y backups del MySQL propio.
+- ¿Qué representación se preselecciona si hay varias? La pulsada; no hay selector genérico.
+- Estrategia de migraciones y backups del MySQL propio, y separación física de
+  frontend/backend/MySQL si se reparte en varias máquinas.
