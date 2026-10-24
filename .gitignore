@@ -30,3 +30,4 @@ data/authority/
 
 # Logs de servicios en runtime
 logs/
+docs/secrets
