@@ -21,11 +21,12 @@ export function AdminAmigosBlogPage({ mine = false }: { mine?: boolean } = {}) {
   const { t } = useI18n();
   const [articles, setArticles] = useState<AmigosArticle[]>([]);
   const [title, setTitle] = useState("");
-  const [eventDate, setEventDate] = useState("");
+  const [eventDate, setEventDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [summary, setSummary] = useState("");
   const [cover, setCover] = useState("");
   const { body, setBody, mode: bodyMode, toggle: toggleBody } = useBodyMode("");
   const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -44,8 +45,13 @@ export function AdminAmigosBlogPage({ mine = false }: { mine?: boolean } = {}) {
 
   const create = async (action: "draft" | "publish") => {
     setError(null);
-    if (title.trim() === "" || body.trim() === "" || eventDate === "") {
+    setMessage(null);
+    if (title.trim() === "") {
       setError(t("friends.titleRequired"));
+      return;
+    }
+    if (eventDate === "" || body.trim() === "") {
+      setError(t("friends.requiredFields"));
       return;
     }
     const payload: AmigosArticleCreateInput = {
@@ -59,10 +65,10 @@ export function AdminAmigosBlogPage({ mine = false }: { mine?: boolean } = {}) {
     try {
       await apiClient.createAmigosBlogArticle(payload);
       setTitle("");
-      setEventDate("");
       setSummary("");
       setCover("");
       setBody("");
+      setMessage(t("friends.saved"));
       await load();
     } catch {
       setError(t("friends.errorSaving"));
@@ -85,7 +91,8 @@ export function AdminAmigosBlogPage({ mine = false }: { mine?: boolean } = {}) {
       </h1>
 
       <Card title={t("friends.newArticle")}>
-        {error ? <p className="mb-2 text-sm text-osap-danger">{error}</p> : null}
+        {error ? <p className="mb-2 text-sm text-osap-danger" role="alert">{error}</p> : null}
+        {message ? <p className="mb-2 text-sm text-osap-success">{message}</p> : null}
         <div className="grid gap-2 sm:grid-cols-3">
           <label className="text-xs text-osap-muted sm:col-span-2">
             {t("friends.titleField")} *
