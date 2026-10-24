@@ -835,6 +835,7 @@ class TestRichtext:
         assert sanitize_html("<ul>\n<li>uno</li>\n<li>dos</li>\n</ul>") == (
             "<ul><li>uno</li><li>dos</li></ul>"
         )
+        assert sanitize_html("<h1>Titular</h1>") == "<h1>Titular</h1>"
 
     def test_plain_text_quita_estilos_y_etiquetas(self) -> None:
         from src.osap.domain.richtext import plain_text

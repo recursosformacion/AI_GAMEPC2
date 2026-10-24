@@ -4,7 +4,7 @@ Los autores pueden escribir el cuerpo como **texto plano** (párrafos separados 
 blanco) o como **HTML sencillo** (`<p>`, `<strong>`, `<em>`, listas, enlaces, `<style>`…).
 
 Reglas de saneado (allowlist):
-- Etiquetas permitidas: p, br, strong/b, em/i, u, s, listas, h2-h4, blockquote, a, hr, style,
+- Etiquetas permitidas: p, br, strong/b, em/i, u, s, listas, h1-h6, blockquote, a, hr, style,
   div, span, section.
 - Se **descarta `<script>`** (y su contenido). Las etiquetas no permitidas se eliminan (se
   conserva su texto).
@@ -26,7 +26,7 @@ from html import escape, unescape
 from html.parser import HTMLParser
 
 _ALLOWED_TAGS = frozenset(
-    {"p", "br", "strong", "b", "em", "i", "u", "s", "ul", "ol", "li", "h2", "h3", "h4",
+    {"p", "br", "strong", "b", "em", "i", "u", "s", "ul", "ol", "li", "h1", "h2", "h3", "h4", "h5", "h6",
      "blockquote", "a", "hr", "style", "div", "span", "section"}
 )
 _VOID_TAGS = frozenset({"br", "hr"})

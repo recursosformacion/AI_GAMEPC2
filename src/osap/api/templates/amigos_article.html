@@ -52,13 +52,9 @@
   </div>
 
   {% if view.cover_url %}
-  <p><img src="{{ view.cover_url }}" alt="{{ view.title }}" style="max-width:100%;height:auto;border-radius:0.5rem" /></p>
+  <p class="article-cover"><img src="{{ view.cover_url }}" alt="{{ view.title }}" style="max-width:100%;height:auto;border-radius:0.5rem" /></p>
   {% endif %}
   {% if view.summary %}<p class="muted"><em>{{ view.summary }}</em></p>{% endif %}
-
-  {% with share=view.share, share_url=view.canonical_url, share_label="Compartir", copy_label="Copiar enlace", copied_label="Enlace copiado" %}
-  {% include "_share_bar.html" %}
-  {% endwith %}
 
   <div class="articulo-osap">
   {{ view.body_html | safe }}
@@ -87,6 +83,10 @@
     {% endfor %}
   </div>
   {% endif %}
+
+  {% with share=view.share, share_url=view.canonical_url, share_label="Compartir", copy_label="Copiar enlace", copied_label="Enlace copiado" %}
+  {% include "_share_bar.html" %}
+  {% endwith %}
 </article>
 
 <div class="coral-actions">

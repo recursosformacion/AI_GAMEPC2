@@ -79,6 +79,13 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.7.3 (C)** — **estilo y compartición de artículos**: se permite `<h1>` en el cuerpo
+  (antes se eliminaba y el titular quedaba como párrafo), se centra la portada, la barra de
+  compartir pasa al final del artículo y se añade un botón de Instagram que copia el enlace
+  (Instagram no ofrece intención web) o usa la hoja nativa. Evidencia: `tsc --noEmit`, test de
+  `sanitize_html` con `<h1>`, build SPA, artículo real con `<h1>`, `article-cover` y
+  `share-instagram`, y smoke de producción.
+
 - **5.7.2 (C)** — **error de publicación visible**: los errores de validación del blog
   (fecha/cuerpo/título) se muestran en un diálogo modal centrado, con cierre por botón,
   Escape o fondo. Corrige la pista visual que quedaba al final del formulario. Evidencia:
