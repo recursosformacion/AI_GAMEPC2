@@ -519,3 +519,13 @@ Uso: `python script/notify.py --kind sitemap_resubmit --title "..." --body "..."
 | `works_ai_runner.py` (osap-storage) | Genera lotes de 20 obras con todos los campos y uniones (generos, ensembles, instrumentos, idiomas, compositores), los envia a Gemini y guarda respuestas en `data/works_ai_out`. `--build-only` solo crea los JSON; reanudable y con rotacion de claves. |
 | `apply_works_ai_json.py` (osap-storage) | Lee las respuestas de obras y aplica campos seguros + `work_genres`/`work_ensembles`/`work_instruments`/`work_language`; duplicados/fusiones y `work=no` van a `docs/ai/works_ai_apply_report.csv`. `--dry-run` por defecto; `--apply`; `--allow-prod`. |
 | `run_works_ai.bat` (osap-storage) | Lanzador del pipeline de obras: lee las dos claves de `secrets` y ejecuta `works_ai_runner.py` (10 lotes por defecto; `--limit 0` para todos). No escribe en la BD. |
+
+### script/build-web.ps1
+Compila en orden el bundle SSR (`dist-ssr`) y la SPA (`dist`). Evita el fallo de servir un
+SSR antiguo tras cambiar componentes. Con `-RestartSSR` reinicia el Node de :3000.
+Uso: `pwsh script/build-web.ps1 -RestartSSR`
+
+### script/smoke-web.ps1
+Smoke test de regresión: abre `/obras/121355` (id legado de storage) y comprueba que
+renderiza la obra y que una representación OMR ofrece Ver/Descargar/visor.
+Uso: `pwsh script/smoke-web.ps1`

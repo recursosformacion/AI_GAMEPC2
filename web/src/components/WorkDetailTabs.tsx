@@ -4,6 +4,8 @@ import { apiClient } from "../api/ApiClient";
 import type { EvidenceInfo, RepresentationInfo, RepresentationSelection, WorkInfo } from "../api/types";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
+import { getRepresentationActions, isStorageUrl, representationViewHref } from "../lib/representations";
+import { VideosLink } from "./VideosLink";
 import { useAuth } from "../state/auth";
 import { VoteControl } from "./VoteControl";
 import { WorkRating } from "./WorkRating";
@@ -12,16 +14,6 @@ export type WorkDetailTab = "overview" | "representations" | "evidence" | "provi
 
 // El endpoint /api/download/{id} de storage exige token de servicio (cuota OMR): no se
 // enlaza directo desde la web; las descargas van siempre por osap-api.
-const _STORAGE_HOSTS = ["storage.openmusicrepository.com", "127.0.0.1", "localhost", "osap-storage"];
-function _isStorageUrl(url?: string | null): boolean {
-  if (!url) return false;
-  if (url.startsWith("/api/download/")) return true;
-  try {
-    return _STORAGE_HOSTS.includes(new URL(url, window.location.origin).hostname);
-  } catch {
-    return false;
-  }
-}
 
 const TABS: { id: WorkDetailTab; labelKey: string }[] = [
   { id: "overview", labelKey: "work.overview" },
@@ -98,7 +90,7 @@ function KnownSelectionBlock({
   const status = selection?.status;
   // La selección solo trae `url`: si es externa (CPDL/IMSLP) no hay fichero servible, así que
   // no se ofrece «Ver partitura»/«Descargar», solo abrir en el proveedor.
-  const selExternal = sel?.url && !_isStorageUrl(sel.url) ? sel.url : null;
+  const selExternal = sel?.url && !isStorageUrl(sel.url) ? sel.url : null;
 
   return (
     <div className="mt-3 rounded border border-dashed border-osap-border p-3">
@@ -154,7 +146,7 @@ function KnownSelectionBlock({
               ) : sel.source_id ? (
                 <>
                   <a
-                    href={_viewHref(sel.source_id, sel.format, workTitle)}
+                    href={representationViewHref(sel.source_id, sel.format, workTitle) ?? "#"}
                     target="_blank"
                     rel="noreferrer"
                     title={t("work.view")}
@@ -278,6 +270,7 @@ export function WorkDetailTabs({
           representations={representations}
           byProvider={byProvider}
           workTitle={work.title}
+          workComposer={work.composer}
           workId={work.work_id}
           allowWorkCorrections={allowWorkCorrections && isAuthenticated}
         />
@@ -323,12 +316,14 @@ function RepresentationsTab({
   representations,
   byProvider,
   workTitle,
+  workComposer,
   workId,
   allowWorkCorrections = false,
 }: {
   representations: RepresentationInfo[];
   byProvider: Map<string, RepresentationInfo[]>;
   workTitle?: string | null;
+  workComposer?: string | null;
   workId?: string | null;
   allowWorkCorrections?: boolean;
 }) {
@@ -336,13 +331,29 @@ function RepresentationsTab({
   const [selected, setSelected] = useState<string | null>(null);
   // Solo cuentan las representaciones con fichero accesible: las externas (CPDL/IMSLP)
   // se abren en su web y no justifican el bloque de «buscar mejores».
-  const accessibleCount = representations.filter((rep) => {
-    const external = rep.url && !_isStorageUrl(rep.url);
-    return !external && rep.available !== false;
-  }).length;
+  const accessibleCount = representations.filter(
+    (rep) => getRepresentationActions(rep, workTitle).canDownload,
+  ).length;
+  const indexIdFromRep = (repId: string | null | undefined): string | null => {
+    const match = /^idx-(\d+)-/.exec(repId ?? "");
+    return match ? `index-${match[1]}` : null;
+  };
+  const baseVideoWorkId =
+    workId?.startsWith("index-")
+      ? workId
+      : representations.map((rep) => indexIdFromRep(rep.id)).find(Boolean) ?? workId;
 
   return (
     <div className="p-3">
+      <div className="mb-3">
+        <VideosLink
+          workId={baseVideoWorkId}
+          title={workTitle}
+          composer={workComposer}
+          variant="compact"
+          label="Buscar vídeos de la obra"
+        />
+      </div>
       <p className="mb-2 text-sm text-osap-muted">
         {t("work.foundReps").replace("{n}", String(representations.length)).replace("{p}", String(byProvider.size))}
       </p>
@@ -355,10 +366,10 @@ function RepresentationsTab({
 
       <ul className="divide-y divide-osap-border">
         {representations.map((rep, i) => {
-          // Solo se ofrece Ver/Descargar si hay fichero servible: `available` explícito o, en su
-          // defecto, una URL que no sea de un proveedor externo (CPDL/IMSLP solo se abren).
-          const repExternal = rep.url && !_isStorageUrl(rep.url) ? rep.url : null;
-          const repDownloadable = repExternal === null && rep.available !== false;
+          const actions = getRepresentationActions(rep, workTitle);
+          const repExternal = actions.externalHref;
+          const repDownloadable = actions.canDownload;
+          const videoWorkId = indexIdFromRep(rep.id) ?? baseVideoWorkId;
           return (
           <li
             key={`${rep.provider}-${rep.format}-${i}`}
@@ -374,10 +385,19 @@ function RepresentationsTab({
               </span>
             </span>
             <span className="flex shrink-0 items-center gap-1.5">
+              <VideosLink
+                workId={videoWorkId}
+                title={workTitle}
+                composer={workComposer}
+                resourceId={rep.id}
+                variant="compact"
+                label="Vídeos"
+                onClick={(e) => e.stopPropagation()}
+              />
               {repDownloadable ? (
                 <>
                   <a
-                    href={_viewHref(rep.id, rep.format, workTitle)}
+                    href={actions.viewHref ?? "#"}
                     target="_blank"
                     rel="noreferrer"
                     translate="no"
@@ -390,7 +410,7 @@ function RepresentationsTab({
                     {(rep.format ?? "").toLowerCase() === "midi" ? t("actions.playPause") : t("work.view")}
                   </a>
                   <a
-                    href={`/api/v1/representations/${rep.id}/download`}
+                    href={actions.downloadHref ?? "#"}
                     download={downloadFileName(rep, workTitle)}
                     target="_blank"
                     rel="noreferrer"
@@ -412,6 +432,19 @@ function RepresentationsTab({
                     >
                       {t("corrections.propose")}
                     </Link>
+                  ) : null}
+                  {repExternal ? (
+                    <a
+                      href={repExternal}
+                      target="_blank"
+                      rel="noreferrer"
+                      title={t("work.openIn").replace("{p}", rep.provider)}
+                      aria-label={t("work.openIn").replace("{p}", rep.provider)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="inline-flex items-center gap-1.5 rounded border border-osap-border px-3 py-1 text-sm text-osap-muted hover:text-osap-accent"
+                    >
+                      <_LinkIcon /> {t("work.openIn").replace("{p}", rep.provider)}
+                    </a>
                   ) : null}
                 </>
               ) : repExternal ? (
@@ -457,7 +490,7 @@ function ProvidersTab({ byProvider }: { byProvider: Map<string, RepresentationIn
       <ul className="divide-y divide-osap-border">
         {[...byProvider.entries()].map(([provider, reps]) => {
           const formats = [...new Set(reps.map((r) => r.format))].join(" · ");
-          const url = reps.find((r) => r.url && !_isStorageUrl(r.url))?.url ?? null;
+          const url = reps.find((r) => r.url && !isStorageUrl(r.url))?.url ?? null;
           return (
             <li key={provider} className="flex items-center justify-between py-2 text-sm">
               <div>
@@ -482,17 +515,6 @@ function ProvidersTab({ byProvider }: { byProvider: Map<string, RepresentationIn
       </ul>
     </div>
   );
-}
-
-function _viewHref(repId: string, format: string | null | undefined, workTitle?: string | null): string {
-  const fmt = (format ?? "").toLowerCase();
-  if (fmt === "midi") {
-    return `/viewer?rep=${encodeURIComponent(repId)}&format=midi&title=${encodeURIComponent(workTitle ?? "")}`;
-  }
-  if (["musicxml", "mxl", "xml", "mei"].includes(fmt)) {
-    return `/viewer?rep=${encodeURIComponent(repId)}&title=${encodeURIComponent(workTitle ?? "")}`;
-  }
-  return `/api/v1/representations/${encodeURIComponent(repId)}/download?view=1`;
 }
 
 function downloadFileName(rep: RepresentationInfo, workTitle?: string | null): string {

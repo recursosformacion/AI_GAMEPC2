@@ -381,6 +381,25 @@ class IndexCatalogProvider(ICatalogProvider):
                     (work_ref,),
                 )
                 work = cur.fetchone()
+                if work is None and work_ref.isdigit():
+                    # Enlaces antiguos o de storage usan el id de recurso/representación
+                    # (p. ej. /obras/121355). Se resuelve al id del índice antes de fallar.
+                    cur.execute(
+                        "SELECT work_id FROM index_representations "
+                        "WHERE source_rep_id = %s OR resource_id = %s "
+                        "ORDER BY (download_url IS NOT NULL) DESC, available DESC LIMIT 1",
+                        (work_ref, work_ref),
+                    )
+                    legacy = cur.fetchone()
+                    if legacy is not None:
+                        work_ref = str(legacy["work_id"])
+                        cur.execute(
+                            "SELECT id, title, composer_name, person_id, catalogue, year, "
+                            "instrumentation, source_count, updated_at "
+                            "FROM index_works WHERE id = %s LIMIT 1",
+                            (work_ref,),
+                        )
+                        work = cur.fetchone()
                 if work is None:
                     return None
                 cur.execute(

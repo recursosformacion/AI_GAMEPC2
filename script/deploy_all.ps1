@@ -1,9 +1,9 @@
-# deploy_all.ps1 — Sube TODOS los programas a producción (SPA + 4 backends).
+# deploy_all.ps1 — Sube TODOS los programas a producción (SPA + SSR + 4 backends).
 #
-# Resumen: construye la SPA, empaqueta el CÓDIGO de osap-api, osap-auth, osap-storage y
-# osap-support (sin configs ni .venv), lo sube a `RemoteIA` y lo extrae sobre
-# /home/ocw/openmusicrepository.com/<repo>; luego reinicia los 4 servicios systemd y
-# comprueba salud. NO toca las BBDD (eso va aparte).
+# Resumen: construye la SPA y el SSR de React, empaqueta el CÓDIGO de osap-api, osap-auth,
+# osap-storage y osap-support (sin configs ni .venv), lo sube a `RemoteIA` y lo extrae sobre
+# /home/ocw/openmusicrepository.com/<repo>; luego reinicia los 4 servicios, el SSR y comprueba
+# salud. NO toca las BBDD (eso va aparte).
 #
 # Uso: powershell -ExecutionPolicy Bypass -File script/deploy_all.ps1
 
@@ -19,6 +19,7 @@ $ErrorActionPreference = "Stop"
 $apiRoot = Split-Path -Parent $PSScriptRoot
 $tmp = Join-Path $env:TEMP "osap-deploy-all"
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
+if (-not $env:VITE_VIDEOS_URL) { $env:VITE_VIDEOS_URL = "https://videos.openmusicrepository.com" }
 function Fail($m) { Write-Error $m; exit 1 }
 
 $repos = @(
@@ -29,9 +30,11 @@ $repos = @(
 )
 
 if (-not $SkipBuild) {
-    Write-Host "== [1/4] Construyendo SPA ==" -ForegroundColor Cyan
+    Write-Host "== [1/4] Construyendo SPA y SSR ==" -ForegroundColor Cyan
     Push-Location (Join-Path $apiRoot "web")
     & ".\node_modules\.bin\tsc.cmd" --noEmit; if ($LASTEXITCODE -ne 0) { Fail "tsc falló" }
+    Remove-Item -LiteralPath "dist-ssr" -Recurse -Force -ErrorAction SilentlyContinue
+    & node "node_modules/vite/bin/vite.js" build --config "vite.ssr.config.ts"; if ($LASTEXITCODE -ne 0) { Fail "vite build SSR falló" }
     & node "node_modules/vite/bin/vite.js" build; if ($LASTEXITCODE -ne 0) { Fail "vite build falló" }
     Pop-Location
 
@@ -56,6 +59,8 @@ foreach ($r in $repos) {
 }
 tar -czf (Join-Path $tmp "dist.tar.gz") -C (Join-Path $apiRoot "web\dist") .
 if ($LASTEXITCODE -ne 0) { Fail "tar dist falló" }
+tar -czf (Join-Path $tmp "dist-ssr.tar.gz") -C (Join-Path $apiRoot "web\dist-ssr") .
+if ($LASTEXITCODE -ne 0) { Fail "tar dist-ssr falló" }
 # Admin de osap-storage (lo sirve su API en /admin desde frontend/dist).
 tar -czf (Join-Path $tmp "storage-admin-dist.tar.gz") -C (Join-Path $IosapRoot "osap-storage\frontend\dist") .
 if ($LASTEXITCODE -ne 0) { Fail "tar storage-admin-dist falló" }
@@ -67,6 +72,7 @@ Write-Host "== [3/4] Subiendo ==" -ForegroundColor Cyan
 ssh -o BatchMode=yes $HostAlias "mkdir -p /home/ocw/deploy_tmp"
 foreach ($r in $repos) { scp -o BatchMode=yes (Join-Path $tmp "$($r.Name).tar.gz") "$($HostAlias):/home/ocw/deploy_tmp/" }
 scp -o BatchMode=yes (Join-Path $tmp "dist.tar.gz") "$($HostAlias):/home/ocw/deploy_tmp/"
+scp -o BatchMode=yes (Join-Path $tmp "dist-ssr.tar.gz") "$($HostAlias):/home/ocw/deploy_tmp/"
 scp -o BatchMode=yes (Join-Path $tmp "storage-admin-dist.tar.gz") "$($HostAlias):/home/ocw/deploy_tmp/"
 scp -o BatchMode=yes (Join-Path $tmp "auth-web-dist.tar.gz") "$($HostAlias):/home/ocw/deploy_tmp/"
 if ($WithConfig) {
@@ -85,11 +91,13 @@ $configStep = if ($WithConfig) { "cp -f /home/ocw/deploy_tmp/osap.production.tom
 $cmd = "set -e; $extract $configStep" +
     "rm -rf $RemoteRoot/app/assets $RemoteRoot/app/index.html; " +
     "tar -xzf /home/ocw/deploy_tmp/dist.tar.gz -C $RemoteRoot/app; " +
+    "rm -rf $RemoteRoot/osap-api/web/dist-ssr; mkdir -p $RemoteRoot/osap-api/web/dist-ssr; " +
+    "tar -xzf /home/ocw/deploy_tmp/dist-ssr.tar.gz -C $RemoteRoot/osap-api/web/dist-ssr; " +
     "mkdir -p $RemoteRoot/osap-storage/frontend/dist; rm -rf $RemoteRoot/osap-storage/frontend/dist/*; " +
     "tar -xzf /home/ocw/deploy_tmp/storage-admin-dist.tar.gz -C $RemoteRoot/osap-storage/frontend/dist; " +
     "mkdir -p $RemoteRoot/osap-auth/web/dist; rm -rf $RemoteRoot/osap-auth/web/dist/*; " +
     "tar -xzf /home/ocw/deploy_tmp/auth-web-dist.tar.gz -C $RemoteRoot/osap-auth/web/dist; " +
-    "$restart rm -rf /home/ocw/deploy_tmp; echo DEPLOY_DONE"
+    "$restart sudo systemctl restart osap-ssr.service; rm -rf /home/ocw/deploy_tmp; echo DEPLOY_DONE"
 ssh -o BatchMode=yes $HostAlias $cmd
 
 Write-Host "== Verificando salud ==" -ForegroundColor Cyan

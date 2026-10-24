@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import type { RepresentationInfo, SearchResultItem } from "../api/types";
 import { Spinner } from "../components/Spinner";
+import { VideosLink } from "../components/VideosLink";
 import { WorkDetailTabs } from "../components/WorkDetailTabs";
 import { useI18n } from "../i18n/I18n";
 import { useSearches } from "../state/searches";
@@ -180,6 +181,12 @@ export function CandidatesPage() {
                     Ficha
                   </Link>
                 ) : null}
+                <VideosLink
+                  workId={fichaId ?? c.work.work_id}
+                  title={c.work.title}
+                  composer={c.work.composer}
+                  variant="compact"
+                />
                 <button
                   type="button"
                   aria-label="expand"

@@ -13,8 +13,8 @@
 #                                            # de otra sesión/administrador)
 #   pwsh script/restart-dev.ps1 -NoElevate   # sin pedir UAC (puede no poder matar todo)
 #   pwsh script/restart-dev.ps1 -SkipKill    # solo arrancar (no mata)
-#   pwsh script/restart-dev.ps1 -Build       # además, recompila la SPA (tsc + vite build)
-#                                            # -> regenera web/dist (lo que sirve Apache)
+#   pwsh script/restart-dev.ps1 -Build       # además, recompila SSR + SPA (tsc + vite)
+#                                            # -> regenera dist-ssr y web/dist
 
 [CmdletBinding()]
 param(
@@ -121,14 +121,17 @@ function Wait-Health([string]$Url, [int]$Timeout) {
 
 function Build-Spa {
     $web = Join-Path (Split-Path $PSScriptRoot -Parent) "web"
-    Write-Status "[1/4] Recompilando SPA (tsc + vite build)..."
+    Write-Status "[1/4] Recompilando SSR + SPA (tsc + vite build)..."
     Push-Location $web
     try {
         & ".\node_modules\.bin\tsc.cmd" --noEmit
         if ($LASTEXITCODE -ne 0) { throw "tsc --noEmit falló (corrige los tipos antes de rebuildar)" }
+        Remove-Item -LiteralPath "dist-ssr" -Recurse -Force -ErrorAction SilentlyContinue
+        & node "node_modules/vite/bin/vite.js" build --config "vite.ssr.config.ts"
+        if ($LASTEXITCODE -ne 0) { throw "vite build SSR falló" }
         & node "node_modules/vite/bin/vite.js" build
-        if ($LASTEXITCODE -ne 0) { throw "vite build falló" }
-        Write-Status "  web/dist regenerado (Apache lo sirve al instante; recarga con Ctrl+F5)"
+        if ($LASTEXITCODE -ne 0) { throw "vite build SPA falló" }
+        Write-Status "  dist-ssr y web/dist regenerados (reinicia el SSR para cargar el bundle nuevo)"
     } finally {
         Pop-Location
     }

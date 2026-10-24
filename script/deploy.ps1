@@ -26,18 +26,22 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 $tmp = Join-Path $env:TEMP "osap-deploy"
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
+if (-not $env:VITE_VIDEOS_URL) { $env:VITE_VIDEOS_URL = "https://videos.openmusicrepository.com" }
 
 function Fail($msg) { Write-Error $msg; exit 1 }
 
-Write-Host "== [1/6] Construyendo frontend ==" -ForegroundColor Cyan
+Write-Host "== [1/6] Construyendo frontend (SSR + SPA) ==" -ForegroundColor Cyan
 Push-Location (Join-Path $root "web")
 & ".\node_modules\.bin\tsc.cmd" --noEmit
 if ($LASTEXITCODE -ne 0) { Fail "tsc --noEmit falló" }
+Remove-Item -LiteralPath "dist-ssr" -Recurse -Force -ErrorAction SilentlyContinue
+& node "node_modules/vite/bin/vite.js" build --config "vite.ssr.config.ts"
+if ($LASTEXITCODE -ne 0) { Fail "vite build SSR falló" }
 & node "node_modules/vite/bin/vite.js" build
 if ($LASTEXITCODE -ne 0) { Fail "vite build falló" }
 Pop-Location
 
-Write-Host "== [2/6] Empaquetando backend y SPA ==" -ForegroundColor Cyan
+Write-Host "== [2/6] Empaquetando backend, SPA y SSR ==" -ForegroundColor Cyan
 Push-Location $root
 tar -czf (Join-Path $tmp "backend.tar.gz") `
     --exclude="__pycache__" --exclude="*.pyc" `
@@ -45,11 +49,13 @@ tar -czf (Join-Path $tmp "backend.tar.gz") `
 if ($LASTEXITCODE -ne 0) { Fail "tar backend falló" }
 tar -czf (Join-Path $tmp "dist.tar.gz") --exclude=*maintenance.flag --exclude=*maintenance.token -C (Join-Path $root "web\dist") .
 if ($LASTEXITCODE -ne 0) { Fail "tar dist falló" }
+tar -czf (Join-Path $tmp "dist-ssr.tar.gz") -C (Join-Path $root "web\dist-ssr") .
+if ($LASTEXITCODE -ne 0) { Fail "tar dist-ssr falló" }
 Pop-Location
 
 Write-Host "== [3/6] Subiendo al servidor ==" -ForegroundColor Cyan
 ssh -o BatchMode=yes $HostAlias "mkdir -p ~/deploy_tmp"
-scp -o BatchMode=yes (Join-Path $tmp "backend.tar.gz") (Join-Path $tmp "dist.tar.gz") "$($HostAlias):~/deploy_tmp/"
+scp -o BatchMode=yes (Join-Path $tmp "backend.tar.gz") (Join-Path $tmp "dist.tar.gz") (Join-Path $tmp "dist-ssr.tar.gz") "$($HostAlias):~/deploy_tmp/"
 if ($LASTEXITCODE -ne 0) { Fail "scp falló" }
 # Config de producción: SOLO con -WithConfig (evita pisar osap.toml del servidor).
 if ($WithConfig) {
@@ -68,10 +74,11 @@ Write-Host "== [4/6] Extrayendo en el servidor y reiniciando ==" -ForegroundColo
 $configStep = if ($WithConfig) { "cp -f ~/deploy_tmp/osap.production.toml $BackendDir/osap.toml && " } else { "test -f $BackendDir/osap.toml && " }
 $remoteCmd = "set -e; $configStep cd $BackendDir && tar -xzf ~/deploy_tmp/backend.tar.gz && " +
     ".venv/bin/pip install --quiet PyMySQL requests Jinja2 PyJWT cryptography && " +
+    "rm -rf web/dist-ssr && mkdir -p web/dist-ssr && tar -xzf ~/deploy_tmp/dist-ssr.tar.gz -C web/dist-ssr && " +
     "cd $SpaDir && rm -rf assets index.html manual && tar -xzf ~/deploy_tmp/dist.tar.gz && " +
     "sudo cp ~/deploy_tmp/app.conf /etc/nginx/sites-enabled/app.openmusicrepository.com.conf && " +
     "sudo nginx -t && sudo nginx -s reload && " +
-    "rm -rf ~/deploy_tmp && sudo systemctl restart osap-api.service && echo RESTART_DONE"
+    "rm -rf ~/deploy_tmp && sudo systemctl restart osap-api.service && sudo systemctl restart osap-ssr.service && echo RESTART_DONE"
 $out = ssh -o BatchMode=yes $HostAlias $remoteCmd
 $out
 

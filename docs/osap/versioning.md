@@ -79,6 +79,19 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.7.0 (B)** — **vídeos en la descubierta de obras**: enlaces «Vídeos» al aplicativo
+  externo `videos.openmusicrepository.com` desde el listado de obras, la ficha pública, las
+  representaciones y los candidatos. La app conserva su versión propia **0.1.0** (preview
+  técnica): búsqueda en YouTube, reproductor embebido y votos por representación/voz en MySQL.
+  Incluye la resolución de ids legados de storage (`/obras/121355` → `index-456780`), las
+  acciones OMR Ver/Descargar/Abrir centralizadas y el build/deploy de SSR + SPA.
+  - Evidencia: producción `/obras/121355` 200 con Humoresque y 2 enlaces de vídeo; compositor
+    Dvořák con **158** enlaces; app `videos…/health` 200 y búsqueda real con 15 resultados;
+    `tsc --noEmit`, `vitest` (5 tests de enlaces/representaciones), build SSR + SPA y
+    `deploy_all` actualizado; mantenimiento desactivado tras verificar.
+  - Alcance: `osap-api` (web + resolución de ids) + aplicativo externo `osap-videos`; versión
+    del conjunto 5.7.0 en los cuatro programas.
+
 - **5.6.0 (B)** — **ficha de obra rediseñada**: una sola caja con pestañas
   **Resumen / Evidencia / Proveedores**; fieldsets de **Datos de la obra** (compositor,
   atribución, catálogo, año, tonalidad, época, descripción), **Características** (duración,

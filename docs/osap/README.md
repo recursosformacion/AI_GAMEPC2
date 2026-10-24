@@ -46,6 +46,10 @@ Chorus (producto independiente): `docs/chorus-vision.md` (visión),
 
 ## Mejoras pendientes (anotadas)
 
+- **Organización e ingeniería post-subvención** (`organizacion-post-subvencion.md`): plan
+  para unificar build/arranque/verificación, definición de hecho, contrato compartido de
+  obras/representaciones, CI, trazabilidad y disciplina de incidentes. **No ejecutar hasta
+  recibir financiación.**
 - **Pendientes 2026-10-21** (`pending.md`): integración del módulo externo
   `ai-recogeYouTube` (búsqueda global + valoraciones, correspondencia de obras y cuota) y
   estado de las fuentes externas de partituras (BNE, BnF, BL, DNB, LOC, Europeana, Cantorion,

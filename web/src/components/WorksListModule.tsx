@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { RepresentationInfo, SearchResultItem, WorkDetail, WorkInfo } from "../api/types";
 import { Spinner } from "./Spinner";
+import { VideosLink } from "./VideosLink";
 import { WorkDetailTabs } from "./WorkDetailTabs";
 import { useI18n } from "../i18n/I18n";
 
@@ -168,6 +169,12 @@ export function WorksListModule({
                   Ficha
                 </Link>
               ) : null}
+              <VideosLink
+                workId={fichaId ?? rawId}
+                title={w.work.title}
+                composer={w.work.composer}
+                variant="compact"
+              />
             </div>
             {isOpen ? (
               <div className="mb-2 overflow-hidden rounded bg-osap-surface">
@@ -225,6 +232,11 @@ export function WorksListModule({
                   Ficha
                 </Link>
               ) : null}
+              <VideosLink
+                workId={fichaId ?? rawId}
+                title={w.title}
+                variant="compact"
+              />
             </div>
             {openId === String(w.work_id) ? (
               <div className="mb-2 overflow-hidden rounded bg-osap-surface">

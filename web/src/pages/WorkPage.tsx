@@ -1,61 +1,16 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
-import type { OsapWorkDetails, PublicWorkRepresentation } from "../api/types";
+import type { OsapWorkDetails } from "../api/types";
 import { Spinner } from "../components/Spinner";
 import { SponsorSlot } from "../components/SponsorSlot";
+import { RepresentationActions } from "../components/RepresentationActions";
+import { VideosLink } from "../components/VideosLink";
 import { useI18n } from "../i18n/I18n";
 import { usePublicWork } from "../state/publicWork";
 
 function canonicalWorkId(raw: string): string {
   return raw.startsWith("index-") ? raw : `index-${raw}`;
-}
-
-function viewerHref(rep: PublicWorkRepresentation): string | null {
-  if (!rep.downloadable || !rep.id) return null;
-  const fmt = rep.format.toLowerCase();
-  if (fmt === "midi") return `/viewer?rep=${encodeURIComponent(rep.id)}&format=midi`;
-  if (["musicxml", "mxl", "xml", "mei", "pdf"].includes(fmt)) {
-    return `/viewer?rep=${encodeURIComponent(rep.id)}`;
-  }
-  return null;
-}
-
-function EyeIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  );
-}
-
-function DownloadIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 3v12" /><path d="m7 10 5 5 5-5" /><path d="M4 21h16" />
-    </svg>
-  );
-}
-
-function ExternalIcon() {
-  return (
-    <svg
-      width="12"
-      height="12"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M14 4h6v6" />
-      <path d="M20 4 10 14" />
-      <path d="M19 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h5" />
-    </svg>
-  );
 }
 
 function Field({ label, value }: { label: string; value: ReactNode }) {
@@ -86,6 +41,7 @@ export function WorkPage() {
   const loadedId = usePublicWork((s) => s.loadedId);
   const load = usePublicWork((s) => s.load);
   const canonicalId = canonicalWorkId(id);
+  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("resumen");
   const [osap, setOsap] = useState<OsapWorkDetails | null>(null);
 
@@ -93,6 +49,16 @@ export function WorkPage() {
     if (loadedId === canonicalId) return;
     void load(canonicalId);
   }, [canonicalId, loadedId, load]);
+
+  useEffect(() => {
+    if (!sheet) return;
+    const raw = String(sheet.work.work_id ?? "");
+    if (!raw) return;
+    const actual = canonicalWorkId(raw);
+    if (actual !== canonicalId) {
+      navigate(`/obras/${encodeURIComponent(actual.replace(/^index-/, ""))}`, { replace: true });
+    }
+  }, [canonicalId, navigate, sheet]);
 
   useEffect(() => {
     if (!sheet) return;
@@ -144,6 +110,7 @@ export function WorkPage() {
   const formatCount = new Set(sheet.representations.map((r) => r.format)).size;
   const workId = d?.id;
   const stats = work.stats;
+  const videosWorkId = work.work_id ?? canonicalId;
 
   const attribution = [
     d?.attribution_type ?? work.attr_type,
@@ -187,6 +154,14 @@ export function WorkPage() {
           <span className="rounded bg-osap-accent-soft px-2 py-0.5">
             {sheet.representations.length} representaciones
           </span>
+        </div>
+        <div className="mt-3">
+          <VideosLink
+            workId={videosWorkId}
+            title={work.title}
+            composer={composerText || work.composer}
+            label="Buscar vídeos en YouTube"
+          />
         </div>
       </header>
 
@@ -294,7 +269,6 @@ export function WorkPage() {
         ) : (
           <ul className="space-y-1">
             {sheet.representations.map((rep, index) => {
-              const viewer = viewerHref(rep);
               return (
                 <li
                   key={rep.id ?? `${rep.provider}-${rep.format}-${index}`}
@@ -309,40 +283,15 @@ export function WorkPage() {
                     </span>
                   </span>
                   <span className="flex shrink-0 items-center gap-1">
-                    {viewer ? (
-                      <Link
-                        to={viewer}
-                        aria-label="Ver"
-                        title="Ver"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded border border-osap-border-strong text-osap-accent hover:bg-osap-accent-soft"
-                      >
-                        <EyeIcon />
-                      </Link>
-                    ) : null}
-                    {rep.downloadable && rep.url ? (
-                      <a
-                        href={rep.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label="Descargar"
-                        title="Descargar"
-                        className="inline-flex h-9 w-9 items-center justify-center rounded border border-osap-border-strong text-osap-accent hover:bg-osap-accent-soft"
-                      >
-                        <DownloadIcon />
-                      </a>
-                    ) : null}
-                    {rep.url ? (
-                      <a
-                        href={rep.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        aria-label="Web"
-                        title={`Abrir en ${rep.provider}`}
-                        className="inline-flex h-9 w-9 items-center justify-center rounded border border-osap-border-strong text-osap-accent hover:bg-osap-accent-soft"
-                      >
-                        <ExternalIcon />
-                      </a>
-                    ) : null}
+                    <VideosLink
+                      workId={videosWorkId}
+                      title={work.title}
+                      composer={composerText || work.composer}
+                      resourceId={rep.id}
+                      variant="icon"
+                      label="Buscar vídeos de esta representación"
+                    />
+                    <RepresentationActions representation={rep} workTitle={work.title} variant="icons" />
                   </span>
                 </li>
               );
@@ -354,4 +303,3 @@ export function WorkPage() {
     </div>
   );
 }
-
