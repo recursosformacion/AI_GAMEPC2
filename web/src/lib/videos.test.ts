@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { videosUrl } from "./videos";
+import { videosHomeUrl, videosUrl } from "./videos";
 
 describe("videos links", () => {
   it("incluye obra, representación, título, compositor y token", () => {
@@ -19,5 +19,9 @@ describe("videos links", () => {
 
   it("no genera enlace sin obra", () => {
     expect(videosUrl({ title: "Obra" })).toBeNull();
+  });
+
+  it("ofrece la portada de búsqueda sin obra", () => {
+    expect(videosHomeUrl()).toContain("localhost:8400");
   });
 });

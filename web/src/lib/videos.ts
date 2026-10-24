@@ -26,3 +26,7 @@ export function videosUrl({
   if (token) params.set("token", token);
   return `${base}/works/${encodeURIComponent(workId)}?${params.toString()}`;
 }
+
+export function videosHomeUrl(): string | null {
+  return videosBaseUrl();
+}

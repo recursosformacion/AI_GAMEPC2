@@ -79,6 +79,11 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.7.6 (C)** — **acceso a vídeos desde Explorar**: tarjeta «Buscar vídeos» que abre la
+  portada del aplicativo sin obra, autor ni voz. La búsqueda funciona; el voto queda oculto
+  hasta abrir desde una representación. Evidencia: `tsc --noEmit`, test de `videosHomeUrl`,
+  build SPA desplegado y `videos…/` responde 200 con el formulario de búsqueda.
+
 - **5.7.5 (C)** — **redirecciones antiguas de obra**: `/obra/<id>` y `/obra/<id>/<slug>`
   resuelven el id y el slug canónicos y hacen un único 301 directo a `/obras/<id>/<slug>`
   esperado, sin cadena de redirecciones. No cambia el contenido ni el esquema. Evidencia:

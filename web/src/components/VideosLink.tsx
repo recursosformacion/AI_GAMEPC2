@@ -2,7 +2,7 @@ import type { MouseEvent } from "react";
 import { useAuth } from "../state/auth";
 import { videosUrl } from "../lib/videos";
 
-function VideosIcon({ size = 16 }: { size?: number }) {
+export function VideosIcon({ size = 16 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M21.6 7.2a2.5 2.5 0 0 0-1.8-1.8C18.2 5 12 5 12 5s-6.2 0-7.8.4a2.5 2.5 0 0 0-1.8 1.8C2 8.8 2 12 2 12s0 3.2.4 4.8a2.5 2.5 0 0 0 1.8 1.8C5.8 19 12 19 12 19s6.2 0 7.8-.4a2.5 2.5 0 0 0 1.8-1.8C22 15.2 22 12 22 12s0-3.2-.4-4.8ZM10 15.5v-7l6 3.5-6 3.5Z" />
@@ -78,4 +78,3 @@ export function VideosLink({
     </a>
   );
 }
-

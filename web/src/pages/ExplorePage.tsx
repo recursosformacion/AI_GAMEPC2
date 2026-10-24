@@ -4,6 +4,8 @@
 import { Link } from "react-router-dom";
 import { Button } from "../components/Button";
 import { useI18n } from "../i18n/I18n";
+import { VideosIcon } from "../components/VideosLink";
+import { videosHomeUrl } from "../lib/videos";
 
 // Catálogo y Fuentes viven DENTRO de Explorar (no en el menú de primer nivel).
 const AREAS = [
@@ -15,6 +17,7 @@ const AREAS = [
 
 export function ExplorePage() {
   const { t } = useI18n();
+  const videosHome = videosHomeUrl();
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="text-center">
@@ -33,6 +36,23 @@ export function ExplorePage() {
           </Link>
         ))}
       </div>
+      {videosHome ? (
+        <a
+          href={videosHome}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-between gap-4 rounded border border-osap-border bg-osap-surface p-4 hover:bg-osap-bg"
+        >
+          <span className="flex items-center gap-3">
+            <span className="text-osap-accent"><VideosIcon size={22} /></span>
+            <span>
+              <span className="block font-semibold">{t("explore.videos")}</span>
+              <span className="block text-sm text-osap-muted">{t("explore.videosHint")}</span>
+            </span>
+          </span>
+          <span className="text-sm font-medium text-osap-accent">→</span>
+        </a>
+      ) : null}
       <div className="text-center">
         <Link to="/discover">
           <Button>{t("nav.discover")}</Button>
