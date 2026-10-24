@@ -526,6 +526,8 @@ SSR antiguo tras cambiar componentes. Con `-RestartSSR` reinicia el Node de :300
 Uso: `pwsh script/build-web.ps1 -RestartSSR`
 
 ### script/smoke-web.ps1
-Smoke test de regresión: abre `/obras/121355` (id legado de storage) y comprueba que
-renderiza la obra y que una representación OMR ofrece Ver/Descargar/visor.
+Smoke test de regresión: abre `/obras/121355` (id legado de storage), comprueba que
+renderiza la obra, que una representación OMR ofrece Ver/Descargar/visor y que la
+variante `?lang=en` de un compositor tiene canónica autorreferente y hreflang.
 Uso: `pwsh script/smoke-web.ps1`
+

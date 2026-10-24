@@ -64,3 +64,4 @@ export function useSeo(): void {
     setHreflangs(meta.canonicalPath, meta.robots.includes("index"));
   }, [location.pathname, location.search]);
 }
+
