@@ -61,6 +61,9 @@ Chorus (producto independiente): `docs/chorus-vision.md` (visión),
   niveles actuales (storage works, índice index_works, representaciones/ficheros) por un
   modelo con Work + Resource + File, reparto de campos, IDs estables, migración y preguntas
   abiertas. Es un cambio **A (major)**: exige punto de control antes de empezar.
+- **Estudio YouTube / ai-recogeYouTube** (`ai-recogeyoutube-integration-study.md`): botón en
+  la ficha de obra, pantalla nueva dentro de OSAP, búsqueda/voto, arquitectura de invocación,
+  asociación de obras, cuota y fases. Sin implementar.
 
 - **Catálogo de formaciones vocales (voicings)**: además de los términos normalizados de
   búsqueda (`SATB`, `STTB`, `AATB`, `ATTB`, …), valorar una tabla/catálogo de voicings con
