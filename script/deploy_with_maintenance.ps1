@@ -2,7 +2,7 @@
 #
 # Resumen: activa el mantenimiento SOLO en el servidor (el público ve 503 +
 # maintenance.html; el equipo entra con ?preview=TOKEN), ejecuta `deploy_all.ps1`
-# (SPA + los cuatro backends) y deja el mantenimiento ACTIVO para revisar. Cuando se
+# (SPA + SSR + los cuatro backends) y deja el mantenimiento ACTIVO para revisar. Cuando se
 # valide, se desactiva a mano con `web/scripts/maintenance.ps1 -RemoteOnly -Off`.
 #
 # No despliega el SSR de React: producción sigue sirviendo /composers y /obras con
@@ -26,7 +26,7 @@ Write-Host "== [1/2] Activando mantenimiento en producción ==" -ForegroundColor
 & pwsh -NoProfile -File (Join-Path $root "web\scripts\maintenance.ps1") -RemoteOnly -On
 if ($LASTEXITCODE -ne 0) { throw "No se pudo activar el mantenimiento" }
 
-Write-Host "== [2/2] Desplegando (SPA + backends) ==" -ForegroundColor Cyan
+Write-Host "== [2/2] Desplegando (SPA + SSR + backends) ==" -ForegroundColor Cyan
 $deployArgs = @("-NoProfile", "-File", (Join-Path $root "script\deploy_all.ps1"), "-HostAlias", $HostAlias)
 if ($SkipBuild) { $deployArgs += "-SkipBuild" }
 & pwsh @deployArgs
@@ -52,3 +52,4 @@ if (Test-Path -LiteralPath $tokenFile) {
 }
 Write-Host "Si todo está bien, publica con:" -ForegroundColor Yellow
 Write-Host "  pwsh web/scripts/maintenance.ps1 -RemoteOnly -Off" -ForegroundColor White
+
