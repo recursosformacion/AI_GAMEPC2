@@ -31,6 +31,7 @@ function setHreflangs(path: string, indexable: boolean): void {
     .querySelectorAll('link[rel="alternate"][hreflang]')
     .forEach((el) => el.remove());
   if (!indexable) return;
+  const basePath = path.split("?")[0];
   const add = (hreflang: string, href: string) => {
     const link = document.createElement("link");
     link.setAttribute("rel", "alternate");
@@ -39,9 +40,9 @@ function setHreflangs(path: string, indexable: boolean): void {
     document.head.appendChild(link);
   };
   for (const { code } of LANGUAGES) {
-    add(code, `${SITE_URL}${path}?lang=${code}`);
+    add(code, `${SITE_URL}${basePath}?lang=${code}`);
   }
-  add("x-default", `${SITE_URL}${path}`);
+  add("x-default", `${SITE_URL}${basePath}`);
 }
 
 /** Mantiene title, description, robots, canonical y hreflang alineados con la ruta. */

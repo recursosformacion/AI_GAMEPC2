@@ -1,5 +1,5 @@
-# Resumen: smoke test de la ficha de obra por id legado y de las acciones de una
-# representación OMR. Falla con código distinto de 0 si no aparecen Ver/Descargar.
+# Resumen: smoke test de ficha legado, acciones OMR y SEO de idioma (canónica + hreflang).
+# Falla con código distinto de 0 si falta algo.
 # Uso: pwsh script/smoke-web.ps1 [-BaseUrl http://osap-app]
 param(
     [string]$BaseUrl = "http://osap-app"
@@ -20,4 +20,13 @@ if ($rep.Content -notmatch "Descargar") { throw "Representación OMR: falta Desc
 if ($rep.Content -notmatch "Abrir en el visor") { throw "Representación OMR: falta el visor" }
 if ($rep.Content -match "Abrir en omr") { throw "Representación OMR: sigue ofreciendo solo abrir OMR" }
 
-Write-Host "Smoke web OK: ficha legado y representación OMR."
+$composer = Invoke-WebRequest -UseBasicParsing "$BaseUrl/composers/d9dd217c-2491-451e-93e8-e9cba76f0182?lang=en"
+if ($composer.StatusCode -ne 200) { throw "Compositor: HTTP $($composer.StatusCode)" }
+if ($composer.Content -notmatch 'rel="canonical" href="[^"]+\?lang=en"') {
+    throw "Compositor: la canónica de la variante ?lang=en no es autorreferente"
+}
+if ([regex]::Matches($composer.Content, 'rel="alternate" hreflang=').Count -lt 6) {
+    throw "Compositor: faltan alternates hreflang"
+}
+
+Write-Host "Smoke web OK: ficha legado, representación OMR y SEO de idioma."

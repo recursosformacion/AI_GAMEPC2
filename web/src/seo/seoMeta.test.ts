@@ -41,4 +41,13 @@ describe("seoMetaForPath", () => {
     expect(seoMetaForPath("/").canonicalPath).toBe("/");
     expect(seoMetaForPath("/explore").canonicalPath).toBe("/explore");
   });
+
+  it("la variante de idioma es autorreferente y sigue siendo indexable", () => {
+    const en = seoMetaForPath("/composers/person-1", "?lang=en");
+    expect(en.robots).toBe("index, follow");
+    expect(en.canonicalPath).toBe("/composers/person-1?lang=en");
+    expect(seoMetaForPath("/composers/person-1", "?lang=en&page=2").canonicalPath).toBe(
+      "/composers/person-1",
+    );
+  });
 });

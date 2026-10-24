@@ -87,7 +87,10 @@ const NOINDEX_ROUTES = [
   "/corrections",
   "/amigos/editor",
   "/amigos/mis-articulos",
+  "/mis",
 ];
+
+const LANGS = new Set(["es", "ca", "fr", "en", "de"]);
 
 const SORTED_ROUTE_KEYS = Object.keys(ROUTE_META).sort((a, b) => b.length - a.length);
 
@@ -116,10 +119,18 @@ export function seoMetaForPath(pathname: string, search = ""): SeoMeta {
     SORTED_ROUTE_KEYS.find((route) => canonicalPath === route) ??
     SORTED_ROUTE_KEYS.find((route) => canonicalPath.startsWith(`${route}/`));
   const base = key ? ROUTE_META[key] : undefined;
+  const params = new URLSearchParams(search);
+  const lang = params.get("lang");
+  params.delete("lang");
+  const hasOtherParams = Array.from(params.keys()).length > 0;
+  const indexable = !isNoindex(pathname, search);
   return {
     title: base?.title ?? DEFAULT_TITLE,
     description: base?.description ?? DEFAULT_DESCRIPTION,
-    robots: isNoindex(pathname, search) ? "noindex, nofollow" : "index, follow",
-    canonicalPath,
+    robots: indexable ? "index, follow" : "noindex, nofollow",
+    canonicalPath:
+      indexable && lang && LANGS.has(lang) && !hasOtherParams
+        ? `${canonicalPath}?lang=${lang}`
+        : canonicalPath,
   };
 }

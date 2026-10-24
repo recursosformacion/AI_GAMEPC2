@@ -79,6 +79,13 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.7.4 (C)** — **SEO de idioma y canónicas**: las variantes `?lang=es|ca|fr|en|de` de
+  compositores y obras son ahora autorreferentes, con `hreflang` para los cinco idiomas y
+  `x-default`; las obras antiguas canonizan a su id de índice. Las rutas privadas/de consulta
+  quedan fuera de `robots.txt`. Evidencia: canónica y 6 alternates en producción para
+  `/composers/...?lang=en`, `/obras/121355` canoniza a `/obras/456780`, `tsc --noEmit`,
+  `vitest` de SEO y smoke ampliado.
+
 - **5.7.3 (C)** — **estilo y compartición de artículos**: se permite `<h1>` en el cuerpo
   (antes se eliminaba y el titular quedaba como párrafo), se centra la portada, la barra de
   compartir pasa al final del artículo y se añade un botón de Instagram que copia el enlace

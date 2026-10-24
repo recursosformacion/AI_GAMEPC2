@@ -51,11 +51,12 @@ tar -czf (Join-Path $tmp "dist.tar.gz") --exclude=*maintenance.flag --exclude=*m
 if ($LASTEXITCODE -ne 0) { Fail "tar dist falló" }
 tar -czf (Join-Path $tmp "dist-ssr.tar.gz") -C (Join-Path $root "web\dist-ssr") .
 if ($LASTEXITCODE -ne 0) { Fail "tar dist-ssr falló" }
+Copy-Item (Join-Path $root "web\ssr\server.mjs") (Join-Path $tmp "server.mjs") -Force
 Pop-Location
 
 Write-Host "== [3/6] Subiendo al servidor ==" -ForegroundColor Cyan
 ssh -o BatchMode=yes $HostAlias "mkdir -p ~/deploy_tmp"
-scp -o BatchMode=yes (Join-Path $tmp "backend.tar.gz") (Join-Path $tmp "dist.tar.gz") (Join-Path $tmp "dist-ssr.tar.gz") "$($HostAlias):~/deploy_tmp/"
+scp -o BatchMode=yes (Join-Path $tmp "backend.tar.gz") (Join-Path $tmp "dist.tar.gz") (Join-Path $tmp "dist-ssr.tar.gz") (Join-Path $tmp "server.mjs") "$($HostAlias):~/deploy_tmp/"
 if ($LASTEXITCODE -ne 0) { Fail "scp falló" }
 # Config de producción: SOLO con -WithConfig (evita pisar osap.toml del servidor).
 if ($WithConfig) {
@@ -75,6 +76,7 @@ $configStep = if ($WithConfig) { "cp -f ~/deploy_tmp/osap.production.toml $Backe
 $remoteCmd = "set -e; $configStep cd $BackendDir && tar -xzf ~/deploy_tmp/backend.tar.gz && " +
     ".venv/bin/pip install --quiet PyMySQL requests Jinja2 PyJWT cryptography && " +
     "rm -rf web/dist-ssr && mkdir -p web/dist-ssr && tar -xzf ~/deploy_tmp/dist-ssr.tar.gz -C web/dist-ssr && " +
+    "cp ~/deploy_tmp/server.mjs web/ssr/server.mjs && " +
     "cd $SpaDir && rm -rf assets index.html manual && tar -xzf ~/deploy_tmp/dist.tar.gz && " +
     "sudo cp ~/deploy_tmp/app.conf /etc/nginx/sites-enabled/app.openmusicrepository.com.conf && " +
     "sudo nginx -t && sudo nginx -s reload && " +

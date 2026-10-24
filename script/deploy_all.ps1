@@ -61,6 +61,7 @@ tar -czf (Join-Path $tmp "dist.tar.gz") -C (Join-Path $apiRoot "web\dist") .
 if ($LASTEXITCODE -ne 0) { Fail "tar dist falló" }
 tar -czf (Join-Path $tmp "dist-ssr.tar.gz") -C (Join-Path $apiRoot "web\dist-ssr") .
 if ($LASTEXITCODE -ne 0) { Fail "tar dist-ssr falló" }
+Copy-Item (Join-Path $apiRoot "web\ssr\server.mjs") (Join-Path $tmp "server.mjs") -Force
 # Admin de osap-storage (lo sirve su API en /admin desde frontend/dist).
 tar -czf (Join-Path $tmp "storage-admin-dist.tar.gz") -C (Join-Path $IosapRoot "osap-storage\frontend\dist") .
 if ($LASTEXITCODE -ne 0) { Fail "tar storage-admin-dist falló" }
@@ -73,6 +74,7 @@ ssh -o BatchMode=yes $HostAlias "mkdir -p /home/ocw/deploy_tmp"
 foreach ($r in $repos) { scp -o BatchMode=yes (Join-Path $tmp "$($r.Name).tar.gz") "$($HostAlias):/home/ocw/deploy_tmp/" }
 scp -o BatchMode=yes (Join-Path $tmp "dist.tar.gz") "$($HostAlias):/home/ocw/deploy_tmp/"
 scp -o BatchMode=yes (Join-Path $tmp "dist-ssr.tar.gz") "$($HostAlias):/home/ocw/deploy_tmp/"
+scp -o BatchMode=yes (Join-Path $tmp "server.mjs") "$($HostAlias):/home/ocw/deploy_tmp/"
 scp -o BatchMode=yes (Join-Path $tmp "storage-admin-dist.tar.gz") "$($HostAlias):/home/ocw/deploy_tmp/"
 scp -o BatchMode=yes (Join-Path $tmp "auth-web-dist.tar.gz") "$($HostAlias):/home/ocw/deploy_tmp/"
 if ($WithConfig) {
@@ -93,6 +95,7 @@ $cmd = "set -e; $extract $configStep" +
     "tar -xzf /home/ocw/deploy_tmp/dist.tar.gz -C $RemoteRoot/app; " +
     "rm -rf $RemoteRoot/osap-api/web/dist-ssr; mkdir -p $RemoteRoot/osap-api/web/dist-ssr; " +
     "tar -xzf /home/ocw/deploy_tmp/dist-ssr.tar.gz -C $RemoteRoot/osap-api/web/dist-ssr; " +
+    "cp /home/ocw/deploy_tmp/server.mjs $RemoteRoot/osap-api/web/ssr/server.mjs; " +
     "mkdir -p $RemoteRoot/osap-storage/frontend/dist; rm -rf $RemoteRoot/osap-storage/frontend/dist/*; " +
     "tar -xzf /home/ocw/deploy_tmp/storage-admin-dist.tar.gz -C $RemoteRoot/osap-storage/frontend/dist; " +
     "mkdir -p $RemoteRoot/osap-auth/web/dist; rm -rf $RemoteRoot/osap-auth/web/dist/*; " +

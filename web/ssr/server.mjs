@@ -177,18 +177,21 @@ async function prefetch(pathname, searchParams) {
     const title = String(sheet.data?.work?.title ?? "Obra");
     const composer = sheet.data?.work?.composer ? ` de ${sheet.data.work.composer}` : "";
     const catalogue = sheet.data?.work?.catalogue ? ` (${sheet.data.work.catalogue})` : "";
+    const canonicalWorkId = String(sheet.data?.work?.work_id ?? id).replace(/^index-/, "");
+    const canonicalPath = `/obras/${encodeURIComponent(canonicalWorkId)}`;
     state.meta = {
       title: `${title}${catalogue}${composer} — Partituras | OpenMusicRepository`,
       description: truncate(
         `${title}${composer}${catalogue}: representaciones y partituras disponibles en OpenMusicRepository.`,
       ),
-      canonical: `${PUBLIC_ORIGIN}${pathname}`,
+      canonical: `${PUBLIC_ORIGIN}${canonicalPath}`,
+      canonicalPath,
       robots: "index, follow",
       jsonLd: {
         "@context": "https://schema.org",
         "@type": "MusicComposition",
         name: title,
-        url: `${PUBLIC_ORIGIN}${pathname}`,
+        url: `${PUBLIC_ORIGIN}${canonicalPath}`,
         ...(sheet.data?.work?.composer ? { composer: { "@type": "Person", name: sheet.data.work.composer } } : {}),
         ...(sheet.data?.work?.catalogue ? { catalogNumber: sheet.data.work.catalogue } : {}),
       },
@@ -208,8 +211,20 @@ function inject(html, state, lang, dark) {
     /<meta name="description" content="[^"]*"\s*\/?>/,
     `<meta name="description" content="${escapeHtml(meta.description ?? "")}" />`,
   );
+  const indexable = String(meta.robots ?? "").includes("index");
+  const alternatePath = String(meta.canonicalPath ?? "");
+  const alternates = indexable && alternatePath
+    ? [
+        ...[...LANGS].map(
+          (code) =>
+            `<link rel="alternate" hreflang="${code}" href="${escapeHtml(`${PUBLIC_ORIGIN}${alternatePath}?lang=${code}`)}" />`,
+        ),
+        `<link rel="alternate" hreflang="x-default" href="${escapeHtml(`${PUBLIC_ORIGIN}${alternatePath}`)}" />`,
+      ]
+    : [];
   const head = [
     meta.canonical ? `<link rel="canonical" href="${escapeHtml(meta.canonical)}" />` : "",
+    ...alternates,
     meta.robots ? `<meta name="robots" content="${escapeHtml(meta.robots)}" />` : "",
     meta.jsonLd ? `<script type="application/ld+json">${safeJson(meta.jsonLd)}</script>` : "",
   ]
@@ -238,6 +253,11 @@ async function buildPage(url, lang, dark) {
   const state = await prefetch(parsed.pathname, parsed.searchParams);
   if (state === null) return null;
   if (state.degraded) return null;
+  const explicitLang = parsed.searchParams.get("lang");
+  const canonicalPath = String(state.meta?.canonicalPath ?? parsed.pathname);
+  const canonical = explicitLang && LANGS.has(explicitLang)
+    ? `${PUBLIC_ORIGIN}${canonicalPath}?lang=${explicitLang}`
+    : `${PUBLIC_ORIGIN}${canonicalPath}`;
   const html = await render(parsed.pathname + parsed.search, {
     lang,
     dark,
@@ -249,7 +269,7 @@ async function buildPage(url, lang, dark) {
     status: state.status,
     html: inject(
       html,
-      { ...state, meta: { ...state.meta, canonicalPath: parsed.pathname } },
+      { ...state, meta: { ...state.meta, canonical, canonicalPath } },
       lang,
       dark,
     ),

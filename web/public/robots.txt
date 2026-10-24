@@ -12,5 +12,10 @@ Disallow: /jobs
 Disallow: /knowledge
 Disallow: /oidc
 Disallow: /corrections
+Disallow: /mis
+Disallow: /amigos/editor
+Disallow: /amigos/mis-articulos
+Disallow: /support?mode=
+Disallow: /support?email=
 
 Sitemap: https://app.openmusicrepository.com/sitemap.xml
