@@ -79,6 +79,12 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.7.8 (C)** — **enlaces de sesión desde vídeos**: OSAP abre su panel de login o
+  registro con `?auth=login|register`; la app de vídeos enlaza ahí en vez de a una URL de
+  auth que devolvía 403. Incluye «Cerrar ventana» en el aplicativo de vídeos, con vuelta a
+  OSAP si el navegador no permite cerrar. Evidencia: `tsc --noEmit`, build SSR + SPA,
+  despliegue de vídeos 0.2.1 y smoke de producción.
+
 - **5.7.7 (C)** — **SSR de compositores con `work_id` numérico**: `fichaIdFor`/`asFichaId`
   convierten el id a texto antes de usar `startsWith`; evita el 500 y el reinicio en bucle
   de `osap-ssr` en compositores cuyo índice devuelve ids numéricos. Evidencia: la ficha

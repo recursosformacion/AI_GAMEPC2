@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router-dom";
+import { Link, NavLink, Outlet, useLocation, useSearchParams } from "react-router-dom";
 import { initAnalytics } from "../analytics/ga";
 import { trackPageView } from "../analytics/gtm";
 import { CookieConsent, openCookiePreferences } from "../consent/CookieConsent";
@@ -384,10 +384,21 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const { start: startOidc, error: oidcError } = useOidcLogin();
   const { unread, load: loadNotifications } = useNotifications();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   useEffect(() => {
     if (user) void loadNotifications();
   }, [user, loadNotifications]);
+
+  useEffect(() => {
+    const mode = searchParams.get("auth");
+    if (mode !== "login" && mode !== "register") return;
+    setAuthMode(mode);
+    setLoginOpen(true);
+    const next = new URLSearchParams(searchParams);
+    next.delete("auth");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams]);
 
   // Sin sesión: pulsa "Iniciar sesión" → popup OIDC; si no se puede, panel de respaldo.
   const openAuth = () => {
