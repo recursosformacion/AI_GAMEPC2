@@ -79,6 +79,11 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.7.9 (C)** — **login social directo**: el callback social sin contexto OIDC redirigía a
+  `/auth/login` sin entregar tokens y parecía que la sesión no se había creado. Ahora crea la
+  sesión y redirige a `/auth/account#access_token=…&refresh_token=…`; la SPA restaura la
+  sesión. Evidencia: `pytest tests/test_social.py` (11) y despliegue de `osap-auth`.
+
 - **5.7.8 (C)** — **enlaces de sesión desde vídeos**: OSAP abre su panel de login o
   registro con `?auth=login|register`; la app de vídeos enlaza ahí en vez de a una URL de
   auth que devolvía 403. Incluye «Cerrar ventana» en el aplicativo de vídeos, con vuelta a
