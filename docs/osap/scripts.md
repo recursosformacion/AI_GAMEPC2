@@ -531,3 +531,15 @@ renderiza la obra, que una representación OMR ofrece Ver/Descargar/visor y que 
 variante `?lang=en` de un compositor tiene canónica autorreferente y hreflang.
 Uso: `pwsh script/smoke-web.ps1`
 
+
+### `wikidata_persons.py` (osap-storage)
+Enriquece personas incompletas desde Wikidata por SPARQL: primero `wikidata_qid` e
+identificadores (`viaf`, `isni`, `musicbrainz`, `imslp`, `gnd`, `rism`); con
+`--name-fallback`, búsqueda por etiqueta exacta y filtro humano + compositor. Solo genera
+propuestas JSON/CSV en `data/wikidata_persons/`; no escribe en la BD. Lanzador:
+`scripts/run_wikidata_persons.bat`.
+
+### `wikidata_works.py` (osap-storage)
+Propone metadatos de obras con compositor QID, casando por QID de compositor y título exacto
+(es/en). Puede devolver coincidencia única, ambigua o sin coincidencia. Solo genera propuestas
+en `data/wikidata_works/`; no escribe en la BD. Lanzador: `scripts/run_wikidata_works.bat`.
