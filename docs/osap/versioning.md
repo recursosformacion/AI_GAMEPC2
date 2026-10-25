@@ -79,6 +79,11 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.7.7 (C)** — **SSR de compositores con `work_id` numérico**: `fichaIdFor`/`asFichaId`
+  convierten el id a texto antes de usar `startsWith`; evita el 500 y el reinicio en bucle
+  de `osap-ssr` en compositores cuyo índice devuelve ids numéricos. Evidencia: la ficha
+  `1281e6da…` responde 200, `tsc --noEmit`, build SSR + SPA desplegado y smoke ampliado.
+
 - **5.7.6 (C)** — **acceso a vídeos desde Explorar**: tarjeta «Buscar vídeos» que abre la
   portada del aplicativo sin obra, autor ni voz. La búsqueda funciona; el voto queda oculto
   hasta abrir desde una representación. Evidencia: `tsc --noEmit`, test de `videosHomeUrl`,

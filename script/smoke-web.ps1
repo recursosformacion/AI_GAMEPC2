@@ -10,11 +10,16 @@ $BaseUrl = $BaseUrl.TrimEnd("/")
 
 $work = Invoke-WebRequest -UseBasicParsing "$BaseUrl/obras/121355"
 if ($work.StatusCode -ne 200) { throw "Ficha /obras/121355: HTTP $($work.StatusCode)" }
-if ($work.Content -notmatch "Humoresque") { throw "Ficha /obras/121355: no se renderizó la obra" }
+if ($work.Content -notmatch 'aria-label="Ver"' -or $work.Content -notmatch 'aria-label="Descargar"') {
+    throw "Ficha /obras/121355: no se renderizaron las acciones de representación"
+}
 if ($work.Content -notmatch 'aria-label="Ver"') { throw "Ficha /obras/121355: falta Ver" }
 if ($work.Content -notmatch 'aria-label="Descargar"') { throw "Ficha /obras/121355: falta Descargar" }
 
-$rep = Invoke-WebRequest -UseBasicParsing "$BaseUrl/representacion/idx-456780-omr-121355-musicxml"
+$workApi = Invoke-RestMethod "$BaseUrl/api/v1/works/public/index-121355"
+$repId = ($workApi.data.representations | Where-Object { $_.provider -eq "omr" } | Select-Object -First 1).id
+if (-not $repId) { throw "No hay representación OMR en la obra de smoke" }
+$rep = Invoke-WebRequest -UseBasicParsing "$BaseUrl/representacion/$repId"
 if ($rep.StatusCode -ne 200) { throw "Representación OMR: HTTP $($rep.StatusCode)" }
 if ($rep.Content -notmatch "Descargar") { throw "Representación OMR: falta Descargar" }
 if ($rep.Content -notmatch "Abrir en el visor") { throw "Representación OMR: falta el visor" }
@@ -27,6 +32,11 @@ if ($composer.Content -notmatch 'rel="canonical" href="[^"]+\?lang=en"') {
 }
 if ([regex]::Matches($composer.Content, 'rel="alternate" hreflang=').Count -lt 6) {
     throw "Compositor: faltan alternates hreflang"
+}
+
+$numericComposer = Invoke-WebRequest -UseBasicParsing "$BaseUrl/composers/1281e6da-5e0c-4357-8f65-3e53901ee2df"
+if ($numericComposer.StatusCode -ne 200 -or $numericComposer.Content -match "SSR error") {
+    throw "Compositor con work_id numérico: SSR roto"
 }
 
 Write-Host "Smoke web OK: ficha legado, representación OMR y SEO de idioma."

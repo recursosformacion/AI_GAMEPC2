@@ -64,11 +64,16 @@ export function ComposerDetailPage() {
       .replace(/[^a-z0-9]+/g, " ")
       .trim();
   const indexByTitle = new Map(indexRows.map((w) => [normalizeTitle(w.title), w.work_id]));
-  const asFichaId = (value: string) => (value.startsWith("index-") ? value : `index-${value}`);
+  const asFichaId = (value: unknown) => {
+    const text = String(value ?? "").trim();
+    if (!text) return null;
+    return text.startsWith("index-") ? text : `index-${text}`;
+  };
   // Las obras que vienen de la búsqueda llevan `work-<uuid>`; la ficha pública usa
   // `index-<n>`. Solo se enlaza cuando hay una obra indexada con el mismo título.
-  const fichaIdFor = (workId: string, title: string): string | null => {
-    if (workId.startsWith("index-")) return workId;
+  const fichaIdFor = (workId: string | number, title: string): string | null => {
+    const raw = String(workId ?? "");
+    if (raw.startsWith("index-")) return raw;
     const exact = indexByTitle.get(normalizeTitle(title));
     if (exact) return asFichaId(exact);
     const head = title.split(" - ")[0] ?? title;
@@ -180,4 +185,3 @@ export function ComposerDetailPage() {
     </div>
   );
 }
-

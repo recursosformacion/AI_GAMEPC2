@@ -339,8 +339,8 @@ function RepresentationsTab({
     return match ? `index-${match[1]}` : null;
   };
   const baseVideoWorkId =
-    workId?.startsWith("index-")
-      ? workId
+    String(workId ?? "").startsWith("index-")
+      ? String(workId)
       : representations.map((rep) => indexIdFromRep(rep.id)).find(Boolean) ?? workId;
 
   return (
