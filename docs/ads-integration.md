@@ -1,0 +1,252 @@
+# Integración de ai_publicidad en OSAP
+
+**Estado:** guía de implementación; no implica que la integración ya esté desplegada.  
+**Repositorios:** [AI_GAMEPC2 (OSAP)](https://github.com/recursosformacion/AI_GAMEPC2) y [ai_publicidad](https://github.com/recursosformacion/ai_publicidad).
+
+## 1. Objetivo y estado actual
+
+Integrar `ai_publicidad` como servicio independiente de entrega de anuncios, manteniendo la aplicación React de OSAP y su contrato HTTP actual. OSAP decide dónde reservar espacio y lo representa; `ai_publicidad` elige la creatividad compatible, registra la entrega, confirma impresiones y recibe los clics.
+
+La inspección de `main` confirma estos puntos de integración existentes:
+
+- El cliente React concentra las llamadas HTTP en `web/src/api/ApiClient.ts`. Usa el prefijo `/api/v1` y espera respuestas OSAP con envoltura `success/request_id/data/error`.
+- Ya existe `web/src/components/SponsorSlot.tsx`, que descarga `/sponsors.json` y muestra patrocinadores configurados estáticamente o un mensaje propio de reserva.
+- El componente está utilizado en `web/src/pages/WorkPage.tsx` (`placement="work"`), `web/src/pages/ComposerDetailPage.tsx` (`placement="composer"`) y `web/src/pages/ComposersPage.tsx` (`placement="composers"`).
+- `web/public/sponsors.json` define esos espacios estáticos. Sus claves `work`, `composer` y `composers` describen pantallas, **no** son los códigos de ubicación física que espera `ai_publicidad`.
+- El API se compone en `src/osap/api/platform_app.py` con routers construidos mediante `build_*_router(ctx)`. `HttpContext.ok(...)` crea la envoltura estándar de OSAP.
+- En desarrollo, Vite reenvía `/api` a `http://127.0.0.1:8001`. En producción, Nginx reenvía `/api/` a `osap_api` en `deploy/app.openmusicrepository.com.conf`.
+
+Por tanto, **no basta con cambiar `sponsors.json`**: hoy el componente no llama al servicio publicitario, su diseño no representa directamente banners de 728×90 o 300×250 y el navegador no puede guardar la clave de servicio. La integración debe pasar por una fachada servidor-a-servidor en `osap-api`.
+
+## 2. Arquitectura obligatoria
+
+```text
+Navegador React
+  └─ ApiClient → POST /api/v1/ads/serve (mismo origen OSAP)
+       └─ osap-api valida la petición
+            └─ HTTP interno → ai_publicidad /api/v1/ads/serve
+                 Header: X-OSAP-Service-Token (solo servidor)
+                 └─ Selección + registro de la entrega
+
+Navegador React
+  └─ ApiClient → POST /api/v1/ads/impression
+       └─ osap-api → ai_publicidad /api/v1/events/impression
+
+Enlace del anuncio
+  └─ https://app.openmusicrepository.com/r/{token}
+       └─ Nginx → ai_publicidad /r/{token} → registra clic y redirige
+```
+
+La llamada de entrega **no debe hacerse directamente desde React a `ai_publicidad`**. La cabecera `X-OSAP-Service-Token` es una credencial de servidor; nunca se incluye en JavaScript, variables `VITE_*`, HTML ni en una respuesta al navegador.
+
+El contrato actual de `ai_publicidad` usa esa cabecera estática compartida. No es automáticamente equivalente a los JWT de servicio de `osap-auth`; el valor enviado por OSAP debe coincidir con `AI_PUBLICIDAD_SERVICE_TOKEN` que valida el servicio publicitario.
+
+## 3. Incorporar una fachada en osap-api
+
+### 3.1 Configuración del backend
+
+En `src/osap/bootstrap/configuration.py` añadir configuración de backend (servidor, no frontend), por ejemplo:
+
+- `OSAP_ADS_BASE_URL`: dirección interna de `ai_publicidad`; si ambos procesos están en el mismo VPS, preferir `http://127.0.0.1:8305`.
+- `OSAP_ADS_SERVICE_TOKEN`: mismo secreto que `AI_PUBLICIDAD_SERVICE_TOKEN` en `ai_publicidad`.
+
+Añadir los campos al dataclass `Configuration` y al mapa `_CONFIG_FIELDS`, siguiendo el patrón actual. Añadir nombres vacíos o instrucciones a los ejemplos de configuración, nunca el secreto real. El secreto debe quedar en un archivo de entorno protegido del servicio systemd o en el mecanismo privado de secretos que ya utilice el despliegue de OSAP.
+
+No se debe utilizar la URL pública del servicio como destino interno si se puede acceder por la red privada o localhost.
+
+### 3.2 Router HTTP
+
+Crear `src/osap/api/http/ads.py` con el patrón del proyecto:
+
+- `build_ads_router(ctx: HttpContext) -> APIRouter`.
+- `POST /api/v1/ads/serve`: valida el contexto, llama al endpoint de `ai_publicidad` y devuelve `ctx.ok(payload)`.
+- `POST /api/v1/ads/impression`: envía `impression_id` al endpoint de confirmación y normaliza la respuesta con `ctx.ok(...)`.
+- Incluir `build_ads_router(ctx)` en `src/osap/api/platform_app.py`.
+- Documentar errores de servicio no disponible mediante el formato de error OSAP.
+
+La fachada debe usar un cliente HTTP de servidor con timeout corto y cerrado, controlar errores HTTP/JSON y no filtrar cabeceras ni secretos. No registrar el token ni la URL privada con credenciales en los logs.
+
+**No reintentar automáticamente `POST /ads/serve`** si se pierde la respuesta: cada llamada válida crea una entrega histórica y el reintento puede producir otra. Ante timeout o error de `ai_publicidad`, la fachada debe devolver un error de disponibilidad bien definido; el frontend lo trata como fallo publicitario, no como fallo de la navegación. La confirmación de impresión es idempotente en el servicio de anuncios, por lo que se puede reportar como operación de mejor esfuerzo y no debe bloquear la página.
+
+### 3.3 Contrato de petición
+
+La fachada recibe el mismo JSON que `ai_publicidad` y conserva los códigos estables de página y ubicación. Ejemplo para un banner de escritorio en la ficha de una obra:
+
+```json
+{
+  "application": "osap",
+  "page": {
+    "type": "work_detail",
+    "entity_type": "work",
+    "entity_id": "12345",
+    "language": "es"
+  },
+  "placement": "header",
+  "format": {
+    "type": "responsive",
+    "width": 728,
+    "height": 90
+  },
+  "device": "desktop"
+}
+```
+
+Para el banner móvil se solicitaría `width=320`, `height=50`, `device="mobile"`. Para los otros formatos: `300×250`, `160×600` y `200×200`. `width` y `height` deben enviarse juntos. El campo `format.type` describe el tipo de creatividad que se admite; las dimensiones corresponden al formato estándar del espacio.
+
+La respuesta interna de `ai_publicidad` es JSON directo. OSAP la debe envolver con `ctx.ok(payload)` para respetar el contrato de `ApiClient`. Campos relevantes:
+
+- `ad_id`, `impression_id`, `kind` (`commercial` o `house`).
+- `title`, `body`, `image_url`, `alt_text`, `format`, `language`.
+- `click_url`, que debe usarse en el enlace del anuncio, no sustituirse por el destino final.
+- `ad_format_code`, `ad_format_name`, `ad_width`, `ad_height`, si se seleccionó un formato del catálogo.
+
+### 3.4 Confirmación de impresión
+
+Cuando el anuncio ya esté realmente visible, el navegador envía a la fachada:
+
+```json
+{ "impression_id": "valor-devuelto-por-ads-serve" }
+```
+
+La fachada lo reenvía a `POST /api/v1/events/impression` de `ai_publicidad` como `{"impression_id":"..."}` con la cabecera de servicio. El componente debe confirmar después de que la ranura entre en pantalla (por ejemplo, con `IntersectionObserver`), y no al pedir el anuncio. El backend garantiza que la misma impresión solo se contabiliza una vez.
+
+## 4. Integración React
+
+### 4.1 Cliente API
+
+En `web/src/api/ApiClient.ts` añadir tipos TypeScript para el anuncio y métodos, usando las funciones `post<T>()` existentes. La página o componente no debe llamar a `fetch` directamente al backend publicitario.
+
+Ejemplos de métodos esperados en `ApiClient`:
+
+- `serveAd(input: AdServeRequest): Promise<AdPayload>` → `POST /ads/serve`.
+- `confirmAdImpression(impressionId: string): Promise<...>` → `POST /ads/impression`.
+
+El cliente de OSAP ya añade `/api/v1` y desempaqueta la envoltura; no duplicar el prefijo ni esperar el JSON directo del servicio remoto.
+
+### 4.2 Componente de representación
+
+Crear un componente nuevo `web/src/components/AdSlot.tsx` o refactorizar `SponsorSlot.tsx` sin eliminar el fallback estático existente hasta validar la integración. El componente debe:
+
+1. Recibir **dos conceptos separados**: el tipo de página/contexto y la ubicación física de la ranura. No enviar `work`, `composer` o `composers` como `placement` de publicidad.
+2. Seleccionar el tamaño para el que se ha reservado espacio. En escritorio, el banner OSAP pide 728×90; en móvil, 320×50. Los otros espacios piden 300×250, 160×600 o 200×200 según su contenedor real.
+3. Renderizar el anuncio dentro de un enlace con `href={ad.click_url}` y `rel="sponsored noopener noreferrer"`. Mostrar título y texto; si el servicio devuelve `image_url`, añadir imagen con texto alternativo.
+4. Ajustar el contenedor a las dimensiones que devuelve el backend, con `max-width: 100%` para no desbordar la pantalla. No estirar una creatividad fija dentro de otro tamaño.
+5. No bloquear la carga ni los controles de OSAP si el servicio de anuncios no responde. En ese caso, conservar el comportamiento de reserva de `SponsorSlot`/`sponsors.json`.
+6. Confirmar la impresión una sola vez por `impression_id` cuando el anuncio se vea. No confirmar en cada renderizado de React.
+7. Etiquetar visualmente el bloque como «Publicidad» o «Patrocinado» y mantener atributos accesibles.
+
+Los anuncios propios no se facturan; se distinguen por `kind="house"` / `is_house_ad=true`, pero se contabilizan igual. Un clic siempre usa `click_url`, para que el servidor pueda registrar el clic y redirigir al destino almacenado.
+
+### 4.3 Contexto y ubicaciones
+
+El componente actual tiene tres instancias, ubicadas al final del contenido de la página correspondiente:
+
+| Código actual del componente | Contexto API recomendado | Estado de la ubicación |
+|---|---|---|
+| `SponsorSlot placement="work"` | `page.type="work_detail"`, `entity_type="work"` | Actualmente al final de la ficha; definir `content_bottom` si no se cambia de lugar. |
+| `SponsorSlot placement="composer"` | `page.type="person_detail"`, `entity_type="person"` | Actualmente al final de la ficha de compositor; ubicación física por definir como `content_bottom`. |
+| `SponsorSlot placement="composers"` | `page.type="search_results"` (o código estable acordado), sin entidad concreta | Actualmente al final del listado; definir `content_bottom`. |
+
+**Importante antes de activar la campaña preparada:** el seed de `ai_publicidad` asigna reglas de ubicación `header`, `content_top`, `sidebar` y `content_inline` a las cuatro creatividades. Esos códigos no coinciden con los tres usos actuales de `SponsorSlot`, que son claves de pantalla. En el frontend revisado no hay todavía un componente que materialice las cuatro ranuras físicas para esos tamaños. Para mostrar los cuatro anuncios como se diseñaron, se deben añadir las ranuras reales en esas ubicaciones, o cambiar de manera deliberada las reglas de la campaña y los tamaños para que coincidan con las ranuras que OSAP implemente. No hay que poner el mismo código en ambos campos para eludir esta diferencia.
+
+Orden de integración recomendado:
+
+1. Añadir una ranura de cabecera con variantes 728×90 / 320×50.
+2. Añadir una ranura 300×250 en la zona de contenido superior.
+3. Añadir la ranura vertical 160×600 solo en una columna que disponga realmente de al menos 160 px.
+4. Añadir la ranura cuadrada 200×200 dentro del contenido.
+5. Conservar los tres `SponsorSlot` actuales como respaldo hasta confirmar todas las nuevas ubicaciones. Se pueden migrar después a `AdSlot` cuando sus códigos de ubicación física estén acordados.
+
+No colocar un formato de 160×600 en una columna estrecha móvil. El catálogo lo clasifica como ubicación vertical/audiovisual, pero el anuncio de campaña inicial es textual: un formato de espacio no proporciona vídeo ni reproductor por sí mismo.
+
+## 5. Clicks: exponer únicamente la ruta de redirección
+
+Las creatividades devuelven `click_url` construida con `AI_PUBLICIDAD_PUBLIC_BASE_URL` más `/r/{token}`. Para el despliegue en el mismo dominio OSAP se propone:
+
+- `AI_PUBLICIDAD_PUBLIC_BASE_URL=https://app.openmusicrepository.com`.
+- Mantener `ai_publicidad` escuchando en `127.0.0.1:8305` (no en una interfaz pública).
+- Añadir en Nginx una ubicación específica `location ^~ /r/` que reenvíe a `http://127.0.0.1:8305`, con cabeceras de proxy normales. Debe ir antes del fallback general de la SPA.
+- No modificar `location /api/`: esa ruta continúa encaminada a `osap-api`, que actúa como fachada autenticada para solicitar anuncios e impresiones.
+
+Ejemplo orientativo para la configuración del servidor HTTPS existente de `app.openmusicrepository.com`:
+
+```nginx
+location ^~ /r/ {
+    proxy_pass http://127.0.0.1:8305;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+}
+```
+
+Este bloque solo expone la ruta pública de clics. No añadir un proxy público para `/admin`, `/api/v1/admin`, `/docs` ni `/openapi.json` de `ai_publicidad`: la autorización de mantenimiento todavía está pendiente. Antes de aplicar cambios, validar la sintaxis de Nginx y revisar el fichero completo de producción.
+
+## 6. Despliegue por etapas
+
+### Etapa A — servicio publicitario listo
+
+1. Configurar `ai_publicidad` con su base independiente `OSAP_PUBLICIDAD` y migrar con `python -m alembic upgrade head`.
+2. Configurar `AI_PUBLICIDAD_ENV=production`, `AI_PUBLICIDAD_DATABASE_URL` o el `osap.toml` privado, `AI_PUBLICIDAD_SERVICE_TOKEN` y `AI_PUBLICIDAD_PUBLIC_BASE_URL=https://app.openmusicrepository.com`.
+3. Ejecutar las cargas idempotentes después de verificar el destino: `python scripts/seed_house_ads.py --apply` y `python scripts/seed_omr_campaign.py --apply`.
+4. Ejecutar el servicio detrás de systemd/Uvicorn enlazado a localhost, por ejemplo en el puerto 8305. No publicar el panel `/admin`.
+
+### Etapa B — fachada OSAP
+
+1. Añadir las variables privadas `OSAP_ADS_BASE_URL=http://127.0.0.1:8305` y `OSAP_ADS_SERVICE_TOKEN` al entorno del servicio `osap-api`; el token debe coincidir con el configurado en `ai_publicidad`.
+2. Implementar `src/osap/api/http/ads.py`, registrar el router en `platform_app.py` y exponer únicamente las rutas de entrega e impresión requeridas por el frontend.
+3. Añadir pruebas de contrato, errores de servicio y respuesta OSAP envuelta.
+
+### Etapa C — React y proxy
+
+1. Añadir los contratos y métodos a `ApiClient.ts`.
+2. Crear el componente de anuncio con renderizado por tamaño, confirmación de impresión y fallback.
+3. Implementar las ranuras físicas y hacer coincidir sus códigos con las reglas de campaña.
+4. Añadir la ruta Nginx `/r/`, validar `nginx -t`, recargar Nginx y desplegar los bundles del frontend.
+5. Probar primero en staging; no exponer la administración.
+
+## 7. Pruebas de aceptación
+
+### Pruebas del backend OSAP
+
+- La petición pública de la fachada responde con la envoltura `success=true` y los datos esperados.
+- OSAP envía `X-OSAP-Service-Token` desde servidor y nunca lo devuelve al cliente.
+- Si el servicio remoto falla o tarda más que el timeout, la búsqueda, ficha de obra y ficha de compositor siguen funcionando.
+- Un fallo de `POST /ads/serve` no provoca varios reintentos que generen entregas adicionales.
+- La confirmación de impresión se envía una sola vez desde la interfaz; repetirla no duplica el evento.
+
+### Pruebas del frontend
+
+- Una respuesta válida pinta título/texto, respeta las dimensiones, usa `click_url` y registra una impresión al hacerse visible.
+- Un error, una respuesta inválida o una petición sin inventario muestra el fallback ya existente.
+- El banner 728×90 no desborda escritorio; el 320×50 se emplea en móvil.
+- 300×250, 160×600 y 200×200 solo se insertan en áreas cuyo tamaño real los admite.
+- Las páginas funcionan con JavaScript publicitario deshabilitado o con `ai_publicidad` desconectado.
+
+### Prueba de extremo a extremo
+
+| Contexto solicitado | Resultado esperado |
+|---|---|
+| `header`, escritorio, 728×90 | `ad_format_code=leaderboard_728x90` |
+| `header`, móvil, 320×50 | `ad_format_code=mobile_banner_320x50` |
+| `content_top`, 300×250 | `ad_format_code=medium_rectangle_300x250` |
+| `sidebar`, escritorio, 160×600 | `ad_format_code=wide_skyscraper_160x600` |
+| `content_inline`, 200×200 | `ad_format_code=square_200x200` |
+| Servicio detenido | OSAP sigue siendo navegable y muestra el fallback estático |
+
+Para cada entrega válida, confirmar que el navegador recibe un `impression_id`, que el evento se cuenta una sola vez y que el clic abre `/r/{token}` con una redirección al destino guardado.
+
+## 8. Rollback
+
+Si aparecen errores visuales o de red:
+
+1. Revertir la inserción de `AdSlot` o desactivar la llamada de anuncios desde el frontend.
+2. Mantener `SponsorSlot` y `sponsors.json` como reserva.
+3. Retirar la ubicación Nginx `/r/` si la redirección está fallando.
+4. Dejar el servicio y su histórico independientes; no borrar `ad_deliveries` ni `ad_events` como método de rollback.
+
+El rollback de la integración visual no requiere cambios en la base de datos del catálogo OSAP ni en la base publicitaria.
+
+## 9. Criterio para dar por integrada la aplicación
+
+La integración se considera completa cuando el router de fachada y el cliente React están implementados, las cuatro ubicaciones tienen correspondencia física y de segmentación, la confirmación de impresión es idempotente, la redirección pública funciona y las pruebas de aceptación pasan en staging. Hasta entonces, `ai_publicidad` debe considerarse un servicio separado preparado para integración, no una fuente que el frontend ya esté consumiendo.
