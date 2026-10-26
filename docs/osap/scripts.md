@@ -547,3 +547,9 @@ en `data/wikidata_works/`; no escribe en la BD. Lanzador: `scripts/run_wikidata_
 Nota: `--limit 0` procesa todo, pero Wikidata limita las consultas. Es preferible avanzar por
 lotes (`--limit 500 --offset ...`). Las obras sin compositor o con compositor sin QID se pueden
 probar con `wikidata_works.py --title-only`; solo propone candidatos y no modifica la BD.
+
+### `apply_wikidata_persons.py` (osap-storage)
+Aplica las propuestas de Wikidata con confianza alta (QID/identificadores) solo sobre campos
+vacíos; añade el QID y los identificadores a `persons_identity`. No cambia nombres ni pisa datos
+existentes. Por defecto es `--dry-run`; para escribir, `--apply`. Lanzador:
+`scripts/run_apply_wikidata_persons.bat --apply`.
