@@ -559,3 +559,8 @@ Aplica propuestas de obras por `composer_qid+title` (confianza >= 0,80) solo sob
 vacíos (`works_year`, `works_catalogue`, `works_description`). No cambia título ni compositor.
 Por defecto es `--dry-run`; para escribir, `--apply`. Lanzador:
 `scripts/run_apply_wikidata_works.bat --apply`.
+
+### `musicbrainz_validate.py` (osap-storage)
+Valida propuestas de personas/obras contra MusicBrainz: artistas por nombre (tipo Person) y
+obras por título/compositor. Solo lectura, con caché y límite de 1 petición/segundo. Resultados
+en `data/musicbrainz/`. Lanzador: `scripts/run_musicbrainz_validate.bat --persons-file ...`.
