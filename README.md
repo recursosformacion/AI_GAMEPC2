@@ -153,6 +153,7 @@ osap resource list
 - [Jobs (diseño V2.2.c)](docs/osap/v2/jobs-design.md)
 - [OSAP Architecture Book (fuente de verdad)](docs/osap/v2/osap-architecture-book.md)
 - [Documentación web](docs/osap/v2/web-docs.md)
+- [Integración de anuncios ai_publicidad](docs/ads-integration.md)
 - [Presentación V2.2 (20 diapositivas)](docs/osap/v2/presentation-v22.md)
 - [Auditoría arquitectónica 2026 (congelada)](docs/osap/v2/architecture-audit.md)
 - [Pipeline](docs/osap/v1/pipeline.md)
