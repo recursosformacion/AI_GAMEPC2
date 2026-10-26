@@ -543,3 +543,7 @@ propuestas JSON/CSV en `data/wikidata_persons/`; no escribe en la BD. Lanzador:
 Propone metadatos de obras con compositor QID, casando por QID de compositor y título exacto
 (es/en). Puede devolver coincidencia única, ambigua o sin coincidencia. Solo genera propuestas
 en `data/wikidata_works/`; no escribe en la BD. Lanzador: `scripts/run_wikidata_works.bat`.
+
+Nota: `--limit 0` procesa todo, pero Wikidata limita las consultas. Es preferible avanzar por
+lotes (`--limit 500 --offset ...`). Las obras sin compositor o con compositor sin QID se pueden
+probar con `wikidata_works.py --title-only`; solo propone candidatos y no modifica la BD.
