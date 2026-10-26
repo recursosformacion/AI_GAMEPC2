@@ -553,3 +553,9 @@ Aplica las propuestas de Wikidata con confianza alta (QID/identificadores) solo 
 vacíos; añade el QID y los identificadores a `persons_identity`. No cambia nombres ni pisa datos
 existentes. Por defecto es `--dry-run`; para escribir, `--apply`. Lanzador:
 `scripts/run_apply_wikidata_persons.bat --apply`.
+
+### `apply_wikidata_works.py` (osap-storage)
+Aplica propuestas de obras por `composer_qid+title` (confianza >= 0,80) solo sobre campos
+vacíos (`works_year`, `works_catalogue`, `works_description`). No cambia título ni compositor.
+Por defecto es `--dry-run`; para escribir, `--apply`. Lanzador:
+`scripts/run_apply_wikidata_works.bat --apply`.
