@@ -592,3 +592,7 @@ Abre los MXL locales enlazados desde `works_resources` y extrae `movement-title`
 `creator type="composer"`, poeta, `source` y `rights`. Genera propuestas JSON/CSV en
 `data/mxl_metadata/`; no escribe en la BD. Muestra de 1.000 obras: 883 títulos y 293
 compositores, 0 errores. Lanzador: `scripts/run_extract_mxl_metadata.bat`.
+
+La extraccion MXL incluye ademas letrista, arreglista, credito, numero de partes, compases,
+notas, voces, pentagramas, tonalidades, compases metricos, tempo, programas MIDI,
+instrumentacion y una estimacion de ensemble.
