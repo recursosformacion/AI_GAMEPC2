@@ -3,6 +3,8 @@
 **Estado:** guía de implementación; no implica que la integración ya esté desplegada.  
 **Repositorios:** [AI_GAMEPC2 (OSAP)](https://github.com/recursosformacion/AI_GAMEPC2) y [ai_publicidad](https://github.com/recursosformacion/ai_publicidad).
 
+**Nota sobre composición dinámica:** la guía describe la primera integración con un anuncio por espacio. En `ai_publicidad` ya se está perfilando una ampliación para que el llamante pueda pedir un formato fijo o facilitar el área y permitir una composición de hasta tres anuncios. Está documentada como propuesta en [Diseño del algoritmo de aprovechamiento de espacios](https://github.com/recursosformacion/ai_publicidad/blob/main/docs/ad-layout-optimization.md); todavía no se debe integrar como si el endpoint `/compose` ya existiera.
+
 ## 1. Objetivo y estado actual
 
 Integrar `ai_publicidad` como servicio independiente de entrega de anuncios, manteniendo la aplicación React de OSAP y su contrato HTTP actual. OSAP decide dónde reservar espacio y lo representa; `ai_publicidad` elige la creatividad compatible, registra la entrega, confirma impresiones y recibe los clics.
