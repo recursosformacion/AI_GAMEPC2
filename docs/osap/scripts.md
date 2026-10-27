@@ -586,3 +586,9 @@ Resuelve los conflictos de nombres fusionando la persona falsa con la existente 
 evidencia de autoridad (MBID, VIAF, GND o Wikidata). Reasigna obras e identificadores, y marca
 la persona falsa como `merged`. Por defecto es dry-run; `--apply` escribe. Informe:
 `data/cleanup_conflicts_report.csv`. Lanzador: `scripts/run_resolve_cleanup_conflicts.bat`.
+
+### `extract_mxl_metadata.py` (osap-storage)
+Abre los MXL locales enlazados desde `works_resources` y extrae `movement-title`/`work-title`,
+`creator type="composer"`, poeta, `source` y `rights`. Genera propuestas JSON/CSV en
+`data/mxl_metadata/`; no escribe en la BD. Muestra de 1.000 obras: 883 títulos y 293
+compositores, 0 errores. Lanzador: `scripts/run_extract_mxl_metadata.bat`.
