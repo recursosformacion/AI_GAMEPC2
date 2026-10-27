@@ -3,11 +3,11 @@
 **Estado:** guía de implementación; no implica que la integración ya esté desplegada.  
 **Repositorios:** [AI_GAMEPC2 (OSAP)](https://github.com/recursosformacion/AI_GAMEPC2) y [ai_publicidad](https://github.com/recursosformacion/ai_publicidad).
 
-**Nota sobre composición dinámica:** la guía describe la primera integración con un anuncio por espacio. En `ai_publicidad` ya se está perfilando una ampliación para que el llamante pueda pedir un formato fijo o facilitar el área y permitir una composición de hasta tres anuncios. Está documentada como propuesta en [Diseño del algoritmo de aprovechamiento de espacios](https://github.com/recursosformacion/ai_publicidad/blob/main/docs/ad-layout-optimization.md); todavía no se debe integrar como si el endpoint `/compose` ya existiera.
+**Composición dinámica disponible en ai_publicidad:** `POST /api/v1/ads/compose` devuelve un fragmento HTML listo para insertar, a partir de un formato fijo o un área disponible, y puede incluir hasta tres anuncios. La emisión registra inmediatamente una impresión por anuncio y no requiere una petición de impresión posterior. La API y el laboratorio están implementados en el servicio publicitario, pero todavía falta incorporarlos a la fachada de `osap-api` y al frontend. Ver [el diseño y comportamiento actual](https://github.com/recursosformacion/ai_publicidad/blob/main/docs/ad-layout-optimization.md).
 
 ## 1. Objetivo y estado actual
 
-Integrar `ai_publicidad` como servicio independiente de entrega de anuncios, manteniendo la aplicación React de OSAP y su contrato HTTP actual. OSAP decide dónde reservar espacio y lo representa; `ai_publicidad` elige la creatividad compatible, registra la entrega, confirma impresiones y recibe los clics.
+Integrar `ai_publicidad` como servicio independiente de entrega de anuncios, manteniendo la aplicación React de OSAP. OSAP reserva el espacio real y le pasa sus dimensiones y ubicación; `ai_publicidad` selecciona y compone hasta tres creatividades, devuelve HTML, registra una entrega/impresión por cada anuncio emitido y recibe los clics. El endpoint antiguo `/ads/serve` seguirá disponible para consumidores que prefieran JSON y confirmación de impresión separada.
 
 La inspección de `main` confirma estos puntos de integración existentes:
 
@@ -24,22 +24,22 @@ Por tanto, **no basta con cambiar `sponsors.json`**: hoy el componente no llama 
 
 ```text
 Navegador React
-  └─ ApiClient → POST /api/v1/ads/serve (mismo origen OSAP)
-       └─ osap-api valida la petición
-            └─ HTTP interno → ai_publicidad /api/v1/ads/serve
+  └─ POST /api/v1/ads/compose (mismo origen OSAP; respuesta text/html)
+       └─ osap-api valida y reenvía la petición
+            └─ HTTP interno → ai_publicidad /api/v1/ads/compose
                  Header: X-OSAP-Service-Token (solo servidor)
-                 └─ Selección + registro de la entrega
+                 └─ HTML calculado + entrega/impresión de cada tarjeta
 
-Navegador React
-  └─ ApiClient → POST /api/v1/ads/impression
-       └─ osap-api → ai_publicidad /api/v1/events/impression
-
-Enlace del anuncio
+Enlace de cada anuncio
   └─ https://app.openmusicrepository.com/r/{token}
        └─ Nginx → ai_publicidad /r/{token} → registra clic y redirige
+
+Contrato legado opcional:
+  POST /ads/serve → JSON de una creatividad
+  POST /events/impression → confirmación separada de ese anuncio
 ```
 
-La llamada de entrega **no debe hacerse directamente desde React a `ai_publicidad`**. La cabecera `X-OSAP-Service-Token` es una credencial de servidor; nunca se incluye en JavaScript, variables `VITE_*`, HTML ni en una respuesta al navegador.
+La llamada de entrega **no debe hacerse directamente desde React a `ai_publicidad`**. La cabecera `X-OSAP-Service-Token` es una credencial de servidor; nunca se incluye en JavaScript, variables `VITE_*`, HTML ni en una respuesta al navegador. Para `/compose`, la fachada de OSAP debe devolver una respuesta HTTP `text/html` sin la envoltura JSON habitual, de modo que el frontend inserte el fragmento que ya generó el servicio y no tenga que construir tarjetas ni recalcular posiciones.
 
 El contrato actual de `ai_publicidad` usa esa cabecera estática compartida. No es automáticamente equivalente a los JWT de servicio de `osap-auth`; el valor enviado por OSAP debe coincidir con `AI_PUBLICIDAD_SERVICE_TOKEN` que valida el servicio publicitario.
 
@@ -61,8 +61,8 @@ No se debe utilizar la URL pública del servicio como destino interno si se pued
 Crear `src/osap/api/http/ads.py` con el patrón del proyecto:
 
 - `build_ads_router(ctx: HttpContext) -> APIRouter`.
-- `POST /api/v1/ads/serve`: valida el contexto, llama al endpoint de `ai_publicidad` y devuelve `ctx.ok(payload)`.
-- `POST /api/v1/ads/impression`: envía `impression_id` al endpoint de confirmación y normaliza la respuesta con `ctx.ok(...)`.
+- `POST /api/v1/ads/compose`: valida el contexto de área/forma y ubicación, envía la petición al endpoint de `ai_publicidad` y devuelve exactamente el cuerpo HTML con `HTMLResponse` y `Content-Type: text/html`. No envolverlo en `ctx.ok`, ya que el cliente necesita insertar el fragmento de HTML producido por el servicio.
+- Mantener opcionalmente `POST /api/v1/ads/serve` para una sola creatividad JSON y `POST /api/v1/ads/impression` para el flujo legado.
 - Incluir `build_ads_router(ctx)` en `src/osap/api/platform_app.py`.
 - Documentar errores de servicio no disponible mediante el formato de error OSAP.
 
@@ -102,15 +102,11 @@ La respuesta interna de `ai_publicidad` es JSON directo. OSAP la debe envolver c
 - `click_url`, que debe usarse en el enlace del anuncio, no sustituirse por el destino final.
 - `ad_format_code`, `ad_format_name`, `ad_width`, `ad_height`, si se seleccionó un formato del catálogo.
 
-### 3.4 Confirmación de impresión
+### 3.4 Impresiones según el endpoint
 
-Cuando el anuncio ya esté realmente visible, el navegador envía a la fachada:
+Para `/ads/compose`, la petición es el acto de emitir el bloque: el servicio crea en la misma transacción una entrega y una impresión para cada tarjeta incluida en el HTML. No hace falta implementar una llamada adicional ni un endpoint de impresión para los anuncios de esa respuesta. Si el servicio devuelve `no-fill`, no crea impresiones.
 
-```json
-{ "impression_id": "valor-devuelto-por-ads-serve" }
-```
-
-La fachada lo reenvía a `POST /api/v1/events/impression` de `ai_publicidad` como `{"impression_id":"..."}` con la cabecera de servicio. El componente debe confirmar después de que la ranura entre en pantalla (por ejemplo, con `IntersectionObserver`), y no al pedir el anuncio. El backend garantiza que la misma impresión solo se contabiliza una vez.
+El contrato legado `/ads/serve` sigue devolviendo un `impression_id` para una única creatividad y se puede confirmar por `POST /api/v1/ads/impression`, que la fachada reenvía a `ai_publicidad /api/v1/events/impression`. No mezclar ambos flujos.
 
 ## 4. Integración React
 
@@ -118,12 +114,9 @@ La fachada lo reenvía a `POST /api/v1/events/impression` de `ai_publicidad` com
 
 En `web/src/api/ApiClient.ts` añadir tipos TypeScript para el anuncio y métodos, usando las funciones `post<T>()` existentes. La página o componente no debe llamar a `fetch` directamente al backend publicitario.
 
-Ejemplos de métodos esperados en `ApiClient`:
+Añadir un método dedicado para `POST /ads/compose` que devuelva el cuerpo como texto HTML, no como DTO JSON. El método genérico `ApiClient.post<T>()` interpreta la envoltura OSAP y no debe reutilizarse para una respuesta `text/html` sin adaptar su lectura. El frontend llama siempre al mismo origen OSAP; la fachada oculta las credenciales y la dirección interna del servicio publicitario.
 
-- `serveAd(input: AdServeRequest): Promise<AdPayload>` → `POST /ads/serve`.
-- `confirmAdImpression(impressionId: string): Promise<...>` → `POST /ads/impression`.
-
-El cliente de OSAP ya añade `/api/v1` y desempaqueta la envoltura; no duplicar el prefijo ni esperar el JSON directo del servicio remoto.
+El cliente de OSAP ya añade `/api/v1` a sus llamadas estándar. Para la ruta de composición, implementar explícitamente una lectura de texto y comprobar `response.ok` y `Content-Type`; no duplicar el prefijo y no enviar el token de servicio al navegador.
 
 ### 4.2 Componente de representación
 
