@@ -568,3 +568,9 @@ en `data/musicbrainz/`. Lanzador: `scripts/run_musicbrainz_validate.bat --person
 Las propuestas de obras separan `composer_qid` y `title_only` en el nombre del fichero. El
 modo `--title-only` exige una instancia de obra musical en Wikidata para reducir falsos
 positivos (películas, sencillos, homónimos).
+
+### `clean_person_names.py` (osap-storage)
+Detecta nombres de persona contaminados con URLs/creditos (hymnary, vwml, musescore, youtube)
+y propone: nombre limpio, compositor extraido de "Composed by", o compositor a partir del
+titulo de obra asociado (`Obra - Compositor`). No modifica la BD. Resultados en
+`data/person_name_cleanup/`. Lanzador: `scripts/run_clean_person_names.bat`.
