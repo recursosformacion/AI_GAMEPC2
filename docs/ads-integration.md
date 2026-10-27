@@ -234,7 +234,7 @@ Este bloque solo expone la ruta pública de clics. No añadir un proxy público 
 | `content_inline`, 200×200 | El HTML contiene tarjetas `data-format="square_200x200"` |
 | Servicio detenido | OSAP sigue siendo navegable y muestra el fallback estático |
 
-Para cada entrega válida, confirmar que el navegador recibe un `impression_id`, que el evento se cuenta una sola vez y que el clic abre `/r/{token}` con una redirección al destino guardado.
+Para `/compose`, comprobar que cada tarjeta del HTML contiene su `data-impression-id` y que la base registra una entrega y una impresión por tarjeta emitida. Una segunda petición es una nueva emisión y genera nuevas entregas; no debe añadirse una llamada posterior de confirmación. Comprobar también que el clic abre `/r/{token}` y redirige al destino guardado. La confirmación idempotente solo corresponde al contrato legado `/serve`.
 
 ## 8. Rollback
 
