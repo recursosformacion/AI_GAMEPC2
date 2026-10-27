@@ -61,8 +61,8 @@ No se debe utilizar la URL pública del servicio como destino interno si se pued
 Crear `src/osap/api/http/ads.py` con el patrón del proyecto:
 
 - `build_ads_router(ctx: HttpContext) -> APIRouter`.
-- `POST /api/v1/ads/compose`: valida el contexto de área/forma y ubicación, envía la petición al endpoint de `ai_publicidad` y devuelve exactamente el cuerpo HTML con `HTMLResponse` y `Content-Type: text/html`. No envolverlo en `ctx.ok`, ya que el cliente necesita insertar el fragmento de HTML producido por el servicio.
-- Mantener opcionalmente `POST /api/v1/ads/serve` para una sola creatividad JSON y `POST /api/v1/ads/impression` para el flujo legado.
+- `POST /api/v1/ads/compose`: valida el contexto de área/formato y ubicación, reenvía la petición a `ai_publicidad` y devuelve exactamente el cuerpo HTML con `HTMLResponse` y `Content-Type: text/html`. No envolverlo en `ctx.ok`, ya que el cliente necesita insertar el fragmento HTML producido por el servicio.
+- Mantener opcionalmente `POST /api/v1/ads/serve` para una sola creatividad JSON y `POST /api/v1/ads/impression` para el flujo legado. No hace falta una confirmación posterior para cada pieza de una respuesta `/compose`.
 - Incluir `build_ads_router(ctx)` en `src/osap/api/platform_app.py`.
 - Documentar errores de servicio no disponible mediante el formato de error OSAP.
 
@@ -72,7 +72,7 @@ La fachada debe usar un cliente HTTP de servidor con timeout corto y cerrado, co
 
 ### 3.3 Contrato de petición
 
-La fachada recibe el mismo JSON que `ai_publicidad` y conserva los códigos estables de página y ubicación. Ejemplo para un banner de escritorio en la ficha de una obra:
+La fachada de composición recibe el contrato de `POST /api/v1/ads/compose`. OSAP proporciona la página y entidad, la ubicación física real, el dispositivo y el rectángulo CSS reservado. Ejemplo para un área flexible de 640×320 en la ficha de una obra:
 
 ```json
 {
@@ -83,24 +83,27 @@ La fachada recibe el mismo JSON que `ai_publicidad` y conserva los códigos esta
     "entity_id": "12345",
     "language": "es"
   },
-  "placement": "header",
-  "format": {
-    "type": "responsive",
-    "width": 728,
-    "height": 90
-  },
-  "device": "desktop"
+  "placement": "content_top",
+  "device": "desktop",
+  "mode": "auto_area",
+  "area": { "width": 640, "height": 320 },
+  "max_ads": 3,
+  "gap": 12,
+  "orientation": "auto"
 }
 ```
 
-Para el banner móvil se solicitaría `width=320`, `height=50`, `device="mobile"`. Para los otros formatos: `300×250`, `160×600` y `200×200`. `width` y `height` deben enviarse juntos. El campo `format.type` describe el tipo de creatividad que se admite; las dimensiones corresponden al formato estándar del espacio.
+Las dimensiones son del contenedor que OSAP reserva, no el ancho completo de la ventana. Para exigir un único formato, se envía `mode="fixed_format"` y `format_code` (por ejemplo, `leaderboard_728x90`). El modo fijo puede incluir `creative_id` para solicitar una creatividad concreta; esta sigue sujeta a estado, fechas, segmentación, formato, marca y cooldown. Una petición con `creative_id` devuelve como máximo una pieza.
 
-La respuesta interna de `ai_publicidad` es JSON directo. OSAP la debe envolver con `ctx.ok(payload)` para respetar el contrato de `ApiClient`. Campos relevantes:
+La respuesta de `/compose` es **HTML directo** (`Content-Type: text/html`), no JSON ni la envoltura `ctx.ok(payload)`. La fachada de OSAP debe devolver exactamente el fragmento HTML con `HTMLResponse`; no debe desempaquetarlo ni construir las tarjetas en React. Las dimensiones y posiciones van en el HTML generado.
 
-- `ad_id`, `impression_id`, `kind` (`commercial` o `house`).
-- `title`, `body`, `image_url`, `alt_text`, `format`, `language`.
-- `click_url`, que debe usarse en el enlace del anuncio, no sustituirse por el destino final.
-- `ad_format_code`, `ad_format_name`, `ad_width`, `ad_height`, si se seleccionó un formato del catálogo.
+### 3.4 Selección comercial y composición
+
+Antes de calcular la geometría, `ai_publicidad` filtra las campañas activas y dentro de fechas, creatividades aprobadas, reglas de ubicación/segmentación, idioma, marcas activas y cooldown temporal. Si hay inventario comercial elegible, compone solo con él; los anuncios propios son reserva cuando no existe inventario comercial compatible para esa petición.
+
+El motor intenta primero el tamaño con mayor superficie que encaje y **no mezcla tamaños dentro de un bloque**. Puede organizar hasta tres anuncios del mismo ancho y alto en fila o columna. No repite campaña ni marca y nunca combina marcas registradas como competidoras. `minimum_interval_seconds` excluye temporalmente una campaña ya emitida en la misma aplicación, tipo de página, entidad y ubicación. No es un límite por usuario; no existe identificación de visitante.
+
+No están implementados todavía los presupuestos, los contratos comerciales, los topes diarios/totales de impresiones o el pacing. Cuando se incorporen, serán condiciones de elegibilidad previas a la composición, no criterios geométricos.
 
 ### 3.4 Impresiones según el endpoint
 
@@ -216,17 +219,19 @@ Este bloque solo expone la ruta pública de clics. No añadir un proxy público 
 - Un error, una respuesta inválida o una petición sin inventario muestra el fallback ya existente.
 - El banner 728×90 no desborda escritorio; el 320×50 se emplea en móvil.
 - 300×250, 160×600 y 200×200 solo se insertan en áreas cuyo tamaño real los admite.
+- Las tarjetas que comparten un bloque tienen exactamente el mismo tamaño; una composición nunca mezcla dimensiones.
+- Las marcas declaradas competidoras nunca aparecen juntas; el inventario comercial elegible se considera antes de usar anuncios propios de reserva.
 - Las páginas funcionan con JavaScript publicitario deshabilitado o con `ai_publicidad` desconectado.
 
 ### Prueba de extremo a extremo
 
 | Contexto solicitado | Resultado esperado |
 |---|---|
-| `header`, escritorio, 728×90 | `ad_format_code=leaderboard_728x90` |
-| `header`, móvil, 320×50 | `ad_format_code=mobile_banner_320x50` |
-| `content_top`, 300×250 | `ad_format_code=medium_rectangle_300x250` |
-| `sidebar`, escritorio, 160×600 | `ad_format_code=wide_skyscraper_160x600` |
-| `content_inline`, 200×200 | `ad_format_code=square_200x200` |
+| `header`, escritorio, 728×90 | El HTML contiene tarjetas `data-format="leaderboard_728x90"` |
+| `header`, móvil, 320×50 | El HTML contiene tarjetas `data-format="mobile_banner_320x50"` |
+| `content_top`, 300×250 | El HTML contiene tarjetas `data-format="medium_rectangle_300x250"` |
+| `sidebar`, escritorio, 160×600 | El HTML contiene tarjetas `data-format="wide_skyscraper_160x600"` |
+| `content_inline`, 200×200 | El HTML contiene tarjetas `data-format="square_200x200"` |
 | Servicio detenido | OSAP sigue siendo navegable y muestra el fallback estático |
 
 Para cada entrega válida, confirmar que el navegador recibe un `impression_id`, que el evento se cuenta una sola vez y que el clic abre `/r/{token}` con una redirección al destino guardado.
