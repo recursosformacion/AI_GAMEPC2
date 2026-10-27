@@ -564,3 +564,7 @@ Por defecto es `--dry-run`; para escribir, `--apply`. Lanzador:
 Valida propuestas de personas/obras contra MusicBrainz: artistas por nombre (tipo Person) y
 obras por título/compositor. Solo lectura, con caché y límite de 1 petición/segundo. Resultados
 en `data/musicbrainz/`. Lanzador: `scripts/run_musicbrainz_validate.bat --persons-file ...`.
+
+Las propuestas de obras separan `composer_qid` y `title_only` en el nombre del fichero. El
+modo `--title-only` exige una instancia de obra musical en Wikidata para reducir falsos
+positivos (películas, sencillos, homónimos).
