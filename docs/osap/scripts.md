@@ -580,3 +580,9 @@ Valida con Gemini las propuestas de limpieza de nombres contaminados y puede apl
 de alta confianza. Usa `--use-existing` para reutilizar una validación ya generada y `--apply`
 para escribir; por defecto es solo propuesta. Resultados en `data/person_name_cleanup/`.
 Lanzador: `scripts/run_validate_cleanup_ai.bat`.
+
+### `resolve_cleanup_conflicts.py` (osap-storage)
+Resuelve los conflictos de nombres fusionando la persona falsa con la existente solo si hay
+evidencia de autoridad (MBID, VIAF, GND o Wikidata). Reasigna obras e identificadores, y marca
+la persona falsa como `merged`. Por defecto es dry-run; `--apply` escribe. Informe:
+`data/cleanup_conflicts_report.csv`. Lanzador: `scripts/run_resolve_cleanup_conflicts.bat`.
