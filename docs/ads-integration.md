@@ -120,17 +120,17 @@ El cliente de OSAP ya añade `/api/v1` a sus llamadas estándar. Para la ruta de
 
 ### 4.2 Componente de representación
 
-Crear un componente nuevo `web/src/components/AdSlot.tsx` o refactorizar `SponsorSlot.tsx` sin eliminar el fallback estático existente hasta validar la integración. El componente debe:
+Crear un componente pequeño `web/src/components/AdSlot.tsx` o refactorizar `SponsorSlot.tsx`, manteniendo el fallback estático hasta validar la integración. El componente no calcula las distribuciones ni genera el contenido interno de las tarjetas; eso ya lo hace `ai_publicidad`.
 
-1. Recibir **dos conceptos separados**: el tipo de página/contexto y la ubicación física de la ranura. No enviar `work`, `composer` o `composers` como `placement` de publicidad.
-2. Seleccionar el tamaño para el que se ha reservado espacio. En escritorio, el banner OSAP pide 728×90; en móvil, 320×50. Los otros espacios piden 300×250, 160×600 o 200×200 según su contenedor real.
-3. Renderizar el anuncio dentro de un enlace con `href={ad.click_url}` y `rel="sponsored noopener noreferrer"`. Mostrar título y texto; si el servicio devuelve `image_url`, añadir imagen con texto alternativo.
-4. Ajustar el contenedor a las dimensiones que devuelve el backend, con `max-width: 100%` para no desbordar la pantalla. No estirar una creatividad fija dentro de otro tamaño.
-5. No bloquear la carga ni los controles de OSAP si el servicio de anuncios no responde. En ese caso, conservar el comportamiento de reserva de `SponsorSlot`/`sponsors.json`.
-6. Confirmar la impresión una sola vez por `impression_id` cuando el anuncio se vea. No confirmar en cada renderizado de React.
-7. Etiquetar visualmente el bloque como «Publicidad» o «Patrocinado» y mantener atributos accesibles.
+1. Recibir **dos conceptos separados**: el tipo de página/contexto y la ubicación física real de la ranura. No enviar `work`, `composer` o `composers` como `placement` publicitario.
+2. Medir el espacio que la página haya reservado y solicitarlo con `mode="auto_area"`; usar `fixed_format` solo donde el diseño exija expresamente un tamaño concreto.
+3. Llamar a la fachada del mismo origen OSAP, comprobar el estado HTTP y que la respuesta sea `text/html`, y colocar el fragmento devuelto dentro del contenedor publicitario. No construir una tarjeta por anuncio en React ni llamar directamente a `ai_publicidad`; el fragmento sale de la plantilla controlada del backend y sus textos/URLs ya se escapan allí.
+4. El contenedor externo debe estar limitado al área solicitada y no puede cambiar el ancho de la columna a espaldas del diseño de página. El servicio solo devuelve tarjetas que caben en las dimensiones recibidas.
+5. Si el servicio falla, responde con un error o el fragmento contiene `data-layout-status="no-fill"`, conservar el fallback de `SponsorSlot`/`sponsors.json`. La publicidad no debe bloquear la navegación de OSAP.
+6. Para `/compose`, no enviar una petición extra de impresión: la emisión del bloque registra una impresión por cada tarjeta. El flujo legado `/serve` conserva la confirmación independiente.
+7. Mantener la ranura identificable y accesible, y etiquetarla como «Publicidad» o «Patrocinado». Los enlaces ya incluidos por la plantilla usan `click_url`, que registra el clic y redirige al destino guardado.
 
-Los anuncios propios no se facturan; se distinguen por `kind="house"` / `is_house_ad=true`, pero se contabilizan igual. Un clic siempre usa `click_url`, para que el servidor pueda registrar el clic y redirigir al destino almacenado.
+Los anuncios propios se distinguen en el HTML por `data-kind="house"` (y en el contrato JSON legado por `is_house_ad=true`); se contabilizan igual, pero deben separarse de las métricas comerciales.
 
 ### 4.3 Contexto y ubicaciones
 
@@ -208,11 +208,11 @@ Este bloque solo expone la ruta pública de clics. No añadir un proxy público 
 - OSAP envía `X-OSAP-Service-Token` desde servidor y nunca lo devuelve al cliente.
 - Si el servicio remoto falla o tarda más que el timeout, la búsqueda, ficha de obra y ficha de compositor siguen funcionando.
 - Un fallo de `POST /ads/serve` no provoca varios reintentos que generen entregas adicionales.
-- La confirmación de impresión se envía una sola vez desde la interfaz; repetirla no duplica el evento.
+- `/ads/compose` crea una impresión por anuncio incluido al emitir HTML y no necesita llamadas posteriores; si se repite la misma petición, cada respuesta emitida genera sus propios registros.
 
 ### Pruebas del frontend
 
-- Una respuesta válida pinta título/texto, respeta las dimensiones, usa `click_url` y registra una impresión al hacerse visible.
+- Una respuesta HTML válida queda insertada en el área reservada, respeta las dimensiones, usa `click_url` y el servicio registra inmediatamente una impresión por tarjeta emitida.
 - Un error, una respuesta inválida o una petición sin inventario muestra el fallback ya existente.
 - El banner 728×90 no desborda escritorio; el 320×50 se emplea en móvil.
 - 300×250, 160×600 y 200×200 solo se insertan en áreas cuyo tamaño real los admite.
