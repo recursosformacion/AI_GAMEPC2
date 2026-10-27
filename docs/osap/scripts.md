@@ -574,3 +574,9 @@ Detecta nombres de persona contaminados con URLs/creditos (hymnary, vwml, musesc
 y propone: nombre limpio, compositor extraido de "Composed by", o compositor a partir del
 titulo de obra asociado (`Obra - Compositor`). No modifica la BD. Resultados en
 `data/person_name_cleanup/`. Lanzador: `scripts/run_clean_person_names.bat`.
+
+### `validate_cleanup_ai.py` (osap-storage)
+Valida con Gemini las propuestas de limpieza de nombres contaminados y puede aplicar renombrados
+de alta confianza. Usa `--use-existing` para reutilizar una validación ya generada y `--apply`
+para escribir; por defecto es solo propuesta. Resultados en `data/person_name_cleanup/`.
+Lanzador: `scripts/run_validate_cleanup_ai.bat`.
