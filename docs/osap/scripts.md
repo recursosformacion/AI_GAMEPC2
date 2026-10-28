@@ -607,3 +607,9 @@ Lanzador: `scripts/run_apply_mxl_metadata.bat`.
 Crea personas con los compositores MXL limpios que no existen y asocia sus obras cuando estas
 no tienen ya un compositor valido distinto. No pisa conflictos. Por defecto es dry-run;
 `--apply` escribe. Lanzador: `scripts/run_create_mxl_composers.bat`.
+
+### `populate_mxl_representations.py` (osap-storage)
+Crea una representacion por recurso MXL sin representacion, enlaza works_resources y guarda
+titulo, instrumentacion, ensemble, partes, compases, notas, tonalidad, compas metrico, tempo,
+letra, creadores, derechos y JSON completo en `representation_metadata`. Por defecto dry-run;
+`--apply` escribe. Lanzador: `scripts/run_populate_mxl_representations.bat`.
