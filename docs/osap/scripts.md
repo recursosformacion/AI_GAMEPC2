@@ -613,3 +613,9 @@ Crea una representacion por recurso MXL sin representacion, enlaza works_resourc
 titulo, instrumentacion, ensemble, partes, compases, notas, tonalidad, compas metrico, tempo,
 letra, creadores, derechos y JSON completo en `representation_metadata`. Por defecto dry-run;
 `--apply` escribe. Lanzador: `scripts/run_populate_mxl_representations.bat`.
+
+### `populate_mxl_representation_persons.py` (osap-storage)
+Lee los `creators` de `representation_metadata` y crea filas en `representation_persons` con
+rol compositor/letrista/arreglista/transcriptor. Enlaza `persons_id` solo si el nombre coincide
+de forma unica con una persona activa; si no, conserva el nombre. Por defecto dry-run;
+`--apply` escribe. Lanzador: `scripts/run_populate_mxl_representation_persons.bat`.
