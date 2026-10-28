@@ -596,3 +596,9 @@ compositores, 0 errores. Lanzador: `scripts/run_extract_mxl_metadata.bat`.
 La extraccion MXL incluye ademas letrista, arreglista, credito, numero de partes, compases,
 notas, voces, pentagramas, tonalidades, compases metricos, tempo, programas MIDI,
 instrumentacion y una estimacion de ensemble.
+
+### `apply_mxl_metadata.py` (osap-storage)
+Asocia las obras MXL a una persona existente cuando el compositor del MusicXML coincide de
+forma unica por nombre normalizado. No crea personas ni pisa compositores validos distintos;
+los conflictos se dejan fuera. Por defecto es dry-run; `--apply` escribe.
+Lanzador: `scripts/run_apply_mxl_metadata.bat`.
