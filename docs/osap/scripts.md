@@ -619,3 +619,9 @@ Lee los `creators` de `representation_metadata` y crea filas en `representation_
 rol compositor/letrista/arreglista/transcriptor. Enlaza `persons_id` solo si el nombre coincide
 de forma unica con una persona activa; si no, conserva el nombre. Por defecto dry-run;
 `--apply` escribe. Lanzador: `scripts/run_populate_mxl_representation_persons.bat`.
+
+### `sanitize_mxl_persons.py` (osap-storage)
+Limpia nombres MXL con puntuación inicial, fusiona coincidencias existentes y desactiva los que
+no son identificables como personas. Con `--all` incluye nombres contaminados de cualquier
+origen. Por defecto dry-run; `--apply` escribe. Lanzador:
+`scripts/run_sanitize_mxl_persons.bat`.
