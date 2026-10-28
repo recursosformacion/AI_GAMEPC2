@@ -602,3 +602,8 @@ Asocia las obras MXL a una persona existente cuando el compositor del MusicXML c
 forma unica por nombre normalizado. No crea personas ni pisa compositores validos distintos;
 los conflictos se dejan fuera. Por defecto es dry-run; `--apply` escribe.
 Lanzador: `scripts/run_apply_mxl_metadata.bat`.
+
+### `create_mxl_composers.py` (osap-storage)
+Crea personas con los compositores MXL limpios que no existen y asocia sus obras cuando estas
+no tienen ya un compositor valido distinto. No pisa conflictos. Por defecto es dry-run;
+`--apply` escribe. Lanzador: `scripts/run_create_mxl_composers.bat`.
