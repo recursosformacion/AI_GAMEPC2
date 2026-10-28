@@ -625,3 +625,9 @@ Limpia nombres MXL con puntuación inicial, fusiona coincidencias existentes y d
 no son identificables como personas. Con `--all` incluye nombres contaminados de cualquier
 origen. Por defecto dry-run; `--apply` escribe. Lanzador:
 `scripts/run_sanitize_mxl_persons.bat`.
+
+### `resolve_inactive_mxl_composers.py` (osap-storage)
+Usa los títulos de las obras de personas MXL desactivadas para preguntar a Gemini por el
+compositor real. Si la evidencia es suficiente, renombra/activa o fusiona y reasocia las obras;
+si son tradicionales, las deja inactivas. Por defecto dry-run; `--apply` escribe.
+Lanzador: `scripts/run_resolve_inactive_mxl_composers.bat`.
