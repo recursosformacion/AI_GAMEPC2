@@ -208,7 +208,7 @@ Para cada tabla/columna se documentará:
 3. Productores: importadores, API, procesos y administración.
 4. Lectores: repositorios, consultas, endpoints, UI, buscador, descargas, informes y trabajos programados.
 5. Volumen de datos, nulos, duplicados, cardinalidad y anomalías conocidas.
-6. Destino V6: Work, Resource, relación, File, StorageLocation, catálogo, proyección o eliminación.
+6. Destino V6: Work, Resource, relación Resource–File, File, catálogo, proyección, staging/auditoría o eliminación. `StorageLocation` no es un destino V6.
 7. Transformación de datos, reglas de reconciliación y pérdidas aceptadas (idealmente ninguna para datos válidos).
 8. Pruebas que demostrarán que el nuevo modelo cubre los usos antiguos.
 9. Criterio para retirar la tabla/campo y todos sus consumidores.
@@ -351,7 +351,7 @@ Estas son las columnas declaradas por 001_baseline_schema.sql. El destino V6 es 
 | works_origin, works_origin_id | SqlWorkRepository los persiste; administración requiere origen; resolución los usa como fallback. | Correspondencias externas Work/Resource según qué identifique cada ID. | No conservar como atributos escalares sin justificar. |
 | works_key | Único en DDL; asociado históricamente a work_key; resolución usa COALESCE(representations_origin_id, works_key). | Eliminar si es clave de agrupación heredada; si es ID de fuente, mover a correspondencia externa. | Trazar todos los escritores/lectores. |
 | works_type_file | El DDL lo define como formato de fichero; el diseño anterior ya proponía retirarlo de Work. | Formato de File o de relación Resource–File. | No pertenece a Work. |
-| works_relative_path | DDL y entidad Work lo exponen; documento previo lo describía vacío en el conjunto PDMX analizado, dato histórico. | StorageLocation o retirar si no hay uso válido; nunca ruta autoritativa en Work. | Validar usos/datos actuales. |
+| works_relative_path | DDL y entidad Work lo exponen; documento previo lo describía vacío en el conjunto PDMX analizado, dato histórico. | Retirar como ruta autoritativa; la ubicación física vive en File y se resuelve mediante Storage. | Validar usos/datos actuales. |
 | works_obra_iden | El cierre del 2026-09-19 registra 0 valores no nulos y 0 referencias funcionales en código/API/scripts. | Candidato a eliminar del esquema V6; no trasladar como relación sin necesidad nueva demostrada. | Evidencia histórica fuerte; confirmar solo si aparece una necesidad nueva. |
 | works_music_digest | Declarada en DDL; productor/lector no rastreado en esta pasada. | Dato derivado/índice o hash musical separado del File.sha256. | No confundir con checksum binario; pendiente. |
 | works_voicing, works_instrumentation | El código deriva instrumentación y ensembles desde relaciones normalizadas; la documentación de migración describe el reemplazo de works_voicing por relaciones. | No duplicar campos textuales heredados; conservar relaciones normalizadas y decidir Work/Resource según semántica. | Candidatos a eliminación; rastrear escritores y verificar cobertura. |
@@ -386,11 +386,11 @@ DDL de scripts/migrate_representations_resources.sql frente al código consumido
 | works_resources_work_id | Lo esperan SqlRepresentationRepository, SqlResourceAdminRepository y consultas de resolución; no aparece en el DDL de creación separado. | FK obligatoria Resource.work_id. | Inconsistencia prioritaria. |
 | works_resources_type | Consumidores lo tratan como formato (MXL, PDF, MIDI, etc.). | Formato de File o relación Resource–File, distinto de Resource.kind. | Definir vocabulario. |
 | works_resources_name | Nombre de fichero/origen; CRUD filtra por él. | Nombre original de fichero o etiqueta de Resource–File. | Separar nombre editorial y nombre técnico. |
-| works_resources_relative_path | Expuesto por API antigua para descarga y leído por CRUD. | StorageLocation o retirar si es ruta heredada; no guardar ruta física en Resource. | Trazar descarga/URL antigua. |
-| works_resources_status | CRUD/resolución lo leen; diagnóstico previo advertía status missing con file_id presente en archive_entries. | Estado editorial de Resource separado del estado técnico de File/StorageLocation. | Definir estados y reglas. |
+| works_resources_relative_path | Expuesto por API antigua para descarga y leído por CRUD. | Retirar como ruta autoritativa; no guardar ruta física en Resource, usar la referencia directa de File y el servicio Storage. | Trazar descarga/URL antigua. |
+| works_resources_status | CRUD/resolución lo leen; diagnóstico previo advertía status missing con file_id presente en archive_entries. | Separar estado editorial de Resource, estado técnico de File y disponibilidad del servicio Storage. | Definir estados y reglas. |
 | works_resources_file_id | FK opcional a File, ON DELETE SET NULL. | Relación Resource–File; permitir varios ficheros por Resource, sin compartir Files entre Resources. | Migrar a tabla asociativa. |
 | works_resources_url | URL externa; cierre previo documenta derivación de URLs CPDL. | URL externa tipada, distinguida de página de edición y descarga interna. | Conservar y clasificar. |
-| works_resources_archive_id | FK opcional a Archives. | Procedencia de ingestión/importación, no ubicación final del File. | Conservar si es útil; separar de StorageLocation. |
+| works_resources_archive_id | FK opcional a Archives. | Procedencia de ingestión/importación, no ubicación final del File. | Conservar si es útil; no convertirlo en ubicación física de File. |
 | works_resources_created_at, works_resources_updated_at | Auditoría técnica. | Auditoría de Resource o relación Resource–File según el significado de cada fila. | Decidir al separar entidades. |
 
 La tabla actual mezcla dos conceptos: recursos PDMX directos a Work y ficheros/referencias de ediciones CPDL. En V6 ambos deben mapear a Resource asociado a Work; bytes y URLs de descarga deben quedar en Resource–File o en una referencia externa tipada.
@@ -952,7 +952,7 @@ Para cada columna de works, representations, works_resources, files, storage_loc
 - lectores (SELECT, join, serializador, frontend, descarga, indexador, consumidor externo);
 - evidencia precisa (archivo y línea, o símbolo y consulta);
 - semántica demostrada y nivel de certeza;
-- propuesta de destino V6: Work, Resource, relación Resource–File, File, StorageLocation, identificador externo, catálogo/relación normalizada, staging/auditoría, proyección reconstruible o retirar;
+- propuesta de destino V6: Work, Resource, relación Resource–File, File, identificador externo, catálogo/relación normalizada, staging/auditoría, proyección reconstruible o retirar; `StorageLocation` no es un destino V6.
 - transformación de migración, tratamiento de nulos/valores inválidos/duplicados;
 - prueba de aceptación;
 - consumidores que deben cambiar antes de retirar;
