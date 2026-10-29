@@ -886,7 +886,7 @@ El nombre actual es ambiguo: muchas filas representan fichero o referencia de fo
 | Productor/consumidor localizado | Dependencia actual | Cambio V6 | Prueba de retirada |
 |---|---|---|---|
 | SqlWorkRepository | SQL sobre works; deriva compositor/intérprete/género/instrumentación/tags desde relaciones | Repositorio Work V6 | Lectura/escritura, listados y detalle sin columnas legacy |
-| SqlRepresentationRepository | Traduce representations y works_resources a dos dataclasses; Resource permite work_id o representation_id | Repositorios Work/Resource/File/Blob | Cero SQL o símbolos legacy en consumidores activos |
+| SqlRepresentationRepository | Traduce representations y works_resources a dos dataclasses; Resource permite work_id o representation_id | Repositorios Work/Resource/File | Cero SQL o símbolos legacy en consumidores activos |
 | SqlResolutionSource | Combina origen, ID, licencia, tonalidad y relaciones | Resolver Work + Resource + identificadores externos tipados | PDMX, CPDL, IMSLP, varias ediciones y sin fichero |
 | SqlResourceAdminRepository y SqlArchiveEntryRepository | CRUD/fallback con rutas, URL, file_id, archive_id y relative_path | Administración y descarga por servicio autorizado | ACL, descarga, archivo y ausencia de fallback |
 | RepresentationAdminCrud, ResourceAdminCrud y rutas admin | IDs/campos representation_id, licencia, origen, ruta y file_id | API V6 Work/Resource/File con permisos | Pruebas contractuales/scopes; sin dependencia de representation_id |
