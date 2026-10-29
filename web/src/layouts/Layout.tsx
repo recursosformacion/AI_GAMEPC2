@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useSearchParams } from "react-router-dom";
+import { authClient } from "../api/AuthClient";
 import { initAnalytics } from "../analytics/ga";
 import { trackPageView } from "../analytics/gtm";
 import { CookieConsent, openCookiePreferences } from "../consent/CookieConsent";
@@ -390,11 +391,21 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
   const [loginOpen, setLoginOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const blogReturnKey = "osap.blog.return_to";
-  const handoffToBlog = useCallback(() => {
+  const handoffToBlog = useCallback(async () => {
     if (sessionStorage.getItem(blogReturnKey) !== "blog") return false;
-    const token = useAuth.getState().accessToken;
-    if (!token) return false;
+    // Consumir el retorno antes de esperar: evita dos handoffs simultáneos.
     sessionStorage.removeItem(blogReturnKey);
+    let token = useAuth.getState().accessToken;
+    if (!token) return false;
+    try {
+      // El token recién emitido por el callback puede tardar un instante en ser
+      // aceptado por /auth/me. Si ocurre, renovamos antes de entregarlo al blog.
+      await authClient.me(token);
+    } catch {
+      await useAuth.getState().refreshSession();
+      token = useAuth.getState().accessToken;
+    }
+    if (!token) return false;
     window.location.assign(blogSessionUrl(token, "/admin"));
     return true;
   }, []);
@@ -420,11 +431,14 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
   }, [searchParams, setSearchParams]);
 
   useEffect(() => {
-    if (user) handoffToBlog();
+    if (user) void handoffToBlog();
   }, [user, handoffToBlog]);
 
   const finishAuth = () => {
-    if (!handoffToBlog()) setLoginOpen(false);
+    void (async () => {
+      const handedOff = await handoffToBlog();
+      if (!handedOff) setLoginOpen(false);
+    })();
   };
 
   // Sin sesión: pulsa "Iniciar sesión" → popup OIDC; si no se puede, panel de respaldo.
