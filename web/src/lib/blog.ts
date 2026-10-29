@@ -4,7 +4,10 @@
 export function blogBaseUrl(): string {
   const configured = import.meta.env.VITE_BLOG_URL?.trim();
   if (configured) return configured.replace(/\/$/, "");
-  return "http://osap-blog";
+  // Un build de producción sin variable no debe apuntar al host de desarrollo.
+  return import.meta.env.PROD
+    ? "https://blog.openmusicrepository.com"
+    : "http://osap-blog";
 }
 
 export function blogHomeUrl(): string {
