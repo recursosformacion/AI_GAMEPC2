@@ -106,7 +106,7 @@ El `work_id` interno será estable y no dependerá de los IDs del índice, CPDL,
 | Idioma | Resource cuando corresponda al texto de esa versión | Una obra puede tener versiones en varios idiomas. |
 | Páginas y partes | Resource | Normalmente dependen de la edición o fichero de partitura, no de la obra abstracta. |
 | Tipo/formato de fichero (PDF, MXL, MIDI…) | File | No dejar en Work una propiedad que cambia por fichero. |
-| Nombre/path/estado del archivo | File o StorageLocation, según semántica | Eliminar rutas heredadas sin uso; no exponer claves físicas de almacenamiento. |
+| Nombre, formato y estado del archivo | File | La ubicación física también se asocia directamente a File; no exponer al cliente la ruta o clave interna. Eliminar rutas heredadas duplicadas tras migrar sus consumidores. |
 | Tamaño, MIME, checksum | File | Un único valor técnico por objeto digital. |
 | Ruta o clave física del objeto | File | File apunta directamente a su objeto físico. No crear `storage_locations` por inercia; mantener una entidad separada solo si la auditoría demuestra un requisito operativo real que no pueda resolver el propio servicio de almacenamiento. |
 | Estado de revisión/publicación | Resource o flujo editorial | No mezclarlo con File disponible/no disponible. |
@@ -149,7 +149,7 @@ La API no debe convertirse en una segunda base autoritativa del catálogo.
 
 ### OSAP Storage — catálogo canónico y ficheros
 
-- Esquema Work/Resource/File/StorageLocation y relaciones normalizadas.
+- Esquema Work/Resource/File y relaciones normalizadas. La propuesta V6 es que `File` contenga la referencia directa a la ubicación física; `StorageLocation` no forma parte del modelo objetivo por defecto y solo se reconsiderará si la auditoría demuestra una necesidad funcional concreta.
 - Repositorios, casos de uso, importadores y consultas del catálogo.
 - Ingesta, verificación de integridad, almacenamiento, disponibilidad y publicación de ficheros.
 - Migración de los datos históricos y reconciliación de IDs.
@@ -1061,7 +1061,7 @@ Seleccionar una Work existente
 
 **La cardinalidad Resource–File debe permitir varios formatos útiles de una misma realización.** PDF, MXL (MusicXML comprimido) y MIDI son posibilidades válidas; basta con disponer de uno, pero lo óptimo es conservar todos los que existan y sean válidos. Cada artefacto/formato es un File independiente bajo el mismo Resource cuando represente la misma realización musical. El informe de auditoría externa debe comprobar la cardinalidad real de los datos y los consumidores, además de distinguir formatos alternativos, partes, conversiones y duplicados; no se debe restringir el modelo a un solo File por Resource sin evidencia que justifique esa limitación.
 
-La ubicación del objeto debe quedar directamente asociada a File en el modelo conceptual. La propuesta por defecto es no tener una tabla `storage_locations`: si File contiene la ruta o clave física gestionada por Storage, una entidad adicional parece redundante. El informe debe verificar si hay alguna necesidad operativa concreta que requiera varias ubicaciones lógicas por File; en ausencia de esa evidencia, se elimina del modelo V6. Las copias de seguridad y réplicas técnicas son responsabilidad interna del servicio de almacenamiento y no necesitan exponerse como entidades del catálogo.
+La ubicación del objeto debe quedar directamente asociada a File en el modelo conceptual. La propuesta por defecto es no tener una tabla `storage_locations`: si File contiene la ruta o clave física gestionada por Storage, una entidad adicional parece redundante. El informe debe verificar si hay alguna necesidad operativa concreta que requiera varias ubicaciones lógicas por File; en ausencia de esa evidencia, se elimina del modelo V6. Las copias de seguridad y réplicas técnicas son responsabilidad interna del servicio de almacenamiento y no necesitan exponerse como entidades del catálogo. Esta decisión propuesta prevalece sobre las menciones anteriores de `StorageLocation` como posible destino: esas menciones sirven para inventariar el esquema heredado y sus consumidores, no para dar por aprobada la entidad en V6.
 
 ## 20. Modelo canónico independiente de proveedores (criterio rector V6, 2026-10-29)
 
