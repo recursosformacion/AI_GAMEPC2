@@ -43,7 +43,7 @@ No se trasladará automáticamente todo lo que hoy está en `works`: cada campo 
 
 Es la entidad que reúne lo que el modelo anterior repartía entre `representations` y `works_resources`. Puede describir una edición, arreglo, transcripción, partitura, versión o fuente musical, incluso cuando todavía no hay fichero disponible.
 
-Un Resource puede no tener ficheros o tener varios artefactos digitales de la misma realización (formatos alternativos, partes o derivados). Cada File pertenece a un único Resource. Un Work puede tener muchos Resources y cada Resource pertenece a una Work canónica.
+Un Resource puede no tener ficheros o tener varios artefactos digitales de la misma realización (formatos alternativos, partes o derivados). Cada File pertenece a un único Resource. Una obra (Work) puede tener muchos Resources y cada Resource pertenece a una única obra (Work) canónica.
 
 Candidatos: tipo de realización, proveedor y su identificador externo, licencia, situación de dominio público del contenido publicado, editor, fuente/nombre original, instrumentación/ensemble/voces/idioma propios de esa realización, tonalidad, duración, compases, páginas, partes, estado de publicación/disponibilidad y calidad/procedencia.
 
@@ -123,7 +123,7 @@ Los documentos de Storage registran históricamente estos casos (las cifras son 
 - **CPDL:** el inventario histórico contiene registros de procedencia y referencias a ficheros; esas agrupaciones reflejan cómo se importó la fuente, no una estructura que V6 deba reproducir.
 - Se registraron 11.242 ediciones sin recursos digitales asociados; algunas contienen licencia y editor y no deben descartarse solo por carecer de fichero.
 - `archive_entries`, `cpdl_editions`, `cpdl_edition_files` y `cpdl_edition_persons` tienen o tuvieron consumidores. Su retirada requiere migrar la información y sustituir dichos consumidores; no implica conservar estas tablas en V6.
-- El modelo actual agrupa datos de proveedores de formas distintas. V6 debe expresar el dominio musical con un único contrato independiente de esas estructuras; los datos de proveedor se conservan en tablas de procedencia y correspondencias.
+- El modelo actual agrupa datos de proveedores de formas distintas. V6 debe expresar el dominio musical con un único contrato independiente de esas estructuras; solo se conservarán las referencias externas mínimas necesarias para identificar la fuente y volver a consultar sus datos, no copias completas de sus registros.
 
 Referencias de análisis existentes en Storage:
 - `docsNew/diagnostico-representaciones-recursos.md`
@@ -516,7 +516,7 @@ Reglas:
 - `File` representa un artefacto de un Resource. Un Resource puede tener PDF, MusicXML y MIDI si pertenecen a la misma realización; cada File tiene su propio rol/formato y puede apuntar al mismo Blob que otro File sin compartir identidad lógica.
 - `File` identifica bytes por SHA-256; `StorageLocation` representa cada copia física. No guarda licencia editorial, autoría musical, publicación ni visibilidad.
 - Una URL de página fuente y una URL de descarga directa son conceptos diferentes. Deben tiparse y no confundirse con un fichero almacenado.
-- No introducir entidades de dominio para replicar jerarquías de proveedores. Resource describe la realización musical; las fichas, IDs, páginas y agrupaciones externas se conservan en tablas de fuente/procedencia, y cada registro heredado se clasifica por su significado real.
+- No introducir entidades de dominio para replicar jerarquías de proveedores. Resource describe la realización musical; solo se conservan los IDs externos y enlaces mínimos necesarios para volver a consultar la fuente. Cada registro heredado se clasifica por su significado real.
 - Las relaciones opcionales de Resource a instrumento/ensemble solo se crean si la realización puede diferir de la Work; no duplicar relaciones idénticas sin razón de consulta.
 
 ### 10.2 Cómo se convierten los dos patrones actuales
@@ -589,7 +589,7 @@ El flujo de aportaciones de osap-api es estado operativo/orquestación; el catá
 ### 10.7 Mi Actividad — alcance funcional inicial
 
 1. Acceso solo a usuarios autenticados.
-2. Buscar y seleccionar una Work canónica existente; crear Resource propio ligado a ella.
+2. Buscar y seleccionar una obra (Work) canónica existente; crear Resource propio ligado a ella.
 3. Subir uno o varios artefactos (PDF, MusicXML, MIDI y formatos admitidos), con límites configurables, validación MIME real, tamaño, hash y análisis antimalware.
 4. Cuota inicial propuesta: 1 GB por usuario, calculada sobre bytes únicos o cuota lógica según una decisión explícita; la primera versión debe escoger una regla visible y no contar deduplicación de manera sorpresiva.
 5. Privado por defecto. Publicación o compartición requiere acción explícita y flujo de revisión/licencia.
@@ -761,7 +761,7 @@ Estas son decisiones de diseño propuestas por defecto para evitar bifurcaciones
 6. **Hash binario frente a huella musical:** SHA-256 calculado sobre bytes identifica File; digest de notas normalizadas agrupa contenido musical aproximado. Ninguno sustituye la identidad canónica de Work.
 7. **Metadatos con ámbito:** datos que pueden cambiar por arreglo/edición (tonalidad, duración, compases, páginas, partes, dificultad) van en Resource si su semántica corresponde a la realización. El dato heredado ambiguo se conserva con procedencia en staging hasta clasificarlo.
 8. **Derechos explícitos:** licencia y dominio público se modelan con sujeto y evidencia. No inferir derechos a partir de visibilidad, origen o disponibilidad de descarga.
-9. **Relaciones normalizadas como verdad:** compositor, editor, arreglista, intérprete, instrumentos, ensemble, voces, género, idioma y tags se representan mediante IDs y roles. Los nombres crudos se conservan como evidencia, no como relación definitiva.
+9. **Relaciones normalizadas como verdad:** compositor, editor, arreglista, intérprete, instrumentos, ensemble, voces, género, idioma y tags se representan mediante IDs y roles. No se guardan copias de los nombres crudos del proveedor; si no se pueden normalizar con suficiente confianza, se omiten o se dejan pendientes de revisión y se vuelven a consultar en el proveedor cuando sea necesario.
 10. **Almacenamiento independiente del catálogo:** File referencia Blob; Blob tiene ubicaciones; ningún campo de Work/Resource contiene la ruta física autoritativa.
 11. **Seguridad por defecto:** aportaciones privadas nacen privadas; la API no puede hacer público un objeto por el mero hecho de aceptar la aportación; Storage aplica ACL en descarga/streaming.
 12. **Un solo catálogo autoritativo:** Storage conserva Work/Resource/relaciones/artefactos; API conserva workflow, configuración de proveedores y proyecciones operativas; Auth mantiene identidad.
@@ -1138,7 +1138,7 @@ No implementar ambas formas sin necesidad demostrada. Roles candidatos: `primary
 4. Dos Files lógicos de Resources distintos con bytes idénticos apuntan a un Blob si se mantiene deduplicación.
 5. Un File no puede pertenecer a dos Resources.
 6. Un Resource no puede tener más de un principal; si existe, pertenece a ese Resource.
-7. Cada fila heredada de `works_resources` conserva fichero/URL, procedencia y estado mediante mapping auditable, aunque el destino sea Resource, File, Blob, referencia externa o excepción.
+7. Cada fila heredada de `works_resources` se clasifica mediante un mapping auditable. Se migran los datos normalizados necesarios y se conservan solo los identificadores/URLs externos imprescindibles; no se copia el payload completo del proveedor. El destino puede ser Resource, File, Blob, referencia externa o excepción.
 8. La descarga antigua sigue funcionando o redirige cuando haya enlaces que preservar.
 9. La importación repetida no duplica Work, Resource, File lógico, Blob ni referencias externas.
 10. La clasificación produce un informe de casos ambiguos y no fusiona silenciosamente candidatos.
@@ -1153,7 +1153,7 @@ No se cierra el DDL ni la migración hasta perfilar los datos reales, confirmar 
 
 Esta sección establece un principio de arquitectura que prevalece sobre cualquier ejemplo de migración que describa la estructura de CPDL, PDMX, IMSLP u otro proveedor como si fuese el modelo interno. **Un proveedor externo aporta datos; no define las entidades ni las cardinalidades de OSAP.** CPDL debe tratarse como una fuente de información entre varias, no como plantilla del catálogo.
 
-El objetivo es diseñar primero un esquema de dominio musical coherente y después mapear a él toda la información útil de cada fuente, conservando el dato original, su procedencia, su interpretación y la incertidumbre. No se crearán entidades internas solo para imitar páginas, ediciones, números o agrupaciones particulares de un proveedor.
+El objetivo es diseñar primero un esquema de dominio musical coherente e importar únicamente los datos que OSAP necesita, normalizados en sus propias tablas. No se conservarán copias completas de registros externos, payloads ni snapshots históricos. Se mantendrá solo la referencia mínima necesaria para identificar y volver a consultar el registro del proveedor. No se crearán entidades internas solo para imitar páginas, ediciones, números o agrupaciones particulares de un proveedor.
 
 ### 20.1 Tablas de dominio propuestas
 
@@ -1163,17 +1163,17 @@ El conjunto siguiente es la propuesta conceptual inicial para precisar con la au
 |---|---|
 | `works` / Work | Obra musical intelectual canónica. Identidad y atributos compartidos por sus realizaciones; relaciones normalizadas con personas creadoras y roles, catálogos, géneros, etc. |
 | `resources` / Resource | Realización musical identificable: arreglo, transcripción, edición, versión o interpretación publicada cuando constituya un objeto catalogable distinto. Siempre pertenece a un Work. No depende de que exista un fichero ni de que una fuente externa la denomine “edición”. |
-| `files` / File | Artefacto digital lógico de un único Resource: partitura completa, formato alternativo, parte, audio, imagen o derivado. Incluye nombre original, formato, MIME, tamaño lógico, rol, orden/etiqueta de parte, estado y metadatos propios del artefacto. |
+| `files` / File | Artefacto digital lógico de un único Resource: partitura completa, formato alternativo, parte, audio, imagen o derivado. Incluye nombre de fichero necesario para identificar/descargar el artefacto, formato, MIME, tamaño lógico, rol, orden/etiqueta de parte, estado y metadatos técnicos propios. No copia metadatos descriptivos completos del registro externo. |
 | `blobs` / Blob | Identidad de los bytes físicos, con SHA-256 único, tamaño verificado y metadatos de integridad. Permite deduplicar bytes sin compartir File lógico, procedencia ni ACL. |
 | `storage_locations` / StorageLocation | Ubicaciones físicas y réplicas de un Blob: backend/proveedor de almacenamiento, clave/ruta, estado, verificación y fechas. No determina por sí sola si un usuario puede acceder. |
 | `external_providers` | Catálogo de proveedores/fuentes: código estable, nombre, tipo, URL base, política de atribución, estado y configuración no secreta. CPDL, PDMX e IMSLP serían filas, no tablas ni ramas especiales del modelo. |
-| `external_records` | Registro de una ficha/registro externo tal como se observó en una fuente. Conserva el ID externo bruto, URL canónica, tipo de registro declarado por el proveedor, título/nombre original, fechas de captura/actualización y estado de observación. Puede existir sin mapearse todavía a Work o Resource. |
-| `external_identifiers` | Correspondencias tipadas entre un identificador externo y una entidad OSAP: proveedor, tipo de entidad externa, ID bruto/normalizado, entidad OSAP de destino y discriminante cuando sea necesario. Debe permitir colisiones reales y múltiples IDs externos para una entidad. |
+| `external_records` (opcional; alternativa a `external_identifiers`) | Solo referencia mínima para volver a localizar un registro en el proveedor: proveedor, tipo de registro, ID externo estable y URL de consulta si resulta útil. No almacena título copiado, payload, metadatos brutos ni snapshots. Confirmar si hace falta esta tabla separada o si basta con `external_identifiers`. |
+| `external_identifiers` | Referencia mínima para volver a localizar el origen: proveedor, tipo de registro externo, identificador externo exacto, entidad OSAP de destino y discriminante solo cuando sea necesario. No duplicar el mismo ID en variantes bruta y normalizada salvo que el adaptador demuestre que ambas son imprescindibles. Debe permitir colisiones reales y múltiples IDs externos para una entidad. |
 | `external_record_links` | Relación entre registros externos y entidades OSAP (Work, Resource o File según la evidencia), con tipo de vínculo, confianza, método, fecha y estado de revisión. Evita forzar una equivalencia uno-a-uno cuando una ficha externa agrupa varias realizaciones o cuando varias fuentes describen la misma entidad. |
 | `source_links` | Enlaces a páginas informativas, páginas de licencia, páginas de descarga y URLs externas, tipados por finalidad y asociados al objeto OSAP correcto. Una URL de página no equivale a un File ni prueba que exista descarga directa. |
 | `resource_credits` / relación equivalente | Créditos y roles vinculados a un Resource cuando describen arreglo, edición, transcripción u otra contribución a esa realización. Los créditos de la composición se mantienen en Work; los roles no se trasladan de ámbito sin evidencia. |
-| `resource_attributes` o relaciones normalizadas | Atributos específicos de la realización que no sean campos centrales ni relaciones ya normalizadas: instrumentación, voces, tonalidad, idioma, número de partes, duración, compases, páginas, etc. Se prefiere esquema relacional tipado/catálogos para atributos con consultas, validaciones o vocabulario estable; JSON solo para metadatos originales auxiliares, no como sustituto indiscriminado del modelo. |
-| `ingestion_runs` / `source_observations` | Auditoría de cada importación/captura: proveedor, lote, versión del adaptador, fecha, resultado y errores. Permite trazabilidad, reintentos idempotentes y explicar por qué se creó o actualizó un dato. |
+| `resource_attributes` o relaciones normalizadas | Atributos específicos de la realización que no sean campos centrales ni relaciones ya normalizadas: instrumentación, voces, tonalidad, idioma, número de partes, duración, compases, páginas, etc. Se prefiere esquema relacional tipado/catálogos para atributos con consultas, validaciones o vocabulario estable. No se guardará JSON con payloads o metadatos originales del proveedor. |
+| `ingestion_runs` | Registro operativo mínimo de cada proceso: proveedor, versión del adaptador, fecha, resultado, contadores y errores técnicos sin payloads de origen. No almacenar snapshots ni una tabla `source_observations` con copias de cada captura. La necesidad y retención de estos logs se confirmarán en el diseño operativo. |
 
 Las tablas actuales normalizadas de personas, roles, géneros, instrumentos, idiomas, conjuntos y catálogos se conservarán o evolucionarán según el inventario; no se duplicarán dentro de JSON ni se desnormalizarán para reproducir la estructura de un proveedor.
 
@@ -1183,12 +1183,12 @@ Las tablas actuales normalizadas de personas, roles, géneros, instrumentos, idi
 2. **Resource no es una ficha externa.** Representa una realización musical distinguible por su contenido o función, aunque se haya descubierto a través de una ficha externa.
 3. **File no es Blob.** File es el artefacto lógico, con su propio nombre, rol, procedencia, visibilidad y autorización; Blob son los bytes deduplicables.
 4. **La procedencia es transversal.** Un Work, Resource o File puede estar respaldado por varias fuentes. Una fuente puede describir varios objetos OSAP. La relación se representa explícitamente y no se codifica en un único `origin` genérico.
-5. **Los IDs externos no son IDs canónicos.** Su unicidad depende del proveedor y del tipo de registro; se conservan tanto el valor bruto como el normalizado y cualquier componente que permita desambiguarlo.
-6. **Los datos originales no se pierden.** Los campos originales, URLs y metadatos capturados se preservan como evidencia/procedencia, aunque se normalicen sus significados a tablas canónicas.
+5. **Los IDs externos no son IDs canónicos.** Se conserva únicamente el identificador necesario para volver a consultar el registro, con su proveedor y tipo; no se almacena una copia del registro externo ni un duplicado normalizado de sus metadatos.
+6. **No se conservan copias de los datos de origen.** OSAP guarda los datos normalizados que necesita para su catálogo y una referencia externa mínima para poder volver a consultar el proveedor. No almacena payloads, títulos originales duplicados, metadatos brutos ni snapshots históricos de la fuente.
 7. **No inferir recursos por existencia de fichero.** Un artefacto solo se agrupa con otros bajo el mismo Resource cuando haya evidencia de que pertenecen a la misma realización. La extensión o el nombre no bastan.
-8. **No inventar recursos por existencia de ficha.** Un registro externo que solo documenta una página o una referencia puede permanecer como `external_record` hasta determinar si describe un Work, Resource o File.
+8. **No inventar recursos por existencia de ficha.** Una referencia externa que solo identifica una página puede permanecer como correspondencia mínima pendiente de clasificar hasta determinar si describe una obra (Work), un Resource o un File; no se conserva el contenido de la ficha.
 9. **La importación es idempotente y revisable.** Conflictos de identidad, duplicados y correspondencias ambiguas quedan registrados; no se resuelven fusionando silenciosamente entidades.
-10. **La licencia se asigna al objeto correcto.** Una licencia de composición, de arreglo/edición, de fichero y condiciones de descarga pueden ser distintas. Se conserva el texto/fuente original y se registra a qué objeto y jurisdicción se refiere.
+10. **La licencia se asigna al objeto correcto.** Una licencia de composición, de arreglo/edición, de fichero y condiciones de descarga pueden ser distintas. OSAP guarda el código/valor normalizado que necesita y una URL de referencia cuando proceda, no una copia extensa del texto de la fuente. Se registra a qué objeto y jurisdicción se refiere.
 
 ### 20.3 Modelo de relaciones externas sin acoplarse a CPDL
 
@@ -1203,13 +1203,13 @@ El contrato debe poder expresar todos estos casos sin cambiar el esquema de domi
 - una URL es una página de información, una licencia, una descarga directa o una ubicación de un fichero ya alojado;
 - una captura contiene información incompleta o contradictoria que necesita revisión.
 
-`external_records` conserva la representación de la fuente; `external_identifiers` resuelve identidad; `external_record_links` documenta correspondencias; `source_links` conserva URLs tipadas. Estas responsabilidades no deben comprimirse en una tabla única ni confundirse con Work/Resource/File.
+`external_identifiers` (y, si la auditoría lo justifica, `external_records`) guarda solo las claves y referencias mínimas para volver a localizar la fuente; las relaciones de correspondencia enlazan esas referencias con Work, Resource o File. `source_links` se limita a URLs externas que tengan utilidad operativa o de atribución. Ninguna de estas tablas conserva la representación completa de la fuente ni snapshots.
 
-La cardinalidad y el DDL exactos de estas tablas quedan abiertos a la auditoría. En particular, se debe evitar un diseño de `external_record_links` que permita asociar un File a un Resource distinto del que declara `files.resource_id`; el contrato debe validar esa consistencia o separar claramente enlaces de procedencia de relaciones de propiedad.
+La cardinalidad y el DDL exactos de estas tablas quedan abiertos a la auditoría. En particular, se debe evitar un diseño de enlaces externos que permita asociar un File a un Resource distinto del que declara `files.resource_id`; el contrato debe validar esa consistencia o separar claramente enlaces de procedencia de relaciones de propiedad. Si `external_records` no aporta nada que no cubra `external_identifiers` y `source_links`, se elimina y no se crea.
 
 ### 20.4 Cómo usar los datos de CPDL y de los demás proveedores
 
-CPDL se importará mediante un adaptador que traduzca su contenido a las tablas canónicas y registre sus identificadores, páginas, créditos, licencias y URLs como datos externos tipados. Sus conceptos particulares —incluidos números de página o edición— se conservarán como identificadores/metadatos de origen cuando sean útiles, pero no se convertirán automáticamente en entidades de dominio ni determinarán la cardinalidad.
+CPDL se importará mediante un adaptador que traduzca la información necesaria a las tablas canónicas. Se conservarán únicamente identificadores externos y URLs útiles para volver a consultar la fuente, más los datos normalizados que OSAP necesite para funcionar. No se copiarán páginas completas, créditos en bruto, licencias en texto duplicadas ni payloads de origen; cuando un dato deba actualizarse, el adaptador volverá a solicitarlo al proveedor. Los conceptos particulares —incluidos números de página o edición— solo se guardarán si son necesarios para identificar o volver a localizar el registro, sin convertirse automáticamente en entidades de dominio.
 
 Se aplicará el mismo criterio a PDMX, IMSLP y futuras fuentes. Si una fuente agrupa varios arreglos en una ficha, OSAP creará los Resources que justifique la evidencia musical, no un Resource por ficha por defecto. Si una fuente publica varios formatos del mismo arreglo, OSAP podrá vincularlos como Files de un Resource. Si no se puede determinar si son formatos equivalentes o realizaciones distintas, se conservarán como candidatos separados y se marcará la revisión pendiente.
 
@@ -1218,11 +1218,22 @@ Se aplicará el mismo criterio a PDMX, IMSLP y futuras fuentes. Si una fuente ag
 Antes de aprobar el DDL, el inventario debe entregar:
 
 - el diccionario de cada tabla canónica, con propósito, PK/FK, cardinalidades, índices, restricciones y política de borrado;
-- el mapa de todos los campos actuales hacia Work, Resource, File, Blob, almacenamiento, identificadores, registros externos, créditos o atributos normalizados;
+- el mapa de todos los campos actuales hacia Work, Resource, File, Blob, almacenamiento, identificadores externos mínimos, créditos o atributos normalizados;
 - ejemplos reales anonimizados de cada patrón de importación, incluidos conflictos y datos incompletos;
 - reglas de identidad y deduplicación separadas para Work, Resource, File lógico y Blob físico;
-- estrategia de preservación de datos brutos y procedencia;
+- estrategia de actualización desde el proveedor, con almacenamiento mínimo de identificadores externos y sin conservar payloads ni snapshots;
 - pruebas de idempotencia, colisiones de IDs, varias fuentes por entidad, varias realizaciones por ficha, varios Files por Resource y Resources sin File;
 - una lista de decisiones pendientes explícitas; ninguna cardinalidad debe justificarse solo por la estructura de una web externa.
 
-La decisión de arquitectura es firme: **el esquema canónico se diseña desde el dominio musical de OSAP; los proveedores se conectan mediante tablas genéricas de identidad, registro y procedencia**. El DDL final solo se cierra después de comprobar que estas entidades cubren los datos y consumidores reales.
+### 20.6 Qué significa separar File de Blob
+
+`File` y `Blob` son dos identidades distintas, no dos copias de los mismos datos:
+
+- **File (fichero lógico):** representa el artefacto que OSAP ofrece dentro de un Resource. Tiene su propio nombre, formato, función, procedencia y reglas de acceso.
+- **Blob (contenido físico):** representa únicamente la secuencia de bytes verificada, identificada por SHA-256 y tamaño. No tiene nombre de catálogo ni permisos propios; esos pertenecen al File y al Resource.
+
+Ejemplo: dos Resources distintos pueden contener un PDF con bytes exactamente iguales. OSAP podría guardar dos filas `files` —una por cada Resource, con su propio contexto y autorización— y una sola fila `blobs` a la que ambas apunten. Así se almacenan los bytes una vez, pero no se mezclan la identidad ni los permisos de los ficheros lógicos. Si los bytes son distintos, corresponden a Blobs distintos aunque los nombres sean iguales.
+
+Esta separación **solo compensa si la deduplicación física aporta un beneficio real y se puede mantener correctamente**. Antes de aprobar el DDL hay que medir cuántos bytes duplicados existen y revisar el coste operativo. Si el ahorro no justifica la complejidad, se puede simplificar el modelo y no deduplicar; no se debe mantener Blob solo por elegancia teórica.
+
+La decisión de arquitectura es firme: **el esquema canónico se diseña desde el dominio musical de OSAP; los proveedores se conectan mediante referencias mínimas de identidad y enlaces útiles para volver a consultarlos, no mediante copias de sus registros**. El DDL final solo se cierra después de comprobar que estas entidades cubren los datos y consumidores reales.
