@@ -273,8 +273,9 @@ function SidebarSection({
   const { t } = useI18n();
   const location = useLocation();
   const token = useAuth((s) => s.accessToken);
+  const refreshToken = useAuth((s) => s.refreshToken);
   const hrefFor = (entry: NavItem) =>
-    entry.sessionHandoff ? blogSessionUrl(token, "/admin") : entry.to;
+    entry.sessionHandoff ? blogSessionUrl(token, refreshToken, "/admin") : entry.to;
   return (
     <div className="mt-5">
       <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-osap-muted">{title}</p>
@@ -406,7 +407,9 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
       token = useAuth.getState().accessToken;
     }
     if (!token) return false;
-    window.location.assign(blogSessionUrl(token, "/admin"));
+    window.location.assign(
+      blogSessionUrl(token, useAuth.getState().refreshToken, "/admin"),
+    );
     return true;
   }, []);
   const { start: startOidc, error: oidcError } = useOidcLogin(handoffToBlog);
