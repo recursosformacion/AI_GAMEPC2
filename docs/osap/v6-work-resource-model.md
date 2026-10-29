@@ -14,7 +14,7 @@
 4. Cada consumidor heredado debe tener un reemplazo definido y probado antes de retirar su estructura.
 5. Separar los metadatos intelectuales de la obra, los de una realización/edición concreta y los del objeto digital.
 6. No confundir el estado editorial/publicación de una realización con la existencia o disponibilidad de sus bytes.
-7. Permitir referencias externas y Resources sin File descargado; cada File representa un artefacto concreto y pertenece a un único Resource. No se propone Blob ni compartir Files entre Resources.
+7. Permitir referencias externas y Resources sin File descargado; cada File representa un artefacto concreto, apunta directamente a la ubicación de su objeto físico y pertenece a un único Resource. Un Resource puede disponer de varios formatos útiles (por ejemplo, PDF, MXL y MIDI): basta con uno, pero el objetivo preferente es conservar todos los formatos válidos disponibles. No se propone Blob ni compartir Files entre Resources.
 8. Diseñar desde el principio las aportaciones de usuarios y el espacio privado de **Mi Actividad**.
 9. Evitar que el índice de búsqueda, la API y Storage mantengan copias autoritativas del mismo catálogo.
 10. No ejecutar migraciones ni escrituras de producción durante la fase de análisis.
@@ -43,7 +43,7 @@ No se trasladará automáticamente todo lo que hoy está en `works`: cada campo 
 
 Es la entidad que reúne lo que el modelo anterior repartía entre `representations` y `works_resources`. Puede describir una edición, arreglo, transcripción, partitura, versión o fuente musical, incluso cuando todavía no hay fichero disponible.
 
-Un Resource puede no tener ficheros o tener varios artefactos digitales de la misma realización (formatos alternativos, partes o derivados). Cada File pertenece a un único Resource. Una obra (Work) puede tener muchos Resources y cada Resource pertenece a una única obra (Work) canónica.
+Un Resource puede no tener ficheros o tener uno o varios artefactos digitales de la misma realización. PDF, MXL (MusicXML comprimido) y MIDI son formatos válidos para una misma realización cuando el contenido musical corresponda: disponer de uno es suficiente, pero si existen varios formatos válidos, el objetivo es conservarlos todos. Cada formato es un File distinto y cada File pertenece a un único Resource. Una obra (Work) puede tener muchos Resources y cada Resource pertenece a una única obra (Work) canónica.
 
 Candidatos: tipo de realización, proveedor y su identificador externo, licencia, situación de dominio público del contenido publicado, editor, fuente/nombre original, instrumentación/ensemble/voces/idioma propios de esa realización, tonalidad, duración, compases, páginas, partes, estado de publicación/disponibilidad y calidad/procedencia.
 
@@ -51,16 +51,15 @@ Estos campos son una propuesta; su semántica, cardinalidad y vocabulario deben 
 
 ### 2.3 File — objeto digital
 
-Identifica bytes concretos y sus propiedades técnicas: checksum, MIME, tamaño, nombre técnico/original si corresponde, estado de integridad y relaciones con ubicaciones de almacenamiento.
+Identifica un artefacto digital concreto y sus propiedades técnicas: checksum, MIME, tamaño, nombre de fichero y estado de integridad. Incluye la referencia directa a la ubicación física del objeto (ruta o clave gestionada por Storage); no necesita una entidad `StorageLocation` separada por defecto.
 
 - File no es una edición ni una obra.
 - Un File lógico pertenece a un único Resource; no se comparte entre Resources.
-- Un Resource puede tener varios Files cuando representan artefactos de esa misma realización.
- - El hash, si se guarda, verifica integridad; no deduplica ni fusiona Files.
- - La referencia de almacenamiento corresponde al File; las réplicas técnicas son responsabilidad interna del servicio de almacenamiento.
+- Un Resource puede tener varios Files si existen varios formatos válidos de esa misma realización (idealmente PDF, MXL y MIDI cuando estén disponibles), o si existen partes u otros artefactos que aporten utilidad real. No es obligatorio disponer de todos los formatos: uno basta.
+- El hash, si se guarda, verifica integridad; no deduplica ni fusiona Files.
+- La ubicación física corresponde directamente al File. La replicación y las copias de seguridad son responsabilidad interna del servicio de almacenamiento, no entidades que deba gestionar el catálogo.
 - Una URL a la página de una edición no es lo mismo que una URL directa a un fichero. El modelo debe distinguir ambas.
-
- - No se propone una tabla de unión Resource–File ni una entidad Blob. La pertenencia se expresa mediante `files.resource_id`; cada File identifica un único artefacto y un único objeto físico.
+- No se propone una tabla de unión Resource–File ni una entidad Blob. La pertenencia se expresa mediante `files.resource_id`; cada File identifica un único artefacto y un único objeto físico.
 
 ## 3. Criterios iniciales para los campos comentados
 
@@ -109,7 +108,7 @@ El `work_id` interno será estable y no dependerá de los IDs del índice, CPDL,
 | Tipo/formato de fichero (PDF, MXL, MIDI…) | File | No dejar en Work una propiedad que cambia por fichero. |
 | Nombre/path/estado del archivo | File o StorageLocation, según semántica | Eliminar rutas heredadas sin uso; no exponer claves físicas de almacenamiento. |
 | Tamaño, MIME, checksum | File | Un único valor técnico por objeto digital. |
-| Proveedor de almacenamiento y clave física | StorageLocation | Separar ubicación del objeto lógico y permitir múltiples copias. |
+| Ruta o clave física del objeto | File | File apunta directamente a su objeto físico. No crear `storage_locations` por inercia; mantener una entidad separada solo si la auditoría demuestra un requisito operativo real que no pueda resolver el propio servicio de almacenamiento. |
 | Estado de revisión/publicación | Resource o flujo editorial | No mezclarlo con File disponible/no disponible. |
 | Estadísticas | Agregados calculados o tablas de eventos apropiadas | No mantener múltiples contadores autoritativos sin una estrategia de actualización. |
 | Thumbnails/imagenes | Revisar si son File relacionado o dato derivado | No conservar JSON/campos duplicados si se reconstruyen desde los recursos. |
@@ -1060,9 +1059,9 @@ Seleccionar una Work existente
 - SHA-256, si se conserva, sirve para verificar integridad; no define por sí solo la identidad musical de Resource ni obliga a deduplicar Files.
 - Puede haber Resources descubiertos en informes externos sin File descargado. Eso no contradice el flujo File-first de carga de un usuario: son caminos de entrada distintos. No se crea un File ficticio para una URL o un artefacto que no se haya obtenido.
 
-**La cardinalidad final Resource–File no se fija por intuición ni por ejemplos hipotéticos.** Debe resolverse con el informe de auditoría externa del modelo y los datos reales: cuántos Resources tienen realmente uno o varios artefactos, qué significan esas filas, si se trata de ficheros alternativos, partes, conversiones o registros duplicados, y qué consumidores necesitan cada caso. Hasta disponer de esa evidencia, la opción de diseño más sencilla es un File principal por Resource y permitir excepciones solo si el informe demuestra casos reales que las justifiquen. No se dará por hecho que cada Resource debe tener PDF, MusicXML y MIDI.
+**La cardinalidad Resource–File debe permitir varios formatos útiles de una misma realización.** PDF, MXL (MusicXML comprimido) y MIDI son posibilidades válidas; basta con disponer de uno, pero lo óptimo es conservar todos los que existan y sean válidos. Cada artefacto/formato es un File independiente bajo el mismo Resource cuando represente la misma realización musical. El informe de auditoría externa debe comprobar la cardinalidad real de los datos y los consumidores, además de distinguir formatos alternativos, partes, conversiones y duplicados; no se debe restringir el modelo a un solo File por Resource sin evidencia que justifique esa limitación.
 
-La ubicación del objeto debe quedar directamente asociada a File en el modelo conceptual. Antes de cerrar el DDL se comprobará en el informe si `storage_locations` representa una necesidad real —por ejemplo, varias ubicaciones por File— o una capa prescindible. Las copias de seguridad y réplicas técnicas pueden seguir siendo responsabilidad interna del servicio de almacenamiento y no necesitan exponerse como entidades del catálogo.
+La ubicación del objeto debe quedar directamente asociada a File en el modelo conceptual. La propuesta por defecto es no tener una tabla `storage_locations`: si File contiene la ruta o clave física gestionada por Storage, una entidad adicional parece redundante. El informe debe verificar si hay alguna necesidad operativa concreta que requiera varias ubicaciones lógicas por File; en ausencia de esa evidencia, se elimina del modelo V6. Las copias de seguridad y réplicas técnicas son responsabilidad interna del servicio de almacenamiento y no necesitan exponerse como entidades del catálogo.
 
 ## 20. Modelo canónico independiente de proveedores (criterio rector V6, 2026-10-29)
 
@@ -1125,13 +1124,13 @@ La cardinalidad y el DDL exactos de estas tablas quedan abiertos a la auditoría
 
 CPDL se importará mediante un adaptador que traduzca la información necesaria a las tablas canónicas. Se conservarán únicamente identificadores externos y URLs útiles para volver a consultar la fuente, más los datos normalizados que OSAP necesite para funcionar. No se copiarán páginas completas, créditos en bruto, licencias en texto duplicadas ni payloads de origen; cuando un dato deba actualizarse, el adaptador volverá a solicitarlo al proveedor. Los conceptos particulares —incluidos números de página o edición— solo se guardarán si son necesarios para identificar o volver a localizar el registro, sin convertirse automáticamente en entidades de dominio.
 
-Se aplicará el mismo criterio a PDMX, IMSLP y futuras fuentes. Si una fuente agrupa varios arreglos en una ficha, OSAP creará los Resources que justifique la evidencia musical, no un Resource por ficha por defecto. Si una fuente publica varios formatos del mismo arreglo, no se crearán automáticamente varios Files: se elegirá el artefacto principal y solo se conservarán conversiones u otros artefactos adicionales cuando exista una razón funcional para mantenerlos. Si no se puede determinar si dos elementos pertenecen a la misma realización, se marcará la revisión pendiente; no se crearán Resources duplicados por defecto.
+Se aplicará el mismo criterio a PDMX, IMSLP y futuras fuentes. Si una fuente agrupa varios arreglos en una ficha, OSAP creará los Resources que justifique la evidencia musical, no un Resource por ficha por defecto. Si una fuente publica varios formatos válidos de la misma realización, se conservarán como Files separados cuando estén disponibles: PDF, MXL y MIDI son formatos útiles, aunque basta con uno. No se generarán formatos ausentes ni conversiones automáticamente por el mero hecho de que el formato sea deseable; se conservarán las conversiones existentes si son válidas y útiles. Si no se puede determinar si dos elementos pertenecen a la misma realización, se marcará la revisión pendiente; no se crearán Resources duplicados por defecto.
 
 ### 20.5 Criterio de aceptación del diseño de datos
 
 Antes de aprobar el DDL, el inventario debe entregar:
 
-- el diccionario de cada tabla canónica, con propósito, PK/FK, cardinalidades, índices, restricciones y política de borrado;
+- el diccionario de cada tabla canónica, con propósito, PK/FK, cardinalidades, índices, restricciones y política de borrado; debe evaluarse expresamente la eliminación de `storage_locations` y documentar una necesidad funcional concreta si se propone conservarla;
 - el mapa de todos los campos actuales hacia Work, Resource, File, almacenamiento, identificadores externos mínimos, créditos o atributos normalizados;
 - ejemplos reales anonimizados de cada patrón de importación, incluidos conflictos y datos incompletos;
  - reglas de identidad para Work, Resource y File; el hash se usa para verificar integridad, no para compartir Files u objetos físicos;
