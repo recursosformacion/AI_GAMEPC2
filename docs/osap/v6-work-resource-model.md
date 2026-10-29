@@ -1047,3 +1047,33 @@ No uses conteos históricos como cifras actuales. No inventes resultados de prod
 
 ---
 
+
+## 19. Decisión de cardinalidad Resource–File tras aclaración de CPDL (2026-10-29)
+
+### Decisión de diseño propuesta como base de V6
+
+El usuario aclara que la presencia de varios ficheros en una página o ficha CPDL no implica que formen un mismo Resource: pueden corresponder a arreglos, transcripciones o realizaciones musicales diferentes. Por tanto, no se debe inferir una relación uno-a-varios entre Resource y File a partir del número de descargas que ofrece CPDL.
+
+La regla de dominio preferida para V6 pasa a ser:
+
+- Una Work puede tener cero o muchos Resources.
+- Cada Resource representa una realización musical diferenciada (edición, arreglo, transcripción u otra versión identificable) y tiene un único File principal.
+- Cada File principal pertenece a un único Resource.
+- Por tanto, la asociación principal es uno a uno entre Resource y File, con la posibilidad de que Resource aún no tenga File durante creación, revisión o importación. En términos de cardinalidad de datos: Resource 0..1 File; File 1 Resource cuando está publicado y asociado.
+- Si una ficha CPDL ofrece tres arreglos distintos, se modelan como tres Resources y tres Files, aunque compartan Work y página de procedencia. El identificador CPDL de página/ficha se conserva como procedencia común; el identificador de cada arreglo/artefacto se registra por separado si existe.
+- No se crea una entidad de dominio `ResourceFile` ni una tabla de unión solo para resolver este caso.
+
+### Condiciones y excepciones que deben evaluarse, no asumirse
+
+1. Un Resource puede existir sin fichero, por ejemplo, una edición catalogada todavía no digitalizada. Esto no contradice la cardinalidad: la relación Resource→File puede estar vacía.
+2. Si un mismo arreglo tiene versiones digitales en varios formatos (PDF y MusicXML, por ejemplo), hay que decidir si son formatos equivalentes de una misma realización o si el MusicXML incorpora información/estructura editorial distinta. Por defecto, si son representaciones digitales equivalentes del mismo contenido musical, el modelo estricto de un File principal requerirá elegir uno como principal y tratar los demás como derivados/versiones técnicas o como artefactos secundarios explícitamente modelados; no se deben fabricar Resources musicales distintos solo para acomodar formatos.
+3. Si se demuestra que el mismo File binario debe asociarse legítimamente a dos Resources diferentes, el requisito entra en conflicto con la regla uno-a-uno y habrá que resolverlo antes del DDL: duplicar el objeto lógico File conservando deduplicación física por hash, o revisar la cardinalidad con evidencia de dominio. No imponer silenciosamente una relación muchos-a-muchos.
+4. El almacenamiento puede seguir deduplicando físicamente bytes idénticos por SHA-256 mediante una capa de blob/objeto físico compartido. Eso no obliga a compartir el registro de dominio File: File (artefacto lógico) y Blob/StorageObject (bytes físicos) pueden ser niveles diferentes si la deduplicación real lo requiere. Solo introducir esa capa si el inventario y los casos reales justifican su coste.
+
+### Efecto en la matriz y en la auditoría de desarrollo
+
+- La sección 17.4 debe interpretarse con esta decisión: las filas actuales de `works_resources` que sean ficheros de arreglos diferentes generan Resources diferentes; no se agrupan por compartir Work, página CPDL o `representation_id`.
+- La sección 17.5 debe distinguir el File lógico del almacenamiento físico. No se debe presuponer que la tabla actual `files` puede eliminar duplicados lógicos solo por compartir hash sin revisar las FKs y la semántica de sus consumidores.
+- La sección 18.F debe recomendar `Resource.file_id` como opción preferente si el rastreo de código confirma que no existe un requisito de varios ficheros principales por Resource ni de compartir el mismo File lógico entre Resources. Debe valorar separadamente formatos secundarios, derivados, archivos fuente y deduplicación física.
+- La cardinalidad uno-a-uno se considera decisión de dominio preferida para el diseño V6, pero el DDL no se declara cerrado hasta que la auditoría identifique todos los casos actuales y su mapeo sin pérdida.
+
