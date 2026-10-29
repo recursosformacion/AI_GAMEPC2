@@ -702,3 +702,85 @@ El modelo conceptual y las fronteras de repositorio ya tienen una propuesta cohe
 
 La planificación se considerará coherente cuando cada elemento de esa matriz tenga: fuente actual, productor, consumidores, decisión V6, mapeo de migración, prueba de aceptación y condición para retirar el legado. Hasta entonces el modelo propuesto es una arquitectura de destino fundamentada, pero el plan no se etiqueta todavía como “listo para implementar”.
 
+
+
+## 16. Cierre de coherencia del diseño y matriz de consumidores (2026-10-29)
+
+Esta sección completa el mapa entre las evidencias localizadas y las decisiones propuestas. No sustituye la validación de un snapshot reciente cuando se prepare la migración, pero sí fija una dirección arquitectónica consistente y evita que la implementación tenga que volver a decidir conceptos básicos en cada repositorio.
+
+### 16.1 Fuentes de verdad en V6
+
+| Concepto | Fuente de verdad | Proyecciones / datos que no deben ser autoritativos |
+|---|---|---|
+| Identidad y metadatos intelectuales de Work | Storage: Work + relaciones canónicas | Índice, cachés API, textos de proveedor, copias en tablas de archivo |
+| Identidad externa de una Work | WorkExternalIdentifier, con proveedor y tipo de entidad | works_key como identidad global; títulos o nombres de archivo |
+| Identidad de una realización/edición | Resource + ResourceExternalIdentifier | Representation como segundo nivel permanente; número CPDLno asumido único |
+| Personas y roles de la obra | Person + WorkPersonRole | composer/artist duplicados en Work; texto de atribución como relación canónica |
+| Personas y roles de la edición/recurso | Person + ResourcePersonRole | representation_persons sin migrar o nombre de editor libre como única identidad |
+| Clasificación de Work | relaciones normalizadas de género, época, instrumento, ensemble, idioma y tags | works_instrumentation / works_voicing y columnas de texto duplicadas |
+| Ficheros | File identificado por SHA-256 verificado cuando contiene bytes | rutas físicas en Work/Resource; nombre de fichero como identidad |
+| Ubicación física | StorageLocation por File y proveedor | archive_id o relative_path como ubicación física autoritativa |
+| Formato de artefacto | ResourceFile + formato normalizado | works_type_file o tipo musical de Resource |
+| Licencia/atribución | afirmación de licencia ligada al objeto que realmente cubre, con fuente | booleano global heredado o inferencia por visibilidad |
+| Estado técnico | File / StorageLocation | estado editorial del Resource |
+| Estado editorial, propiedad y visibilidad | Resource y sus metadatos de gestión en Storage | estados duplicados en API que aparenten publicar el catálogo |
+| Identidad del usuario | osap-auth | copias de credenciales/usuarios en Storage |
+| Workflow de aportación/revisión | estado operativo de aportación en API; la aceptación materializa Resource en Storage | contribución aceptada como sustituto permanente del registro canónico |
+| Búsqueda | índice reconstruible desde Work/Resource y relaciones | una segunda copia editable del catálogo |
+
+### 16.2 Matriz de consumidores heredados y destino V6
+
+| Consumidor actual identificado | Dependencia actual | Adaptación V6 requerida | Criterio para retirar el legado |
+|---|---|---|---|
+| SqlWorkRepository y casos de uso de Work | columnas works_* y relaciones normalizadas; expone títulos, roles, géneros, instrumentos, idioma, tags y voicing | Repositorio Work V6; metadatos de edición pasan a Resource; respuestas de listas se generan desde relaciones | Tests de búsqueda/detalle y round-trip; cero lectura de columnas retiradas |
+| SqlRepresentationRepository | Lee/escribe representations y works_resources, incluidos work_id y representation_id | Sustituir por repositorios Resource, ResourceFile y ResourceExternalIdentifier | Ninguna entidad/puerto/SQL de Representation en los consumidores activos |
+| SqlResolutionSource | Une Work, Representation y Resource; usa COALESCE de origen/ID/licencia y lee tonalidad desde Work | Resolución por Work + Resources candidatas; procedencia, licencia y tonalidad según ámbito correcto | Pruebas de resolución con PDMX, CPDL, transposición/arreglo y Resource sin fichero |
+| SqlResourceAdminRepository / ResourceAdminCrud | CRUD de works_resources, rutas, estado, URL, file_id y archive_id | Administración de Resource y de sus artefactos, sin exponer rutas físicas | CRUD completo y permisos probados; rutas antiguas no requeridas |
+| RepresentationAdminCrud y rutas admin de representations/resources | Exponen representation_id, licencia, origen y editoría | Sustituir por administración de Resource y roles de Resource; adaptar scopes y UI | Ningún endpoint activo requiere representation_id como identidad de negocio |
+| api/routes/works.py y schemas WorkRead/WorkDetailRead/ResourceRead | Respuesta de obra con resources, relative_path, format, file_id y URL | Contrato versionado Work + Resource + artefactos; URLs emitidas por servicio de acceso, no construidas desde path | Clientes y frontend migrados; pruebas contractuales y redirects donde proceda |
+| SqlArchiveEntryRepository, importador PDMX y fallback de obra/descarga | archive_entries como registro legado, ruta relativa, logical_id, file_id y metadatos de fuente | Importar todo dato exclusivo a Work/Resource/ResourceFile/File/procedencia; reemplazar cada fallback | Conteos y relaciones reconciliados, descarga equivalente, rastreo sin referencias activas |
+| scripts/migrate_to_representations.py y herramientas de importación CPDL | Conversión actual de PDMX a Representation y CPDL a Representation + resources | Reescribir como importador V6 idempotente; CPDL edition → Resource, hijos → ResourceFile/referencia | Reimportación repetida sin duplicados; errores y exclusiones auditables |
+| scripts/analyze_works_content.py y revisión por digest | Calcula digest musical desde MusicXML para reconciliación | Mantener como proceso derivado opcional y versionado solo si se aprueba consumidor; nunca usarlo como hash de bytes | Prueba de uso y calidad; si no hay consumidor, retirar proceso y campo tras preservar resultados necesarios |
+| API de aportaciones (ContributionService, ContributionsMixin, router HTTP) | Operación add_resource dirigida a representation; estado draft/submitted/in_review/accepted/rejected; adjuntos File no públicos | Cambiar target a Work/Resource según operación; aceptación idempotente crea/actualiza Resource y ResourceFile; estado operativo sigue en API | Pruebas de reintento/fallo parcial, propiedad derivada de Auth y ACL de Storage |
+| Cliente StorageContributionClient | Consulta admin de Representation para recuperar Work y sube File sin crear Resource | Resolver Work/Resource por contrato V6 y materializar relación ResourceFile con operación autorizada | Ninguna llamada del cliente a rutas admin legacy |
+| Frontend/API e índice | IDs y contratos actuales de obras, representaciones, URLs de recursos | Consumir API V6; reconstruir índice desde modelo canónico; mapear IDs públicos antiguos | Tests E2E, links antiguos redirigidos o con respuesta de retirada documentada |
+| Importadores externos (PDMX, CPDL, IMSLP y futuros) | campos de origen en Work o Representation y formatos históricos | Adaptadores de origen a WorkExternalIdentifier/ResourceExternalIdentifier y contratos de ingesta | Ningún importador escribe directamente en tablas internas ni asume IDs de tablas |
+| Aplicaciones consumidoras (incluida futura AI_Guitarra) | Posible dependencia de IDs, endpoints o estructura actual | Consumir contrato API documentado; permiso de descarga se verifica por Resource/File | Pruebas de integración sin acceso SQL directo |
+
+### 16.3 Decisiones cerradas para el diseño de destino
+
+Estas son decisiones de diseño propuestas por defecto para evitar bifurcaciones durante la implementación. No son afirmaciones de que el código ya las cumpla.
+
+1. **Una sola entidad musical de realización:** Resource absorbe el significado editorial de Representation. No hay tabla/contrato permanente Representation en V6.
+2. **Separación entre realización y artefacto:** Resource no es un PDF ni un MXL. ResourceFile representa cada archivo/referencia concreta y su papel/formato.
+3. **Un Work por Resource:** toda Resource tiene un Work padre obligatorio. No hay recursos musicales huérfanos.
+4. **Cero o muchos artefactos:** Resource puede carecer de fichero, tener varios o compartir un File con otras Resources. La ausencia de bytes no elimina la edición catalogada.
+5. **Identificadores externos tipados:** clave única por proveedor + entidad + identificador normalizado, con excepciones expresas por fuentes que no ofrezcan IDs únicos. Guardar ID crudo y URL de origen cuando ayude a auditoría.
+6. **Hash binario frente a huella musical:** SHA-256 calculado sobre bytes identifica File; digest de notas normalizadas agrupa contenido musical aproximado. Ninguno sustituye la identidad canónica de Work.
+7. **Metadatos con ámbito:** datos que pueden cambiar por arreglo/edición (tonalidad, duración, compases, páginas, partes, dificultad) van en Resource si su semántica corresponde a la realización. El dato heredado ambiguo se conserva con procedencia en staging hasta clasificarlo.
+8. **Derechos explícitos:** licencia y dominio público se modelan con sujeto y evidencia. No inferir derechos a partir de visibilidad, origen o disponibilidad de descarga.
+9. **Relaciones normalizadas como verdad:** compositor, editor, arreglista, intérprete, instrumentos, ensemble, voces, género, idioma y tags se representan mediante IDs y roles. Los nombres crudos se conservan como evidencia, no como relación definitiva.
+10. **Almacenamiento independiente del catálogo:** ResourceFile referencia File; File tiene ubicaciones; ningún campo de Work/Resource contiene la ruta física autoritativa.
+11. **Seguridad por defecto:** aportaciones privadas nacen privadas; la API no puede hacer público un objeto por el mero hecho de aceptar la aportación; Storage aplica ACL en descarga/streaming.
+12. **Un solo catálogo autoritativo:** Storage conserva Work/Resource/relaciones/artefactos; API conserva workflow, configuración de proveedores y proyecciones operativas; Auth mantiene identidad.
+13. **Importadores idempotentes:** proveedor + ID externo y reglas de reconciliación controlan reimportación; nunca deduplicar automáticamente dos obras solo por título o digest.
+14. **Retirada de legado al final:** tablas y campos actuales solo se eliminan cuando la matriz de consumidores y las pruebas demuestren que ya no son necesarios.
+
+### 16.4 Comprobaciones obligatorias al preparar la migración real
+
+No son decisiones conceptuales pendientes; son verificaciones de datos que deben realizarse sobre una exportación/snapshot autorizado y reciente antes de ejecutar el importador:
+
+- Reconciliar la diferencia documentada entre 0 URLs CPDL en el diagnóstico de 2026-09-19 y 217.343 URLs externas en el informe del 2026-09-20. Distinguir URL de página CPDL, URL de descarga y URL derivada; comprobar cobertura y respuesta sin descargar materiales protegidos indiscriminadamente.
+- Verificar el estado actual de las tablas cpdl_editions*: si ya no existen, tratarlas como legado documental; si existen con datos exclusivos, migrarlos o justificar su archivo.
+- Comprobar cuántas filas de works_music_digest tienen un digest válido y qué proceso/revisión lo consume hoy; no reemplazarlo con SHA-256.
+- Contabilizar los valores actuales de tonalidad, duración, compases, páginas, partes, licencia y dominio público en Work y Resource. Los recuentos históricos no bastan para decidir pérdida/cobertura.
+- Enumerar cada ruta HTTP pública y privada de detalle/descarga y su uso externo; definir mapeo de IDs y redirects.
+- Validar la política efectiva de almacenamiento privado. Los ejemplos de configuración y los documentos de diseño no demuestran por sí solos la configuración desplegada.
+- Comprobar que las aportaciones actuales no se materializan aún o identificar la versión exacta del flujo activo; diseñar el reemplazo sin asumir que comentarios antiguos reflejan código posterior.
+- Obtener snapshot y backup verificado; estas tareas pertenecen a la preparación de migración, no a la fase documental actual.
+
+### 16.5 Criterio final de preparación
+
+La arquitectura V6 ya tiene un modelo objetivo único y una dirección de migración coherente. Se podrá declarar **lista para implementación** cuando el documento de inventario tenga una fila por cada columna/tabla/contrato que se retirará, con productor, lectores, mapeo de destino y prueba; y cuando se hayan cerrado los contratos de API y el DDL reproducible desde una base vacía.
+
+Las verificaciones de datos del §16.4 no bloquean la definición del modelo conceptual, pero sí bloquean la ejecución segura de una migración real. No se consultará ni escribirá producción desde este trabajo documental.
