@@ -14,7 +14,7 @@
 4. Cada consumidor heredado debe tener un reemplazo definido y probado antes de retirar su estructura.
 5. Separar los metadatos intelectuales de la obra, los de una realización/edición concreta y los del objeto digital.
 6. No confundir el estado editorial/publicación de una realización con la existencia o disponibilidad de sus bytes.
-7. Permitir fuentes externas, recursos sin fichero descargado y ficheros compartidos por deduplicación.
+7. Permitir fuentes externas y Resources sin File descargado; separar el File lógico del Blob físico para conservar deduplicación SHA-256 sin compartir Files entre Resources.
 8. Diseñar desde el principio las aportaciones de usuarios y el espacio privado de **Mi Actividad**.
 9. Evitar que el índice de búsqueda, la API y Storage mantengan copias autoritativas del mismo catálogo.
 10. No ejecutar migraciones ni escrituras de producción durante la fase de análisis.
@@ -26,9 +26,9 @@ La hipótesis preferida para investigar es **dos niveles musicales —Work y Res
 ```text
 Work (obra musical)
   └── Resource (realización, edición, arreglo, transcripción o fuente)
-        └── ResourceFile (relación)
-              └── File (objeto digital, deduplicable)
-                    └── StorageLocation (ubicación/copia física)
+        └── File (artefacto digital lógico, pertenece a un Resource)
+              └── Blob (bytes deduplicados por SHA-256)
+                    └── StorageLocation (ubicación/copia física del Blob)
 ```
 
 ### 2.1 Work — obra musical
@@ -43,7 +43,7 @@ No se trasladará automáticamente todo lo que hoy está en `works`: cada campo 
 
 Es la entidad que reúne lo que el modelo anterior repartía entre `representations` y `works_resources`. Puede describir una edición, arreglo, transcripción, partitura, versión o fuente musical, incluso cuando todavía no hay fichero disponible.
 
-Puede tener cero, uno o varios ficheros. Un Work puede tener muchos Resources. Cada Resource pertenece a un Work canónico.
+Un Resource puede no tener ficheros o tener varios artefactos digitales de la misma realización (formatos alternativos, partes o derivados). Cada File pertenece a un único Resource. Un Work puede tener muchos Resources y cada Resource pertenece a una Work canónica.
 
 Candidatos: tipo de realización, proveedor y su identificador externo, licencia, situación de dominio público del contenido publicado, editor, fuente/nombre original, instrumentación/ensemble/voces/idioma propios de esa realización, tonalidad, duración, compases, páginas, partes, estado de publicación/disponibilidad y calidad/procedencia.
 
@@ -54,12 +54,13 @@ Estos campos son una propuesta; su semántica, cardinalidad y vocabulario deben 
 Identifica bytes concretos y sus propiedades técnicas: checksum, MIME, tamaño, nombre técnico/original si corresponde, estado de integridad y relaciones con ubicaciones de almacenamiento.
 
 - File no es una edición ni una obra.
-- El mismo File puede asociarse a más de un Resource cuando el contenido es idéntico y se deduplica.
-- Un Resource puede disponer de varios Files (por ejemplo, MusicXML, PDF y MIDI).
-- Las ubicaciones físicas pertenecen a File, no a Work ni a Resource.
+- Un File lógico pertenece a un único Resource; no se comparte entre Resources.
+- Un Resource puede tener varios Files cuando representan artefactos de esa misma realización.
+- Los bytes idénticos se deduplican en Blob, no compartiendo el File lógico.
+- Las ubicaciones físicas pertenecen a Blob, no a Work, Resource ni File.
 - Una URL a la página de una edición no es lo mismo que una URL directa a un fichero. El modelo debe distinguir ambas.
 
-Se estudiará una relación explícita `resource_files` en lugar de asumir que un único `file_id` dentro de Resource cubre todos los casos.
+No se propone una tabla de unión Resource–File. La pertenencia se expresa mediante `files.resource_id`; la deduplicación física mediante `files.blob_id` hacia Blob.
 
 ## 3. Criterios iniciales para los campos comentados
 
@@ -296,8 +297,8 @@ No se han creado ramas ni tags en esta fase de planificación.
 V6 no se considerará lista solo porque arranque la aplicación. Como mínimo:
 
 - Existe una identidad canónica de Work y ninguna fuente externa o índice la sustituye.
-- Un Work puede tener múltiples Resources; un Resource puede existir sin File y asociarse a varios Files.
-- Los ficheros pueden deduplicarse sin perder sus relaciones de procedencia, propiedad y acceso.
+- Un Work puede tener múltiples Resources; un Resource puede existir sin Files o asociarse a varios Files propios. Cada File pertenece a un único Resource y referencia un Blob deduplicable.
+- Los bytes pueden deduplicarse en Blob sin compartir la identidad, procedencia, propiedad ni autorización de los Files lógicos.
 - Metadatos de licencia, edición, instrumentación, tonalidad, duración y compases no se mezclan entre Work y Resource de forma ambigua.
 - Todos los datos válidos de las tablas antiguas tienen destino documentado y reconciliado.
 - Los importadores pueden ejecutarse repetidamente sin duplicar obras, recursos o correspondencias.
@@ -511,7 +512,7 @@ Work
 Reglas:
 - `Work` identifica la obra intelectual; no es un fichero, una edición ni un formato.
 - `Resource` es una realización/fuente musical concreta: edición, partitura, arreglo, transcripción, versión, interpretación publicada o fuente catalográfica. Puede existir sin ficheros, por ejemplo una edición CPDL catalogada pero no materializada.
-- `ResourceFile` relaciona una realización con los ficheros que la representan. Un Resource puede tener PDF, MusicXML y MIDI; un mismo File puede compartirse si el contenido binario es idéntico.
+- `File` representa un artefacto de un Resource. Un Resource puede tener PDF, MusicXML y MIDI si pertenecen a la misma realización; cada File tiene su propio rol/formato y puede apuntar al mismo Blob que otro File sin compartir identidad lógica.
 - `File` identifica bytes por SHA-256; `StorageLocation` representa cada copia física. No guarda licencia editorial, autoría musical, publicación ni visibilidad.
 - Una URL de página fuente y una URL de descarga directa son conceptos diferentes. Deben tiparse y no confundirse con un fichero almacenado.
 - No introducir una entidad `Representation` adicional solo para conservar la jerarquía CPDL. Su semántica editorial se absorbe en Resource; las filas hijas actuales de `works_resources` se reinterpretan como relaciones de fichero/referencia tras auditar sus campos.
@@ -521,13 +522,13 @@ Reglas:
 
 | Patrón actual | Conversión propuesta |
 |---|---|
-| PDMX: Work → Resource directo, habitualmente un fichero MXL | Crear Resource para la realización PDMX y asociar el File mediante ResourceFile. No exigir un nivel Representation. |
-| CPDL: Work → Representation (edición) → varios works_resources | Crear un Resource por edición CPDL, trasladando origen, ID de página/CPDLno, licencia, nombre fuente y roles de editor. Convertir los hijos works_resources en ResourceFile/referencias de formato, no en nuevos Resources si solo representan ficheros de esa misma edición. |
-| CPDL Representation sin hijos (11.242 según diagnóstico histórico) | Crear Resource de edición sin ResourceFile. No descartarlo por no tener bytes. |
+| PDMX: Work → Resource directo, habitualmente un fichero MXL | Crear Resource para la realización PDMX y asociar el artefacto mediante `files.resource_id`. No exigir un nivel Representation. |
+| CPDL: Work → Representation (edición) → varios works_resources | No convertir automáticamente una Representation ni cada hijo en un único Resource. Perfilar cada fichero y buscar una clave de realización; cada arreglo identificado será un Resource y sus formatos/partes File hijos. Los ambiguos quedan para revisión. |
+| CPDL Representation sin hijos (11.242 según diagnóstico histórico) | Crear Resource sin Files solo si la edición tiene identidad musical/procedencia suficiente; validar el conteo con snapshot actual. No descartarlo solo por no tener bytes. |
 | Recurso externo que no se ha descargado | Mantener Resource y su referencia externa tipada; no crear un File ficticio. Si el registro solo expresa un formato esperado pero no una referencia real, conservarlo temporalmente como placeholder identificable y resolverlo en auditoría antes de migrar. |
-| Aportación de usuario | Crear Resource ligado a Work; relacionar File(s) privados a través de ResourceFile; guardar propietario, visibilidad y estado editorial separados. |
+| Aportación de usuario | Crear Resource ligado a Work; cada File privado apunta a ese Resource y a su Blob; guardar propietario, visibilidad y estado editorial separados. |
 
-La cardinalidad del modelo nuevo es intencionalmente más expresiva que la cardinalidad actual: Work 1:N Resource, Resource 0:N ResourceFile, File 0:N ResourceFile y File 0:N StorageLocation. No se codifica como regla universal que PDMX sea 1:1 ni que una edición tenga siempre un número concreto de ficheros.
+La cardinalidad propuesta es: Work 1:N Resource; Resource 0:N File; cada File pertenece a un único Resource y referencia un Blob; Blob 1:N File lógico y Blob 0:N StorageLocation. No se asume que una ficha CPDL equivalga a un único Resource.
 
 ### 10.3 Destino propuesto de los campos discutidos
 
@@ -668,7 +669,7 @@ La migración se diseña para un esquema nuevo completo y una sustitución contr
 | Decisión | Propuesta por defecto | Motivo | Cuándo se considerará cerrada |
 |---|---|---|---|
 | Representation como entidad | Eliminar como tabla/contrato independiente y absorber en Resource | Unifica PDMX y CPDL sin perder edición como concepto | Tras probar la conversión CPDL, incluyendo recursos sin fichero y roles de editor |
-| Resource vs fichero | Separar Resource y ResourceFile; File separado | La edición puede tener varios formatos y un File puede compartirse | Tras validar cardinalidades y casos de uso de importación/descarga |
+| Resource vs fichero | Resource 1:N File mediante `files.resource_id`; File N:1 Blob si se mantiene deduplicación | Una realización puede tener varios artefactos; los bytes compartidos no comparten identidad/ACL lógica | Tras perfilar CPDL, formatos secundarios y referencias a hash |
 | `works_key` | No llevar como identidad canónica; conservar en staging/mapping y derivar identificadores externos cuando proceda | Actualmente mezcla agrupación e identificación de origen | Tras rastrear todos sus consumidores y probar reconciliación |
 | `works_music_digest` | Huella derivada opcional, no sustituto de SHA-256 | Huella musical y hash binario miden cosas distintas | Tras demostrar consumidor de agrupación musical en V6 |
 | Licencia/dominio público | Afirmaciones tipadas por sujeto y procedencia; no booleano ambiguo global | Obra, edición y fichero tienen derechos distintos | Tras inventariar semántica y valores actuales |
@@ -1048,32 +1049,101 @@ No uses conteos históricos como cifras actuales. No inventes resultados de prod
 ---
 
 
-## 19. Decisión de cardinalidad Resource–File tras aclaración de CPDL (2026-10-29)
+## 19. Modelo Resource–File–Blob y decisión de cardinalidad (2026-10-29)
 
-### Decisión de diseño propuesta como base de V6
+Esta sección prevalece sobre cualquier formulación anterior incompatible sobre `ResourceFile`, la cardinalidad Resource–File o la deduplicación. La auditoría de código aportada el 29-10-2026 concluye que el modelo actual no permite inferir una agrupación musical fiable a partir de `works_resources` o `representations` sin perfilar los datos.
 
-El usuario aclara que la presencia de varios ficheros en una página o ficha CPDL no implica que formen un mismo Resource: pueden corresponder a arreglos, transcripciones o realizaciones musicales diferentes. Por tanto, no se debe inferir una relación uno-a-varios entre Resource y File a partir del número de descargas que ofrece CPDL.
+### 19.1 Decisión de diseño propuesta para V6
 
-La regla de dominio preferida para V6 pasa a ser:
+```text
+Work 1 ─── N Resource
+Resource 1 ─── 0..N File
+File N ─── 1 Blob
+Blob 1 ─── 0..N StorageLocation
+```
 
-- Una Work puede tener cero o muchos Resources.
-- Cada Resource representa una realización musical diferenciada (edición, arreglo, transcripción u otra versión identificable) y tiene un único File principal.
-- Cada File principal pertenece a un único Resource.
-- Por tanto, la asociación principal es uno a uno entre Resource y File, con la posibilidad de que Resource aún no tenga File durante creación, revisión o importación. En términos de cardinalidad de datos: Resource 0..1 File; File 1 Resource cuando está publicado y asociado.
-- Si una ficha CPDL ofrece tres arreglos distintos, se modelan como tres Resources y tres Files, aunque compartan Work y página de procedencia. El identificador CPDL de página/ficha se conserva como procedencia común; el identificador de cada arreglo/artefacto se registra por separado si existe.
-- No se crea una entidad de dominio `ResourceFile` ni una tabla de unión solo para resolver este caso.
+- **Work** identifica la obra musical intelectual.
+- **Resource** identifica una realización musical diferenciada: arreglo, transcripción, edición o versión distinguible por evidencia.
+- **File** identifica un artefacto digital lógico asociado a exactamente un Resource. Puede ser principal, formato alternativo, parte, miniatura o derivado. Un Resource puede existir sin Files y puede tener varios Files si pertenecen a la misma realización.
+- **Blob** identifica los bytes físicos por SHA-256 y tamaño verificados. Varios Files lógicos pueden apuntar al mismo Blob sin compartir identidad, procedencia, nombre, propiedad ni autorización.
+- **StorageLocation** identifica cada ubicación/copia física de un Blob.
 
-### Condiciones y excepciones que deben evaluarse, no asumirse
+No se propone una entidad de dominio ni tabla de unión `ResourceFile`. La pertenencia se expresa mediante `files.resource_id`; la deduplicación física mediante `files.blob_id` hacia Blob. Esto evita una relación Resource–File M:N y conserva la deduplicación por SHA-256.
 
-1. Un Resource puede existir sin fichero, por ejemplo, una edición catalogada todavía no digitalizada. Esto no contradice la cardinalidad: la relación Resource→File puede estar vacía.
-2. Si un mismo arreglo tiene versiones digitales en varios formatos (PDF y MusicXML, por ejemplo), hay que decidir si son formatos equivalentes de una misma realización o si el MusicXML incorpora información/estructura editorial distinta. Por defecto, si son representaciones digitales equivalentes del mismo contenido musical, el modelo estricto de un File principal requerirá elegir uno como principal y tratar los demás como derivados/versiones técnicas o como artefactos secundarios explícitamente modelados; no se deben fabricar Resources musicales distintos solo para acomodar formatos.
-3. Si se demuestra que el mismo File binario debe asociarse legítimamente a dos Resources diferentes, el requisito entra en conflicto con la regla uno-a-uno y habrá que resolverlo antes del DDL: duplicar el objeto lógico File conservando deduplicación física por hash, o revisar la cardinalidad con evidencia de dominio. No imponer silenciosamente una relación muchos-a-muchos.
-4. El almacenamiento puede seguir deduplicando físicamente bytes idénticos por SHA-256 mediante una capa de blob/objeto físico compartido. Eso no obliga a compartir el registro de dominio File: File (artefacto lógico) y Blob/StorageObject (bytes físicos) pueden ser niveles diferentes si la deduplicación real lo requiere. Solo introducir esa capa si el inventario y los casos reales justifican su coste.
+### 19.2 Qué demuestra el modelo actual
 
-### Efecto en la matriz y en la auditoría de desarrollo
+La auditoría del código y del DDL versionado informa de que:
 
-- La sección 17.4 debe interpretarse con esta decisión: las filas actuales de `works_resources` que sean ficheros de arreglos diferentes generan Resources diferentes; no se agrupan por compartir Work, página CPDL o `representation_id`.
-- La sección 17.5 debe distinguir el File lógico del almacenamiento físico. No se debe presuponer que la tabla actual `files` puede eliminar duplicados lógicos solo por compartir hash sin revisar las FKs y la semántica de sus consumidores.
-- La sección 18.F debe recomendar `Resource.file_id` como opción preferente si el rastreo de código confirma que no existe un requisito de varios ficheros principales por Resource ni de compartir el mismo File lógico entre Resources. Debe valorar separadamente formatos secundarios, derivados, archivos fuente y deduplicación física.
-- La cardinalidad uno-a-uno se considera decisión de dominio preferida para el diseño V6, pero el DDL no se declara cerrado hasta que la auditoría identifique todos los casos actuales y su mapeo sin pérdida.
+- Cada fila de `works_resources` representa hoy una fila de fichero/referencia con campos como tipo, nombre, estado, `file_id`, URL y archivo de origen.
+- El importador CPDL histórico agrupa ficheros bajo una representación/edición, pero eso no demuestra que pertenezcan a una única realización musical.
+- `representation_metadata` almacena metadatos por representación; si una representación reúne arreglos distintos, no puede describirlos individualmente.
+- El diagnóstico histórico cuenta ficheros por edición, pero no distingue formatos equivalentes de arreglos diferentes.
+- `files.sha256` es UNIQUE en el baseline auditado. Si File fuese a la vez la identidad lógica del artefacto y el registro único de bytes, no sería posible asignar los mismos bytes a dos Resources sin compartir File o romper la unicidad. Blob separa ambos conceptos.
 
+Estos puntos proceden del código y DDL versionados citados por el informe; no certifican por sí solos el esquema de producción ni la distribución actual de datos.
+
+### 19.3 Clasificación de ficheros CPDL
+
+No crear Resources ni fusionarlos exclusivamente por `cpdlno`, nombre, extensión o `works_resources_type`. Perfilar y clasificar los casos antes de materializar el modelo nuevo.
+
+Señales candidatas —no prueba automática de identidad musical—:
+
+- título, instrumentación/ensemble, voces, número de partes, tonalidades y creadores;
+- `representations_ensemble_code` y `representations_voice_signature`;
+- nombre de fichero normalizado, eliminando extensión y tokens de formato;
+- nombre/tipo del recurso y procedencia CPDL;
+- comparación de contenidos musicales cuando exista MusicXML utilizable.
+
+Reglas:
+
+1. **Mismo arreglo, formatos equivalentes:** un Resource con varios Files (por ejemplo PDF y MXL) si la evidencia confirma que describen la misma realización.
+2. **Partitura completa y partes:** un Resource con Files diferenciados por rol si pertenecen a la misma realización.
+3. **Arreglos diferentes:** Resources distintos aunque compartan Work, página CPDL o `cpdlno`; por ejemplo SATB frente a TTBB o realizaciones con instrumentación, tonalidad o contenido editorial sustancialmente diferentes.
+4. **Ambigüedad:** no fusionar silenciosamente. Mantener candidatos separables, marcarlos para revisión y producir un informe de excepciones.
+5. **Sin File:** crear un Resource sin artefactos solo si existe evidencia suficiente de una realización catalogable; no inventar Resources a partir de una fila técnica vacía.
+
+Una firma es ayuda para revisión, no autoridad de dominio. No se acepta una fusión automática basada solo en similitud de nombre o metadatos incompletos.
+
+### 19.4 Identificadores externos y procedencia
+
+Una página CPDL puede ser procedencia común de varios Resources. No imponer unicidad global a `(provider, external_id)` si ese ID identifica una página con varias realizaciones.
+
+V6 debe distinguir identidad externa de página/ficha, de edición cuando exista, de Resource/realización dentro de la página y de cada File/fichero fuente. La tabla/contrato de correspondencias debe permitir un discriminante estable cuando el proveedor no ofrezca ID único de realización, por ejemplo `provider`, `entity_type`, `external_id` y `variant_key`, con reglas explícitas para nulos y unicidad. No se fija todavía un DDL concreto. El nombre del fichero por sí solo no es una clave fiable.
+
+### 19.5 File principal, formatos alternativos y partes
+
+Un Resource puede declarar un File principal opcional. Antes del DDL, elegir una sola fuente de verdad:
+
+- marca de principal en File con unicidad por Resource y validación de pertenencia; o
+- referencia desde Resource al File principal, con restricción que garantice que ese File pertenece al mismo Resource.
+
+No implementar ambas formas sin necesidad demostrada. Roles candidatos: `primary`, `alternate_format`, `full_score`, `part`, `thumbnail` y `derived`; validar el vocabulario con casos reales. Para partes, conservar orden y etiqueta de voz/instrumento cuando existan. PDF y MXL no se convierten automáticamente en Resources distintos por ser formatos diferentes.
+
+### 19.6 Consecuencias de arquitectura
+
+- **API pública:** el contrato V6 expone `Work.resources[]`; cada Resource incluye sus Files y referencia principal opcional. No depender de `representations[].resources[]`.
+- **Descarga:** la autorización se resuelve sobre Resource/File y su propietario/visibilidad; Blob resuelve bytes y ubicaciones. La ruta antigua `/api/download/{id}` debe conservarse como alias/redirección durante la transición si hay enlaces que preservar. La ruta nueva identifica explícitamente Resource y File.
+- **Administración:** sustituir CRUD de Representation/`works_resources` por Work, Resource, File y procedencia.
+- **Aportaciones:** las operaciones se dirigen a Work/Resource; adjuntar un File no lo hace público automáticamente. Preservar la materialización idempotente antes de marcar la aportación como aceptada.
+- **Consumidores:** revisar RepresentationPage, WorkPage, índices, `osap-videos`, importadores y consumidores de IDs de representación. Un ID de proyección/índice no es identidad canónica de Resource.
+- **Almacenamiento y privacidad:** StorageLocation cuelga de Blob; ACL y propiedad se mantienen en el nivel lógico autorizado, nunca se deducen de compartir bytes.
+- **Cuota:** documentar si se mide por bytes físicos únicos o por cuota lógica del usuario.
+
+### 19.7 Pruebas de aceptación mínimas
+
+1. Una realización con PDF y MXL equivalentes produce un Resource y dos Files, con un principal opcional claramente definido.
+2. Dos arreglos distintos de una misma página/edición CPDL producen dos Resources.
+3. Un Resource sin File es válido.
+4. Dos Files lógicos de Resources distintos con bytes idénticos apuntan a un Blob si se mantiene deduplicación.
+5. Un File no puede pertenecer a dos Resources.
+6. Un Resource no puede tener más de un principal; si existe, pertenece a ese Resource.
+7. Cada fila heredada de `works_resources` conserva fichero/URL, procedencia y estado mediante mapping auditable, aunque el destino sea Resource, File, Blob, referencia externa o excepción.
+8. La descarga antigua sigue funcionando o redirige cuando haya enlaces que preservar.
+9. La importación repetida no duplica Work, Resource, File lógico, Blob ni referencias externas.
+10. La clasificación produce un informe de casos ambiguos y no fusiona silenciosamente candidatos.
+
+### 19.8 Estado de la decisión
+
+La arquitectura propuesta queda como base documental: **Work 1:N Resource; Resource 0:N File; cada File pertenece a un Resource; File N:1 Blob; Blob 0:N StorageLocation**. No se recomienda la tabla ResourceFile M:N.
+
+No se cierra el DDL ni la migración CPDL hasta perfilar los datos reales, confirmar formatos secundarios, revisar todos los consumidores de `files.sha256` y `storage_locations.file_id`, y definir las claves externas discriminantes. Los conteos de septiembre de 2026 son históricos y no deben usarse como cifras actuales.
