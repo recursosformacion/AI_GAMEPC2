@@ -524,7 +524,7 @@ Reglas:
 | Recurso externo que no se ha descargado | Mantener Resource y su referencia externa tipada; no crear un File ficticio. Si el registro solo expresa un formato esperado pero no una referencia real, conservarlo temporalmente como placeholder identificable y resolverlo en auditoría antes de migrar. |
 | Aportación de usuario | Crear Resource ligado a Work; cada File privado pertenece a ese Resource y tiene almacenamiento propio; guardar propietario, visibilidad y estado editorial separados. |
 
-La cardinalidad propuesta es: Work 1:N Resource; Resource 0:N File; cada File pertenece a un único Resource y representa un único artefacto almacenado. No se asume que una ficha CPDL equivalga a un único Resource.
+La cardinalidad propuesta es: Work 1:N Resource; Resource puede existir sin File y normalmente tiene un único File. Varios Files por Resource son una excepción justificada. Cada File pertenece a un único Resource y apunta directamente a la ubicación de un único objeto almacenado. No se asume que una ficha CPDL equivalga a un único Resource.
 
 ### 10.3 Destino propuesto de los campos discutidos
 
@@ -1045,20 +1045,18 @@ Esta sección fija el criterio de V6: **no se introduce una entidad Blob ni se c
 ```text
 Work (obra)
   └── Resource (realización musical)
-        ├── File (PDF)
-        ├── File (MusicXML)
-        └── File (MIDI)
+        └── File (apunta a la ubicación del objeto físico)
 ```
 
 - **Resource** describe una realización musical; no es un formato de fichero. Puede existir sin ficheros y puede reunir varios artefactos de esa misma realización.
 - **File** es la identidad del artefacto concreto, con nombre, formato, estado, tamaño, hash de integridad si se necesita y referencia al objeto físico almacenado.
 - **Un objeto físico solo puede estar asociado a un File.** No hay una tabla de unión `ResourceFile` ni una relación M:N.
-- Si el mismo PDF parece corresponder a dos Resources, no se comparte el objeto mediante dos Files. Se revisa si se han creado dos Resources para una misma realización; si son realizaciones distintas, cada una tendrá su propio File y objeto físico, aunque los bytes coincidan.
+- Si el mismo PDF parece corresponder a dos Resources, la primera hipótesis debe ser que se ha duplicado el Resource: revisar la identidad musical y consolidar la realización si corresponde. No se duplican Resources ni Files solo para representar distintos créditos de personas; esos créditos se registran mediante sus relaciones de personas y roles. Si hay evidencia de que son realizaciones diferentes, debe documentarse qué las distingue antes de decidir cómo catalogarlas.
 - Los arreglistas, editores y demás personas se registran mediante las relaciones de personas y roles correspondientes al objeto musical correcto. La presencia de varias personas no justifica duplicar Resources ni compartir un File entre ellos.
 - SHA-256, si se conserva, se utiliza para verificar integridad y detectar alteraciones; no define la identidad de File ni fuerza una deduplicación. La restricción `UNIQUE` existente en `files.sha256` debe revisarse en el diseño V6.
 - Las ubicaciones, réplicas y copias de seguridad físicas son responsabilidad del servicio de almacenamiento. No justifican por sí mismas una entidad de catálogo Blob.
 
-La decisión evita complejidad de deduplicación, permisos y cuotas. Antes del DDL se comprobarán los consumidores actuales de `files.sha256` y `storage_locations` para decidir qué campos y servicios de almacenamiento se mantienen. No se cambiará el modelo por una supuesta optimización de bytes sin evidencia y necesidad operativa.
+La decisión evita complejidad de deduplicación, permisos y cuotas. Antes del DDL se comprobarán los consumidores actuales de `files.sha256` y `storage_locations`. La hipótesis V6 es que File apunte directamente a la ubicación del objeto; `storage_locations` solo se mantendrá si la auditoría demuestra una necesidad real de modelar varias ubicaciones por File. No se añadirá esa capa por inercia.
 
 ## 20. Modelo canónico independiente de proveedores (criterio rector V6, 2026-10-29)
 
@@ -1121,7 +1119,7 @@ La cardinalidad y el DDL exactos de estas tablas quedan abiertos a la auditoría
 
 CPDL se importará mediante un adaptador que traduzca la información necesaria a las tablas canónicas. Se conservarán únicamente identificadores externos y URLs útiles para volver a consultar la fuente, más los datos normalizados que OSAP necesite para funcionar. No se copiarán páginas completas, créditos en bruto, licencias en texto duplicadas ni payloads de origen; cuando un dato deba actualizarse, el adaptador volverá a solicitarlo al proveedor. Los conceptos particulares —incluidos números de página o edición— solo se guardarán si son necesarios para identificar o volver a localizar el registro, sin convertirse automáticamente en entidades de dominio.
 
-Se aplicará el mismo criterio a PDMX, IMSLP y futuras fuentes. Si una fuente agrupa varios arreglos en una ficha, OSAP creará los Resources que justifique la evidencia musical, no un Resource por ficha por defecto. Si una fuente publica varios formatos del mismo arreglo, OSAP podrá vincularlos como Files de un Resource. Si no se puede determinar si son formatos equivalentes o realizaciones distintas, se conservarán como candidatos separados y se marcará la revisión pendiente.
+Se aplicará el mismo criterio a PDMX, IMSLP y futuras fuentes. Si una fuente agrupa varios arreglos en una ficha, OSAP creará los Resources que justifique la evidencia musical, no un Resource por ficha por defecto. Si una fuente publica varios formatos del mismo arreglo, no se crearán automáticamente varios Files: se elegirá el artefacto principal y solo se conservarán conversiones u otros artefactos adicionales cuando exista una razón funcional para mantenerlos. Si no se puede determinar si dos elementos pertenecen a la misma realización, se marcará la revisión pendiente; no se crearán Resources duplicados por defecto.
 
 ### 20.5 Criterio de aceptación del diseño de datos
 
