@@ -917,3 +917,133 @@ El nombre actual es ambiguo: muchas filas representan fichero o referencia de fo
 7. **API/frontend/importadores:** no hay contrato activo que exija columnas/IDs legacy; enlaces externos tienen mapping/redirect.
 8. **Aportaciones/privacidad:** aceptación, propiedad, visibilidad, cuota, descarga privada y archivo probados en Storage V6.
 
+
+## 18. Prompt para auditoría de desarrollo antes de declarar V6 lista para implementar
+
+La matriz §17 es el inventario documental inicial. El programador debe ejecutar esta auditoría **en modo lectura**, desde las copias locales actuales de los repositorios, para descubrir consumidores omitidos y discrepancias entre documentos y código. No se solicita implementar V6 ni corregir el código actual.
+
+Copiar y entregar al programador el prompt siguiente:
+
+---
+
+### PROMPT DE AUDITORÍA OSAP V6 — SOLO INVESTIGACIÓN, CERO CAMBIOS
+
+Actúa como auditor técnico de los repositorios actuales de OSAP y prepara evidencia para cerrar la planificación de V6.
+
+**Restricción absoluta:** no modifiques ningún archivo, código, configuración, migración, base de datos, rama, tag ni commit. No hagas escrituras en producción ni ejecutes importadores, migradores, jobs, scripts de reparación o pruebas que puedan modificar datos. No instales dependencias. No hagas commit. Puedes ejecutar búsquedas estáticas y pruebas existentes únicamente si demuestras que son locales, aisladas y no destructivas. Si no puedes garantizarlo, no ejecutes la prueba y anota la limitación. No muestres secretos, tokens, contraseñas ni valores de configuración sensibles.
+
+#### Repositorios que debes revisar
+
+- AI_GAMEPC2 (osap-api).
+- AI_osap-storage.
+- AI_osap-auth.
+- ai-importacion.
+- ai_recogeYouTube y otros repositorios consumidores que estén presentes localmente o estén declarados como dependencias.
+
+No des por hecho que las copias locales están sincronizadas con GitHub. Registra para cada repo la ruta, branch, commit HEAD, estado de git (limpio/sucio) y si hay cambios locales preexistentes. No cambies de branch ni hagas fetch/pull que altere el workspace. Si un repo no está disponible, decláralo.
+
+#### A. Inventario de esquema SQL real versionado
+
+1. Localiza todas las definiciones SQL y ORM de las tablas actuales relevantes: works, representations, works_resources, files, storage_locations, archives, archive_entries, tablas de relaciones de personas/roles, géneros, instrumentos, ensembles/voces, idiomas, tags, identificadores, estadísticas y aportaciones.
+2. Para cada tabla, recoge todas las columnas, tipo, nullabilidad, default, PK/FK, unique keys e índices de los artefactos versionados. Distingue el esquema activo del esquema legacy, staging y snapshots/dumps.
+3. Compara el DDL con entidades de dominio, repositorios, schemas/DTOs y consultas SQL. Señala columnas leídas/escritas por código pero ausentes del baseline versionado, y columnas del baseline sin consumidor localizado.
+4. No conectes a ninguna base de datos, ni siquiera una llamada que pueda cambiar estado. Si existe un dump local ya disponible, solo úsalo si su origen está documentado y el acceso es de solo lectura; no lo presentes como producción sin evidencia.
+
+#### B. Matriz exhaustiva de columnas
+
+Para cada columna de works, representations, works_resources, files, storage_locations, archives y archive_entries, produce una fila con:
+
+- repositorio/ruta y tabla.columna;
+- definición SQL encontrada y versión/esquema al que pertenece;
+- productores (INSERT, UPDATE, importer, endpoint, admin, job);
+- lectores (SELECT, join, serializador, frontend, descarga, indexador, consumidor externo);
+- evidencia precisa (archivo y línea, o símbolo y consulta);
+- semántica demostrada y nivel de certeza;
+- propuesta de destino V6: Work, Resource, relación Resource–File, File, StorageLocation, identificador externo, catálogo/relación normalizada, staging/auditoría, proyección reconstruible o retirar;
+- transformación de migración, tratamiento de nulos/valores inválidos/duplicados;
+- prueba de aceptación;
+- consumidores que deben cambiar antes de retirar;
+- criterio verificable de retirada.
+
+No concluyas que un campo está muerto por no encontrarlo en una búsqueda simple. Busca también SQL dinámico, strings construidos, schemas, frontend, scripts, jobs y tests.
+
+#### C. Grafo de consumidores y contratos
+
+Rastrea referencias directas e indirectas a:
+- works_key, works_origin, works_origin_id, works_source_url, works_relative_path, works_type_file, works_music_digest, works_musical_key, works_duration, works_measures, works_pages, works_parts, works_complexity, works_license, works_public_domain, works_voicing e instrumentation;
+- representations_id y todos los campos representations_*;
+- works_resources_* (en especial work_id, representation_id, type, name, relative_path, status, file_id, url y archive_id);
+- files.sha256, mime_type, size_bytes, status y storage_locations;
+- archive_entries, archive_id, logical_id, relative_path, offset_bytes y cualquier fallback de descarga;
+- representation_id en contratos HTTP, API, frontend, importadores y aportaciones.
+
+Para cada endpoint y contrato, identifica productor, consumidor, esquema de request/response, auth/scope, URL pública y compatibilidad requerida. Distingue las APIs públicas de las rutas admin/internas. Localiza URLs de descarga que se construyan a partir de rutas físicas.
+
+#### D. Casos de dominio que deben quedar demostrados
+
+Evalúa, con ejemplos de datos de fixtures/tests o trazado de código (no producción), cómo se representa cada caso:
+1. Una Work sin Resource.
+2. Un Resource de edición sin fichero.
+3. Un Resource con PDF, MusicXML y MIDI.
+4. Un File idéntico compartido por dos Resources.
+5. PDMX actual: recursos directos a Work.
+6. CPDL: edición con varios ficheros, edición sin fichero y múltiples ediciones de una Work.
+7. IMSLP: página fuente sin descarga alojada.
+8. URL externa de página frente a URL directa de descarga y File almacenado.
+9. Un Resource que modifica la tonalidad/instrumentación respecto de Work.
+10. Editor/arreglista de Resource frente a compositor de Work.
+11. licencia de Work, licencia de edición y licencia de fichero; visibilidad privada frente a dominio público.
+12. Resource privado de usuario, cuota, autorización de descarga, archivado y File compartido.
+13. Aportación aceptada, error de Storage durante aceptación, reintento idempotente y fallo parcial.
+14. Identificadores externos duplicados o no únicos, especialmente CPDLno.
+15. Fusión de Works y redirección de IDs/URLs antiguos.
+
+Por caso, indica si está soportado actualmente, dónde, evidencia, riesgos y comportamiento V6 que necesita una prueba.
+
+#### E. Auditoría del flujo de aportaciones y almacenamiento
+
+Lee el código actual, no solo docstrings. Confirma el orden real entre materialización en Storage y transición a accepted, idempotencia, reintentos y operaciones soportadas. Localiza la migración de las tablas de aportaciones y determina únicamente desde los archivos disponibles si está preparada, aplicada en tests o no hay evidencia suficiente de aplicación en producción.
+
+Localiza todas las rutas de upload, download, streaming, autorización y almacenamiento físico. Distingue código, configuración de ejemplo y configuración efectiva. No leas ni expongas secretos. No afirmes que el almacenamiento privado está correctamente configurado solo porque exista un ejemplo.
+
+#### F. Evaluación de ResourceFile
+
+No des por obligatoria una entidad de dominio llamada ResourceFile. Compara y evalúa:
+- A) Resource.file_id (uno a uno/uno a muchos limitado);
+- B) tabla de unión Resource–File muchos a muchos con atributos propios;
+- C) tabla de unión mínima sin entidad de dominio independiente.
+
+Comprueba si el código y los casos de uso requieren que un Resource tenga múltiples ficheros, que un File se comparta, que un artefacto tenga formato/papel/orden/atribución propia o que exista una referencia externa sin bytes. Recomienda la alternativa mínima que cubra los casos reales y separa la decisión física de tabla SQL de la decisión de modelo de dominio.
+
+#### G. Discrepancias y errores actuales
+
+Señala por separado:
+- errores reales del código/esquema actual, con evidencia reproducible;
+- documentación obsoleta o contradictoria;
+- incertidumbres que no pueden resolverse sin datos actuales;
+- propuestas de rediseño V6 que no deben describirse como bugs actuales.
+
+No corrijas ninguno de esos problemas durante esta auditoría.
+
+#### H. Entregables
+
+Devuelve:
+1. Resumen ejecutivo y conclusión: ¿plan V6 listo para implementación? Sí/no, con razones.
+2. Tabla de estado de cada repositorio (HEAD, branch, dirty).
+3. Inventario DDL completo con separación actual/legacy/staging.
+4. Matriz de columnas completa en CSV o Markdown, sin omitir columnas porque parezcan obvias.
+5. Grafo/lista de productores y consumidores por tabla/campo y contratos API.
+6. Lista priorizada de discrepancias, errores y documentación obsoleta, con ruta y líneas.
+7. Evaluación de ResourceFile A/B/C y recomendación.
+8. Lista de decisiones de modelo aún abiertas; para cada una, recomendación por defecto.
+9. Pruebas existentes ejecutadas y resultado; cualquier prueba no ejecutada y por qué.
+10. Plan de migración por lotes, reconciliación de datos, mapping de IDs y criterios de rollback, sin ejecutar migración.
+11. Lista concreta de cambios documentales necesarios en docs/osap/v6-work-resource-model.md.
+12. Prompt/órdenes de seguimiento solo si falta evidencia imprescindible.
+
+No uses conteos históricos como cifras actuales. No inventes resultados de producción. No declares “sin consumidores” sin describir el método de búsqueda y sus límites. Cita rutas y líneas para que otra persona pueda reproducir cada conclusión.
+
+**Final obligatorio:** confirma explícitamente que no has modificado ningún archivo, base de datos, rama, tag ni commit.
+
+---
+
