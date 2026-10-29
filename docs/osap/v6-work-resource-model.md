@@ -51,7 +51,7 @@ Estos campos son una propuesta; su semántica, cardinalidad y vocabulario deben 
 
 ### 2.3 File — objeto digital
 
-Identifica un artefacto digital concreto y sus propiedades técnicas: checksum, MIME, tamaño, nombre de fichero y estado de integridad. Incluye la referencia directa a la ubicación física del objeto (ruta o clave gestionada por Storage); no necesita una entidad `StorageLocation` separada por defecto.
+Identifica un artefacto digital concreto y sus propiedades técnicas: checksum, MIME, tamaño, nombre de fichero y estado de integridad. Incluye una referencia directa a la ubicación de su objeto físico gestionada por Storage. `StorageLocation` no forma parte del modelo V6 y debe retirarse de la implementación objetivo.
 
 - File no es una edición ni una obra.
 - Un File lógico pertenece a un único Resource; no se comparte entre Resources.
@@ -108,7 +108,7 @@ El `work_id` interno será estable y no dependerá de los IDs del índice, CPDL,
 | Tipo/formato de fichero (PDF, MXL, MIDI…) | File | No dejar en Work una propiedad que cambia por fichero. |
 | Nombre, formato y estado del archivo | File | La ubicación física también se asocia directamente a File; no exponer al cliente la ruta o clave interna. Eliminar rutas heredadas duplicadas tras migrar sus consumidores. |
 | Tamaño, MIME, checksum | File | Un único valor técnico por objeto digital. |
-| Ruta o clave física del objeto | File | File apunta directamente a su objeto físico. No crear `storage_locations` por inercia; mantener una entidad separada solo si la auditoría demuestra un requisito operativo real que no pueda resolver el propio servicio de almacenamiento. |
+| Ruta o clave física del objeto | File | `File` apunta directamente a su objeto físico. `storage_locations` se retira del modelo V6; Storage gestiona internamente las copias y la recuperación sin exponerlas como entidades del catálogo. |
 | Estado de revisión/publicación | Resource o flujo editorial | No mezclarlo con File disponible/no disponible. |
 | Estadísticas | Agregados calculados o tablas de eventos apropiadas | No mantener múltiples contadores autoritativos sin una estrategia de actualización. |
 | Thumbnails/imagenes | Revisar si son File relacionado o dato derivado | No conservar JSON/campos duplicados si se reconstruyen desde los recursos. |
@@ -149,7 +149,7 @@ La API no debe convertirse en una segunda base autoritativa del catálogo.
 
 ### OSAP Storage — catálogo canónico y ficheros
 
-- Esquema Work/Resource/File y relaciones normalizadas. La propuesta V6 es que `File` contenga la referencia directa a la ubicación física; `StorageLocation` no forma parte del modelo objetivo por defecto y solo se reconsiderará si la auditoría demuestra una necesidad funcional concreta.
+- Esquema Work/Resource/File y relaciones normalizadas. En V6, `File` contiene la referencia directa a la ubicación física. `StorageLocation` y `storage_locations` se retiran del modelo y de la implementación objetivo; solo una nueva decisión arquitectónica explícita podría reabrir esta decisión.
 - Repositorios, casos de uso, importadores y consultas del catálogo.
 - Ingesta, verificación de integridad, almacenamiento, disponibilidad y publicación de ficheros.
 - Migración de los datos históricos y reconciliación de IDs.
@@ -645,8 +645,8 @@ La migración se diseña para un esquema nuevo completo y una sustitución contr
 
 1. Toda Resource pertenece a exactamente una Work.
 2. Una Resource puede no tener File; no se inventa un File para una URL o un placeholder.
-3. Un File almacenado tiene SHA-256 verificado, tamaño y MIME comprobados; la disponibilidad requiere al menos una StorageLocation válida.
-4. Una StorageLocation no determina por sí sola la visibilidad de Resource.
+3. Un File almacenado tiene integridad, tamaño y MIME comprobados; en V6, la disponibilidad se resuelve desde la referencia directa del File y el contrato de Storage, no mediante la existencia de una `StorageLocation`.
+4. La ubicación física y la disponibilidad técnica de un File no determinan por sí solas la visibilidad de Resource; en V6, la disponibilidad se resuelve mediante la referencia directa de File y el contrato de Storage, sin `StorageLocation`.
 5. La misma huella de fichero no implica que dos Resources sean la misma realización.
 6. El mismo identificador externo puede existir en distintos proveedores; unicidad se define por proveedor + tipo de entidad + ID externo, con excepciones documentadas para IDs no únicos como CPDLno.
 7. La identidad de Work no se determina exclusivamente por título, compositor, `works_key` ni digest musical.
@@ -664,7 +664,7 @@ La migración se diseña para un esquema nuevo completo y una sustitución contr
 | Decisión | Propuesta por defecto | Motivo | Cuándo se considerará cerrada |
 |---|---|---|---|
 | Representation como entidad | Eliminar como tabla/contrato independiente y absorber en Resource | Unifica PDMX y CPDL sin perder edición como concepto | Tras probar la conversión CPDL, incluyendo recursos sin fichero y roles de editor |
-| Resource vs fichero | Resource 1:N File mediante `files.resource_id`; cada File tiene almacenamiento propio, sin compartir objeto físico entre Files | Una realización puede tener varios artefactos; los bytes compartidos no comparten identidad/ACL lógica | Tras perfilar CPDL, formatos secundarios y referencias a hash |
+| Resource vs fichero | Resource 1:N File mediante `files.resource_id`; cada File tiene almacenamiento propio, sin compartir objeto físico entre Files | Una realización puede tener varios artefactos; los bytes compartidos no comparten identidad/ACL lógica | Tras perfilar CPDL, formatos secundarios y referencias a hash |\n| `storage_locations` | Retirar de V6. Cada File apunta a su objeto físico; las copias y la recuperación son responsabilidad interna de Storage. Si otro proveedor aporta un fichero cuya identidad binaria no se puede verificar de forma fiable, se crea otro Resource con su propio File. | No existe garantía de que dos proveedores hayan entregado el mismo fichero; la tabla añade una cardinalidad que no responde a una necesidad de dominio demostrada. | Decisión cerrada para el modelo V6; los consumidores actuales deben adaptarse antes de retirar la tabla de la implementación. |
 | `works_key` | No llevar como identidad canónica; conservar en staging/mapping y derivar identificadores externos cuando proceda | Actualmente mezcla agrupación e identificación de origen | Tras rastrear todos sus consumidores y probar reconciliación |
 | `works_music_digest` | Huella derivada opcional, no sustituto de SHA-256 | Huella musical y hash binario miden cosas distintas | Tras demostrar consumidor de agrupación musical en V6 |
 | Licencia/dominio público | Afirmaciones tipadas por sujeto y procedencia; no booleano ambiguo global | Obra, edición y fichero tienen derechos distintos | Tras inventariar semántica y valores actuales |
@@ -1063,7 +1063,7 @@ Seleccionar una Work existente
 
 La auditoría ya disponible confirma que `storage_locations` no es una tabla vacía ni meramente documental en el sistema actual: relaciona `file_id`, `provider_id` y `object_key`, impone unicidad por `(file_id, provider_id)` y registra el estado de cada copia (`stored`, `failed`, `removed`). El contrato actual considera disponible un File almacenado cuando existe al menos una `StorageLocation` válida. Por tanto, hoy sirve para representar ubicaciones/copies de un mismo File en distintos proveedores y el estado de cada una; retirarla sin cambiar esos consumidores rompería la resolución de disponibilidad y almacenamiento.
 
-Para V6, sin embargo, la decisión de dominio propuesta es que `File` apunte directamente a una ubicación física gestionada por Storage y que las réplicas/copias de seguridad sean un detalle interno del servicio, no entidades del catálogo. **Recomendación:** no trasladar `storage_locations` automáticamente al modelo canónico V6; retirar esa tabla del dominio solo si Storage asume internamente la gestión de proveedores, réplicas y fallos y expone a los consumidores una operación estable para localizar/servir el objeto. La migración debe reemplazar explícitamente el uso actual de `StorageLocation` en el cálculo de disponibilidad, las descargas y la administración. Si se decide que la selección y el estado de ubicaciones por proveedor deben seguir siendo capacidades explícitas del contrato de Storage, entonces la tabla sí tiene una función real y debe conservarse en la capa de infraestructura, aunque no necesariamente como entidad del catálogo musical.
+La auditoría disponible describe el comportamiento heredado de `storage_locations`: relaciona `file_id`, `provider_id` y `object_key`, impone unicidad por `(file_id, provider_id)` y registra el estado de cada copia (`stored`, `failed`, `removed`). El contrato actual considera disponible un File almacenado cuando existe al menos una `StorageLocation` válida. Los datos auditados muestran cero Files con múltiples ubicaciones tanto en local como en producción (máximo observado: una), aunque el esquema permita varias. Estos hechos describen la implementación actual, no justifican conservar la tabla en V6.\n\n**Decisión V6 cerrada:** `storage_locations` se elimina del modelo objetivo y de la implementación. No hay una herramienta que garantice que un proveedor distinto haya entregado exactamente el mismo fichero binario; por tanto, si se incorpora un fichero de otro proveedor sin una verificación fiable de identidad binaria, se trata como otro `Resource` con su propio `File`. Cada `File` apunta directamente a su objeto físico. No se introduce `Blob` ni una entidad de ubicaciones por proveedor. Storage puede gestionar copias de seguridad y mecanismos internos de recuperación sin convertirlos en entidades del catálogo.\n\nLa retirada de la tabla exige adaptar antes todos sus consumidores: cálculo de disponibilidad, publicación, carga, descargas, resolución de URL, administración, errores y recuperación. La migración deberá validar que cada File conserve una referencia física estable y que las pruebas de disponibilidad, descarga y recuperación funcionen sin `storage_locations`. Las referencias a la tabla en el inventario de código y esquema se mantienen únicamente como evidencia del sistema heredado.
 
 ## 20. Modelo canónico independiente de proveedores (criterio rector V6, 2026-10-29)
 
@@ -1132,7 +1132,7 @@ Se aplicará el mismo criterio a PDMX, IMSLP y futuras fuentes. Si una fuente ag
 
 Antes de aprobar el DDL, el inventario debe entregar:
 
-- el diccionario de cada tabla canónica, con propósito, PK/FK, cardinalidades, índices, restricciones y política de borrado; debe evaluarse expresamente la eliminación de `storage_locations` y documentar una necesidad funcional concreta si se propone conservarla;
+- el diccionario de cada tabla canónica, con propósito, PK/FK, cardinalidades, índices, restricciones y política de borrado; `storage_locations` queda excluida del modelo V6 y su retirada de la implementación debe tener migración, adaptación de consumidores y pruebas verificables;
 - el mapa de todos los campos actuales hacia Work, Resource, File, almacenamiento, identificadores externos mínimos, créditos o atributos normalizados;
 - ejemplos reales anonimizados de cada patrón de importación, incluidos conflictos y datos incompletos;
  - reglas de identidad para Work, Resource y File; el hash se usa para verificar integridad, no para compartir Files u objetos físicos;
