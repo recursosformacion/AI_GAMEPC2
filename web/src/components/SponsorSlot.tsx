@@ -1,28 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-
-type Sponsor = {
-  id: string;
-  name: string;
-  text?: string | null;
-  url: string;
-  image?: string | null;
-  active?: boolean;
-  from?: string | null;
-  to?: string | null;
-};
-
-type Placement = {
-  label?: string;
-  mode?: "rotate" | "stack";
-  rotateSeconds?: number;
-  sponsors?: Sponsor[];
-};
-
-type SponsorsConfig = {
-  house?: { title?: string; text?: string; cta?: string; url?: string };
-  placements?: Record<string, Placement>;
-};
+import {
+  loadSponsorsConfig,
+  type Sponsor,
+  type SponsorsConfig,
+} from "../lib/sponsors";
 
 const FALLBACK_HOUSE = {
   title: "Espacio para anunciantes y patrocinadores",
@@ -30,16 +12,6 @@ const FALLBACK_HOUSE = {
   cta: "Contacta con nosotros",
   url: "/corrections?kind=contact",
 };
-
-let cache: Promise<SponsorsConfig | null> | null = null;
-
-function loadConfig(): Promise<SponsorsConfig | null> {
-  if (cache) return cache;
-  cache = fetch("/sponsors.json", { cache: "no-cache" })
-    .then((res) => (res.ok ? (res.json() as Promise<SponsorsConfig>) : null))
-    .catch(() => null);
-  return cache;
-}
 
 function isActive(sponsor: Sponsor, now: Date): boolean {
   if (sponsor.active === false) return false;
@@ -71,7 +43,7 @@ export function SponsorSlot({ placement }: { placement: string }) {
 
   useEffect(() => {
     let alive = true;
-    void loadConfig().then((data) => {
+    void loadSponsorsConfig().then((data) => {
       if (alive) setConfig(data);
     });
     return () => {

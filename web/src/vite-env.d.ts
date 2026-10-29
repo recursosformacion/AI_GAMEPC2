@@ -5,6 +5,8 @@ interface ImportMetaEnv {
   readonly VITE_GA_ID?: string;
   /** URL pública del aplicativo de vídeos (por defecto, http://localhost:8400). */
   readonly VITE_VIDEOS_URL?: string;
+  /** URL pública del blog (por defecto, http://osap-blog). */
+  readonly VITE_BLOG_URL?: string;
 }
 
 interface ImportMeta {

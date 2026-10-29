@@ -35,6 +35,7 @@ http://osap-app                     Apache (XAMPP) — VirtualHost *:80
 | `osap-app` | **Cliente web OSAP** (SPA + proxy /api) — la app en la que trabajamos |
 | `osap-api` | Backend API (uvicorn 8001) |
 | `osap-storage` | Open Music Repository / storage (uvicorn 8000) |
+| `osap-blog` | Blog independiente (uvicorn 8500, VirtualHost Apache) |
 
 Todos apuntan a `127.0.0.1`.
 
@@ -168,6 +169,21 @@ en `C:\xampp\apache\conf\httpd.conf`.
     CustomLog "logs/osap-app-access.log" combined
 </VirtualHost>
 ```
+
+El blog independiente se sirve en `http://osap-blog` (uvicorn 8500):
+
+```
+<VirtualHost *:80>
+    ServerName osap-blog
+    ProxyPreserveHost On
+    ProxyPass / http://127.0.0.1:8500/
+    ProxyPassReverse / http://127.0.0.1:8500/
+</VirtualHost>
+```
+
+La SPA enlaza al blog desde el ítem «Blog» del menú lateral. El build de producción define
+`VITE_BLOG_URL=https://blog.openmusicrepository.com` en `script/deploy.ps1` y
+`script/deploy_all.ps1`.
 
 ---
 

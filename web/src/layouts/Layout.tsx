@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useSearchParams } from "react-router-dom";
 import { initAnalytics } from "../analytics/ga";
 import { trackPageView } from "../analytics/gtm";
@@ -13,6 +13,7 @@ import { useOidcLogin } from "../components/useOidcLogin";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
 import { useSeo } from "../seo/useSeo";
+import { blogHomeUrl, blogSessionUrl } from "../lib/blog";
 import { useAuth } from "../state/auth";
 import { useNotifications } from "../state/notifications";
 import { useSystem } from "../state/system";
@@ -140,6 +141,8 @@ interface NavItem {
   icon: IconName;
   /** Navegación completa: la página la sirve el HTML del servidor (SSR), no React. */
   external?: boolean;
+  /** Enlace externo que recibe la sesión de OSAP (handoff del blog). */
+  sessionHandoff?: boolean;
 }
 
 interface NavGroupItem {
@@ -165,6 +168,7 @@ const CLASSIFICATION_CHILDREN = [
 const CONTENT_ENTRIES: readonly NavEntry[] = [
   { to: "/", key: "nav.home", icon: "home" },
   { to: "/explore", key: "nav.explore", icon: "discover" },
+  { to: blogHomeUrl(), key: "nav.blog", icon: "article", external: true, sessionHandoff: true },
   { to: "/composers", key: "nav.composers", icon: "person" },
   {
     group: true,
@@ -267,6 +271,9 @@ function SidebarSection({
 }) {
   const { t } = useI18n();
   const location = useLocation();
+  const token = useAuth((s) => s.accessToken);
+  const hrefFor = (entry: NavItem) =>
+    entry.sessionHandoff ? blogSessionUrl(token, "/admin") : entry.to;
   return (
     <div className="mt-5">
       <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-osap-muted">{title}</p>
@@ -278,7 +285,7 @@ function SidebarSection({
             <li key={entry.to}>
               {entry.external ? (
                 <a
-                  href={entry.to}
+                  href={hrefFor(entry)}
                   onClick={onNavigate}
                   className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-bold ${
                     location.pathname === entry.to
@@ -382,7 +389,16 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
   const { user, logout, isAdmin, updateName } = useAuth();
   const [loginOpen, setLoginOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
-  const { start: startOidc, error: oidcError } = useOidcLogin();
+  const blogReturnKey = "osap.blog.return_to";
+  const handoffToBlog = useCallback(() => {
+    if (sessionStorage.getItem(blogReturnKey) !== "blog") return false;
+    const token = useAuth.getState().accessToken;
+    if (!token) return false;
+    sessionStorage.removeItem(blogReturnKey);
+    window.location.assign(blogSessionUrl(token, "/admin"));
+    return true;
+  }, []);
+  const { start: startOidc, error: oidcError } = useOidcLogin(handoffToBlog);
   const { unread, load: loadNotifications } = useNotifications();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -393,12 +409,23 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
   useEffect(() => {
     const mode = searchParams.get("auth");
     if (mode !== "login" && mode !== "register") return;
+    if (searchParams.get("return_to") === "blog") {
+      sessionStorage.setItem(blogReturnKey, "blog");
+    }
     setAuthMode(mode);
     setLoginOpen(true);
     const next = new URLSearchParams(searchParams);
     next.delete("auth");
     setSearchParams(next, { replace: true });
   }, [searchParams, setSearchParams]);
+
+  useEffect(() => {
+    if (user) handoffToBlog();
+  }, [user, handoffToBlog]);
+
+  const finishAuth = () => {
+    if (!handoffToBlog()) setLoginOpen(false);
+  };
 
   // Sin sesión: pulsa "Iniciar sesión" → popup OIDC; si no se puede, panel de respaldo.
   const openAuth = () => {
@@ -502,9 +529,9 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
                     </button>
                   </div>
                   {authMode === "login" ? (
-                    <LoginForm onDone={() => setLoginOpen(false)} />
+                    <LoginForm onDone={finishAuth} />
                   ) : (
-                    <RegisterForm onDone={() => setLoginOpen(false)} />
+                    <RegisterForm onDone={finishAuth} />
                   )}
                 </div>
               )}

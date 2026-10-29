@@ -7,7 +7,7 @@ name = "chorus-study-generator"
 version = "5.7.9"
 description = "Chorus Study Generator with Open Score Acquisition Platform"
 requires-python = ">=3.12"
-license = {text = "MIT"}
+license = {text = "GPL-3.0-only"}
 authors = [
     {name = "Chorus Team"},
 ]

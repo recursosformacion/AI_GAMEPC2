@@ -20,6 +20,7 @@ $apiRoot = Split-Path -Parent $PSScriptRoot
 $tmp = Join-Path $env:TEMP "osap-deploy-all"
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 if (-not $env:VITE_VIDEOS_URL) { $env:VITE_VIDEOS_URL = "https://videos.openmusicrepository.com" }
+if (-not $env:VITE_BLOG_URL) { $env:VITE_BLOG_URL = "https://blog.openmusicrepository.com" }
 function Fail($m) { Write-Error $m; exit 1 }
 
 $repos = @(

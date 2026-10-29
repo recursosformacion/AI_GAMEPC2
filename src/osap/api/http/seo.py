@@ -8,6 +8,7 @@ canónico, de modo que el enlace permanente nunca se rompe.
 
 from __future__ import annotations
 
+import os
 import re
 import urllib.parse
 from typing import TYPE_CHECKING
@@ -63,6 +64,11 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
     read_only = bool(storage_info()[1]) if callable(storage_info) else False
     mode_fn = getattr(ctx.api, "mode", None)
     mode = mode_fn() if callable(mode_fn) else "unknown"
+    blog_base = os.environ.get("OSAP_BLOG_URL", "").rstrip("/") or (
+        "https://blog.openmusicrepository.com"
+        if mode == "prod"
+        else "http://osap-blog"
+    )
     # En desarrollo el HTML no se cachea: si no, el navegador sigue mostrando la
     # plantilla anterior durante una hora tras cada cambio.
     _NO_STORE = mode != "prod"
@@ -228,12 +234,28 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
             return RedirectResponse(url=f"/amigos/corales/{group_id}/{view.slug}", status_code=301)
         return _html(render_amigos_group(view))
 
+    def blog_article_redirect(data: dict[str, object], fallback_slug: str) -> RedirectResponse | None:
+        if str(data.get("group_id") or ""):
+            return None
+        slug = str(data.get("slug") or fallback_slug)
+        return RedirectResponse(
+            url=f"{blog_base}/blog/{urllib.parse.quote(slug)}",
+            status_code=301,
+        )
+
+    @router.get("/amigos/articulos", include_in_schema=False)
+    def amigos_articles_home() -> Response:
+        return RedirectResponse(url=f"{blog_base}/", status_code=301)
+
     @router.get("/amigos/articulo/{article_id}", include_in_schema=False)
     def amigos_article_canonical(article_id: str) -> Response:
         data = ctx.api.seo_amigos_article(article_id)
         if data is None:
             return _html(render_not_found(), status_code=404)
         view = build_article_view(data)
+        redirect = blog_article_redirect(data, view.slug)
+        if redirect is not None:
+            return redirect
         return RedirectResponse(url=f"/amigos/articulo/{article_id}/{view.slug}", status_code=301)
 
     @router.get("/amigos/articulo/{article_id}/{slug}", include_in_schema=False)
@@ -242,6 +264,9 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
         if data is None:
             return _html(render_not_found(), status_code=404)
         view = build_article_view(data)
+        redirect = blog_article_redirect(data, view.slug)
+        if redirect is not None:
+            return redirect
         if slug != view.slug:
             return RedirectResponse(url=f"/amigos/articulo/{article_id}/{view.slug}", status_code=301)
         return _html(render_amigos_article(view))

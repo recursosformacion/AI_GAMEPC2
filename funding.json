@@ -1,0 +1,221 @@
+{
+  "$schema": "https://fundingjson.org/schema/v1.1.0.json",
+  "version": "v1.1.0",
+  "entity": {
+    "type": "individual",
+    "role": "maintainer",
+    "name": "Miguel García García",
+    "email": "admin@openmusicrepository.com",
+    "description": "Mantenedor de OpenMusicRepository (OSAP), una plataforma abierta para descubrir obras musicales, localizar partituras y recursos relacionados, y conectar el catálogo con grabaciones y vídeos. El proyecto combina un motor de resolución de recursos, servicios de almacenamiento, identidad, soporte y herramientas de importación y revisión.",
+    "webpageUrl": {
+      "url": "https://openmusicrepository.com"
+    }
+  },
+  "projects": [
+    {
+      "guid": "osap-core",
+      "name": "OSAP Core — OpenMusicRepository",
+      "description": "Núcleo de OSAP y plataforma pública OpenMusicRepository: catálogo de obras, compositores y representaciones; resolución de recursos musicales; API y aplicación web; fichas públicas, buscador, visor y enlaces a vídeos.",
+      "webpageUrl": {
+        "url": "https://app.openmusicrepository.com"
+      },
+      "repositoryUrl": {
+        "url": "https://github.com/recursosformacion/AI_GAMEPC2"
+      },
+      "licenses": ["spdx:GPL-3.0-only"],
+      "tags": [
+        "music",
+        "music-catalog",
+        "musicxml",
+        "resource-discovery",
+        "open-data",
+        "choirs",
+        "orchestras",
+        "education"
+      ]
+    },
+    {
+      "guid": "osap-storage",
+      "name": "OSAP Storage",
+      "description": "Servicio de datos y almacenamiento del catálogo OSAP. Gestiona obras, compositores, representaciones, recursos, ficheros y ubicaciones de almacenamiento para el resto de servicios del ecosistema.",
+      "webpageUrl": {
+        "url": "https://app.openmusicrepository.com"
+      },
+      "repositoryUrl": {
+        "url": "https://github.com/recursosformacion/AI_osap-storage"
+      },
+      "licenses": ["spdx:GPL-3.0-only"],
+      "tags": [
+        "music",
+        "storage",
+        "catalog",
+        "api",
+        "open-data"
+      ]
+    },
+    {
+      "guid": "osap-auth",
+      "name": "OSAP Auth",
+      "description": "Servicio de identidad y autenticación del ecosistema OSAP, con OIDC, sesiones, permisos y federación de identidades para la aplicación y los servicios internos.",
+      "webpageUrl": {
+        "url": "https://auth.openmusicrepository.com"
+      },
+      "repositoryUrl": {
+        "url": "https://github.com/recursosformacion/AI_osap-auth"
+      },
+      "licenses": ["spdx:GPL-3.0-only"],
+      "tags": [
+        "identity",
+        "authentication",
+        "oauth2",
+        "security",
+        "api"
+      ]
+    },
+    {
+      "guid": "osap-support",
+      "name": "OSAP Support",
+      "description": "Servicio independiente de apoyo económico de OSAP: donaciones puntuales, membresías recurrentes, pagos con PayPal y comunicaciones por correo.",
+      "webpageUrl": {
+        "url": "https://app.openmusicrepository.com/support"
+      },
+      "repositoryUrl": {
+        "url": "https://github.com/recursosformacion/AI_osap-support"
+      },
+      "licenses": ["spdx:GPL-3.0-only"],
+      "tags": [
+        "donations",
+        "memberships",
+        "payments",
+        "community",
+        "api"
+      ]
+    },
+    {
+      "guid": "osap-videos",
+      "name": "OSAP Videos",
+      "description": "Aplicación independiente de OpenMusicRepository para localizar vídeos de YouTube asociados a una representación musical, reproducirlos y recoger votos de utilidad de la comunidad, incluidas pistas de ensayo por voces.",
+      "webpageUrl": {
+        "url": "https://videos.openmusicrepository.com"
+      },
+      "repositoryUrl": {
+        "url": "https://github.com/recursosformacion/osap-videos"
+      },
+      "licenses": ["spdx:GPL-3.0-only"],
+      "tags": [
+        "music",
+        "youtube",
+        "video",
+        "choirs",
+        "community"
+      ]
+    },
+    {
+      "guid": "ai-publicidad",
+      "name": "ai_publicidad",
+      "description": "Servicio independiente de publicidad directa para OSAP y OpenMusicRepository: campañas, creatividades, segmentación, composición de anuncios, impresiones, clics y redirecciones.",
+      "webpageUrl": {
+        "url": "https://github.com/recursosformacion/ai_publicidad"
+      },
+      "repositoryUrl": {
+        "url": "https://github.com/recursosformacion/ai_publicidad"
+      },
+      "licenses": ["spdx:GPL-3.0-only"],
+      "tags": [
+        "advertising",
+        "campaigns",
+        "marketing",
+        "api",
+        "osap"
+      ]
+    },
+    {
+      "guid": "osap-blog",
+      "name": "OSAP Blog",
+      "description": "Blog independiente de OpenMusicRepository para publicar noticias, análisis y novedades sobre el catálogo, la comunidad y el ecosistema OSAP.",
+      "webpageUrl": {
+        "url": "https://blog.openmusicrepository.com"
+      },
+      "repositoryUrl": {
+        "url": "https://github.com/recursosformacion/osap-blog"
+      },
+      "licenses": ["spdx:GPL-3.0-only"],
+      "tags": [
+        "blog",
+        "publishing",
+        "music",
+        "community"
+      ]
+    },
+    {
+      "guid": "ai-importacion",
+      "name": "AI Importación",
+      "description": "Herramienta independiente para localizar, catalogar y revisar materiales musicales publicados en Internet Archive, con base de datos propia y sin escritura directa en la producción de OSAP.",
+      "webpageUrl": {
+        "url": "https://github.com/recursosformacion/ai-importacion"
+      },
+      "repositoryUrl": {
+        "url": "https://github.com/recursosformacion/ai-importacion"
+      },
+      "licenses": ["spdx:GPL-3.0-only"],
+      "tags": [
+        "music",
+        "import",
+        "internet-archive",
+        "metadata",
+        "catalog"
+      ]
+    },
+    {
+      "guid": "ai-recoge-youtube",
+      "name": "ai_recogeYouTube",
+      "description": "Herramienta para descubrir, clasificar y revisar grabaciones de YouTube asociadas a obras musicales, incluidas pistas de ensayo por voces y grabaciones corales.",
+      "webpageUrl": {
+        "url": "https://github.com/recursosformacion/ai_recogeYouTube"
+      },
+      "repositoryUrl": {
+        "url": "https://github.com/recursosformacion/ai_recogeYouTube"
+      },
+      "licenses": ["spdx:GPL-3.0-only"],
+      "tags": [
+        "music",
+        "youtube",
+        "video",
+        "metadata",
+        "choirs"
+      ]
+    }
+  ],
+  "funding": {
+    "channels": [
+      {
+        "guid": "osap-support",
+        "type": "payment-provider",
+        "address": "https://app.openmusicrepository.com/support",
+        "description": "Donaciones puntuales y membresías mediante OSAP Support (PayPal). Requiere iniciar sesión en OSAP."
+      }
+    ],
+    "plans": [
+      {
+        "guid": "maintenance-yearly",
+        "status": "active",
+        "name": "Mantenimiento anual",
+        "description": "Financiación para el mantenimiento de servidores, almacenamiento, copias de seguridad y desarrollo continuo de OpenMusicRepository y sus servicios.",
+        "amount": 10000,
+        "currency": "EUR",
+        "frequency": "yearly",
+        "channels": ["osap-support"]
+      },
+      {
+        "guid": "goodwill-one-time",
+        "status": "active",
+        "name": "Apoyo puntual",
+        "description": "Aportación libre para apoyar el catálogo abierto y la comunidad OSAP.",
+        "amount": 0,
+        "currency": "USD",
+        "frequency": "one-time",
+        "channels": ["osap-support"]
+      }
+    ]
+  }
+}
