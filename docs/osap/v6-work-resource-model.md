@@ -317,3 +317,122 @@ V6 no se considerará lista solo porque arranque la aplicación. Como mínimo:
 - Diagnóstico y modelo anterior de Storage: `AI_osap-storage/docsNew/diagnostico-representaciones-recursos.md`, `diseño-representaciones-recursos.md`, `cierre-representaciones-recursos.md` y `estudio-representations-vs-resources.md`.
 
 Estas referencias sirven como historial y evidencia. La definición final se cerrará tras el inventario; V6 no queda obligada a conservar las decisiones arquitectónicas de la versión anterior.
+
+
+## 9.1 Inventario inicial verificado en Storage (2026-10-29)
+
+**Alcance:** lectura de los archivos versionados de AI_osap-storage; no se consultó la base de datos de producción. Esto describe el repositorio y el código, no certifica el esquema desplegado.
+
+### A. Discrepancia prioritaria: baseline frente al esquema que espera el código
+
+Se comparó infrastructure/db/migrations/001_baseline_schema.sql con scripts/migrate_representations_resources.sql y los repositorios SQL.
+
+| Elemento | Evidencia del repositorio | Consecuencia para V6 |
+|---|---|---|
+| works | El baseline declara las columnas listadas en la matriz B. | Evidencia de esquema versionado, no prueba del esquema de producción. |
+| representations, representation_persons, works_resources | No aparecen como tablas en 001_baseline_schema.sql. Un script separado las crea. | El baseline no reconstruye por sí solo el esquema que espera la aplicación. |
+| works_resources | El script de creación declara works_resources_representation_id como NOT NULL, pero no declara works_resources_work_id. | El código consulta y escribe works_resources_work_id. Discrepancia concreta entre DDL y consumidor. |
+| representations | El DDL separado no declara representations_ensemble_code ni representations_voice_signature; la entidad y el repositorio los contemplan opcionalmente. | Confirmar si existen en otra migración, son campos abandonados o dependencias sin soporte de esquema versionado. |
+| Orden/reproducibilidad | El baseline y el script de creación están separados; el baseline no contiene las tablas nuevas. | V6 necesita un baseline completo y una prueba de instalación en una base vacía. No corregir el esquema desplegado durante esta fase. |
+
+**Resultado:** el SQL versionado no es una fuente única reproducible para el bloque Work/Representation/Resource. Es un requisito de diseño y pruebas de V6, no una razón para conservar el modelo anterior.
+
+### B. Matriz inicial de works
+
+Estas son las columnas declaradas por 001_baseline_schema.sql. El destino V6 es provisional y debe contrastarse con productores, lectores y datos.
+
+| Columna actual | Evidencia/uso observado | Destino V6 propuesto | Estado |
+|---|---|---|---|
+| id | PK referenciada por relaciones y repositorios. | Work.id canónico; estrategia/tipo por decidir. | Conservar semántica; revisar contratos e IDs. |
+| works_song_name, works_title, works_subtitle | SqlWorkRepository y consultas de obra los leen/escriben; título se usa en búsqueda/resolución. | Título canónico y subtítulo en Work; nombre crudo de proveedor en Resource/procedencia si difiere. | Separar canónico y original. |
+| works_attr_type, works_attribution_note | La atribución se usa en administración y flujos de atribución. | Work y estado de atribución explícito. | Revisar junto al modelo de atribuciones V6. |
+| works_opus, works_catalogue, works_year, works_epoch_id | Metadatos de catálogo/cronología. | Opus, catálogos y época en Work; definir si year significa composición, publicación u otra fecha. | Año requiere semántica. |
+| works_musical_key, works_duration, works_measures | Están en DDL/entidad; SqlResolutionSource lee tonalidad desde Work. | Resource según el criterio inicial del usuario. | Adaptar resolución y contratos que hoy los leen desde Work. |
+| works_pages, works_parts, works_complexity | Están en DDL/entidad; consumidores y semántica no se han completado en esta pasada. | Pages/parts provisionalmente en Resource; complexity según describa obra o realización. | Pendiente de rastreo. |
+| works_description | Campo de texto general. | Work si describe la obra; notas específicas de edición a Resource. | Distinguir significado por fuente. |
+| works_license, works_public_domain | DDL/entidad; SqlResolutionSource usa licencia de Work como fallback cuando falta licencia de Representation. | Resource; separar licencia de composición, edición, fichero y permiso de redistribución. | Migrar fallback y aclarar semántica legal. |
+| works_origin, works_origin_id | SqlWorkRepository los persiste; administración requiere origen; resolución los usa como fallback. | Correspondencias externas Work/Resource según qué identifique cada ID. | No conservar como atributos escalares sin justificar. |
+| works_key | Único en DDL; asociado históricamente a work_key; resolución usa COALESCE(representations_origin_id, works_key). | Eliminar si es clave de agrupación heredada; si es ID de fuente, mover a correspondencia externa. | Trazar todos los escritores/lectores. |
+| works_type_file | El DDL lo define como formato de fichero; el diseño anterior ya proponía retirarlo de Work. | Formato de File o de relación Resource–File. | No pertenece a Work. |
+| works_relative_path | DDL y entidad Work lo exponen; documento previo lo describía vacío en el conjunto PDMX analizado, dato histórico. | StorageLocation o retirar si no hay uso válido; nunca ruta autoritativa en Work. | Validar usos/datos actuales. |
+| works_obra_iden | FK autorreferente e indexada. | Alias/relación de equivalencia entre obras si sigue siendo válida; si no, eliminar. | Semántica pendiente. |
+| works_music_digest | Declarada en DDL; productor/lector no rastreado en esta pasada. | Dato derivado/índice o hash musical separado del File.sha256. | No confundir con checksum binario; pendiente. |
+| works_voicing, works_instrumentation | DDL conserva campos JSON/texto; SqlWorkRepository deriva instrumentación y voicing desde work_instruments/work_ensembles. | Retirar copias redundantes si se demuestra cobertura; asignar plantilla a Work o Resource según alcance. | Rastrear escritores y valores no migrados. |
+| works_created_at, works_updated_at | Auditoría técnica de fila. | Timestamps de Work. | Conservar si el modelo nuevo mantiene auditoría equivalente. |
+
+### C. Matriz inicial de representations y representation_persons
+
+DDL inspeccionado en scripts/migrate_representations_resources.sql:
+
+| Columna actual | Uso/evidencia | Destino V6 propuesto | Estado |
+|---|---|---|---|
+| representations.id | PK usada por repositorios y CRUD. | Nueva identidad Resource o ID de transición de migración. | No conservar la identidad antigua como contrato público por inercia. |
+| representations_works_id | FK obligatoria a Work; el repositorio lista por obra. | Resource.work_id obligatorio. | Conservar relación, aplanando el nivel. |
+| representations_origin, representations_origin_id | Identifican entidad de origen; índice único compuesto. | Correspondencia externa de Resource cuando el origen identifica edición/realización. | No duplicar con procedencia de Work. |
+| representations_origin_cpdlno | Dato auxiliar CPDL; el diseño anterior indica que no es único. | Metadato de procedencia de Resource. | No usar como identificador externo único. |
+| representations_type | Tipo de edición/score/etc. | Resource.kind, separado del formato de fichero. | Normalizar vocabulario. |
+| representations_source_name | Nombre crudo del origen; usado por búsqueda CRUD. | Nombre/título original de Resource o dato de procedencia. | Mantener si sirve para trazabilidad. |
+| representations_license | Licencia por edición; fallback en resolución. | Licencia/atribución de Resource, separada de permisos del File. | Normalizar sin perder texto original. |
+| representations_created_at, representations_updated_at | Auditoría técnica. | Auditoría de Resource si es útil. | No duplicar timestamps sin necesidad. |
+| representations_ensemble_code, representations_voice_signature | La entidad/repositorio los contemplan opcionalmente, pero no aparecen en el DDL inspeccionado. | Plantilla musical normalizada o firma derivada; no guardar firma derivada como fuente de verdad. | Discrepancia de esquema por resolver. |
+
+representation_persons contiene id, representation_persons_representation_id, representation_persons_person_id, representation_persons_role_id, representation_persons_name y representation_persons_created_at. Administración y resolución leen estas relaciones como editores de la representación. En V6 se convertirán en relaciones de Resource con personas/roles cuando corresponda; el nombre libre solo debe sobrevivir como evidencia de origen, no como sustituto permanente de la persona canónica.
+
+### D. Matriz inicial de works_resources
+
+DDL de scripts/migrate_representations_resources.sql frente al código consumidor:
+
+| Columna actual | Uso/evidencia | Destino V6 propuesto | Estado |
+|---|---|---|---|
+| id | PK de fila de recurso y CRUD. | Resource.id será identidad musical; los ficheros se relacionan mediante tabla Resource–File. | Reconciliar identidad de fila actual durante migración. |
+| works_resources_representation_id | FK obligatoria en DDL separado. | Eliminar nivel intermedio; Resource tendrá work_id. | Aplanar y reconciliar. |
+| works_resources_work_id | Lo esperan SqlRepresentationRepository, SqlResourceAdminRepository y consultas de resolución; no aparece en el DDL de creación separado. | FK obligatoria Resource.work_id. | Inconsistencia prioritaria. |
+| works_resources_type | Consumidores lo tratan como formato (MXL, PDF, MIDI, etc.). | Formato de File o relación Resource–File, distinto de Resource.kind. | Definir vocabulario. |
+| works_resources_name | Nombre de fichero/origen; CRUD filtra por él. | Nombre original de fichero o etiqueta de Resource–File. | Separar nombre editorial y nombre técnico. |
+| works_resources_relative_path | Expuesto por API antigua para descarga y leído por CRUD. | StorageLocation o retirar si es ruta heredada; no guardar ruta física en Resource. | Trazar descarga/URL antigua. |
+| works_resources_status | CRUD/resolución lo leen; diagnóstico previo advertía status missing con file_id presente en archive_entries. | Estado editorial de Resource separado del estado técnico de File/StorageLocation. | Definir estados y reglas. |
+| works_resources_file_id | FK opcional a File, ON DELETE SET NULL. | Relación Resource–File; permitir varios ficheros y deduplicación. | Migrar a tabla asociativa. |
+| works_resources_url | URL externa; cierre previo documenta derivación de URLs CPDL. | URL externa tipada, distinguida de página de edición y descarga interna. | Conservar y clasificar. |
+| works_resources_archive_id | FK opcional a Archives. | Procedencia de ingestión/importación, no ubicación final del File. | Conservar si es útil; separar de StorageLocation. |
+| works_resources_created_at, works_resources_updated_at | Auditoría técnica. | Auditoría de Resource o relación Resource–File según el significado de cada fila. | Decidir al separar entidades. |
+
+La tabla actual mezcla dos conceptos: recursos PDMX directos a Work y ficheros/referencias de ediciones CPDL. En V6 ambos deben mapear a Resource asociado a Work; bytes y URLs de descarga deben quedar en Resource–File o en una referencia externa tipada.
+
+### E. files y storage_locations
+
+| Tabla/columnas | Esquema versionado y código | Destino V6 propuesto | Estado |
+|---|---|---|---|
+| files.id | PK usada por repositorios y ubicaciones. | Identidad canónica del objeto digital. | Conservar semántica; revisar tipo de ID. |
+| files.sha256 | CHAR(64), nullable, UNIQUE. La entidad exige hash para derivar la clave de almacenamiento, pero acepta None. | Hash de bytes calculado y validado en ingesta. | Decidir si File sin bytes es posible; no confundir con hash musical. |
+| files.name | VARCHAR(512) NOT NULL. | Nombre técnico/original o nombre en Resource–File si un mismo File tiene nombres de origen diferentes. | Evitar que un nombre global borre procedencia. |
+| files.mime_type, files.size_bytes | MIME/tamaño opcionales. | Metadatos técnicos derivados/verificados de bytes. | Conservar y validar. |
+| files.status | La entidad usa registered, downloading, available, failed. | Estado de integridad/procesamiento de File. | Separar de publicación/visibilidad de Resource. |
+| files.created_at, files.updated_at | Auditoría técnica. | Timestamps de File. | Conservar si son necesarios. |
+| storage_locations.file_id, provider_id, object_key | DDL enlaza File y proveedor; UNIQUE(file_id, provider_id). | Copias físicas de File, fuera de Resource. | Conservar separación. |
+| storage_locations.status | La entidad usa stored, failed, removed. | Estado de esa copia concreta. | No inferir disponibilidad solo del estado global de File. |
+
+**Consumidores identificados en esta pasada:**
+- infrastructure/repositories/sql_file_repository.py crea, consulta, actualiza y borra files; domain/entities/file.py define estado y clave derivada de SHA-256.
+- api/routes/files.py expone registro, subida service-to-service, listado, detalle, descarga y URL. Su contrato declara que subir un File no crea Resource ni lo hace público.
+- domain/entities/storage_location.py y storage_locations modelan copias físicas por proveedor.
+- infrastructure/repositories/sql_representation_repository.py y application/use_cases/resource_admin.py consultan los campos actuales de Resource, incluidas las dos relaciones a Work/Representation.
+- infrastructure/repositories/sql_resolution_source.py une Work, Representation y Resource, y usa licencia/ID de Work como fallback; debe adaptarse al nivel Resource.
+- api/routes/works.py presenta una respuesta antigua de obra y recursos con relative_path, formato y file_id.
+- application/use_cases/representation_admin.py, application/use_cases/resource_admin.py y las rutas api/routes/admin_representations.py / api/routes/admin_resources.py exponen CRUD de ambas tablas y deben sustituirse por administración de Work/Resource/File y relaciones.
+- infrastructure/repositories/sql_work_repository.py lee/escribe metadatos de Work y deriva compositor, intérprete, género, instrumentación, tags, idioma y ensemble desde relaciones, aunque el DDL también declara works_voicing y works_instrumentation.
+
+### F. Orientación de diseño derivada de la evidencia
+
+1. Work conserva identidad intelectual y relaciones canónicas; no almacena formato ni ruta de fichero.
+2. Resource representa una realización musical concreta, con work_id obligatorio; absorbe lo válido de Representation y la parte editorial de la fila antigua works_resources.
+3. Resource–File debe ser una relación separada, con cardinalidad múltiple y deduplicación; una referencia externa no debe fingir que sus bytes están en Storage.
+4. File representa bytes y metadatos técnicos; puede compartirse y tener varias ubicaciones.
+5. Procedencia debe separar ID externo de Work del ID externo de Resource.
+6. Separar revisión/publicación/visibilidad de Resource, disponibilidad técnica de File y estado de StorageLocation.
+7. PDF/MXL/MIDI es el eje de formato; edition/score/arrangement/transcription es el eje de tipo musical.
+8. Los campos de Work derivados desde relaciones normalizadas son candidatos a retirada, pero solo tras rastrear escrituras y comparar valores históricos.
+9. V6 debe tener migraciones versionadas que creen todas las tablas y restricciones desde cero; no corregir esta discrepancia mediante cambios improvisados en la base desplegada.
+
+### G. Siguiente bloque del inventario
+
+Rastrear en todos los repositorios escritores y lectores de works_key, works_origin, works_origin_id, works_music_digest, works_obra_iden, works_voicing y works_instrumentation; completar archive_entries y tablas CPDL; revisar relaciones de personas/género/instrumentos/idioma/ensembles, contratos API e índice. Cada columna deberá clasificarse como **conservar**, **trasladar**, **derivar** o **eliminar**, con evidencia de productor y consumidor.
