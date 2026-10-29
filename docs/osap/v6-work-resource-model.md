@@ -323,19 +323,17 @@ Estas referencias sirven como historial y evidencia. La definición final se cer
 
 **Alcance:** lectura de los archivos versionados de AI_osap-storage; no se consultó la base de datos de producción. Esto describe el repositorio y el código, no certifica el esquema desplegado.
 
-### A. Discrepancia prioritaria: baseline frente al esquema que espera el código
+### A. Reconciliación de esquema versionado y documentación de la evolución
 
-Se comparó infrastructure/db/migrations/001_baseline_schema.sql con scripts/migrate_representations_resources.sql y los repositorios SQL.
+La primera lectura comparó infrastructure/db/migrations/001_baseline_schema.sql con scripts/migrate_representations_resources.sql. Esa comparación aislada parecía mostrar tablas ausentes y una columna que faltaba. Al ampliar la investigación a los documentos de evolución y al diagnóstico op2 del propio repositorio, **no hay base suficiente para calificarlo como error actual**: el baseline refleja una etapa del esquema, mientras que las tablas de representación/recurso se incorporaron mediante un script posterior y la aplicación evolucionó después. La documentación de diagnóstico más reciente describe works_resources_work_id como columna existente y parte del modelo op2. Por tanto, la discrepancia inicial debe tratarse como documentación/versionado histórico no actualizado, salvo que una prueba actual demuestre lo contrario.
 
-| Elemento | Evidencia del repositorio | Consecuencia para V6 |
+| Observación inicial | Lectura corregida | Acción V6 |
 |---|---|---|
-| works | El baseline declara las columnas listadas en la matriz B. | Evidencia de esquema versionado, no prueba del esquema de producción. |
-| representations, representation_persons, works_resources | No aparecen como tablas en 001_baseline_schema.sql. Un script separado las crea. | El baseline no reconstruye por sí solo el esquema que espera la aplicación. |
-| works_resources | El script de creación declara works_resources_representation_id como NOT NULL, pero no declara works_resources_work_id. | El código consulta y escribe works_resources_work_id. Discrepancia concreta entre DDL y consumidor. |
-| representations | El DDL separado no declara representations_ensemble_code ni representations_voice_signature; la entidad y el repositorio los contemplan opcionalmente. | Confirmar si existen en otra migración, son campos abandonados o dependencias sin soporte de esquema versionado. |
-| Orden/reproducibilidad | El baseline y el script de creación están separados; el baseline no contiene las tablas nuevas. | V6 necesita un baseline completo y una prueba de instalación en una base vacía. No corregir el esquema desplegado durante esta fase. |
+| representations, representation_persons y works_resources no aparecen en 001_baseline_schema.sql. | El baseline no es por sí solo el historial completo de creación del bloque; existe un script posterior y documentación de migración ejecutada. | Reconstruir la secuencia real de evolución desde archivos versionados; no diagnosticar un fallo desplegado solo por omisión en el baseline. |
+| works_resources_work_id no aparece en scripts/migrate_representations_resources.sql. | El diagnóstico op2 documenta recursos PDMX directos a Work y CPDL asociados a Representation; el código actual consulta work_id. El script inspeccionado corresponde a una fase anterior del modelo. | Documentar la evolución op2 y diseñar V6 desde la estructura actual confirmada por evidencia cruzada. |
+| representations_ensemble_code y representations_voice_signature no aparecen en el DDL anterior. | La entidad/repositorio y la documentación evolucionaron; no se ha demostrado que sean columnas necesarias del esquema actual. | Clasificar cada campo por uso real y no añadirlo al modelo nuevo solo porque aparezca en una entidad histórica. |
 
-**Resultado:** el SQL versionado no es una fuente única reproducible para el bloque Work/Representation/Resource. Es un requisito de diseño y pruebas de V6, no una razón para conservar el modelo anterior.
+No se consultó la base de datos de producción. El estado actual se determina aquí por coherencia entre documentación de migración, código y pruebas versionadas; cualquier afirmación sobre datos desplegados requerirá una consulta de solo lectura autorizada o una exportación reciente facilitada para análisis.
 
 ### B. Matriz inicial de works
 
@@ -355,9 +353,9 @@ Estas son las columnas declaradas por 001_baseline_schema.sql. El destino V6 es 
 | works_key | Único en DDL; asociado históricamente a work_key; resolución usa COALESCE(representations_origin_id, works_key). | Eliminar si es clave de agrupación heredada; si es ID de fuente, mover a correspondencia externa. | Trazar todos los escritores/lectores. |
 | works_type_file | El DDL lo define como formato de fichero; el diseño anterior ya proponía retirarlo de Work. | Formato de File o de relación Resource–File. | No pertenece a Work. |
 | works_relative_path | DDL y entidad Work lo exponen; documento previo lo describía vacío en el conjunto PDMX analizado, dato histórico. | StorageLocation o retirar si no hay uso válido; nunca ruta autoritativa en Work. | Validar usos/datos actuales. |
-| works_obra_iden | FK autorreferente e indexada. | Alias/relación de equivalencia entre obras si sigue siendo válida; si no, eliminar. | Semántica pendiente. |
+| works_obra_iden | El cierre del 2026-09-19 registra 0 valores no nulos y 0 referencias funcionales en código/API/scripts. | Candidato a eliminar del esquema V6; no trasladar como relación sin necesidad nueva demostrada. | Evidencia histórica fuerte; confirmar solo si aparece una necesidad nueva. |
 | works_music_digest | Declarada en DDL; productor/lector no rastreado en esta pasada. | Dato derivado/índice o hash musical separado del File.sha256. | No confundir con checksum binario; pendiente. |
-| works_voicing, works_instrumentation | DDL conserva campos JSON/texto; SqlWorkRepository deriva instrumentación y voicing desde work_instruments/work_ensembles. | Retirar copias redundantes si se demuestra cobertura; asignar plantilla a Work o Resource según alcance. | Rastrear escritores y valores no migrados. |
+| works_voicing, works_instrumentation | El código deriva instrumentación y ensembles desde relaciones normalizadas; la documentación de migración describe el reemplazo de works_voicing por relaciones. | No duplicar campos textuales heredados; conservar relaciones normalizadas y decidir Work/Resource según semántica. | Candidatos a eliminación; rastrear escritores y verificar cobertura. |
 | works_created_at, works_updated_at | Auditoría técnica de fila. | Timestamps de Work. | Conservar si el modelo nuevo mantiene auditoría equivalente. |
 
 ### C. Matriz inicial de representations y representation_persons
@@ -436,3 +434,44 @@ La tabla actual mezcla dos conceptos: recursos PDMX directos a Work y ficheros/r
 ### G. Siguiente bloque del inventario
 
 Rastrear en todos los repositorios escritores y lectores de works_key, works_origin, works_origin_id, works_music_digest, works_obra_iden, works_voicing y works_instrumentation; completar archive_entries y tablas CPDL; revisar relaciones de personas/género/instrumentos/idioma/ensembles, contratos API e índice. Cada columna deberá clasificarse como **conservar**, **trasladar**, **derivar** o **eliminar**, con evidencia de productor y consumidor.
+
+
+## 9.2 Corrección de interpretación y hallazgos adicionales (2026-10-29)
+
+Esta sección corrige la lectura inicial de §9.1.A. La regla de trabajo es partir de la **situación actual del sistema**, no reconstruirla suponiendo que un archivo antiguo es el esquema entero. Las diferencias entre documentos fechados y código posterior se registran como documentación histórica desactualizada hasta que exista evidencia de un fallo vigente.
+
+### Hallazgos con evidencia documental/código cruzada
+
+1. **Modelo op2 actual, no jerarquía uniforme de tres niveles.** El diagnóstico de Storage de 2026-09-19 declara expresamente: PDMX usa Work → Resource y CPDL usa Work → Representation (edición) → N Resources. works_resources_work_id es parte de esa estructura; works_resources_representation_id es opcional en el modelo descrito. V6 puede decidir un modelo más uniforme, pero deberá migrar ambos casos sin perder la diferencia entre obra/recurso PDMX y edición CPDL.
+2. **Tablas cpdl_editions* obsoletas como arquitectura activa.** scripts/import_cpdl_editions.py se marca [OBSOLETO] y dice que cpdl_editions, cpdl_edition_files y cpdl_edition_persons se eliminaron tras migrar a representations, works_resources y representation_persons. Algunos documentos generales aún las llaman staging/legado; se consideran documentación histórica, no prueba de que las tablas sigan activas.
+3. **works_obra_iden: legado sin uso demostrado.** docsNew/works-obra-iden-cierre.md documenta 0 valores no nulos en 310.455 obras y ninguna referencia funcional en código, API o scripts. En V6 es candidato a eliminar, salvo que el diseño nuevo identifique una función de equivalencia de obras que realmente necesite esa relación.
+4. **works_voicing: normalización previa realizada.** Las migraciones 007 y 008 y la documentación de fork describen el traslado de voicing a relaciones normalizadas de voices/ensembles. El código actual de SqlWorkRepository deriva el dato desde work_ensembles; no debemos reintroducir works_voicing como campo autoritativo. works_instrumentation también aparece como campo legado, mientras que la API deriva instrumentación desde work_instruments; verificar escritores antes de concluir su retirada.
+5. **works_music_digest y works_key no son equivalentes.** El primero se añadió en una migración específica para una huella musical de 32 caracteres; works_key está descrito en el baseline como hash de agrupación heredado y se usa históricamente como clave de origen PDMX en la migración a Representation. V6 debe distinguir huella de contenido musical, identificador/clave de agrupación y clave externa de proveedor.
+6. **Procedencia Work vs Resource.** En la migración PDMX, representations_origin_id se rellena con works_key; para CPDL se construye como page_id:cpdlno, porque un Work puede tener múltiples ediciones. V6 necesita correspondencias externas tipadas por entidad, no una única columna genérica copiada sin criterio.
+7. **archive_entries sigue siendo un consumidor/fallback histórico importante.** La documentación de Storage indica que no se retiró durante la transición y que GetWork, la descarga e import_pdmx tenían dependencias/fallback. En V6 hay que migrar primero esos flujos y validar cobertura; no basta con copiar registros a Resource y eliminar el legado.
+
+### Clasificación de trabajo actualizada
+
+| Elemento | Clasificación preliminar V6 | Evidencia / siguiente comprobación |
+|---|---|---|
+| works_obra_iden | **Eliminar** | Cierre documentado: cero valores/consumidores; confirmar que V6 no necesita equivalencias múltiples. |
+| works_voicing | **Eliminar como campo autoritativo** | Migraciones y repositorios usan relaciones normalizadas. |
+| works_instrumentation | **Eliminar como copia redundante**, sujeto a validación | Lectura normalizada en work_instruments; rastrear escritores y diferencias no migradas. |
+| works_key | **Trasladar o redefinir**, no eliminar a ciegas | Se usa como clave heredada de agrupación y como identificador PDMX en migración; separar semánticas. |
+| works_music_digest | **Conservar como concepto solo si sigue teniendo consumidor** | Revisar migración 034 y productores/lectores; no confundir con SHA-256 de File. |
+| works_origin / works_origin_id | **Trasladar a correspondencias externas**, separando Work y Resource | Los imports muestran identificadores de distinto ámbito; definir cardinalidad/unicidad por proveedor. |
+| works_resources_work_id | **Conservar como relación conceptual obligatoria en Resource V6** | Modelo op2 documenta recursos PDMX directos a Work; en V6 todos los Resource tendrán Work padre. |
+| works_resources_representation_id | **Eliminar como FK separada si V6 elimina Representation** | Migrar las ediciones CPDL a Resource y transferir licencia, editoría, identificador CPDL y ficheros sin pérdida. |
+| representations | **Candidata a absorberse en Resource**, no eliminación mecánica | Mantiene semántica real de edición CPDL y 11.242 registros sin fichero según diagnóstico histórico; esos datos deben sobrevivir como Resources aunque no haya File. |
+| archive_entries | **Retirar solo después de migrar y reemplazar consumidores** | Auditar SqlArchiveEntryRepository, import_pdmx, GetWork, descarga y cualquier fallback restante. |
+
+### Siguiente tramo de investigación
+
+Antes de proponer el DDL final, rastrear:
+- migración 034 y referencias a works_music_digest;
+- escritores/lectores de works_key, works_origin, works_origin_id, works_type_file y works_relative_path;
+- relaciones de personas/roles, géneros, instrumentos, idiomas y ensembles, distinguiendo dato canónico de proyección/índice;
+- endpoints y frontend que exponen recursos, URLs de descarga, edición CPDL y metadatos de licencia;
+- fallback y cobertura de archive_entries.
+
+No se ha cambiado código ni base de datos. Esta planificación se mantiene en el repositorio API como documento maestro.
