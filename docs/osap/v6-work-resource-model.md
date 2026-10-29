@@ -446,9 +446,9 @@ Esta sección corrige la lectura inicial de §9.1.A. La regla de trabajo es part
 2. **Tablas cpdl_editions* obsoletas como arquitectura activa.** scripts/import_cpdl_editions.py se marca [OBSOLETO] y dice que cpdl_editions, cpdl_edition_files y cpdl_edition_persons se eliminaron tras migrar a representations, works_resources y representation_persons. Algunos documentos generales aún las llaman staging/legado; se consideran documentación histórica, no prueba de que las tablas sigan activas.
 3. **works_obra_iden: legado sin uso demostrado.** docsNew/works-obra-iden-cierre.md documenta 0 valores no nulos en 310.455 obras y ninguna referencia funcional en código, API o scripts. En V6 es candidato a eliminar, salvo que el diseño nuevo identifique una función de equivalencia de obras que realmente necesite esa relación.
 4. **works_voicing: normalización previa realizada.** Las migraciones 007 y 008 y la documentación de fork describen el traslado de voicing a relaciones normalizadas de voices/ensembles. El código actual de SqlWorkRepository deriva el dato desde work_ensembles; no debemos reintroducir works_voicing como campo autoritativo. works_instrumentation también aparece como campo legado, mientras que la API deriva instrumentación desde work_instruments; verificar escritores antes de concluir su retirada.
-5. **works_music_digest y works_key no son equivalentes.** El primero se añadió en una migración específica para una huella musical de 32 caracteres; works_key está descrito en el baseline como hash de agrupación heredado y se usa históricamente como clave de origen PDMX en la migración a Representation. V6 debe distinguir huella de contenido musical, identificador/clave de agrupación y clave externa de proveedor.
+5. **works_music_digest y works_key no son equivalentes.** La migración 034 explica que works_music_digest es un MD5 de notas musicales normalizadas (step/octave/duration/voice) extraídas de MusicXML, calculado por scripts/analyze_works_content.py para agrupar obras musicalmente equivalentes entre ediciones. works_key está descrito en el baseline como hash de agrupación heredado y se usó en la migración PDMX como identificador de origen. V6 debe distinguir huella musical, identidad/agrupación canónica y clave externa de proveedor. El digest es candidato a conservar como índice derivado si se confirma que siguen siendo necesarios el proceso y su uso; no es un hash de seguridad ni sustituye File.sha256.
 6. **Procedencia Work vs Resource.** En la migración PDMX, representations_origin_id se rellena con works_key; para CPDL se construye como page_id:cpdlno, porque un Work puede tener múltiples ediciones. V6 necesita correspondencias externas tipadas por entidad, no una única columna genérica copiada sin criterio.
-7. **archive_entries sigue siendo un consumidor/fallback histórico importante.** La documentación de Storage indica que no se retiró durante la transición y que GetWork, la descarga e import_pdmx tenían dependencias/fallback. En V6 hay que migrar primero esos flujos y validar cobertura; no basta con copiar registros a Resource y eliminar el legado.
+7. **archive_entries es un legado que hay que migrar con cobertura comprobada.** La documentación de la transición indica que se mantuvo intacto mientras se migraban recursos y que GetWork, la descarga e import_pdmx tenían dependencias/fallback. La situación exacta de cada fallback debe verificarse en el código vigente; en V6 no se retirará hasta sustituirlo y validar cobertura.
 
 ### Clasificación de trabajo actualizada
 
@@ -475,3 +475,9 @@ Antes de proponer el DDL final, rastrear:
 - fallback y cobertura de archive_entries.
 
 No se ha cambiado código ni base de datos. Esta planificación se mantiene en el repositorio API como documento maestro.
+
+
+### Nota de rigor sobre la evidencia
+
+La migración 034 describe works_music_digest con una semántica concreta (MD5 de notas normalizadas, no hash de fichero). La documentación de works_obra_iden es un cierre histórico basado en una consulta de septiembre de 2026, no una consulta actual. Se usa como evidencia fuerte para el diseño, pero no como prueba de datos actuales. Del mismo modo, el diagnóstico op2 es evidencia de la estructura que se documentó tras la migración, no una lectura de producción hecha en esta revisión.
+
