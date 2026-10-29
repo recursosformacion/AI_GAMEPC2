@@ -405,8 +405,8 @@ La tabla actual mezcla dos conceptos: recursos PDMX directos a Work y ficheros/r
 | files.mime_type, files.size_bytes | MIME/tamaño opcionales. | Metadatos técnicos derivados/verificados de bytes. | Conservar y validar. |
 | files.status | La entidad usa registered, downloading, available, failed. | Estado de integridad/procesamiento de File. | Separar de publicación/visibilidad de Resource. |
 | files.created_at, files.updated_at | Auditoría técnica. | Timestamps de File. | Conservar si son necesarios. |
-| storage_locations.file_id, provider_id, object_key | DDL enlaza File y proveedor; UNIQUE(file_id, provider_id). | Copias físicas de File, fuera de Resource. | Conservar separación. |
-| storage_locations.status | La entidad usa stored, failed, removed. | Estado de esa copia concreta. | No inferir disponibilidad solo del estado global de File. |
+| storage_locations.file_id, provider_id, object_key | DDL enlaza File y proveedor; UNIQUE(file_id, provider_id). | Estructura heredada que se retira de V6; cada File apunta directamente a su objeto físico. | Migrar referencias y consumidores antes de eliminar la tabla. |
+| storage_locations.status | La entidad usa stored, failed, removed. | Estado heredado de ubicación por proveedor; no se conserva como entidad del modelo V6. | Sustituir las reglas de disponibilidad y recuperación por el contrato de Storage. |
 
 **Consumidores identificados en esta pasada:**
 - infrastructure/repositories/sql_file_repository.py crea, consulta, actualiza y borra files; domain/entities/file.py define estado y clave derivada de SHA-256.
@@ -423,9 +423,9 @@ La tabla actual mezcla dos conceptos: recursos PDMX directos a Work y ficheros/r
 1. Work conserva identidad intelectual y relaciones canónicas; no almacena formato ni ruta de fichero.
 2. Resource representa una realización musical concreta, con work_id obligatorio; absorbe lo válido de Representation y la parte editorial de la fila antigua works_resources.
  - Resource–File debe tener cardinalidad 1:N, sin compartir Files ni objetos físicos entre Resources; una referencia externa no debe fingir que sus bytes están almacenados por OSAP.
-4. File representa bytes y metadatos técnicos; puede compartirse y tener varias ubicaciones.
+4. File representa un artefacto digital con metadatos técnicos y referencia directa a su objeto físico; no se comparte entre Resources ni se modelan ubicaciones por proveedor.
 5. Procedencia debe separar ID externo de Work del ID externo de Resource.
-6. Separar revisión/publicación/visibilidad de Resource, disponibilidad técnica de File y estado de StorageLocation.
+6. Separar revisión/publicación/visibilidad de Resource y disponibilidad técnica de File; los mecanismos de copia y recuperación quedan internos a Storage.
 7. PDF/MXL/MIDI es el eje de formato; edition/score/arrangement/transcription es el eje de tipo musical.
 8. Los campos de Work derivados desde relaciones normalizadas son candidatos a retirada, pero solo tras rastrear escrituras y comparar valores históricos.
 9. V6 debe tener migraciones versionadas que creen todas las tablas y restricciones desde cero; no corregir esta discrepancia mediante cambios improvisados en la base desplegada.
@@ -499,7 +499,7 @@ Work
       ├── ResourceExternalIdentifier
       ├── File (0..N, cada uno pertenece a un solo Resource)
               └── almacenamiento propio del File (ruta o clave física)
-      │                  └── StorageLocation (0..N copias)
+      │                  └── objeto físico propio del File (ubicación directa en Storage)
       ├── ResourceLanguage ── Language          [idioma de esta realización]
       └── ResourceEnsemble / ResourceInstrument [solo si difiere de la obra]
 ```
@@ -508,7 +508,7 @@ Reglas:
 - `Work` identifica la obra intelectual; no es un fichero, una edición ni un formato.
 - `Resource` es una realización/fuente musical concreta: edición, partitura, arreglo, transcripción, versión, interpretación publicada o fuente catalográfica. Puede existir sin ficheros, por ejemplo una edición CPDL catalogada pero no materializada.
  - `File` representa un artefacto de un Resource. Un Resource puede tener PDF, MusicXML y MIDI si pertenecen a la misma realización; cada formato es un File independiente, con su propio identificador, hash de integridad opcional y ubicación.
-- `File` identifica bytes por SHA-256; `StorageLocation` representa cada copia física. No guarda licencia editorial, autoría musical, publicación ni visibilidad.
+- `File` identifica un artefacto digital y apunta a su propio objeto físico. El hash verifica integridad; Storage gestiona internamente copias de seguridad y recuperación, sin una entidad `StorageLocation` en V6.
 - Una URL de página fuente y una URL de descarga directa son conceptos diferentes. Deben tiparse y no confundirse con un fichero almacenado.
 - No introducir entidades de dominio para replicar jerarquías de proveedores. Resource describe la realización musical; solo se conservan los IDs externos y enlaces mínimos necesarios para volver a consultar la fuente. Cada registro heredado se clasifica por su significado real.
 - Las relaciones opcionales de Resource a instrumento/ensemble solo se crean si la realización puede diferir de la Work; no duplicar relaciones idénticas sin razón de consulta.
@@ -538,7 +538,7 @@ La cardinalidad propuesta es: Work 1:N Resource; Resource puede existir sin File
 | `works_key` | Campo de migración/clave de agrupación solo si se documenta su semántica; IDs externos se trasladan a WorkExternalIdentifier | Se usa en SqlWorkRepository y herramientas de revisión/importación, y el migrador PDMX lo usó como ID de origen de una Representation. No reutilizarlo como identidad canónica ni asumir que equivale a un ID de proveedor. Mantener tabla de correspondencia durante la migración. |
 | `works_music_digest` | Huella musical derivada, opcional e indexable, separada de Work.id y File.sha256 | Es MD5 de notas normalizadas de MusicXML, no hash de bytes. Conservar solo si la agrupación/reconciliación musical V6 tiene un consumidor demostrado. |
 | `works_type_file`, `works_resources_type` | Formato de File mediante catálogo/valor normalizado | PDF/MXL/MIDI describe el artefacto, no el tipo musical de Resource. |
-| `works_relative_path`, `works_resources_relative_path` | Eliminar como dato autoritativo; usar StorageLocation.object_key internamente y resolver URL a través del servicio | No exponer rutas físicas ni mantener rutas replicadas en Work/Resource. Antes, migrar todos los enlaces/descargas que aún dependan de ellas. |
+| `works_relative_path`, `works_resources_relative_path` | Eliminar como dato autoritativo; usar la referencia física directa de File y resolver URL a través del servicio Storage | No exponer rutas físicas ni mantener rutas replicadas en Work/Resource. Antes, migrar todos los enlaces/descargas que aún dependan de ellas. |
 | `works_voicing`, `works_instrumentation` | Retirar copias textuales tras validar cobertura de relaciones normalizadas | La instrumentación/ensemble canónicos están en relaciones. Una realización que difiera de la Work debe poder expresar su propia instrumentación sin duplicar el dato de Work. |
 | `works_obra_iden` | Eliminar | Sin valores/consumidores según cierre histórico; no representa un mecanismo suficiente para resolver identidad/duplicados. |
 | `works_song_name`, `works_title`, `works_subtitle` | Título canónico y variantes/títulos de fuente en Work, con reglas explícitas de preferencia | No fusionar automáticamente columnas solo por parecido; preservar variantes y valores crudos cuando sean evidencia de procedencia. |
@@ -714,10 +714,10 @@ Esta sección completa el mapa entre las evidencias localizadas y las decisiones
 | Personas y roles de la edición/recurso | Person + ResourcePersonRole | representation_persons sin migrar o nombre de editor libre como única identidad |
 | Clasificación de Work | relaciones normalizadas de género, época, instrumento, ensemble, idioma y tags | works_instrumentation / works_voicing y columnas de texto duplicadas |
 | Ficheros | File identificado por SHA-256 verificado cuando contiene bytes | rutas físicas en Work/Resource; nombre de fichero como identidad |
-| Ubicación física | StorageLocation por File y proveedor | archive_id o relative_path como ubicación física autoritativa |
+| Ubicación física | Referencia directa de File a su objeto físico; copias/recuperación internas a Storage | archive_id o relative_path como ubicación física autoritativa |
 | Formato de artefacto | File + formato normalizado | works_type_file o tipo musical de Resource |
 | Licencia/atribución | afirmación de licencia ligada al objeto que realmente cubre, con fuente | booleano global heredado o inferencia por visibilidad |
-| Estado técnico | File / StorageLocation | estado editorial del Resource |
+| Estado técnico | File y contrato de disponibilidad de Storage | estado editorial del Resource |
 | Estado editorial, propiedad y visibilidad | Resource y sus metadatos de gestión en Storage | estados duplicados en API que aparenten publicar el catálogo |
 | Identidad del usuario | osap-auth | copias de credenciales/usuarios en Storage |
 | Workflow de aportación/revisión | estado operativo de aportación en API; la aceptación materializa Resource en Storage | contribución aceptada como sustituto permanente del registro canónico |
@@ -817,7 +817,7 @@ La matriz distingue tres niveles: evidencia de código/documentación, destino p
 | works_year | Campo genérico de fecha | Fecha/periodo de Work con tipo y precisión | Distinguir composición, publicación y estimación; conservar original |
 | works_duration, works_measures, works_pages, works_parts, works_complexity | Campos heredados; pueden variar por edición/arreglo | Resource si describen realización; Work solo si son globales | Revisar unidad/tipo; no confundir páginas, compases y partes vocales |
 | works_license, works_public_domain | Semántica insuficiente para afirmar derechos de toda realización | Afirmación de derechos con sujeto, jurisdicción, fuente, fecha y confianza | No convertir booleano en certeza legal; preservar valor crudo |
-| works_relative_path | Insertado por repositorio Work; rutas/fallback legacy pueden usarlo | Eliminar de Work; ubicación en StorageLocation y relación con File | Encontrar y migrar todo lector y constructor de URL |
+| works_relative_path | Insertado por repositorio Work; rutas/fallback legacy pueden usarlo | Eliminar de Work; ubicación física directa en File y resolución mediante Storage | Encontrar y migrar todo lector y constructor de URL |
 | works_type_file | Campo histórico de formato, pendiente de rastreo completo de consumidores | Formato normalizado del artefacto asociado a Resource | No confundir formato con tipo de realización |
 | works_music_digest | MD5 de notas normalizadas MusicXML para similitud musical, no hash binario | Huella derivada opcional de reconciliación | Conservar mientras exista consumidor probado; no sustituir por SHA-256 |
 | works_voicing, works_instrumentation | Textos históricos; las relaciones de ensemble/instrumento ya se usan en repositorio Work | Relaciones canónicas; override de Resource si difiere | Resolver contra catálogos; staging de texto crudo y prueba de cobertura |
@@ -849,8 +849,8 @@ El nombre actual es ambiguo: muchas filas representan fichero o referencia de fo
 | works_resources_representation_id | Une artefactos CPDL con edición; nulo en PDMX directo | Resource padre V6 | Eliminar jerarquía doble; asociación de artefacto apunta a Resource |
 | works_resources_type | PDF, MXL, MIDI, MP3, CAPX, MUS, SIB, MSCZ y otros formatos | Formato de asociación Resource–File | Normalizar sin perder códigos desconocidos; no es tipo musical de Resource |
 | works_resources_name | Nombre de artefacto/recurso | Nombre original del artefacto; título editorial vive en Resource | No usar como título canónico de Work ni identidad de File |
-| works_resources_relative_path | Consumido por repositorios y posiblemente descarga/fallback | No guardar ruta física en Work/Resource; ubicación en StorageLocation | Migrar enlaces y constructores de URL antes de retirar |
-| works_resources_status | Estado técnico/editorial ambiguo | Separar estado técnico de File/StorageLocation y estado editorial de Resource | Tabla explícita de correspondencia; no copiar un estado a ambos |
+| works_resources_relative_path | Consumido por repositorios y posiblemente descarga/fallback | No guardar ruta física en Work/Resource; ubicación física directa en File y resolución mediante Storage | Migrar enlaces y constructores de URL antes de retirar |
+| works_resources_status | Estado técnico/editorial ambiguo | Separar estado técnico de File y disponibilidad de Storage del estado editorial de Resource | Tabla explícita de correspondencia; no copiar un estado a ambos |
 | works_resources_file_id | FK opcional a File | Relación Resource–File | Verificar hash/ubicaciones; no asumir ubicación activa |
 | works_resources_url | Puede ser URL de página o descarga; semántica no garantizada | SourceLink o ExternalArtifactReference tipado | Distinguir página, descarga directa y URL derivada; no crear File ficticio |
 | works_resources_archive_id | Referencia al archivo comprimido heredado | Procedencia/staging o ubicación de archivo si se demuestra necesaria | No trasladar automáticamente a StorageLocation |
@@ -858,12 +858,14 @@ El nombre actual es ambiguo: muchas filas representan fichero o referencia de fo
 
 ### 17.5 File, StorageLocation y archivo legado
 
+Esta tabla documenta el esquema heredado que debe migrarse; sus referencias a `StorageLocation` no forman parte del modelo objetivo V6.
+
 | Entidad/campo | Destino V6 | Condición |
 |---|---|---|
 | files.id | File.id si se conserva el espacio de IDs | Mapping si cambia; identidad lógica por SHA-256 verificado |
 | files.sha256 | SHA-256 binario de File | Verificar bytes disponibles; nunca confundir con digest musical |
 | files.name, mime_type, size_bytes, status | Metadatos técnicos de File | Distinguir MIME declarado/detectado; validar al subir |
-| storage_locations | Ubicación física de File por proveedor/localización | Una fila por copia física; la URL no concede permiso |
+| storage_locations | Retirar del modelo y de la implementación V6 | Migrar las referencias físicas a File, adaptar consumidores y validar disponibilidad/descarga/recuperación antes de borrar la tabla |
 | archives, archive_entries | Fuente de migración o subsistema explícito si sigue requerido | Inventariar lectores, offsets y cobertura; retirar fallback solo tras probar equivalencia |
 | archive_entries.relative_path, offset_bytes, size | Metadatos de extracción/archivo, no de Work | Migrar solo si el archivo comprimido sigue siendo fuente necesaria |
 | archive_entries.logical_id, composer, title | Procedencia/staging y reconciliación | Promover solo si aporta dato no duplicado y se resuelve conflicto |
