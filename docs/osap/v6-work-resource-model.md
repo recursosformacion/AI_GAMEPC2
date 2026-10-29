@@ -803,3 +803,117 @@ La investigación de los importadores confirma que no existe una regla única pa
 - **URL de origen vs URL de descarga:** works_source_url (IMSLP) enlaza la fuente catalográfica. Una URL de descarga apunta a un artefacto concreto. V6 debe distinguir SourceLink/URL de página, URL directa de descarga y File almacenado; no crear un File solo porque exista un permalink.
 - **Idempotencia:** las claves de ingesta deben incluir proveedor, tipo de entidad e ID externo. La política de unicidad se define por fuente: no usar una única restricción global de origin_id ni deduplicar Work por título.
 
+
+## 17. Matriz de columnas y contratos heredados: estado de cierre documental (2026-10-29)
+
+### 17.1 Regla para interpretar esta matriz
+
+La matriz distingue tres niveles: evidencia de código/documentación, destino propuesto y verificación pendiente. Se ha completado hasta el nivel necesario para orientar el diseño y preparar una auditoría automatizada; no se afirma que sea aún un inventario exhaustivo de cada referencia literal del monorepo o consumidor externo. El prompt de la sección 18 debe cerrar ese límite.
+
+### 17.2 Columnas de Work (works)
+
+| Campo actual / familia | Evidencia y uso conocido | Destino V6 | Regla de migración y retirada |
+|---|---|---|---|
+| id | PK de Work referenciada por roles, catálogos, índice, recursos y rutas | Work.id | Mantener si no hay fusión; mapping y redirects si cambia; nunca reutilizar ID |
+| works_title, works_song_name, works_subtitle | SqlWorkRepository inserta/proyecta estos campos; importadores alimentan títulos con reglas distintas | Work.title + variantes/títulos de fuente | Definir precedencia; preservar originales y fuente; no fusionar solo por nombre |
+| works_key | Usado por SqlWorkRepository y herramientas de agrupación; la documentación de migración lo describe como clave de agrupación/deduplicación; un migrador antiguo lo reutilizó como ID de origen | No es ID canónico; mapping y, si procede, ExternalIdentifier PDMX | Rastrear todos los lectores/escritores y preservar mapping reversible |
+| works_origin, works_origin_id | IMSLP guarda proveedor + pageid estable en Work; CPDL usa IDs de página en un camino; PDMX tiene semántica histórica variable | WorkExternalIdentifier si identifica obra; ResourceExternalIdentifier si identifica edición | Proveedor + entidad + ID; preservar crudo, URL y colisiones; no unicidad global de origin_id |
+| works_source_url | IMSLP lo define como permalink a página fuente, no como fichero alojado | Enlace de fuente asociado a Work o Resource | Distinguir URL de página, descarga directa y File almacenado |
+| works_catalogue, works_opus | Proyección de catálogo/opus en repositorio y scripts de enriquecimiento | Identificadores de catálogo tipados en Work | Conservar autoridad, catálogo, valor y texto original |
+| works_attr_type, works_attribution_note | Repositorio y scripts de atribución; atribución anónima/tradicional separada de identidades | Atribución explícita de Work + WorkPersonRole + auditoría | No crear Persona para anónimo/tradicional; evitar dobles verdades |
+| works_musical_key | Se expone desde Work; puede variar por arreglo/transposición | Resource.musical_key por defecto | Migrar con procedencia; no copiar a todos los Resources sin evidencia |
+| works_year | Campo genérico de fecha | Fecha/periodo de Work con tipo y precisión | Distinguir composición, publicación y estimación; conservar original |
+| works_duration, works_measures, works_pages, works_parts, works_complexity | Campos heredados; pueden variar por edición/arreglo | Resource si describen realización; Work solo si son globales | Revisar unidad/tipo; no confundir páginas, compases y partes vocales |
+| works_license, works_public_domain | Semántica insuficiente para afirmar derechos de toda realización | Afirmación de derechos con sujeto, jurisdicción, fuente, fecha y confianza | No convertir booleano en certeza legal; preservar valor crudo |
+| works_relative_path | Insertado por repositorio Work; rutas/fallback legacy pueden usarlo | Eliminar de Work; ubicación en StorageLocation y relación con File | Encontrar y migrar todo lector y constructor de URL |
+| works_type_file | Campo histórico de formato, pendiente de rastreo completo de consumidores | Formato normalizado del artefacto asociado a Resource | No confundir formato con tipo de realización |
+| works_music_digest | MD5 de notas normalizadas MusicXML para similitud musical, no hash binario | Huella derivada opcional de reconciliación | Conservar mientras exista consumidor probado; no sustituir por SHA-256 |
+| works_voicing, works_instrumentation | Textos históricos; las relaciones de ensemble/instrumento ya se usan en repositorio Work | Relaciones canónicas; override de Resource si difiere | Resolver contra catálogos; staging de texto crudo y prueba de cobertura |
+| works_description y otros descriptivos | La semántica depende del origen y del sujeto descrito | Work.description o Resource.description según significado | Clasificar por contenido y procedencia |
+| cachés, contadores, ranking y digests | Algunos pueden ser calculados por procesos auxiliares o índice | Proyección reconstruible o estadísticas separadas si hay requisito | Identificar productor/lector y reconstrucción antes de retirar |
+
+### 17.3 Columnas de Representation (representations)
+
+| Campo actual | Evidencia/uso conocido | Destino V6 | Regla de migración |
+|---|---|---|---|
+| id | Identificador de edición consumido por admin, resolución y aportaciones | Resource.id cuando la fila representa edición/fuente | Mapping legacy → Resource; no exponer representation_id en V6 |
+| representations_works_id | FK a Work | Resource.work_id NOT NULL | Cada Resource debe tener Work; excepciones a staging, no huérfanos |
+| representations_origin, representations_origin_id | PDMX usa work_key en vía histórica; CPDL usa página + cpdlno | ResourceExternalIdentifier + procedencia | Proveedor + entidad + ID; preservar componentes separados |
+| representations_origin_cpdlno | Número de edición CPDL que no es único por sí solo | Identificador de Resource compuesto por página + cpdlno | Unicidad compuesta según fuente |
+| representations_type | Tipo de representación/fuente | Resource.kind normalizado | No reutilizar códigos de formato PDF/MXL |
+| representations_source_name | Nombre textual de edición/fuente | Resource.source_title o nombre de fuente | Conservar literal original |
+| representations_license | Usado por repositorio/admin; probablemente describe edición | Afirmación de derechos de Resource/artefacto | Migrar literal y procedencia; revisar ambigüedad |
+| representations_ensemble_code, representations_voice_signature | Ensemble canónico y voces tienen modelo normalizado; voice_signature es derivado | Relaciones de instrumentación de Resource solo si difiere de Work | Resolver alias; no persistir firma derivada como segunda verdad |
+| created_at, updated_at | Auditoría técnica | Auditoría de Resource | Conservar timestamps si son confiables y distinguir importación/publicación |
+
+### 17.4 Columnas de works_resources
+
+El nombre actual es ambiguo: muchas filas representan fichero o referencia de formato, no una realización musical completa. No se conserva el nombre de tabla por inercia.
+
+| Campo actual | Evidencia/uso conocido | Destino V6 | Regla de migración |
+|---|---|---|---|
+| id | PK de fila que hoy puede ser fichero/referencia | ID de asociación Resource–File o Resource solo si lo justifica la semántica | No mapear automáticamente a Resource.id |
+| works_resources_work_id | Camino directo de PDMX y filas sin Representation | Resource.work_id para filas que sean realizaciones; si son artefactos, Work se deriva de Resource | Clasificar semántica por fila; no conservar doble vía |
+| works_resources_representation_id | Une artefactos CPDL con edición; nulo en PDMX directo | Resource padre V6 | Eliminar jerarquía doble; asociación de artefacto apunta a Resource |
+| works_resources_type | PDF, MXL, MIDI, MP3, CAPX, MUS, SIB, MSCZ y otros formatos | Formato de asociación Resource–File | Normalizar sin perder códigos desconocidos; no es tipo musical de Resource |
+| works_resources_name | Nombre de artefacto/recurso | Nombre original del artefacto; título editorial vive en Resource | No usar como título canónico de Work ni identidad de File |
+| works_resources_relative_path | Consumido por repositorios y posiblemente descarga/fallback | No guardar ruta física en Work/Resource; ubicación en StorageLocation | Migrar enlaces y constructores de URL antes de retirar |
+| works_resources_status | Estado técnico/editorial ambiguo | Separar estado técnico de File/StorageLocation y estado editorial de Resource | Tabla explícita de correspondencia; no copiar un estado a ambos |
+| works_resources_file_id | FK opcional a File | Relación Resource–File | Verificar hash/ubicaciones; no asumir ubicación activa |
+| works_resources_url | Puede ser URL de página o descarga; semántica no garantizada | SourceLink o ExternalArtifactReference tipado | Distinguir página, descarga directa y URL derivada; no crear File ficticio |
+| works_resources_archive_id | Referencia al archivo comprimido heredado | Procedencia/staging o ubicación de archivo si se demuestra necesaria | No trasladar automáticamente a StorageLocation |
+| timestamps | Auditoría técnica | Auditoría de Resource o asociación, según semántica | Preservar en mapping si se dividen filas |
+
+### 17.5 File, StorageLocation y archivo legado
+
+| Entidad/campo | Destino V6 | Condición |
+|---|---|---|
+| files.id | File.id si se conserva el espacio de IDs | Mapping si cambia; identidad lógica por SHA-256 verificado |
+| files.sha256 | SHA-256 binario de File | Verificar bytes disponibles; nunca confundir con digest musical |
+| files.name, mime_type, size_bytes, status | Metadatos técnicos de File | Distinguir MIME declarado/detectado; validar al subir |
+| storage_locations | Ubicación física de File por proveedor/localización | Una fila por copia física; la URL no concede permiso |
+| archives, archive_entries | Fuente de migración o subsistema explícito si sigue requerido | Inventariar lectores, offsets y cobertura; retirar fallback solo tras probar equivalencia |
+| archive_entries.relative_path, offset_bytes, size | Metadatos de extracción/archivo, no de Work | Migrar solo si el archivo comprimido sigue siendo fuente necesaria |
+| archive_entries.logical_id, composer, title | Procedencia/staging y reconciliación | Promover solo si aporta dato no duplicado y se resuelve conflicto |
+
+### 17.6 Relaciones normalizadas y catálogos
+
+| Dominio actual | Destino V6 | Regla |
+|---|---|---|
+| works_person_roles, persons, roles | WorkPersonRole, Person, Role | Preservar rol, orden, procedencia y atribución; editor de Resource no es compositor de Work |
+| representation_persons o equivalente | ResourcePersonRole | Migrar editores/arreglistas/transcriptores al ámbito correcto; nombres no resueltos son evidencia, no Personas falsas |
+| work_genres, genres | WorkGenre + catálogo | Resource solo si la edición cambia clasificación |
+| work_instruments, instruments | WorkInstrument + catálogo | IDs canónicos; Resource puede declarar variación del arreglo |
+| work_ensembles, ensembles, ensemble_voices | WorkEnsemble y voces canónicas | No persistir voice_signature como segunda verdad |
+| work_language e idiomas | WorkLanguage para idioma de la obra; ResourceLanguage para traducción/edición | Distinguir idioma original del idioma de la realización |
+| tags | WorkTag o ResourceTag según sujeto | No copiar tags de proveedor a todas las ediciones |
+| época, catálogo y opus | Relaciones/identificadores tipados | No guardar IDs de catálogo como texto ambiguo si se puede normalizar sin pérdida |
+
+### 17.7 Contratos, productores y consumidores
+
+| Productor/consumidor localizado | Dependencia actual | Cambio V6 | Prueba de retirada |
+|---|---|---|---|
+| SqlWorkRepository | SQL sobre works; deriva compositor/intérprete/género/instrumentación/tags desde relaciones | Repositorio Work V6 | Lectura/escritura, listados y detalle sin columnas legacy |
+| SqlRepresentationRepository | Traduce representations y works_resources a dos dataclasses; Resource permite work_id o representation_id | Repositorios Work/Resource/ResourceFile/File | Cero SQL o símbolos legacy en consumidores activos |
+| SqlResolutionSource | Combina origen, ID, licencia, tonalidad y relaciones | Resolver Work + Resource + identificadores externos tipados | PDMX, CPDL, IMSLP, varias ediciones y sin fichero |
+| SqlResourceAdminRepository y SqlArchiveEntryRepository | CRUD/fallback con rutas, URL, file_id, archive_id y relative_path | Administración y descarga por servicio autorizado | ACL, descarga, archivo y ausencia de fallback |
+| RepresentationAdminCrud, ResourceAdminCrud y rutas admin | IDs/campos representation_id, licencia, origen, ruta y file_id | API V6 Work/Resource/File con permisos | Pruebas contractuales/scopes; sin dependencia de representation_id |
+| api/routes/works.py y schemas WorkRead/WorkDetailRead/ResourceRead | Serializan resources, relative_path, formato, file_id y URL | DTO V6 sin rutas físicas; URLs por servicio de acceso | Tests contractuales, enlaces y redirects |
+| Importadores PDMX, CPDL e IMSLP | Mapean origen de formas distintas; algunos escriben directamente en tablas | Adaptadores idempotentes con contratos de ingesta V6 | Reimportación sin duplicados y conflictos auditables |
+| scripts/analyze_works_content.py y works_music_digest | Digest musical para comparación/reconciliación | Proceso derivado optativo | Demostrar consumidor antes de retirar |
+| ContributionService, ContributionsMixin y StorageContributionClient | Aportación a representation; plataforma materializa antes de accepted | Workflow API + materialización idempotente de Resource y relación de File en Storage | Reintento/fallo parcial; accepted implica materialización completa |
+| Frontend, búsqueda e índice | IDs de obra/recurso, títulos, URLs y esquema actual | Contrato V6 e índice reconstruible | E2E, redirects y reconstrucción |
+| ai_recogeYouTube, futura AI_Guitarra y consumidores | Riesgo de dependencia de IDs/estructura actual | API pública estable, sin SQL interno | Pruebas de integración |
+| osap-auth | Identidad y tokens | Mantener identidad fuera del catálogo; Storage solo guarda ID estable del propietario | Tests de token y ACL |
+
+### 17.8 Condiciones de retirada por grupo
+
+1. **Work:** no quedan consumidores de works_key, works_origin, works_origin_id, rutas ni columnas duplicadas; todo ID externo está mapeado.
+2. **Representation:** cada fila tiene Resource destino o exclusión justificada; editores/licencia/procedencia reconciliados; volver a contar con snapshot reciente las filas sin fichero históricamente reportadas.
+3. **works_resources:** cada fila se clasifica como Resource, asociación de fichero, referencia externa o inválida; no se pierde una edición al convertir varios hijos.
+4. **File/ubicación:** hashes y tamaños se verifican donde hay bytes; ubicaciones activas se distinguen de huérfanos; deduplicar no elimina asociaciones.
+5. **archive_entries:** todos los lectores/fallbacks sustituidos y descarga probada desde V6.
+6. **Relaciones:** cada vínculo tiene catálogo destino y tratamiento de valores sin resolver; textos se retiran solo con métricas de cobertura.
+7. **API/frontend/importadores:** no hay contrato activo que exija columnas/IDs legacy; enlaces externos tienen mapping/redirect.
+8. **Aportaciones/privacidad:** aceptación, propiedad, visibilidad, cuota, descarga privada y archivo probados en Storage V6.
+
