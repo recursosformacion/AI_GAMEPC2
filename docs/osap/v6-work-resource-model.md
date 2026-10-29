@@ -1038,25 +1038,31 @@ No uses conteos históricos como cifras actuales. No inventes resultados de prod
 
 ---
 
-## 19. Modelo Resource–File y decisión de cardinalidad (2026-10-29)
+## 19. Flujo de creación File → Resource → Work y cardinalidad pendiente de informe (2026-10-29)
 
-Esta sección fija el criterio de V6: **no se introduce una entidad Blob ni se comparte un objeto físico entre Files**. La relación conceptual es Work 1:N Resource; Resource 0:N File; cada File pertenece a un único Resource y representa un único artefacto almacenado.
+El flujo de trabajo que se debe diseñar parte del artefacto que una persona incorpora: **se crea un File y, al definirlo, se selecciona el Resource al que pertenece o se crea un Resource nuevo bajo una Work existente**. Si la Work todavía no existe, deberá resolverse o crearse mediante el flujo de catálogo correspondiente. No se debe obligar a crear primero un Resource vacío para después buscar cómo asociarle el fichero.
 
 ```text
-Work (obra)
-  └── Resource (realización musical)
-        └── File (apunta a la ubicación del objeto físico)
+Seleccionar una Work existente
+  └── seleccionar un Resource existente
+      └── crear File que apunta a la ubicación del objeto
+  O
+Seleccionar una Work existente
+  └── crear un Resource (definir la realización musical)
+      └── crear File que apunta a la ubicación del objeto
 ```
 
-- **Resource** describe una realización musical; no es un formato de fichero. Puede existir sin ficheros y puede reunir varios artefactos de esa misma realización.
-- **File** es la identidad del artefacto concreto, con nombre, formato, estado, tamaño, hash de integridad si se necesita y referencia al objeto físico almacenado.
-- **Un objeto físico solo puede estar asociado a un File.** No hay una tabla de unión `ResourceFile` ni una relación M:N.
-- Si el mismo PDF parece corresponder a dos Resources, la primera hipótesis debe ser que se ha duplicado el Resource: revisar la identidad musical y consolidar la realización si corresponde. No se duplican Resources ni Files solo para representar distintos créditos de personas; esos créditos se registran mediante sus relaciones de personas y roles. Si hay evidencia de que son realizaciones diferentes, debe documentarse qué las distingue antes de decidir cómo catalogarlas.
-- Los arreglistas, editores y demás personas se registran mediante las relaciones de personas y roles correspondientes al objeto musical correcto. La presencia de varias personas no justifica duplicar Resources ni compartir un File entre ellos.
-- SHA-256, si se conserva, se utiliza para verificar integridad y detectar alteraciones; no define la identidad de File ni fuerza una deduplicación. La restricción `UNIQUE` existente en `files.sha256` debe revisarse en el diseño V6.
-- Las ubicaciones, réplicas y copias de seguridad físicas son responsabilidad del servicio de almacenamiento. No justifican por sí mismas una entidad de catálogo Blob.
+- **Work** identifica la obra musical canónica, por ejemplo «Ave Verum».
+- **Resource** describe la realización musical y su finalidad, por ejemplo un arreglo para coro SATB o una versión para solista. Al crear un File, se debe poder indicar si corresponde a un Resource existente o si representa una realización nueva que debe crearse bajo la Work elegida.
+- **File** identifica el artefacto digital concreto y apunta directamente a la ubicación de su objeto físico almacenado. No es una ficha externa ni una URL de página informativa.
+- Un objeto físico solo puede estar asociado a un File. No se introduce Blob ni se comparte una ubicación física entre Files.
+- Los arreglistas, editores y demás personas se registran mediante las relaciones de personas y roles correspondientes. No se crean Resources distintos solo para duplicar créditos personales si el contenido y la finalidad musical son los mismos.
+- SHA-256, si se conserva, sirve para verificar integridad; no define por sí solo la identidad musical de Resource ni obliga a deduplicar Files.
+- Puede haber Resources descubiertos en informes externos sin File descargado. Eso no contradice el flujo File-first de carga de un usuario: son caminos de entrada distintos. No se crea un File ficticio para una URL o un artefacto que no se haya obtenido.
 
-La decisión evita complejidad de deduplicación, permisos y cuotas. Antes del DDL se comprobarán los consumidores actuales de `files.sha256` y `storage_locations`. La hipótesis V6 es que File apunte directamente a la ubicación del objeto; `storage_locations` solo se mantendrá si la auditoría demuestra una necesidad real de modelar varias ubicaciones por File. No se añadirá esa capa por inercia.
+**La cardinalidad final Resource–File no se fija por intuición ni por ejemplos hipotéticos.** Debe resolverse con el informe de auditoría externa del modelo y los datos reales: cuántos Resources tienen realmente uno o varios artefactos, qué significan esas filas, si se trata de ficheros alternativos, partes, conversiones o registros duplicados, y qué consumidores necesitan cada caso. Hasta disponer de esa evidencia, la opción de diseño más sencilla es un File principal por Resource y permitir excepciones solo si el informe demuestra casos reales que las justifiquen. No se dará por hecho que cada Resource debe tener PDF, MusicXML y MIDI.
+
+La ubicación del objeto debe quedar directamente asociada a File en el modelo conceptual. Antes de cerrar el DDL se comprobará en el informe si `storage_locations` representa una necesidad real —por ejemplo, varias ubicaciones por File— o una capa prescindible. Las copias de seguridad y réplicas técnicas pueden seguir siendo responsabilidad interna del servicio de almacenamiento y no necesitan exponerse como entidades del catálogo.
 
 ## 20. Modelo canónico independiente de proveedores (criterio rector V6, 2026-10-29)
 
