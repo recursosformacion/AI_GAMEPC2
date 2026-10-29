@@ -481,3 +481,224 @@ No se ha cambiado código ni base de datos. Esta planificación se mantiene en e
 
 La migración 034 describe works_music_digest con una semántica concreta (MD5 de notas normalizadas, no hash de fichero). La documentación de works_obra_iden es un cierre histórico basado en una consulta de septiembre de 2026, no una consulta actual. Se usa como evidencia fuerte para el diseño, pero no como prueba de datos actuales. Del mismo modo, el diagnóstico op2 es evidencia de la estructura que se documentó tras la migración, no una lectura de producción hecha en esta revisión.
 
+
+
+## 10. Arquitectura objetivo propuesta para cerrar el modelo V6
+
+Esta sección convierte los hallazgos en una propuesta coherente de destino. No describe cambios ya implementados. Se parte del modelo op2 documentado en Storage y se normaliza para V6, sin exigir que el esquema nuevo reproduzca sus dos caminos heredados.
+
+### 10.1 Modelo lógico recomendado
+
+**Recomendación:** eliminar la entidad persistente separada `Representation` y usar un único `Resource` musical dependiente de una `Work`. Mantener `File` como identidad de bytes y una relación explícita entre Resource y File.
+
+```text
+Work
+ ├── WorkPersonRole ── Person
+ ├── WorkGenre ─────── Genre
+ ├── WorkInstrument ── Instrument (+ cantidad/función si aplica)
+ ├── WorkEnsemble ──── Ensemble ── EnsembleVoice
+ ├── WorkLanguage ──── Language                 [idioma de la obra/original, si se conoce]
+ ├── WorkExternalIdentifier
+ └── Resource (0..N; cada Resource tiene exactamente un Work)
+      ├── ResourcePersonRole ── Person          [editor, arreglista, transcriptor, etc.]
+      ├── ResourceExternalIdentifier
+      ├── ResourceFile ── File (0..N)
+      │                  └── StorageLocation (0..N copias)
+      ├── ResourceLanguage ── Language          [idioma de esta realización]
+      └── ResourceEnsemble / ResourceInstrument [solo si difiere de la obra]
+```
+
+Reglas:
+- `Work` identifica la obra intelectual; no es un fichero, una edición ni un formato.
+- `Resource` es una realización/fuente musical concreta: edición, partitura, arreglo, transcripción, versión, interpretación publicada o fuente catalográfica. Puede existir sin ficheros, por ejemplo una edición CPDL catalogada pero no materializada.
+- `ResourceFile` relaciona una realización con los ficheros que la representan. Un Resource puede tener PDF, MusicXML y MIDI; un mismo File puede compartirse si el contenido binario es idéntico.
+- `File` identifica bytes por SHA-256; `StorageLocation` representa cada copia física. No guarda licencia editorial, autoría musical, publicación ni visibilidad.
+- Una URL de página fuente y una URL de descarga directa son conceptos diferentes. Deben tiparse y no confundirse con un fichero almacenado.
+- No introducir una entidad `Representation` adicional solo para conservar la jerarquía CPDL. Su semántica editorial se absorbe en Resource; las filas hijas actuales de `works_resources` se reinterpretan como relaciones de fichero/referencia tras auditar sus campos.
+- Las relaciones opcionales de Resource a instrumento/ensemble solo se crean si la realización puede diferir de la Work; no duplicar relaciones idénticas sin razón de consulta.
+
+### 10.2 Cómo se convierten los dos patrones actuales
+
+| Patrón actual | Conversión propuesta |
+|---|---|
+| PDMX: Work → Resource directo, habitualmente un fichero MXL | Crear Resource para la realización PDMX y asociar el File mediante ResourceFile. No exigir un nivel Representation. |
+| CPDL: Work → Representation (edición) → varios works_resources | Crear un Resource por edición CPDL, trasladando origen, ID de página/CPDLno, licencia, nombre fuente y roles de editor. Convertir los hijos works_resources en ResourceFile/referencias de formato, no en nuevos Resources si solo representan ficheros de esa misma edición. |
+| CPDL Representation sin hijos (11.242 según diagnóstico histórico) | Crear Resource de edición sin ResourceFile. No descartarlo por no tener bytes. |
+| Recurso externo que no se ha descargado | Mantener Resource y su referencia externa tipada; no crear un File ficticio. Si el registro solo expresa un formato esperado pero no una referencia real, conservarlo temporalmente como placeholder identificable y resolverlo en auditoría antes de migrar. |
+| Aportación de usuario | Crear Resource ligado a Work; relacionar File(s) privados a través de ResourceFile; guardar propietario, visibilidad y estado editorial separados. |
+
+La cardinalidad del modelo nuevo es intencionalmente más expresiva que la cardinalidad actual: Work 1:N Resource, Resource 0:N ResourceFile, File 0:N ResourceFile y File 0:N StorageLocation. No se codifica como regla universal que PDMX sea 1:1 ni que una edición tenga siempre un número concreto de ficheros.
+
+### 10.3 Destino propuesto de los campos discutidos
+
+| Dato heredado | Destino V6 recomendado | Justificación / condición |
+|---|---|---|
+| `works_musical_key` | Resource.musical_key | La tonalidad puede cambiar entre arreglos/transposiciones. Si la fuente solo conoce una tonalidad global de la obra, migrarla como valor de origen con procedencia y no fingir que aplica a todas las realizaciones. |
+| `works_duration`, `works_measures`, `works_pages`, `works_parts`, `works_complexity` | Resource, con valores tipados cuando se pueda | Duración, compases, páginas, partes y dificultad pueden variar por arreglo/edición. No convertir datos ambiguos a números sin preservar el valor original. |
+| `works_license` | Resource.licence assertion; si la condición solo se aplica a un fichero, a ResourceFile | La licencia debe acompañar al objeto que realmente licencia; conservar texto original, fuente y evidencia cuando no sea posible normalizar. No heredar automáticamente una licencia de Work a todos sus Resources. |
+| `works_public_domain` | No trasladar ciegamente como booleano autoritativo. Convertir a una afirmación de estado legal con sujeto, jurisdicción, fecha/fuente y confianza, asociada a Work si se refiere a la composición o a Resource/ResourceFile si se refiere a edición/fichero | Dominio público de una composición y licencia de una edición/escaneo no son equivalentes. Conservar el dato legado y su procedencia mientras se determina qué significaba cada valor. |
+| `works_origin`, `works_origin_id` | WorkExternalIdentifier | Solo cuando identifiquen la obra intelectual del proveedor. |
+| `representations_origin`, `representations_origin_id`, `representations_origin_cpdlno` | ResourceExternalIdentifier / metadatos de procedencia | CPDL page ID y CPDLno son identificadores de ámbitos distintos; CPDLno no debe suponerse único. |
+| `works_key` | Campo de migración/clave de agrupación solo si se documenta su semántica; IDs externos se trasladan a WorkExternalIdentifier | No reutilizar una clave de agrupación como identidad canónica, ni asumir que equivale a un ID de proveedor. Mantener tabla de correspondencia durante la migración. |
+| `works_music_digest` | Huella musical derivada, opcional e indexable, separada de Work.id y File.sha256 | Es MD5 de notas normalizadas de MusicXML, no hash de bytes. Conservar solo si la agrupación/reconciliación musical V6 tiene un consumidor demostrado. |
+| `works_type_file`, `works_resources_type` | Formato de ResourceFile mediante catálogo/valor normalizado | PDF/MXL/MIDI describe el artefacto, no el tipo musical de Resource. |
+| `works_relative_path`, `works_resources_relative_path` | Eliminar como dato autoritativo; usar StorageLocation.object_key internamente y resolver URL a través del servicio | No exponer rutas físicas ni mantener rutas replicadas en Work/Resource. Antes, migrar todos los enlaces/descargas que aún dependan de ellas. |
+| `works_voicing`, `works_instrumentation` | Retirar copias textuales tras validar cobertura de relaciones normalizadas | La instrumentación/ensemble canónicos están en relaciones. Una realización que difiera de la Work debe poder expresar su propia instrumentación sin duplicar el dato de Work. |
+| `works_obra_iden` | Eliminar | Sin valores/consumidores según cierre histórico; no representa un mecanismo suficiente para resolver identidad/duplicados. |
+| `works_song_name`, `works_title`, `works_subtitle` | Título canónico y variantes/títulos de fuente en Work, con reglas explícitas de preferencia | No fusionar automáticamente columnas solo por parecido; preservar variantes y valores crudos cuando sean evidencia de procedencia. |
+| `works_year` | Work date/period con tipo de fecha y precisión | Aclarar si significa composición, publicación, edición o fecha estimada; un único entero genérico puede no bastar. |
+| `works_description` | Work.description si describe la obra; Resource.description si describe edición/fuente | Clasificar por significado y origen, no por el nombre de columna. |
+
+### 10.4 Catálogos y relaciones normalizadas
+
+Mantener el principio de que la identidad canónica de una persona, instrumento, género, idioma o ensemble se guarda una sola vez y se conecta mediante relaciones:
+- Personas y roles: reutilizar `persons`, identidades/alias e IDs externos de persona; mantener `WorkPersonRole` y `ResourcePersonRole` diferenciados para que un editor de edición no se convierta en compositor de la obra.
+- Géneros y época: género principal/relaciones en Work cuando describen la obra; no duplicarlos en Resource sin evidencia de que una edición cambia la clasificación.
+- Instrumentos y ensembles: Work expresa la instrumentación/plantilla conocida de la obra; Resource puede sobrescribirla o añadir una variante si el arreglo cambia la formación. Las voces se derivan del ensemble canónico y su relación de voces, no de una firma textual duplicada.
+- Idioma: distinguir idioma original/de la obra y lengua de la realización, por ejemplo una traducción. La relación actual `work_language` no basta para representar ambos significados si las ediciones varían.
+- Tags: conservar tags editoriales como clasificación de Work o Resource según el origen y el significado; no copiar tags de una fuente a todas las realizaciones automáticamente.
+- Catálogos/opus: conservar identificadores de catálogo tipados en Work; no convertirlos en claves externas genéricas.
+- Índice de búsqueda: proyección reconstruible del modelo canónico, sin propiedad exclusiva de ningún metadato.
+
+### 10.5 Licencia, publicación, privacidad y aportaciones
+
+Son ejes separados, no un único campo `status`:
+- **Estado técnico de File:** registrado, procesando, disponible, fallido; ubicación concreta: almacenada, retirada o fallida.
+- **Estado editorial de Resource:** borrador, pendiente de revisión, aceptado/publicado, rechazado, archivado, según el flujo de catálogo.
+- **Visibilidad:** público, no listado, grupo, privado.
+- **Propiedad:** usuario propietario mediante el ID estable de osap-auth; Storage guarda la referencia de propiedad, pero no replica credenciales ni gestiona contraseñas.
+- **Licencia/atribución:** afirmación legal asociada al objeto correcto (Work, Resource o ResourceFile), con fuente; no se deduce de que sea público.
+- **Acceso a bytes:** toda descarga pasa por autorización. Los objetos privados no pueden servirse desde un bucket público o URL sin control. La URL pública de un recurso no convierte en públicos todos sus ficheros.
+
+El flujo de aportaciones de osap-api es estado operativo/orquestación; el catálogo publicado y la relación Resource–File viven en Storage. Aceptar una aportación debe materializar una operación idempotente en Storage y dejar trazabilidad. El código actual todavía documenta una limitación: el flujo de aportaciones está centrado en `target_kind=representation` y el comentario de servicio indica que la aceptación no materializa aún el catálogo. V6 deberá sustituir ese contrato por Work/Resource, no perpetuar Representation como API pública.
+
+### 10.6 Fronteras entre repositorios
+
+| Repositorio | Responsabilidad V6 | No debe convertirse en |
+|---|---|---|
+| `AI_GAMEPC2` / osap-api | API pública, orquestación, contratos de proveedores, búsqueda/UX, aportaciones como workflow, administración y proyección de catálogo | Copia autoritativa de obras, recursos o ficheros; gestor de identidad; ubicación de los bytes |
+| `AI_osap-storage` | Catálogo canónico Work/Resource, relaciones, procedencia, metadatos de File, ResourceFile, ubicaciones físicas y autorización/streaming de contenido según contrato | Propietario de contraseñas/identidad ni configuración de proveedores externos que pertenece a API |
+| `AI_osap-auth` | Identidad, autenticación, tokens y claves públicas/verificación | Catálogo musical o ACL duplicada con su propio modelo de recursos |
+| `ai-importacion`, importadores de Storage y otros conectores | Ingesta, mapeo de origen, validación, propuesta de metadatos y ejecución de contratos versionados | Escritura directa en tablas internas ni mantenimiento de un esquema paralelo autoritativo |
+| `ai_recogeYouTube` y futuros consumidores | Asociar vídeos/observaciones con Work/Resource por API estable, sin suponer Representation | Dependencia directa de tablas o IDs internos no documentados |
+
+**Decisión de propiedad de datos:** los campos canónicos de propiedad/visibilidad/publicación de un Resource deben pertenecer a Storage porque describen el recurso del catálogo; Auth solo acredita quién es el usuario y API coordina el flujo. La base de datos de API conserva el estado operativo de aportaciones, pero no se convierte en una segunda fuente del catálogo.
+
+### 10.7 Mi Actividad — alcance funcional inicial
+
+1. Acceso solo a usuarios autenticados.
+2. Buscar y seleccionar una Work canónica existente; crear Resource propio ligado a ella.
+3. Subir uno o varios artefactos (PDF, MusicXML, MIDI y formatos admitidos), con límites configurables, validación MIME real, tamaño, hash y análisis antimalware.
+4. Cuota inicial propuesta: 1 GB por usuario, calculada sobre bytes únicos o cuota lógica según una decisión explícita; la primera versión debe escoger una regla visible y no contar deduplicación de manera sorpresiva.
+5. Privado por defecto. Publicación o compartición requiere acción explícita y flujo de revisión/licencia.
+6. Almacenamiento privado en VPS, fuera de directorios de despliegue y fuera de buckets públicos. La capa de almacenamiento debe permitir migrar a otro proveedor sin cambiar Resource.
+7. Ver, descargar, renombrar metadatos, archivar y retirar aportaciones propias con auditoría. No permitir que archivar borre un File compartido por otros Resources.
+8. No duplicar catálogos de personas, géneros, instrumentos, idiomas o ensembles; enlazar los existentes.
+9. Diseñar el contrato de modo que AI_Guitarra pueda consumir Resources autorizados sin acceder a tablas internas.
+10. No confundir “archivar para mí” con borrar del catálogo público; la operación debe actuar sobre la aportación/visibilidad del usuario sin borrar una Work compartida.
+
+## 11. Secuencia de migración y liberación
+
+La migración se diseña para un esquema nuevo completo y una sustitución controlada, no para mantener indefinidamente el modelo viejo.
+
+### Fase A — inventario congelado y punto de control (antes de escribir código)
+- Congelar el estado de los repositorios implicados y registrar commits, tags y estado de despliegue.
+- Crear un tag de referencia y una rama de mantenimiento de la versión actual antes de iniciar implementación; no hacerlo durante esta fase documental.
+- Completar inventario de productores, consumidores, contratos HTTP, tablas, jobs, scripts, índices y rutas de descarga.
+- Obtener un snapshot/export de datos autorizado y reciente para el análisis de migración; no consultar ni escribir producción desde esta planificación.
+- Entregable: matriz de columna/tabla con clasificación, prueba de cobertura, responsable y plan de retirada.
+
+### Fase B — contrato V6 y esquema canónico
+- Aprobar el glosario Work, Resource, ResourceFile, File, StorageLocation, procedencia externa, estado editorial, visibilidad y licencia.
+- Definir DDL íntegro y versionado desde una base vacía, constraints, índices, unicidad, soft delete/archivado y auditoría.
+- Definir contratos de API versionados y errores; ningún consumidor dependerá de SQL directo.
+- Definir claves estables y mapping de IDs. Preservar IDs existentes cuando no haya fusión y no rompa semántica; si hay deduplicación/fusión de Works, usar mapping explícito old_id → new_id y redirecciones de URL.
+- Entregable: modelo lógico, DDL, OpenAPI/contratos, reglas de identidad y plan de compatibilidad transitoria.
+
+### Fase C — importador y reconciliación en entorno aislado
+- Crear importadores repetibles e idempotentes para Work, personas/roles, catálogos, Resources, ResourceFiles, Files, ubicaciones y procedencia.
+- Importar CPDL conservando una Resource por edición, editores, licencia, IDs de origen y ediciones sin fichero.
+- Importar PDMX conservando la relación Work–Resource y cada File descargable.
+- Resolver `archive_entries` como fuente/fallback histórico: comparar cobertura y conflictos con Resources/File antes de retirarlo; no copiar sus metadatos de obra si ya existen en Work sin una regla de precedencia.
+- Conservar valores crudos en una tabla de staging/auditoría cuando la normalización no sea segura. No descartar registros ambiguos silenciosamente.
+- Entregable: informe de reconciliación, errores exportables, filas no migradas justificadas y repetición idempotente demostrada.
+
+### Fase D — adaptación de consumidores en paralelo
+- Adaptar primero Storage: entidades, repositorios, casos de uso, administración, descarga/streaming e importadores.
+- Adaptar API: contratos de Work/Resource, búsqueda, detalle, enlaces, resolución, aportaciones y Mi Actividad.
+- Adaptar Auth solo donde el contrato de identidad/token lo requiera; no trasladar identidad a Storage.
+- Adaptar importadores y consumidores externos, incluyendo cualquier app que hoy espere `representation_id`, `works_resources_relative_path` o rutas de descarga antiguas.
+- Actualizar índice y cachés como proyecciones reconstruibles.
+- Entregable: matriz de consumidores con pruebas pasando contra V6 sin leer tablas legacy.
+
+### Fase E — validación y corte
+- Ejecutar migración completa sobre snapshot de ensayo; repetir desde cero y comprobar idempotencia.
+- Comparar cantidades, relaciones, checksums, recuentos por origen/formato, IDs externos, recursos sin fichero, licencias, editores y descargas.
+- Probar búsquedas, detalle de obra, resolución de recursos, importación, administración, autorización, cuota, subida, descarga privada/pública, archivado y restauración.
+- Probar una base nueva desde cero solo con migraciones versionadas; prohibido depender de alteraciones manuales no reproducibles.
+- Plan de corte con ventana, backup verificable, criterio de abortar, rollback al tag/DB actual y verificación posterior.
+- Entregable: acta de validación y checklist de liberación.
+
+### Fase F — retirada del modelo anterior
+- Solo después del corte estable: eliminar tablas/campos/endpoints internos legacy, fallbacks de `archive_entries`, contratos de Representation y adaptadores temporales.
+- Mantener redirecciones HTTP/IDs históricos donde sean necesarios para URLs públicas y enlaces externos, no una capa de compatibilidad de datos indefinida.
+- Confirmar que ningún repositorio, script, tarea programada o frontend sigue usando el modelo antiguo.
+- Entregable: prueba de ausencia de referencias, backup de archivo histórico y documentación de retirada.
+
+## 12. Invariantes de datos y criterios de aceptación V6
+
+1. Toda Resource pertenece a exactamente una Work.
+2. Una Resource puede no tener File; no se inventa un File para una URL o un placeholder.
+3. Un File almacenado tiene SHA-256 verificado, tamaño y MIME comprobados; la disponibilidad requiere al menos una StorageLocation válida.
+4. Una StorageLocation no determina por sí sola la visibilidad de Resource.
+5. La misma huella de fichero no implica que dos Resources sean la misma realización.
+6. El mismo identificador externo puede existir en distintos proveedores; unicidad se define por proveedor + tipo de entidad + ID externo, con excepciones documentadas para IDs no únicos como CPDLno.
+7. La identidad de Work no se determina exclusivamente por título, compositor, `works_key` ni digest musical.
+8. Los roles de Work no se copian automáticamente a Resource ni viceversa.
+9. Una licencia o afirmación de dominio público siempre tiene sujeto y procedencia; “público” como visibilidad no equivale a “dominio público” legal.
+10. Los objetos privados nunca se sirven sin autorización ni desde almacenamiento público.
+11. Archivar/eliminar una Resource no borra un File mientras esté referenciado por otras Resources.
+12. La importación repetida no duplica Work, Resource, relaciones externas ni asociaciones ResourceFile.
+13. Las proyecciones de búsqueda se pueden reconstruir desde el catálogo canónico.
+14. Todas las migraciones se ejecutan desde una base vacía con artefactos versionados; las cifras finales se comparan con un snapshot actual, no con conteos de septiembre de 2026.
+15. No queda consumidor en producción que requiera las tablas o contratos retirados al finalizar V6.
+
+## 13. Registro de decisiones: propuesta por defecto
+
+| Decisión | Propuesta por defecto | Motivo | Cuándo se considerará cerrada |
+|---|---|---|---|
+| Representation como entidad | Eliminar como tabla/contrato independiente y absorber en Resource | Unifica PDMX y CPDL sin perder edición como concepto | Tras probar la conversión CPDL, incluyendo recursos sin fichero y roles de editor |
+| Resource vs fichero | Separar Resource y ResourceFile; File separado | La edición puede tener varios formatos y un File puede compartirse | Tras validar cardinalidades y casos de uso de importación/descarga |
+| `works_key` | No llevar como identidad canónica; conservar en staging/mapping y derivar identificadores externos cuando proceda | Actualmente mezcla agrupación e identificación de origen | Tras rastrear todos sus consumidores y probar reconciliación |
+| `works_music_digest` | Huella derivada opcional, no sustituto de SHA-256 | Huella musical y hash binario miden cosas distintas | Tras demostrar consumidor de agrupación musical en V6 |
+| Licencia/dominio público | Afirmaciones tipadas por sujeto y procedencia; no booleano ambiguo global | Obra, edición y fichero tienen derechos distintos | Tras inventariar semántica y valores actuales |
+| Instrumentación/voicing | Relaciones canónicas; override de Resource solo cuando difiere | Evita duplicidad de texto/catálogos | Tras reconciliar valores no normalizados |
+| Propiedad/visibilidad | Metadatos canónicos de Resource en Storage; Auth aporta identidad; API orquesta workflow | Una sola fuente autoritativa del recurso | En contrato V6 y pruebas ACL |
+| Estado de aportación | Workflow operativo en API; aceptación materializa Resource idempotente en Storage | Separa revisión del catálogo publicado | Tras pruebas de repetición y fallos parciales |
+| IDs públicos | Mantener cuando no haya fusiones; tabla de mapeo/redirect para los que cambien | Reduce roturas sin conservar el esquema antiguo | Tras análisis de duplicados y URLs |
+| `archive_entries` | Retirar al final, tras migrar todos los consumidores y validar cobertura | Sigue siendo legado/fallback documentado | Solo cuando pruebas y rastreo demuestren cero dependencias |
+
+## 14. Discrepancias documentales que deben quedar resueltas
+
+### 14.1 Fechas y cifras de CPDL
+El diagnóstico de 2026-09-19 dice que los 217.343 recursos CPDL no tenían `file_id` ni `url`. El informe de migración de 2026-09-20 dice que tenían URL externa derivada. Es una diferencia temporal/documental que no puede resolverse con los documentos solos. Para V6, no afirmar que esas URLs siguen vigentes: el inventario de migración deberá verificar su forma, estado HTTP, tipo (página vs descarga directa), licencia y cobertura desde un snapshot/export reciente. Las 11.242 ediciones sin recursos son un recuento histórico, no un número garantizado hoy.
+### 14.2 `works_music_digest` frente a `files.sha256`
+El informe de migración propone calcular `files.sha256` y “cuando exista, eliminar `works_music_digest`”. Esa sustitución no es semánticamente válida: SHA-256 identifica bytes de un fichero; `works_music_digest` es MD5 de notas musicales normalizadas para detectar similitud musical. Solo se podrá retirar la huella musical si se demuestra que ningún proceso de reconciliación/agrupación la necesita; nunca porque se haya calculado SHA-256. La documentación de V6 debe tratar esa recomendación anterior como obsoleta o incompleta.
+### 14.3 Representations vs esquema V6
+El informe de migración del 2026-09-20 considera cerrado el modelo actual Work → Representation → Resource, pero el propio diagnóstico op2 documenta dos patrones distintos: PDMX directo a Work y CPDL a través de Representation. No es un error de funcionamiento por sí mismo; describe la evolución del sistema actual. La decisión V6 de absorber Representation en Resource es una propuesta de rediseño y exige la conversión explícita descrita en §10.2.
+### 14.4 Tablas CPDL de staging
+La documentación aún enumera `cpdl_editions*` entre las tablas heredadas, mientras que el script de importación se marca obsoleto y declara que se retiraron como arquitectura activa. Hasta revisar el esquema/uso vigente, tratarlas como artefactos históricos/staging candidatos a retirada, no como fuente canónica. La migración debe detectar si existen y si contienen datos exclusivos antes de descartarlas.
+
+## 15. Trabajo documental pendiente antes de declarar el plan cerrado
+
+El modelo conceptual y las fronteras de repositorio ya tienen una propuesta coherente. Para declarar la planificación **lista para implementación**, queda completar una última matriz de evidencia:
+- Todos los consumidores actuales de `works_key`, `works_origin`, `works_origin_id`, `works_type_file`, `works_relative_path` y `works_music_digest`.
+- Productores y lectores de `archive_entries` y rutas de descarga/URL.
+- Relaciones de Work/Resource con personas, roles, idiomas, instrumentos, ensembles, géneros y tags.
+- Endpoints, schemas, frontend, importadores y aplicaciones consumidoras que exponen `representation_id` o campos de ruta antiguos.
+- Contrato actual de upload/streaming de Storage y configuración efectiva de almacenamiento privado, documentado sin asumir que los ejemplos de configuración son producción.
+- Inventario de IDs/URLs públicos y reglas de redirects.
+- Reconciliación de cifras históricas contra un snapshot autorizado y reciente, sin consultar ni modificar producción desde esta fase.
+
+La planificación se considerará coherente cuando cada elemento de esa matriz tenga: fuente actual, productor, consumidores, decisión V6, mapeo de migración, prueba de aceptación y condición para retirar el legado. Hasta entonces el modelo propuesto es una arquitectura de destino fundamentada, pero el plan no se etiqueta todavía como “listo para implementar”.
+
