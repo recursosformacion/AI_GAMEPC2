@@ -90,7 +90,7 @@ En lugar de repartir `origin` y `origin_id` entre varias tablas, estudiar una es
 - URL de origen opcional y metadatos de importación;
 - fecha y estado de sincronización.
 
-La clave única debe impedir duplicar la misma entidad externa al reimportar. Un identificador PDMX que identifica una obra podría mapear a Work; un ID de edición CPDL debe mapear a Resource. No se debe decidir por el nombre de la columna: hay que demostrar qué representa cada ID.
+La clave externa debe impedir duplicar la misma entidad de origen al reimportar, sin condicionar el modelo interno a la jerarquía del proveedor. Un identificador externo puede referirse a Work, Resource, File o a una ficha/fuente que no sea una entidad canónica; cada correspondencia se tipa tras verificar su significado.
 
 El `work_id` interno será estable y no dependerá de los IDs del índice, CPDL, PDMX u otro proveedor. La estrategia concreta (UUID u otro tipo) se resolverá junto con contratos, índices y URLs.
 
@@ -120,10 +120,10 @@ El `work_id` interno será estable y no dependerá de los IDs del índice, CPDL,
 Los documentos de Storage registran históricamente estos casos (las cifras son diagnósticos de septiembre de 2026, no una garantía de los valores actuales):
 
 - **PDMX:** unos 254.035 recursos enlazados directamente a obras en el diagnóstico. El nivel de representación no aportaba una edición diferenciada en esa estructura.
-- **CPDL:** unas 81.983 ediciones/representaciones, con unos 217.343 ficheros/referencias de recurso. Una obra puede tener varias ediciones y cada edición puede tener múltiples ficheros.
+- **CPDL:** el inventario histórico contiene registros de procedencia y referencias a ficheros; esas agrupaciones reflejan cómo se importó la fuente, no una estructura que V6 deba reproducir.
 - Se registraron 11.242 ediciones sin recursos digitales asociados; algunas contienen licencia y editor y no deben descartarse solo por carecer de fichero.
 - `archive_entries`, `cpdl_editions`, `cpdl_edition_files` y `cpdl_edition_persons` tienen o tuvieron consumidores. Su retirada requiere migrar la información y sustituir dichos consumidores; no implica conservar estas tablas en V6.
-- El modelo actual admite recursos PDMX directos a Work y recursos CPDL bajo Representation. V6 debe expresar ambos casos con un único contrato coherente, sin conservar el nivel intermedio únicamente por la diferencia histórica de los proveedores.
+- El modelo actual agrupa datos de proveedores de formas distintas. V6 debe expresar el dominio musical con un único contrato independiente de esas estructuras; los datos de proveedor se conservan en tablas de procedencia y correspondencias.
 
 Referencias de análisis existentes en Storage:
 - `docsNew/diagnostico-representaciones-recursos.md`
@@ -516,7 +516,7 @@ Reglas:
 - `File` representa un artefacto de un Resource. Un Resource puede tener PDF, MusicXML y MIDI si pertenecen a la misma realización; cada File tiene su propio rol/formato y puede apuntar al mismo Blob que otro File sin compartir identidad lógica.
 - `File` identifica bytes por SHA-256; `StorageLocation` representa cada copia física. No guarda licencia editorial, autoría musical, publicación ni visibilidad.
 - Una URL de página fuente y una URL de descarga directa son conceptos diferentes. Deben tiparse y no confundirse con un fichero almacenado.
-- No introducir una entidad `Representation` adicional solo para conservar la jerarquía CPDL. Su semántica editorial se absorbe en Resource; las filas hijas actuales de `works_resources` se reinterpretan como relaciones de fichero/referencia tras auditar sus campos.
+- No introducir entidades de dominio para replicar jerarquías de proveedores. Resource describe la realización musical; las fichas, IDs, páginas y agrupaciones externas se conservan en tablas de fuente/procedencia, y cada registro heredado se clasifica por su significado real.
 - Las relaciones opcionales de Resource a instrumento/ensemble solo se crean si la realización puede diferir de la Work; no duplicar relaciones idénticas sin razón de consulta.
 
 ### 10.2 Cómo se convierten los dos patrones actuales
@@ -524,8 +524,8 @@ Reglas:
 | Patrón actual | Conversión propuesta |
 |---|---|
 | PDMX: Work → Resource directo, habitualmente un fichero MXL | Crear Resource para la realización PDMX y asociar el artefacto mediante `files.resource_id`. No exigir un nivel Representation. |
-| CPDL: Work → Representation (edición) → varios works_resources | No convertir automáticamente una Representation ni cada hijo en un único Resource. Perfilar cada fichero y buscar una clave de realización; cada arreglo identificado será un Resource y sus formatos/partes File hijos. Los ambiguos quedan para revisión. |
-| CPDL Representation sin hijos (11.242 según diagnóstico histórico) | Crear Resource sin Files solo si la edición tiene identidad musical/procedencia suficiente; validar el conteo con snapshot actual. No descartarlo solo por no tener bytes. |
+| Fuente externa con ficha que contiene varios artefactos | No copiar la jerarquía de la fuente al dominio. Clasificar cada dato como Work, Resource, File, enlace de fuente o registro de procedencia; identificar realizaciones por evidencia y marcar ambigüedades para revisión. |
+| Registro externo sin fichero asociado | Crear Resource sin Files solo si la información describe una realización musical con identidad suficiente; en caso contrario conservarlo como registro de fuente/procedencia, sin inventar Resource. |
 | Recurso externo que no se ha descargado | Mantener Resource y su referencia externa tipada; no crear un File ficticio. Si el registro solo expresa un formato esperado pero no una referencia real, conservarlo temporalmente como placeholder identificable y resolverlo en auditoría antes de migrar. |
 | Aportación de usuario | Crear Resource ligado a Work; cada File privado apunta a ese Resource y a su Blob; guardar propietario, visibilidad y estado editorial separados. |
 
@@ -540,7 +540,7 @@ La cardinalidad propuesta es: Work 1:N Resource; Resource 0:N File; cada File pe
 | `works_license` | Resource.licence assertion; si la condición solo se aplica a un artefacto, a File | La licencia debe acompañar al objeto que realmente licencia; conservar texto original, fuente y evidencia cuando no sea posible normalizar. No heredar automáticamente una licencia de Work a todos sus Resources. |
 | `works_public_domain` | No trasladar ciegamente como booleano autoritativo. Convertir a una afirmación de estado legal con sujeto, jurisdicción, fecha/fuente y confianza, asociada a Work si se refiere a la composición o a Resource/File si se refiere a edición/artefacto | Dominio público de una composición y licencia de una edición/escaneo no son equivalentes. Conservar el dato legado y su procedencia mientras se determina qué significaba cada valor. |
 | `works_origin`, `works_origin_id` | WorkExternalIdentifier | Solo cuando identifiquen la obra intelectual del proveedor. Ejemplo confirmado: el importador IMSLP guarda el pageid estable en Work. Para CPDL, la página identifica Work, mientras pageid:cpdlno identifica una edición/Resource. |
-| `representations_origin`, `representations_origin_id`, `representations_origin_cpdlno` | ResourceExternalIdentifier / metadatos de procedencia | CPDL page ID y CPDLno son identificadores de ámbitos distintos; CPDLno no debe suponerse único. |
+| `representations_origin`, `representations_origin_id`, `representations_origin_cpdlno` | Correspondencias externas tipadas y datos de procedencia | Los componentes heredados pueden identificar proveedor, ficha, agrupación o realización; determinar semántica antes de mapear. |
 | `works_key` | Campo de migración/clave de agrupación solo si se documenta su semántica; IDs externos se trasladan a WorkExternalIdentifier | Se usa en SqlWorkRepository y herramientas de revisión/importación, y el migrador PDMX lo usó como ID de origen de una Representation. No reutilizarlo como identidad canónica ni asumir que equivale a un ID de proveedor. Mantener tabla de correspondencia durante la migración. |
 | `works_music_digest` | Huella musical derivada, opcional e indexable, separada de Work.id y File.sha256 | Es MD5 de notas normalizadas de MusicXML, no hash de bytes. Conservar solo si la agrupación/reconciliación musical V6 tiene un consumidor demostrado. |
 | `works_type_file`, `works_resources_type` | Formato de File mediante catálogo/valor normalizado | PDF/MXL/MIDI describe el artefacto, no el tipo musical de Resource. |
@@ -716,7 +716,7 @@ Esta sección completa el mapa entre las evidencias localizadas y las decisiones
 |---|---|---|
 | Identidad y metadatos intelectuales de Work | Storage: Work + relaciones canónicas | Índice, cachés API, textos de proveedor, copias en tablas de archivo |
 | Identidad externa de una Work | WorkExternalIdentifier, con proveedor y tipo de entidad | works_key como identidad global; títulos o nombres de archivo |
-| Identidad de una realización/edición | Resource + ResourceExternalIdentifier | Representation como segundo nivel permanente; número CPDLno asumido único |
+| Identidad de una realización | Resource + ExternalIdentifier tipado | No copiar jerarquías de proveedor ni asumir unicidad de IDs que identifican páginas o agrupaciones |
 | Personas y roles de la obra | Person + WorkPersonRole | composer/artist duplicados en Work; texto de atribución como relación canónica |
 | Personas y roles de la edición/recurso | Person + ResourcePersonRole | representation_persons sin migrar o nombre de editor libre como única identidad |
 | Clasificación de Work | relaciones normalizadas de género, época, instrumento, ensemble, idioma y tags | works_instrumentation / works_voicing y columnas de texto duplicadas |
@@ -1107,7 +1107,7 @@ Una firma es ayuda para revisión, no autoridad de dominio. No se acepta una fus
 
 ### 19.4 Identificadores externos y procedencia
 
-Una página CPDL puede ser procedencia común de varios Resources. No imponer unicidad global a `(provider, external_id)` si ese ID identifica una página con varias realizaciones.
+Una ficha de cualquier proveedor puede ser procedencia común de varios Resources. No imponer unicidad global a `(provider, external_id)` si el identificador corresponde a una página, catálogo o agrupación que contiene varias entidades.
 
 V6 debe distinguir identidad externa de página/ficha, de edición cuando exista, de Resource/realización dentro de la página y de cada File/fichero fuente. La tabla/contrato de correspondencias debe permitir un discriminante estable cuando el proveedor no ofrezca ID único de realización, por ejemplo `provider`, `entity_type`, `external_id` y `variant_key`, con reglas explícitas para nulos y unicidad. No se fija todavía un DDL concreto. El nombre del fichero por sí solo no es una clave fiable.
 
@@ -1147,4 +1147,82 @@ No implementar ambas formas sin necesidad demostrada. Roles candidatos: `primary
 
 La arquitectura propuesta queda como base documental: **Work 1:N Resource; Resource 0:N File; cada File pertenece a un Resource; File N:1 Blob; Blob 0:N StorageLocation**. No se recomienda la tabla ResourceFile M:N.
 
-No se cierra el DDL ni la migración CPDL hasta perfilar los datos reales, confirmar formatos secundarios, revisar todos los consumidores de `files.sha256` y `storage_locations.file_id`, y definir las claves externas discriminantes. Los conteos de septiembre de 2026 son históricos y no deben usarse como cifras actuales.
+No se cierra el DDL ni la migración hasta perfilar los datos reales, confirmar la identidad de las realizaciones, revisar todos los consumidores de `files.sha256` y `storage_locations.file_id`, y definir las claves externas discriminantes. Las estructuras y cifras de proveedores son evidencia de importación, no el modelo conceptual de V6.
+
+## 20. Modelo canónico independiente de proveedores (criterio rector V6, 2026-10-29)
+
+Esta sección establece un principio de arquitectura que prevalece sobre cualquier ejemplo de migración que describa la estructura de CPDL, PDMX, IMSLP u otro proveedor como si fuese el modelo interno. **Un proveedor externo aporta datos; no define las entidades ni las cardinalidades de OSAP.** CPDL debe tratarse como una fuente de información entre varias, no como plantilla del catálogo.
+
+El objetivo es diseñar primero un esquema de dominio musical coherente y después mapear a él toda la información útil de cada fuente, conservando el dato original, su procedencia, su interpretación y la incertidumbre. No se crearán entidades internas solo para imitar páginas, ediciones, números o agrupaciones particulares de un proveedor.
+
+### 20.1 Tablas de dominio propuestas
+
+El conjunto siguiente es la propuesta conceptual inicial para precisar con la auditoría; los nombres y tipos SQL definitivos requieren contrastar todos los productores y consumidores.
+
+| Tabla/entidad | Propósito y datos que le corresponden |
+|---|---|
+| `works` / Work | Obra musical intelectual canónica. Identidad y atributos compartidos por sus realizaciones; relaciones normalizadas con personas creadoras y roles, catálogos, géneros, etc. |
+| `resources` / Resource | Realización musical identificable: arreglo, transcripción, edición, versión o interpretación publicada cuando constituya un objeto catalogable distinto. Siempre pertenece a un Work. No depende de que exista un fichero ni de que una fuente externa la denomine “edición”. |
+| `files` / File | Artefacto digital lógico de un único Resource: partitura completa, formato alternativo, parte, audio, imagen o derivado. Incluye nombre original, formato, MIME, tamaño lógico, rol, orden/etiqueta de parte, estado y metadatos propios del artefacto. |
+| `blobs` / Blob | Identidad de los bytes físicos, con SHA-256 único, tamaño verificado y metadatos de integridad. Permite deduplicar bytes sin compartir File lógico, procedencia ni ACL. |
+| `storage_locations` / StorageLocation | Ubicaciones físicas y réplicas de un Blob: backend/proveedor de almacenamiento, clave/ruta, estado, verificación y fechas. No determina por sí sola si un usuario puede acceder. |
+| `external_providers` | Catálogo de proveedores/fuentes: código estable, nombre, tipo, URL base, política de atribución, estado y configuración no secreta. CPDL, PDMX e IMSLP serían filas, no tablas ni ramas especiales del modelo. |
+| `external_records` | Registro de una ficha/registro externo tal como se observó en una fuente. Conserva el ID externo bruto, URL canónica, tipo de registro declarado por el proveedor, título/nombre original, fechas de captura/actualización y estado de observación. Puede existir sin mapearse todavía a Work o Resource. |
+| `external_identifiers` | Correspondencias tipadas entre un identificador externo y una entidad OSAP: proveedor, tipo de entidad externa, ID bruto/normalizado, entidad OSAP de destino y discriminante cuando sea necesario. Debe permitir colisiones reales y múltiples IDs externos para una entidad. |
+| `external_record_links` | Relación entre registros externos y entidades OSAP (Work, Resource o File según la evidencia), con tipo de vínculo, confianza, método, fecha y estado de revisión. Evita forzar una equivalencia uno-a-uno cuando una ficha externa agrupa varias realizaciones o cuando varias fuentes describen la misma entidad. |
+| `source_links` | Enlaces a páginas informativas, páginas de licencia, páginas de descarga y URLs externas, tipados por finalidad y asociados al objeto OSAP correcto. Una URL de página no equivale a un File ni prueba que exista descarga directa. |
+| `resource_credits` / relación equivalente | Créditos y roles vinculados a un Resource cuando describen arreglo, edición, transcripción u otra contribución a esa realización. Los créditos de la composición se mantienen en Work; los roles no se trasladan de ámbito sin evidencia. |
+| `resource_attributes` o relaciones normalizadas | Atributos específicos de la realización que no sean campos centrales ni relaciones ya normalizadas: instrumentación, voces, tonalidad, idioma, número de partes, duración, compases, páginas, etc. Se prefiere esquema relacional tipado/catálogos para atributos con consultas, validaciones o vocabulario estable; JSON solo para metadatos originales auxiliares, no como sustituto indiscriminado del modelo. |
+| `ingestion_runs` / `source_observations` | Auditoría de cada importación/captura: proveedor, lote, versión del adaptador, fecha, resultado y errores. Permite trazabilidad, reintentos idempotentes y explicar por qué se creó o actualizó un dato. |
+
+Las tablas actuales normalizadas de personas, roles, géneros, instrumentos, idiomas, conjuntos y catálogos se conservarán o evolucionarán según el inventario; no se duplicarán dentro de JSON ni se desnormalizarán para reproducir la estructura de un proveedor.
+
+### 20.2 Reglas canónicas del dominio
+
+1. **Work no es una fuente.** Una obra puede estar descrita por varios proveedores y no tener ningún fichero alojado.
+2. **Resource no es una ficha externa.** Representa una realización musical distinguible por su contenido o función, aunque se haya descubierto a través de una ficha externa.
+3. **File no es Blob.** File es el artefacto lógico, con su propio nombre, rol, procedencia, visibilidad y autorización; Blob son los bytes deduplicables.
+4. **La procedencia es transversal.** Un Work, Resource o File puede estar respaldado por varias fuentes. Una fuente puede describir varios objetos OSAP. La relación se representa explícitamente y no se codifica en un único `origin` genérico.
+5. **Los IDs externos no son IDs canónicos.** Su unicidad depende del proveedor y del tipo de registro; se conservan tanto el valor bruto como el normalizado y cualquier componente que permita desambiguarlo.
+6. **Los datos originales no se pierden.** Los campos originales, URLs y metadatos capturados se preservan como evidencia/procedencia, aunque se normalicen sus significados a tablas canónicas.
+7. **No inferir recursos por existencia de fichero.** Un artefacto solo se agrupa con otros bajo el mismo Resource cuando haya evidencia de que pertenecen a la misma realización. La extensión o el nombre no bastan.
+8. **No inventar recursos por existencia de ficha.** Un registro externo que solo documenta una página o una referencia puede permanecer como `external_record` hasta determinar si describe un Work, Resource o File.
+9. **La importación es idempotente y revisable.** Conflictos de identidad, duplicados y correspondencias ambiguas quedan registrados; no se resuelven fusionando silenciosamente entidades.
+10. **La licencia se asigna al objeto correcto.** Una licencia de composición, de arreglo/edición, de fichero y condiciones de descarga pueden ser distintas. Se conserva el texto/fuente original y se registra a qué objeto y jurisdicción se refiere.
+
+### 20.3 Modelo de relaciones externas sin acoplarse a CPDL
+
+El contrato debe poder expresar todos estos casos sin cambiar el esquema de dominio:
+
+- un proveedor identifica directamente una obra;
+- un proveedor identifica una realización dentro de una obra;
+- una ficha externa describe una obra y enlaza a varias realizaciones;
+- una ficha externa enlaza a varios ficheros, algunos equivalentes y otros de realizaciones diferentes;
+- dos proveedores describen la misma Work o Resource con identificadores distintos;
+- un identificador externo cambia, desaparece o colisiona;
+- una URL es una página de información, una licencia, una descarga directa o una ubicación de un fichero ya alojado;
+- una captura contiene información incompleta o contradictoria que necesita revisión.
+
+`external_records` conserva la representación de la fuente; `external_identifiers` resuelve identidad; `external_record_links` documenta correspondencias; `source_links` conserva URLs tipadas. Estas responsabilidades no deben comprimirse en una tabla única ni confundirse con Work/Resource/File.
+
+La cardinalidad y el DDL exactos de estas tablas quedan abiertos a la auditoría. En particular, se debe evitar un diseño de `external_record_links` que permita asociar un File a un Resource distinto del que declara `files.resource_id`; el contrato debe validar esa consistencia o separar claramente enlaces de procedencia de relaciones de propiedad.
+
+### 20.4 Cómo usar los datos de CPDL y de los demás proveedores
+
+CPDL se importará mediante un adaptador que traduzca su contenido a las tablas canónicas y registre sus identificadores, páginas, créditos, licencias y URLs como datos externos tipados. Sus conceptos particulares —incluidos números de página o edición— se conservarán como identificadores/metadatos de origen cuando sean útiles, pero no se convertirán automáticamente en entidades de dominio ni determinarán la cardinalidad.
+
+Se aplicará el mismo criterio a PDMX, IMSLP y futuras fuentes. Si una fuente agrupa varios arreglos en una ficha, OSAP creará los Resources que justifique la evidencia musical, no un Resource por ficha por defecto. Si una fuente publica varios formatos del mismo arreglo, OSAP podrá vincularlos como Files de un Resource. Si no se puede determinar si son formatos equivalentes o realizaciones distintas, se conservarán como candidatos separados y se marcará la revisión pendiente.
+
+### 20.5 Criterio de aceptación del diseño de datos
+
+Antes de aprobar el DDL, el inventario debe entregar:
+
+- el diccionario de cada tabla canónica, con propósito, PK/FK, cardinalidades, índices, restricciones y política de borrado;
+- el mapa de todos los campos actuales hacia Work, Resource, File, Blob, almacenamiento, identificadores, registros externos, créditos o atributos normalizados;
+- ejemplos reales anonimizados de cada patrón de importación, incluidos conflictos y datos incompletos;
+- reglas de identidad y deduplicación separadas para Work, Resource, File lógico y Blob físico;
+- estrategia de preservación de datos brutos y procedencia;
+- pruebas de idempotencia, colisiones de IDs, varias fuentes por entidad, varias realizaciones por ficha, varios Files por Resource y Resources sin File;
+- una lista de decisiones pendientes explícitas; ninguna cardinalidad debe justificarse solo por la estructura de una web externa.
+
+La decisión de arquitectura es firme: **el esquema canónico se diseña desde el dominio musical de OSAP; los proveedores se conectan mediante tablas genéricas de identidad, registro y procedencia**. El DDL final solo se cierra después de comprobar que estas entidades cubren los datos y consumidores reales.
