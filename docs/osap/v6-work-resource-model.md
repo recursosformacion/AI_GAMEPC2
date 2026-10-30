@@ -1157,3 +1157,12 @@ Ejemplo: un Resource puede tener un PDF, un MusicXML y un MIDI; son tres Files p
 La decisión es eliminar Blob del modelo conceptual. La eventual replicación física, si la infraestructura la necesita por disponibilidad o copias de seguridad, queda dentro del servicio de almacenamiento y no permite que un objeto se asocie a varios Files.
 
 La decisión de arquitectura es firme: **el esquema canónico se diseña desde el dominio musical de OSAP; los proveedores se conectan mediante referencias mínimas de identidad y enlaces útiles para volver a consultarlos, no mediante copias de sus registros**. El DDL final solo se cierra después de comprobar que estas entidades cubren los datos y consumidores reales.
+
+## Documentación de integración y corte V6
+
+La revisión de impacto en osap-storage, la conservación de los punteros Cloudflare R2, la reconstrucción de la base de datos, el contrato API consumido por OSAP y la reconstrucción/sincronización del índice están desarrolladas en:
+
+- [Integración OSAP-API con OSAP Storage V6](v6-storage-integration-index.md)
+- [Plan exhaustivo de reconstrucción, API, índice e implantación en AI_osap-storage](https://github.com/recursosformacion/AI_osap-storage/blob/main/docs/v6-reconstruction-api-index-cutover.md)
+
+Estos documentos describen el objetivo y las tareas pendientes; no significan que el código ni la base de datos productiva estén ya migrados.
