@@ -1166,3 +1166,7 @@ La revisión de impacto en osap-storage, la conservación de los punteros Cloudf
 - [Plan exhaustivo de reconstrucción, API, índice e implantación en AI_osap-storage](https://github.com/recursosformacion/AI_osap-storage/blob/main/docs/v6-reconstruction-api-index-cutover.md)
 
 Estos documentos describen el objetivo y las tareas pendientes; no significan que el código ni la base de datos productiva estén ya migrados.
+
+## Área de trabajo personal y aportaciones de usuarios en V6
+
+El modelo Work → Resource → File también debe soportar el área privada del usuario y las aportaciones revisables al catálogo. La especificación funcional y de almacenamiento está en [AI_osap-storage: área de trabajo y aportaciones V6](https://github.com/recursosformacion/AI_osap-storage/blob/main/docs/v6-user-workspace-contributions.md). El impacto específico en OSAP-API, interfaz, permisos e índice se recoge en [v6-user-workspace-contributions.md](v6-user-workspace-contributions.md). Estas funciones forman parte del alcance V6, no de una fase opcional posterior.
