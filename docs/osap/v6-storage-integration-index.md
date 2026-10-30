@@ -183,3 +183,7 @@ No desplegar Storage V6 mientras el consumidor de producción siga esperando el 
 - [Retirada de StorageLocation](v6-storage-locations-removal.md)
 
 **Regla:** el índice debe poder borrarse y reconstruirse desde las fuentes V6 sin depender de Representation ni de la estructura física de R2. La prueba de aceptación es una reconstrucción completa y una sincronización incremental funcionales, no simplemente que el proceso termine sin error.
+
+## 8. Área personal y aportaciones de usuarios
+
+OSAP-API debe integrar en V6 el área privada del usuario y el flujo de aportación/revisión/publicación. El catálogo sigue siendo Work → Resource → File; el espacio personal mantiene relaciones privadas con Works existentes y borradores separados, sin duplicar el catálogo. Solo las entidades publicadas se incorporan al índice general. Véase [especificación funcional en AI_osap-storage](https://github.com/recursosformacion/AI_osap-storage/blob/main/docs/v6-user-workspace-contributions.md) y [impacto de integración en OSAP-API](v6-user-workspace-contributions.md).
