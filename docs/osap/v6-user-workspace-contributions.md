@@ -176,3 +176,7 @@ Solo el aportante original puede modificar directamente una Work. Si el usuario 
 - El usuario aportante en altas autenticadas se obtiene automáticamente de la sesión validada por el servidor.
 - El titular de derechos no se deduce del compositor ni del aportante.
 - El formulario solo solicita información que tenga sentido para el alta y que no pueda obtenerse de la sesión o de la fuente. Los datos desconocidos permanecen sin determinar.
+
+### Procedencia inicial y autorización editorial
+
+La procedencia/aportante se almacena en Resource. Para aplicar la regla de modificación de Work se identifica el Resource que introdujo originalmente esa Work y se consulta su aportante. No se añade un segundo campo uploader/owner en Work. Si el Resource inicial o su aportante no pueden verificarse, no se concede edición directa por heurística; otro usuario que quiera modificar la obra crea una copia privada derivada conforme a la regla vigente.
