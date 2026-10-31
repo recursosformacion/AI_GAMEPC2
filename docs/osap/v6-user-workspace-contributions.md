@@ -60,7 +60,7 @@ Estados mínimos del expediente:
 
 `draft → submitted → in_review → accepted | rejected | changes_requested`
 
-La transición se valida en servidor. Al enviar se congela una versión revisable, incluidos metadatos declarados, créditos/licencia y lista de Files. Si se solicitan cambios, la nueva entrega no sobrescribe la versión revisada.
+La transición se valida en servidor. Al enviar se congela una versión revisable, incluidos los metadatos disponibles de Work, la procedencia y derechos/licencia declarados para cada Resource y la lista de Files. No se solicitan ni inventan datos desconocidos. Si se solicitan cambios, la nueva entrega no sobrescribe la versión revisada.
 
 La aceptación y la publicación deben ser distinguibles si la operación de integración puede fallar. Solo cuando la publicación termine correctamente el material se considera público.
 
@@ -168,3 +168,11 @@ No cerrar el DDL ni los scopes hasta verificar el sistema real y resolver estas 
 ## Regla de propiedad editorial: modificación de Works ajenas
 
 Solo el aportante original puede modificar directamente una Work. Si el usuario actual no es ese aportante y solicita modificarla, la operación debe crear automáticamente una Work derivada independiente en su área personal, privada desde el inicio. La Work original no cambia. El usuario recibe crédito de arreglista (rol canónico arranger, ID 3, sujeto a vínculo User↔Person válido) y la derivada conserva el linaje de la original. Añadir al espacio personal sin modificar sigue siendo una relación sin copia. La copia solo se hace pública mediante una aportación/publicación separada, respetando licencia y trazabilidad. Véase [inventario de migración y propiedad editorial](https://github.com/recursosformacion/AI_osap-storage/blob/main/docs/v6-data-migration-mapping.md).
+
+## Decisión vinculante: distribución mínima de metadatos
+
+- La autoría/compositoría pertenece a **Work** y es única para esa identidad de obra; no varía entre Resources.
+- La procedencia/aportante y los derechos/licencia pertenecen a **Resource** y pueden diferir entre recursos de una misma Work.
+- El usuario aportante en altas autenticadas se obtiene automáticamente de la sesión validada por el servidor.
+- El titular de derechos no se deduce del compositor ni del aportante.
+- El formulario solo solicita información que tenga sentido para el alta y que no pueda obtenerse de la sesión o de la fuente. Los datos desconocidos permanecen sin determinar.
