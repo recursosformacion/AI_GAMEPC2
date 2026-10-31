@@ -62,7 +62,7 @@ El fetcher debe consumir un contrato versionado que identifique inequívocamente
 - Resource: `id`, tipo, procedencia/aportante (PDMX, IMSLP, CPDL o usuario autenticado), derechos/licencia conocidos y características del material.
 - File: identificador si es necesario, formato, MIME, tamaño/estado y enlace de descarga generado por Storage.
 - Resource externo sin File: URL externa explícita y estado que no se confunda con un File alojado.
-- Work sin Resources: resultado válido.
+- Work sin Resources: inválida en V6; cada Work debe tener al menos un Resource.
 
 El adaptador no debe:
 - elegir silenciosamente solo el primer Resource si hay varios;
@@ -197,6 +197,6 @@ OSAP-API debe integrar en V6 el área privada del usuario y el flujo de aportaci
 - El titular de derechos puede ser el compositor o un tercero. No se deduce del compositor ni del aportante.
 - Se conservan solo datos disponibles y necesarios. No se crean estructuras de titularidad, historiales o evidencias para escenarios hipotéticos; lo desconocido queda sin determinar.
 
-## Procedencia inicial y permisos de modificación de Work
+## Permisos independientes de Work y Resource
 
-La procedencia/aportante se registra en Resource. Para aplicar la regla editorial de que solo quien introdujo originalmente la Work puede modificarla, OSAP consulta el aportante del Resource que dio entrada a esa Work; no duplica un campo de uploader/owner en Work. Aportar un Resource posterior no concede permisos de edición de Work. Si no se identifica de forma fiable el Resource inicial o su aportante, no se concede edición directa por inferencia.
+Solo el compositor autenticado puede modificar los metadatos catalográficos de Work. Cada Resource solo puede modificarlo su creador. Cualquier otro usuario aporta un nuevo Resource a la misma Work. No se duplica Work ni se infiere permiso desde el aportante inicial. Toda Work debe tener al menos un Resource, aunque este sea URL-only y no tenga File.
