@@ -1256,3 +1256,28 @@ No clasificar Resources históricos como original por orden de inserción/fecha 
 Se mantiene la regla: compositor y coautores pertenecen exclusivamente a Work. Resource no admite el rol compositor. Los créditos personales propios del material (arreglista, editor, adaptador, intérprete, traductor, etc.) pertenecen a Resource cuando se conocen.
 
 Esta corrección prevalece sobre las secciones anteriores que describan Resource original obligatorio, primer Resource original o arreglos automáticos.
+
+
+
+## Corrección de alcance: Work OMR sin Resource y materiales federados
+
+Esta corrección precisa el límite del modelo Work → Resource → File y prevalece sobre cualquier regla anterior de este documento que exija que toda Work tenga al menos un Resource o que convierta automáticamente cada material de proveedor en Resource.
+
+1. **Work puede existir con cero Resources OMR.** Una ficha catalográfica puede ser válida aunque OMR todavía no haya incorporado un material concreto. No se crea un Resource vacío ni ficticio para satisfacer una cardinalidad.
+2. **Resource es material perteneciente al repositorio OMR.** Representa un material concreto incorporado al catálogo/repositorio OMR. Puede tener cero, uno o varios Files. Un enlace externo o candidato de un proveedor consultado por la búsqueda no se convierte automáticamente en Resource OMR.
+3. **Material externo federado pertenece a la capa API.** API conserva y resuelve los registros de IMSLP, CPDL, Mutopia y otras fuentes con sus identificadores originales, URL y metadatos necesarios. Pueden aparecer junto a una Work OMR en los resultados sin que Storage los almacene.
+4. **La federación no altera el modelo de Storage.** La coexistencia de una Work OMR con materiales externos no obliga a crear Resources OMR ni a importar/copiar archivos externos.
+5. **Resource de referencia sigue siendo opcional** y solo puede apuntar a un Resource de la misma Work. Si una Work no tiene Resources, no tiene referencia.
+6. **No se infiere identidad por coincidencia de título.** La agrupación provisional de búsqueda es distinta de la asociación persistente confirmada entre una Work y una fuente externa.
+
+### Responsabilidades de cada capa
+
+- **Storage:** Work OMR, Resources OMR, Files OMR, créditos del material OMR, punteros físicos y entrega de archivos.
+- **API/federación:** conectores externos, candidatos, IDs originales de proveedor, agrupación provisional, ranking, reconciliación persistente, índice federado, cachés y resolución de detalle/descarga externa.
+- **OSAP web:** consume la respuesta de API y presenta la Work y los materiales con su procedencia, sin confundir IDs ni asumir que todos los materiales están almacenados en OMR.
+
+### Búsqueda inmediata y reconciliación
+
+La búsqueda puede mostrar de inmediato una agrupación provisional de candidatos de distintas fuentes. El agrupamiento no debe escribir una asociación definitiva ni cambiar el catálogo. Las asociaciones persistentes se confirman en la capa de reconciliación de API mediante reglas idempotentes y revisión de los casos ambiguos. El proceso batch no debe ser requisito para que una búsqueda muestre un material externo.
+
+V6 puede modificar OSAP-API en profundidad si hace falta para mantener una identidad coherente: contratos/DTO, agrupación, matching, ranking, índice, scripts de rebuild/sync, cachés, adaptador OMR, rutas de detalle/descarga y pruebas. No se debe limitar el alcance a un simple cambio de fetcher ni hacer un renombrado mecánico de clases llamadas Representation.
