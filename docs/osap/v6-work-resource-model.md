@@ -279,7 +279,7 @@ No se han creado ramas ni tags en esta fase de planificación.
 
 1. **Identidad de Work:** UUID u otro ID estable; política de alias y fusiones.
 2. **Resource:** vocabulario de tipos y campos obligatorios mínimos; recurso sin fichero permitido.
-3. **Procedencia:** esquema de correspondencias para IDs externos de Work y Resource.
+3. **Procedencia:** se registra en Resource. Los identificadores externos técnicos de Work se conservan aparte solo si son imprescindibles para reconciliar identidad/idempotencia; no son datos de procedencia.
 4. **Tonalidad/duración/compases/licencia/dominio público:** se proponen en Resource siguiendo el criterio inicial del usuario; concretar semántica, validación y representación.
 5. **Instrumentación, voces, idioma y ensemble:** decidir qué es atributo de Resource y qué puede heredarse/derivarse.
 6. **Personas:** normalizar roles de creación de Work y roles editoriales de Resource.
@@ -347,7 +347,7 @@ Estas son las columnas declaradas por 001_baseline_schema.sql. El destino V6 es 
 | works_musical_key, works_duration, works_measures | Están en DDL/entidad; SqlResolutionSource lee tonalidad desde Work. | Resource según el criterio inicial del usuario. | Adaptar resolución y contratos que hoy los leen desde Work. |
 | works_pages, works_parts, works_complexity | Están en DDL/entidad; consumidores y semántica no se han completado en esta pasada. | Pages/parts provisionalmente en Resource; complexity según describa obra o realización. | Pendiente de rastreo. |
 | works_description | Campo de texto general. | Work si describe la obra; notas específicas de edición a Resource. | Distinguir significado por fuente. |
-| works_license, works_public_domain | DDL/entidad; SqlResolutionSource usa licencia de Work como fallback cuando falta licencia de Representation. | Resource; separar licencia de composición, edición, fichero y permiso de redistribución. | Migrar fallback y aclarar semántica legal. |
+| works_license, works_public_domain | DDL/entidad; SqlResolutionSource usa licencia de Work como fallback cuando falta licencia de Representation. | Resource, solo cuando pueda identificarse el material al que aplica. | Eliminar el fallback de Work; no separar licencias hipotéticas de composición/edición/fichero ni inferir titular. |
 | works_origin, works_origin_id | SqlWorkRepository los persiste; administración requiere origen; resolución los usa como fallback. | Correspondencias externas Work/Resource según qué identifique cada ID. | No conservar como atributos escalares sin justificar. |
 | works_key | Único en DDL; asociado históricamente a work_key; resolución usa COALESCE(representations_origin_id, works_key). | Eliminar si es clave de agrupación heredada; si es ID de fuente, mover a correspondencia externa. | Trazar todos los escritores/lectores. |
 | works_type_file | El DDL lo define como formato de fichero; el diseño anterior ya proponía retirarlo de Work. | Formato de File o de relación Resource–File. | No pertenece a Work. |
@@ -424,7 +424,7 @@ La tabla actual mezcla dos conceptos: recursos PDMX directos a Work y ficheros/r
 2. Resource representa una realización musical concreta, con work_id obligatorio; absorbe lo válido de Representation y la parte editorial de la fila antigua works_resources.
  - Resource–File debe tener cardinalidad 1:N, sin compartir Files ni objetos físicos entre Resources; una referencia externa no debe fingir que sus bytes están almacenados por OSAP.
 4. File representa un artefacto digital con metadatos técnicos y referencia directa a su objeto físico; no se comparte entre Resources ni se modelan ubicaciones por proveedor.
-5. Procedencia debe separar ID externo de Work del ID externo de Resource.
+5. Los identificadores externos de Work y Resource deben distinguirse solo cuando exista una necesidad demostrada de reconciliación/idempotencia; la procedencia/aportante se registra únicamente en Resource.
 6. Separar revisión/publicación/visibilidad de Resource y disponibilidad técnica de File; los mecanismos de copia y recuperación quedan internos a Storage.
 7. PDF/MXL/MIDI es el eje de formato; edition/score/arrangement/transcription es el eje de tipo musical.
 8. Los campos de Work derivados desde relaciones normalizadas son candidatos a retirada, pero solo tras rastrear escrituras y comparar valores históricos.
@@ -445,7 +445,7 @@ Esta sección corrige la lectura inicial de §9.1.A. La regla de trabajo es part
 3. **works_obra_iden: legado sin uso demostrado.** docsNew/works-obra-iden-cierre.md documenta 0 valores no nulos en 310.455 obras y ninguna referencia funcional en código, API o scripts. En V6 es candidato a eliminar, salvo que el diseño nuevo identifique una función de equivalencia de obras que realmente necesite esa relación.
 4. **works_voicing: normalización previa realizada.** Las migraciones 007 y 008 y la documentación de fork describen el traslado de voicing a relaciones normalizadas de voices/ensembles. El código actual de SqlWorkRepository deriva el dato desde work_ensembles; no debemos reintroducir works_voicing como campo autoritativo. works_instrumentation también aparece como campo legado, mientras que la API deriva instrumentación desde work_instruments; verificar escritores antes de concluir su retirada.
 5. **works_music_digest y works_key no son equivalentes.** La migración 034 explica que works_music_digest es un MD5 de notas musicales normalizadas (step/octave/duration/voice) extraídas de MusicXML, calculado por scripts/analyze_works_content.py para agrupar obras musicalmente equivalentes entre ediciones. works_key está descrito en el baseline como hash de agrupación heredado y se usó en la migración PDMX como identificador de origen. V6 debe distinguir huella musical, identidad/agrupación canónica y clave externa de proveedor. El digest es candidato a conservar como índice derivado si se confirma que siguen siendo necesarios el proceso y su uso; no es un hash de seguridad ni sustituye File.sha256.
-6. **Procedencia Work vs Resource.** En la migración PDMX, representations_origin_id se rellena con works_key; para CPDL se construye como page_id:cpdlno, porque un Work puede tener múltiples ediciones. V6 necesita correspondencias externas tipadas por entidad, no una única columna genérica copiada sin criterio.
+6. **Identificador externo Work vs Resource.** En la migración PDMX, representations_origin_id se rellena con works_key; para CPDL se construye como page_id:cpdlno, porque un Work puede tener múltiples ediciones. V6 debe conservar solo los identificadores técnicos necesarios para reconciliación/idempotencia y asignarlos al ámbito correcto. No convertirlos en atributos de procedencia de Work: la procedencia/aportante corresponde a Resource.
 7. **archive_entries es un legado que hay que migrar con cobertura comprobada.** La documentación de la transición indica que se mantuvo intacto mientras se migraban recursos y que GetWork, la descarga e import_pdmx tenían dependencias/fallback. La situación exacta de cada fallback debe verificarse en el código vigente; en V6 no se retirará hasta sustituirlo y validar cobertura.
 
 ### Clasificación de trabajo actualizada
@@ -531,7 +531,7 @@ La cardinalidad propuesta es: Work 1:N Resource; Resource puede existir sin File
 |---|---|---|
 | `works_musical_key` | Resource.musical_key | La tonalidad puede cambiar entre arreglos/transposiciones. Si la fuente solo conoce una tonalidad global de la obra, migrarla como valor de origen con procedencia y no fingir que aplica a todas las realizaciones. |
 | `works_duration`, `works_measures`, `works_pages`, `works_parts`, `works_complexity` | Resource, con valores tipados cuando se pueda | Duración, compases, páginas, partes y dificultad pueden variar por arreglo/edición. No convertir datos ambiguos a números sin preservar el valor original. |
-| `works_license` | Resource.licence assertion; si la condición solo se aplica a un artefacto, a File | La licencia debe acompañar al objeto que realmente licencia; conservar texto original, fuente y evidencia cuando no sea posible normalizar. No heredar automáticamente una licencia de Work a todos sus Resources. |
+| `works_license` | Resource.license, solo cuando el valor se pueda asociar inequívocamente al material | No asignar licencia a Work ni a File. Conservar únicamente el dato conocido y necesario; no crear evidencias o jerarquías jurídicas adicionales sin uso real. |
 | `works_public_domain` | No trasladar ciegamente como booleano autoritativo. Convertir a una afirmación de estado legal con sujeto, jurisdicción, fecha/fuente y confianza, asociada a Work si se refiere a la composición o a Resource/File si se refiere a edición/artefacto | Dominio público de una composición y licencia de una edición/escaneo no son equivalentes. Conservar el dato legado y su procedencia mientras se determina qué significaba cada valor. |
 | `works_origin`, `works_origin_id` | WorkExternalIdentifier | Solo cuando identifiquen la obra intelectual del proveedor. Ejemplo confirmado: el importador IMSLP guarda el pageid estable en Work. Para CPDL, la página identifica Work, mientras pageid:cpdlno identifica una edición/Resource. |
 | `representations_origin`, `representations_origin_id`, `representations_origin_cpdlno` | Correspondencias externas tipadas y datos de procedencia | Los componentes heredados pueden identificar proveedor, ficha, agrupación o realización; determinar semántica antes de mapear. |
@@ -739,7 +739,7 @@ Esta sección completa el mapa entre las evidencias localizadas y las decisiones
 | API de aportaciones (ContributionService, ContributionsMixin, router HTTP) | Operación add_resource dirigida a representation; estado draft/submitted/in_review/accepted/rejected; adjuntos File no públicos; review_contribution materializa primero en Storage al aceptar | Cambiar target a Work/Resource según operación; conservar materialización previa al estado accepted, idempotencia por evento y manejo de fallo parcial | Pruebas de reintento/fallo parcial, propiedad derivada de Auth y ACL de Storage |
 | Cliente StorageContributionClient | Consulta admin de Representation para recuperar Work y sube File sin crear Resource | Resolver Work/Resource por contrato V6 y materializar File con operación autorizada | Ninguna llamada del cliente a rutas admin legacy |
 | Frontend/API e índice | IDs y contratos actuales de obras, representaciones, URLs de recursos | Consumir API V6; reconstruir índice desde modelo canónico; mapear IDs públicos antiguos | Tests E2E, links antiguos redirigidos o con respuesta de retirada documentada |
-| Importadores externos (PDMX, CPDL, IMSLP y futuros) | campos de origen en Work o Representation y formatos históricos | Adaptadores de origen a WorkExternalIdentifier/ResourceExternalIdentifier y contratos de ingesta | Ningún importador escribe directamente en tablas internas ni asume IDs de tablas |
+| Importadores externos (PDMX, CPDL, IMSLP y futuros) | campos históricos de origen en Work o Representation | Adaptadores: procedencia/aportante en Resource; identificadores técnicos externos mínimos en Work/Resource solo cuando sean necesarios para reconciliación | Ningún importador escribe directamente en tablas internas ni asume IDs de tablas |
 | Aplicaciones consumidoras (incluida futura AI_Guitarra) | Posible dependencia de IDs, endpoints o estructura actual | Consumir contrato API documentado; permiso de descarga se verifica por Resource/File | Pruebas de integración sin acceso SQL directo |
 
 ### 16.3 Decisiones cerradas para el diseño de destino
@@ -874,7 +874,7 @@ Esta tabla documenta el esquema heredado que debe migrarse; sus referencias a `S
 
 | Dominio actual | Destino V6 | Regla |
 |---|---|---|
-| works_person_roles, persons, roles | WorkPersonRole, Person, Role | Preservar rol, orden, procedencia y atribución; editor de Resource no es compositor de Work |
+| works_person_roles, persons, roles | WorkPersonRole, Person, Role | Preservar rol y orden de autoría de Work; la procedencia del crédito solo se conserva si ya existe y es necesaria para resolver atribuciones. Editor de Resource no es compositor de Work |
 | representation_persons o equivalente | ResourcePersonRole | Migrar editores/arreglistas/transcriptores al ámbito correcto; nombres no resueltos son evidencia, no Personas falsas |
 | work_genres, genres | WorkGenre + catálogo | Resource solo si la edición cambia clasificación |
 | work_instruments, instruments | WorkInstrument + catálogo | IDs canónicos; Resource puede declarar variación del arreglo |
