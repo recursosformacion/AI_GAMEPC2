@@ -200,3 +200,15 @@ OSAP-API debe integrar en V6 el área privada del usuario y el flujo de aportaci
 ## Permisos independientes de Work y Resource
 
 Solo el compositor autenticado puede modificar los metadatos catalográficos de Work. Cada Resource solo puede modificarlo su creador. Cualquier otro usuario aporta un nuevo Resource a la misma Work. No se duplica Work ni se infiere permiso desde el aportante inicial. Toda Work debe tener al menos un Resource, aunque este sea URL-only y no tenga File.
+
+
+## Regla vinculante: Resource original, arreglos y compositoría
+
+- Toda Work se crea junto con un primer Resource que representa el material original de la obra. No existe Work sin ese Resource.
+- Los Resources que se incorporan después a esa Work representan arreglos de la obra original. Si el material tiene una composición distinta, corresponde a otra Work.
+- El compositor y los coautores se relacionan exclusivamente con Work. Resource **no tiene compositor ni admite el rol compositor**. No se duplica la relación de compositor en cada Resource.
+- Los créditos personales propios de cada material (arreglista, editor, adaptador, intérprete, traductor, etc.) se relacionan con su Resource cuando se conocen.
+- No se selecciona un Resource principal mediante un campo adicional: el primer Resource es el original por definición del proceso de creación. Su clase debe distinguirse explícitamente de los Resources de arreglo.
+- En registros históricos no se presume que el primer registro encontrado, el más antiguo por fecha técnica o el único que tenga File sea el original. Solo se clasifica como original con evidencia; si no puede demostrarse, se registra un conflicto de migración y no se inventa un original.
+
+El esquema y los servicios deben garantizar un único Resource original por Work, permitir cero o más Resources de arreglo, impedir el rol compositor en créditos de Resource y crear Work + Resource original como una operación lógica atómica. La migración debe señalar Works sin original demostrable, candidatos originales múltiples y créditos de compositor incompatibles.
