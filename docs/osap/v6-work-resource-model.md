@@ -35,7 +35,7 @@ Work (obra musical)
 
 Identidad intelectual canónica de la obra, independiente de proveedor, formato de fichero, edición o índice. Contendrá únicamente atributos que describen la obra como tal y relaciones normalizadas que sean realmente comunes a ella.
 
-Ejemplos candidatos: título canónico, subtítulo cuando proceda, personas creadoras y sus roles, catálogo/opus, época, géneros y descripción general.
+Ejemplos candidatos: título canónico, subtítulo cuando proceda, autoría/compositoría de la obra, catálogo/opus, época, géneros y descripción general. La autoría se define una sola vez en Work y no cambia según el Resource.
 
 No se trasladará automáticamente todo lo que hoy está en `works`: cada campo se clasificará por significado y uso demostrado.
 
@@ -45,7 +45,7 @@ Es la entidad que reúne lo que el modelo anterior repartía entre `representati
 
 Un Resource puede no tener ficheros o tener uno o varios artefactos digitales de la misma realización. PDF, MXL (MusicXML comprimido) y MIDI son formatos válidos para una misma realización cuando el contenido musical corresponda: disponer de uno es suficiente, pero si existen varios formatos válidos, el objetivo es conservarlos todos. Cada formato es un File distinto y cada File pertenece a un único Resource. Una obra (Work) puede tener muchos Resources y cada Resource pertenece a una única obra (Work) canónica.
 
-Candidatos: tipo de realización, proveedor y su identificador externo, licencia, situación de dominio público del contenido publicado, editor, fuente/nombre original, instrumentación/ensemble/voces/idioma propios de esa realización, tonalidad, duración, compases, páginas, partes, estado de publicación/disponibilidad y calidad/procedencia.
+Candidatos: tipo de realización, procedencia/aportante (fuente externa como PDMX, IMSLP o CPDL, o usuario autenticado), identificador externo cuando sea necesario, derechos y licencia aplicables a ese Resource, editor si es relevante, nombre original, instrumentación/ensemble/voces/idioma propios de esa realización, tonalidad, duración, compases, páginas y partes. Solo se almacenarán los datos disponibles y útiles; no se exigirán titular, licencia, editor ni identificadores cuando no se conozcan o no sean necesarios.
 
 Estos campos son una propuesta; su semántica, cardinalidad y vocabulario deben fijarse en el inventario.
 
@@ -68,8 +68,8 @@ Estos criterios recogen las observaciones iniciales del usuario y deben validars
 | Campo actual | Criterio inicial V6 | Trabajo pendiente |
 |---|---|---|
 | `works_key` | No conservarlo automáticamente en Work. Puede ser una clave técnica, un identificador de dataset o una clave natural heredada. | Rastrear escritores, lectores, unicidad, estabilidad y usos en URLs/importadores. Eliminarlo si no tiene semántica propia; si identifica un origen, moverlo al mapeo de procedencia. |
-| `works_origin` | No parece un atributo intrínseco de Work: una obra puede proceder de varias fuentes. | Sustituir por una o varias correspondencias de origen; determinar si alguna fuente identifica Work o una realización concreta. |
-| `works_origin_id` | No asumir que identifica globalmente una obra. | Mover al registro de correspondencia con el proveedor y asociarlo a Work o Resource según qué identifique realmente el ID externo. |
+| `works_origin` | No trasladar a Work como procedencia o aportante. | Determinar si identifica la fuente/aportante de un Resource y migrarlo allí; si no puede asociarse con seguridad, dejarlo en conflicto sin inferir. |
+| `works_origin_id` | No tratarlo como identidad de Work por defecto. | Asociarlo al Resource solo si la evidencia demuestra que identifica ese material; si identifica una ficha de obra de la fuente, conservar únicamente la correspondencia mínima necesaria y sin convertirla en procedencia de Work. |
 | `works_musical_key` | **Resource**, según criterio inicial del usuario. | Confirmar que representa la tonalidad de esa realización y cómo registrar la tonalidad original de la obra si hace falta. |
 | `works_duration` | **Resource**, según criterio inicial del usuario. | Definir unidades, precisión y si se trata de duración interpretativa, audio o estimación musical. |
 | `works_measures` | **Resource**, según criterio inicial del usuario. | Definir qué cuenta como compás y cómo tratar versiones/arreglos con diferente número de compases. |
@@ -98,8 +98,8 @@ El `work_id` interno será estable y no dependerá de los IDs del índice, CPDL,
 | Grupo de datos actual | Destino candidato | Regla |
 |---|---|---|
 | Título canónico, subtítulo y descripción general | Work | Solo datos que describen la obra; conservar títulos crudos de fuentes aparte si son útiles. |
-| Compositor, autor y demás roles intelectuales | Relaciones de Work con personas/roles | Reutilizar el catálogo canónico de personas; no duplicar personas como texto libre salvo para preservar la procedencia. |
-| Editor de una edición | Relación de Resource con persona/rol | No atribuirlo al compositor ni a toda la obra. |
+| Compositoría/autoría de la obra | Relación de autoría de Work | La atribución es única para la identidad Work y común a todos sus Resources. No variar el compositor según el Resource. Distinguir identificado, anónimo, tradicional y desconocido sin crear personas ficticias. |
+| Editor de una edición | Resource, solo si es dato útil y conocido | No exigirlo ni convertirlo en compositor. Omitirlo si no se dispone de información fiable. |
 | Catálogo, opus y época | Work | Si el valor identifica la obra intelectual. |
 | Géneros | Work y catálogo normalizado | Evitar copias de nombres de género en cada tabla o en JSON redundante. |
 | Instrumentación, voces y ensemble | Resource cuando describan la plantilla concreta | Reutilizar catálogos y relaciones existentes; distinguir atributos explícitos de firmas derivadas. |
@@ -1174,3 +1174,14 @@ El modelo Work → Resource → File también debe soportar el área privada del
 ## Propiedad editorial y copias privadas derivadas
 
 Solo el usuario que aportó originalmente una Work puede modificarla. Si otro usuario desea modificarla, OSAP crea automáticamente una Work derivada independiente en su área privada; la original permanece intacta y el usuario recibe crédito de arreglista. La copia conserva el linaje a la Work fuente y solo puede publicarse mediante aportación/revisión separada. El inventario y las reglas de migración están en [AI_osap-storage: v6-data-migration-mapping.md](https://github.com/recursosformacion/AI_osap-storage/blob/main/docs/v6-data-migration-mapping.md).
+
+## Decisión vinculante: autoría, procedencia y derechos en Work/Resource
+
+Esta decisión prevalece sobre cualquier propuesta anterior de distribución de estos datos:
+
+- **Autoría pertenece a Work.** La identidad de una obra tiene una atribución de autoría común a todos sus Resources. No puede haber un compositor para una partitura y otro para una grabación si ambas se consideran Resources de la misma Work. Si la diferencia revela obras intelectualmente distintas, debe revisarse la identidad Work, no crear autorías alternativas por Resource. Se admiten coautores cuando la obra realmente sea conjunta. Los estados de atribución deben distinguir, sin crear personas ficticias: compositor identificado, anónimo declarado, tradicional y desconocido/no resuelto. «Anónimo» no equivale a «desconocido».
+- **Procedencia pertenece a Resource.** Cada Resource indica quién lo aporta o de qué fuente procede: por ejemplo PDMX, IMSLP, CPDL o un usuario autenticado. En un alta directa de usuario, el aportante se obtiene de la sesión autenticada; no se pregunta ni se acepta un user_id arbitrario del cliente. No se debe confundir la fuente de un Resource con la autoría de Work.
+- **Derechos y licencia pertenecen a Resource.** Se registran únicamente cuando se conocen y son útiles para ese material. El titular puede coincidir con el compositor o ser otra persona/entidad; nunca se deduce automáticamente de la autoría ni del aportante. No se presupone que todos los Resources de una Work compartan titular o licencia.
+- **Principio de mínima información:** no crear campos, tablas, relaciones, historiales o evidencias por anticipado para datos hipotéticos. Guardar solo la información disponible, necesaria y con un uso funcional claro. Los datos desconocidos permanecen nulos/no determinados; no se inventan titulares, licencias, fuentes ni personas. Las evidencias adicionales se conservan solo cuando ya existan y sean necesarias para resolver conflictos, auditoría o cumplimiento.
+
+En consecuencia, `works_origin`, `works_origin_id`, `works_license` y `works_public_domain` no se migran como atributos de Work. Su eventual contenido se asigna a Resource solo cuando se pueda identificar con seguridad el material al que corresponde; de lo contrario se clasifica como conflicto/no migrable sin inferencias.
