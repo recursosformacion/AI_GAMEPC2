@@ -975,7 +975,7 @@ Para cada endpoint y contrato, identifica productor, consumidor, esquema de requ
 #### D. Casos de dominio que deben quedar demostrados
 
 Evalúa, con ejemplos de datos de fixtures/tests o trazado de código (no producción), cómo se representa cada caso:
-1. Una Work sin Resource.
+1. Una Work sin Resource (inválida en V6; toda Work debe tener al menos un Resource).
 2. Un Resource de edición sin fichero.
 3. Un Resource con PDF, MusicXML y MIDI.
 4. Un File idéntico compartido por dos Resources.
@@ -1173,7 +1173,7 @@ El modelo Work → Resource → File también debe soportar el área privada del
 
 ## Propiedad editorial y copias privadas derivadas
 
-Solo el usuario que aportó originalmente una Work puede modificarla. Si otro usuario desea modificarla, OSAP crea automáticamente una Work derivada independiente en su área privada; la original permanece intacta y el usuario recibe crédito de arreglista. La copia conserva el linaje a la Work fuente y solo puede publicarse mediante aportación/revisión separada. El inventario y las reglas de migración están en [AI_osap-storage: v6-data-migration-mapping.md](https://github.com/recursosformacion/AI_osap-storage/blob/main/docs/v6-data-migration-mapping.md).
+Regla vigente: solo el compositor autenticado modifica los metadatos catalográficos de Work; solo el creador modifica su Resource. Cualquier otro usuario aporta un Resource nuevo a la misma Work. No se crea una Work derivada por esta operación. Véase [regla de edición Work/Resource](v6-user-workspace-contributions.md).
 
 ## Decisión vinculante: autoría, procedencia y derechos en Work/Resource
 
@@ -1196,9 +1196,9 @@ Las matrices y ejemplos anteriores de este documento contienen propuestas explor
 - `works_license` y `works_public_domain` no son atributos V6 de Work. Solo se asignan al Resource al que correspondan cuando la asociación sea inequívoca. No se trasladan a File ni se construye una jerarquía legal adicional sin necesidad funcional.
 - Cualquier texto previo que hable de procedencia transversal, licencia de Work o titular inferido queda sustituido por esta regla.
 
-## Relación entre procedencia del Resource inicial y permisos editoriales
+## Permisos independientes de Work y Resource
 
-La procedencia/aportante pertenece a Resource y no se duplica en Work. La regla editorial que reserva la modificación de una Work a quien la introdujo originalmente se resuelve consultando el aportante del Resource que dio entrada a esa Work al catálogo. Aportar después otro Resource a una Work existente no concede permisos de edición sobre Work. La migración solo identifica ese Resource inicial cuando hay evidencia fiable; si no la hay, la propiedad editorial queda sin resolver y no se infiere desde `works_origin`, emails, votos o último editor.
+Solo el compositor autenticado puede editar los metadatos catalográficos de Work. Cada Resource solo lo puede modificar su creador. La procedencia del primer Resource no determina quién puede editar Work. Otros usuarios aportan nuevos Resources bajo la misma Work; no se duplica Work.
 
 ## Regla vinculante de edición: Work y Resource tienen permisos distintos
 
