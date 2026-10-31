@@ -790,7 +790,7 @@ El docstring de src/osap/application/contributions.py, que dice que aceptar solo
 
 La investigación de los importadores confirma que no existe una regla única para trasladar todos los campos de origen:
 
-- **IMSLP:** scripts/import_imslp_works.py materializa una Work con works_origin=IMSLP y works_origin_id igual al pageid estable de la obra. También conserva works_source_url como permalink a la página fuente y crea una fila de importación de compositor sin resolver. V6 debe trasladar el pageid a WorkExternalIdentifier, el permalink a un enlace de fuente de Work y la atribución sin resolver al flujo de evidencia/personas, sin inventar un Resource descargable: el importador declara que no descarga ni aloja ficheros IMSLP.
+- **IMSLP:** scripts/import_imslp_works.py materializa actualmente Work con works_origin=IMSLP y works_origin_id igual al pageid, además de works_source_url. En V6, la procedencia/aportante no se conserva como atributo de Work: si existe un Resource asociado, se asigna a ese Resource; si el importador solo crea una identidad Work sin material, no se inventa un Resource ni se traslada allí una procedencia que no corresponde a un material. El pageid solo podrá mantenerse como identificador técnico externo mínimo de reconciliación/idempotencia de Work si sigue siendo necesario; no será un campo de procedencia ni una copia de la ficha. La atribución de compositor sin resolver se trata en Work, sin inventar Persona.
 - **CPDL:** el page ID identifica la página/Work y el par page ID + cpdlno identifica una edición. cpdlno solo no es único. En V6, WorkExternalIdentifier y ResourceExternalIdentifier deben ser entidades/ámbitos distintos.
 - **PDMX:** works_key se utilizó como clave de agrupación y en la migración como representations_origin_id. Antes de descartarlo, se debe guardar una correspondencia reversible que permita reimportación, reconciliación y auditoría; no asumir que representa una clave externa universal.
 - **URL de origen vs URL de descarga:** works_source_url (IMSLP) enlaza la fuente catalográfica. Una URL de descarga apunta a un artefacto concreto. V6 debe distinguir SourceLink/URL de página, URL directa de descarga y File almacenado; no crear un File solo porque exista un permalink.
@@ -809,14 +809,14 @@ La matriz distingue tres niveles: evidencia de código/documentación, destino p
 | id | PK de Work referenciada por roles, catálogos, índice, recursos y rutas | Work.id | Mantener si no hay fusión; mapping y redirects si cambia; nunca reutilizar ID |
 | works_title, works_song_name, works_subtitle | SqlWorkRepository inserta/proyecta estos campos; importadores alimentan títulos con reglas distintas | Work.title + variantes/títulos de fuente | Definir precedencia; preservar originales y fuente; no fusionar solo por nombre |
 | works_key | Usado por SqlWorkRepository y herramientas de agrupación; la documentación de migración lo describe como clave de agrupación/deduplicación; un migrador antiguo lo reutilizó como ID de origen | No es ID canónico; mapping y, si procede, ExternalIdentifier PDMX | Rastrear todos los lectores/escritores y preservar mapping reversible |
-| works_origin, works_origin_id | IMSLP guarda proveedor + pageid estable en Work; CPDL usa IDs de página en un camino; PDMX tiene semántica histórica variable | WorkExternalIdentifier si identifica obra; ResourceExternalIdentifier si identifica edición | Proveedor + entidad + ID; preservar crudo, URL y colisiones; no unicidad global de origin_id |
+| works_origin, works_origin_id | IMSLP guarda proveedor + pageid en Work; CPDL distingue page ID y cpdlno; PDMX tiene semántica histórica variable | Procedencia/aportante en Resource; identificador técnico externo mínimo en Work solo si es imprescindible para reconciliar identidad de obra | No conservar origin como procedencia de Work. Asociar la procedencia a Resource; mantener un ID técnico externo de Work solo con consumidor/idempotencia demostrados. |
 | works_source_url | IMSLP lo define como permalink a página fuente, no como fichero alojado | Enlace de fuente asociado a Work o Resource | Distinguir URL de página, descarga directa y File almacenado |
 | works_catalogue, works_opus | Proyección de catálogo/opus en repositorio y scripts de enriquecimiento | Identificadores de catálogo tipados en Work | Conservar autoridad, catálogo, valor y texto original |
 | works_attr_type, works_attribution_note | Repositorio y scripts de atribución; atribución anónima/tradicional separada de identidades | Atribución explícita de Work + WorkPersonRole + auditoría | No crear Persona para anónimo/tradicional; evitar dobles verdades |
 | works_musical_key | Se expone desde Work; puede variar por arreglo/transposición | Resource.musical_key por defecto | Migrar con procedencia; no copiar a todos los Resources sin evidencia |
 | works_year | Campo genérico de fecha | Fecha/periodo de Work con tipo y precisión | Distinguir composición, publicación y estimación; conservar original |
 | works_duration, works_measures, works_pages, works_parts, works_complexity | Campos heredados; pueden variar por edición/arreglo | Resource si describen realización; Work solo si son globales | Revisar unidad/tipo; no confundir páginas, compases y partes vocales |
-| works_license, works_public_domain | Semántica insuficiente para afirmar derechos de toda realización | Afirmación de derechos con sujeto, jurisdicción, fuente, fecha y confianza | No convertir booleano en certeza legal; preservar valor crudo |
+| works_license, works_public_domain | Semántica histórica insuficiente y actualmente mezclada en Work | Resource, solo cuando pueda identificarse el material al que aplica | No migrar licencia/dominio público como atributo de Work. No crear un sistema jurídico más complejo que los datos y usos reales; dejar sin determinar lo que no pueda atribuirse con seguridad. |
 | works_relative_path | Insertado por repositorio Work; rutas/fallback legacy pueden usarlo | Eliminar de Work; ubicación física directa en File y resolución mediante Storage | Encontrar y migrar todo lector y constructor de URL |
 | works_type_file | Campo histórico de formato, pendiente de rastreo completo de consumidores | Formato normalizado del artefacto asociado a Resource | No confundir formato con tipo de realización |
 | works_music_digest | MD5 de notas normalizadas MusicXML para similitud musical, no hash binario | Huella derivada opcional de reconciliación | Conservar mientras exista consumidor probado; no sustituir por SHA-256 |
@@ -985,7 +985,7 @@ Evalúa, con ejemplos de datos de fixtures/tests o trazado de código (no produc
 8. URL externa de página frente a URL directa de descarga y File almacenado.
 9. Un Resource que modifica la tonalidad/instrumentación respecto de Work.
 10. Editor/arreglista de Resource frente a compositor de Work.
-11. licencia de Work, licencia de edición y licencia de fichero; visibilidad privada frente a dominio público.
+11. licencia/derechos aplicables a cada Resource y posibles diferencias entre recursos de una misma Work; visibilidad privada frente a publicación. No asignar licencia a Work ni inferir titular.
 12. Resource privado de usuario, cuota, autorización de descarga, archivado y File compartido.
 13. Aportación aceptada, error de Storage durante aceptación, reintento idempotente y fallo parcial.
 14. Identificadores externos duplicados o no únicos, especialmente CPDLno.
@@ -1102,13 +1102,13 @@ Las tablas actuales normalizadas de personas, roles, géneros, instrumentos, idi
 1. **Work no es una fuente.** Una obra puede estar descrita por varios proveedores y no tener ningún fichero alojado.
 2. **Resource no es una ficha externa.** Representa una realización musical distinguible por su contenido o función, aunque se haya descubierto a través de una ficha externa.
  - File incluye identidad, nombre, formato, estado, hash de integridad cuando exista y referencia al almacenamiento. No se separan los bytes en una entidad Blob.
-4. **La procedencia es transversal.** Un Work, Resource o File puede estar respaldado por varias fuentes. Una fuente puede describir varios objetos OSAP. La relación se representa explícitamente y no se codifica en un único `origin` genérico.
+4. **La procedencia/aportante pertenece a Resource.** Cada Resource identifica su fuente/aportante cuando se conoce (PDMX, IMSLP, CPDL o usuario autenticado). No se mantiene una procedencia genérica transversal a Work/Resource/File. Los identificadores externos técnicos de Work solo se conservan si son imprescindibles para reconciliación/idempotencia y no representan al aportante del material.
 5. **Los IDs externos no son IDs canónicos.** Se conserva únicamente el identificador necesario para volver a consultar el registro, con su proveedor y tipo; no se almacena una copia del registro externo ni un duplicado normalizado de sus metadatos.
 6. **No se conservan copias de los datos de origen.** OSAP guarda los datos normalizados que necesita para su catálogo y una referencia externa mínima para poder volver a consultar el proveedor. No almacena payloads, títulos originales duplicados, metadatos brutos ni snapshots históricos de la fuente.
 7. **No inferir recursos por existencia de fichero.** Un artefacto solo se agrupa con otros bajo el mismo Resource cuando haya evidencia de que pertenecen a la misma realización. La extensión o el nombre no bastan.
 8. **No inventar recursos por existencia de ficha.** Una referencia externa que solo identifica una página puede permanecer como correspondencia mínima pendiente de clasificar hasta determinar si describe una obra (Work), un Resource o un File; no se conserva el contenido de la ficha.
 9. **La importación es idempotente y revisable.** Conflictos de identidad, duplicados y correspondencias ambiguas quedan registrados; no se resuelven fusionando silenciosamente entidades.
-10. **La licencia se asigna al objeto correcto.** Una licencia de composición, de arreglo/edición, de fichero y condiciones de descarga pueden ser distintas. OSAP guarda el código/valor normalizado que necesita y una URL de referencia cuando proceda, no una copia extensa del texto de la fuente. Se registra a qué objeto y jurisdicción se refiere.
+10. **Los derechos/licencia pertenecen a Resource.** Se guarda la información conocida y necesaria para ese material. El titular puede ser el compositor o un tercero; no se deduce de autoría ni de aportante. No se crea una estructura legal por capas (composición/edición/fichero/jurisdicción/evidencia) salvo que exista una necesidad real y datos fiables que la justifiquen.
 
 ### 20.3 Modelo de relaciones externas sin acoplarse a CPDL
 
@@ -1185,3 +1185,13 @@ Esta decisión prevalece sobre cualquier propuesta anterior de distribución de 
 - **Principio de mínima información:** no crear campos, tablas, relaciones, historiales o evidencias por anticipado para datos hipotéticos. Guardar solo la información disponible, necesaria y con un uso funcional claro. Los datos desconocidos permanecen nulos/no determinados; no se inventan titulares, licencias, fuentes ni personas. Las evidencias adicionales se conservan solo cuando ya existan y sean necesarias para resolver conflictos, auditoría o cumplimiento.
 
 En consecuencia, `works_origin`, `works_origin_id`, `works_license` y `works_public_domain` no se migran como atributos de Work. Su eventual contenido se asigna a Resource solo cuando se pueda identificar con seguridad el material al que corresponde; de lo contrario se clasifica como conflicto/no migrable sin inferencias.
+
+
+## Corrección vinculante de las matrices históricas de origen y derechos
+
+Las matrices y ejemplos anteriores de este documento contienen propuestas exploratorias previas. Se corrigen por la decisión de dominio actual:
+
+- IMSLP/CPDL/PDMX como fuente/aportante se registra en el **Resource** que procede de esa fuente. Si una importación solo crea una Work y no incorpora ningún material, no se crea un Resource ficticio para alojar la procedencia.
+- Un identificador externo de ficha que sea necesario para reconocer/reconciliar una Work puede conservarse como dato técnico mínimo de identidad externa, pero no representa procedencia, aportante ni titularidad. Solo se mantiene si hay un uso demostrado de idempotencia o reconciliación; no se acumulan URLs, payloads o copias de la ficha.
+- `works_license` y `works_public_domain` no son atributos V6 de Work. Solo se asignan al Resource al que correspondan cuando la asociación sea inequívoca. No se trasladan a File ni se construye una jerarquía legal adicional sin necesidad funcional.
+- Cualquier texto previo que hable de procedencia transversal, licencia de Work o titular inferido queda sustituido por esta regla.
