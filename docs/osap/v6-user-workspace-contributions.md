@@ -164,3 +164,7 @@ No cerrar el DDL ni los scopes hasta verificar el sistema real y resolver estas 
 10. Ejecutar pruebas de seguridad, integridad, carga, revisión y rebuild.
 
 **Mi Actividad y las aportaciones de usuarios forman parte del alcance obligatorio de V6. No deben aplazarse a una versión posterior al corte Work → Resource → File.**
+
+## Regla de propiedad editorial: modificación de Works ajenas
+
+Solo el aportante original puede modificar directamente una Work. Si el usuario actual no es ese aportante y solicita modificarla, la operación debe crear automáticamente una Work derivada independiente en su área personal, privada desde el inicio. La Work original no cambia. El usuario recibe crédito de arreglista (rol canónico arranger, ID 3, sujeto a vínculo User↔Person válido) y la derivada conserva el linaje de la original. Añadir al espacio personal sin modificar sigue siendo una relación sin copia. La copia solo se hace pública mediante una aportación/publicación separada, respetando licencia y trazabilidad. Véase [inventario de migración y propiedad editorial](https://github.com/recursosformacion/AI_osap-storage/blob/main/docs/v6-data-migration-mapping.md).
