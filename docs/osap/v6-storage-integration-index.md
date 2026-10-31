@@ -196,3 +196,7 @@ OSAP-API debe integrar en V6 el área privada del usuario y el flujo de aportaci
 - En altas directas de usuario, el aportante se obtiene automáticamente de la sesión autenticada; no se pregunta ni se acepta una identidad arbitraria del cliente.
 - El titular de derechos puede ser el compositor o un tercero. No se deduce del compositor ni del aportante.
 - Se conservan solo datos disponibles y necesarios. No se crean estructuras de titularidad, historiales o evidencias para escenarios hipotéticos; lo desconocido queda sin determinar.
+
+## Procedencia inicial y permisos de modificación de Work
+
+La procedencia/aportante se registra en Resource. Para aplicar la regla editorial de que solo quien introdujo originalmente la Work puede modificarla, OSAP consulta el aportante del Resource que dio entrada a esa Work; no duplica un campo de uploader/owner en Work. Aportar un Resource posterior no concede permisos de edición de Work. Si no se identifica de forma fiable el Resource inicial o su aportante, no se concede edición directa por inferencia.
