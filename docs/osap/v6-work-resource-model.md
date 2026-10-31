@@ -1170,3 +1170,7 @@ Estos documentos describen el objetivo y las tareas pendientes; no significan qu
 ## Área de trabajo personal y aportaciones de usuarios en V6
 
 El modelo Work → Resource → File también debe soportar el área privada del usuario y las aportaciones revisables al catálogo. La especificación funcional y de almacenamiento está en [AI_osap-storage: área de trabajo y aportaciones V6](https://github.com/recursosformacion/AI_osap-storage/blob/main/docs/v6-user-workspace-contributions.md). El impacto específico en OSAP-API, interfaz, permisos e índice se recoge en [v6-user-workspace-contributions.md](v6-user-workspace-contributions.md). Estas funciones forman parte del alcance V6, no de una fase opcional posterior.
+
+## Propiedad editorial y copias privadas derivadas
+
+Solo el usuario que aportó originalmente una Work puede modificarla. Si otro usuario desea modificarla, OSAP crea automáticamente una Work derivada independiente en su área privada; la original permanece intacta y el usuario recibe crédito de arreglista. La copia conserva el linaje a la Work fuente y solo puede publicarse mediante aportación/revisión separada. El inventario y las reglas de migración están en [AI_osap-storage: v6-data-migration-mapping.md](https://github.com/recursosformacion/AI_osap-storage/blob/main/docs/v6-data-migration-mapping.md).
