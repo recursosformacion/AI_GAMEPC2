@@ -1209,3 +1209,15 @@ Solo el compositor autenticado puede editar los metadatos catalográficos de Wor
 - Toda Work nace con al menos un Resource. Si la fuente solo proporciona datos catalográficos y no un archivo, enlace o material concreto, se crea un Resource de referencia que describa esa fuente/material sin File; no se permite Work sin Resource.
 - El arreglo/edición/interpretación aportado por otro usuario se describe en su Resource. No se altera la autoría de Work ni se asigna automáticamente al aportante como compositor. El crédito de arreglista, cuando corresponda, se asocia al Resource que contiene ese arreglo, no a la autoría global de Work.
 - «Añadir a Mi Actividad» sigue siendo una relación personal con Work y no crea ni modifica Resources.
+
+
+## Regla vinculante: Resource original, arreglos y compositoría
+
+- Toda Work se crea junto con un primer Resource que representa el material original de la obra. No existe Work sin ese Resource.
+- Los Resources que se incorporan después a esa Work representan arreglos de la obra original. Si el material tiene una composición distinta, corresponde a otra Work.
+- El compositor y los coautores se relacionan exclusivamente con Work. Resource **no tiene compositor ni admite el rol compositor**. No se duplica la relación de compositor en cada Resource.
+- Los créditos personales propios de cada material (arreglista, editor, adaptador, intérprete, traductor, etc.) se relacionan con su Resource cuando se conocen.
+- No se selecciona un Resource principal mediante un campo adicional: el primer Resource es el original por definición del proceso de creación. Su clase debe distinguirse explícitamente de los Resources de arreglo.
+- En registros históricos no se presume que el primer registro encontrado, el más antiguo por fecha técnica o el único que tenga File sea el original. Solo se clasifica como original con evidencia; si no puede demostrarse, se registra un conflicto de migración y no se inventa un original.
+
+El esquema y los servicios deben garantizar un único Resource original por Work, permitir cero o más Resources de arreglo, impedir el rol compositor en créditos de Resource y crear Work + Resource original como una operación lógica atómica. La migración debe señalar Works sin original demostrable, candidatos originales múltiples y créditos de compositor incompatibles.
