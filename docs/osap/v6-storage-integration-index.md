@@ -212,3 +212,21 @@ Solo el compositor autenticado puede modificar los metadatos catalográficos de 
 - En registros históricos no se presume que el primer registro encontrado, el más antiguo por fecha técnica o el único que tenga File sea el original. Solo se clasifica como original con evidencia; si no puede demostrarse, se registra un conflicto de migración y no se inventa un original.
 
 El esquema y los servicios deben garantizar un único Resource original por Work, permitir cero o más Resources de arreglo, impedir el rol compositor en créditos de Resource y crear Work + Resource original como una operación lógica atómica. La migración debe señalar Works sin original demostrable, candidatos originales múltiples y créditos de compositor incompatibles.
+
+---
+
+## Corrección vinculante: Resource de referencia opcional
+
+Esta regla sustituye las frases anteriores de este documento que declaren inválida una Work sin Resources o exijan un Resource original.
+
+- Work puede existir con cero, uno o varios Resources. El índice debe indexar Works aunque no tengan Resources ni Files.
+- Work puede seleccionar opcionalmente uno de sus Resources como Resource de referencia. La selección destaca un material útil para consultar la obra y no implica que sea el original histórico.
+- El Resource de referencia puede ser la partitura original conocida, una edición crítica u otro material elegido. En repertorio clásico puede no conocerse el original; la referencia puede ser otra edición o quedar vacía.
+- No inferir originalidad/referencia por orden de alta, antigüedad técnica, proveedor o presencia de File.
+- No etiquetar automáticamente como arreglos los Resources añadidos después del primero.
+- work_id identifica Work; resource_id identifica el material. La selección de referencia no sustituye el ID de Work.
+- El adaptador y los DTO deben exponer la referencia como dato opcional y conservar todos los Resources; no elegir silenciosamente el primero.
+- La presencia o ausencia de referencia no debe afectar a la indexación, autoría, permisos, disponibilidad ni descarga.
+- Compositor y coautores siguen perteneciendo exclusivamente a Work; Resource no admite rol compositor.
+
+Cualquier regla anterior de “Work sin Resources inválida” o “primer Resource original” queda reemplazada por esta corrección.
