@@ -165,9 +165,19 @@ No cerrar el DDL ni los scopes hasta verificar el sistema real y resolver estas 
 
 **Mi Actividad y las aportaciones de usuarios forman parte del alcance obligatorio de V6. No deben aplazarse a una versión posterior al corte Work → Resource → File.**
 
-## Regla de propiedad editorial: modificación de Works ajenas
+## Regla vinculante de edición de Work y Resource
 
-Solo el aportante original puede modificar directamente una Work. Si el usuario actual no es ese aportante y solicita modificarla, la operación debe crear automáticamente una Work derivada independiente en su área personal, privada desde el inicio. La Work original no cambia. El usuario recibe crédito de arreglista (rol canónico arranger, ID 3, sujeto a vínculo User↔Person válido) y la derivada conserva el linaje de la original. Añadir al espacio personal sin modificar sigue siendo una relación sin copia. La copia solo se hace pública mediante una aportación/publicación separada, respetando licencia y trazabilidad. Véase [inventario de migración y propiedad editorial](https://github.com/recursosformacion/AI_osap-storage/blob/main/docs/v6-data-migration-mapping.md).
+La autorización se aplica por separado a los dos niveles:
+
+- **Work:** solo el compositor identificado y autenticado puede modificar los metadatos catalográficos de la obra: nombres, títulos, variantes y demás datos descriptivos propios de su identidad. No puede utilizar esa facultad para modificar Resources creados por otros usuarios.
+- **Resource:** solo su creador/aportante puede modificar ese Resource. Ni el compositor de Work ni el creador de otro Resource adquieren permiso sobre él por esa relación.
+- Cualquier otro usuario que quiera aportar un arreglo, edición, transcripción, versión, partitura, grabación u otro material crea un nuevo Resource asociado a la misma Work. No se crea una Work derivada ni se sobrescribe el Resource existente.
+- El aportante de un Resource creado directamente se obtiene de la sesión autenticada; en importaciones se identifica la fuente. No se pregunta ni se acepta un user_id arbitrario del cliente.
+- Toda Work debe tener al menos un Resource. Un Resource puede ser una referencia externa/URL y no tener File, pero no se permite una Work sin Resource.
+- Los créditos específicos de arreglista/editor/intérprete, cuando procedan, describen el Resource concreto y no sustituyen la autoría de Work.
+- «Añadir Work a Mi Actividad» solo crea una relación personal y no crea una copia ni un Resource.
+
+La regla anterior de duplicar automáticamente una Work privada para que otro usuario pueda modificarla queda **retirada**. La aportación de otro usuario se representa mediante un nuevo Resource bajo la Work existente.
 
 ## Decisión vinculante: distribución mínima de metadatos
 
@@ -177,6 +187,12 @@ Solo el aportante original puede modificar directamente una Work. Si el usuario 
 - El titular de derechos no se deduce del compositor ni del aportante.
 - El formulario solo solicita información que tenga sentido para el alta y que no pueda obtenerse de la sesión o de la fuente. Los datos desconocidos permanecen sin determinar.
 
-### Procedencia inicial y autorización editorial
+### Permisos de Work y Resource
 
-La procedencia/aportante se almacena en Resource. Para aplicar la regla de modificación de Work se identifica el Resource que introdujo originalmente esa Work y se consulta su aportante. No se añade un segundo campo uploader/owner en Work. Si el Resource inicial o su aportante no pueden verificarse, no se concede edición directa por heurística; otro usuario que quiera modificar la obra crea una copia privada derivada conforme a la regla vigente.
+No se deriva el permiso de edición de Work del aportante inicial. Work la modifica únicamente su compositor autenticado; cada Resource lo modifica únicamente su creador. Otros usuarios aportan nuevos Resources a la Work existente.
+
+## Regla de cardinalidad y permisos
+
+Toda Work debe tener al menos un Resource. El Resource puede ser URL-only y no tener File. Work no se crea como ficha vacía a la espera de un Resource.
+
+El compositor autenticado puede modificar los metadatos descriptivos de Work. El creador de un Resource puede modificar exclusivamente ese Resource. Los demás usuarios no duplican Work para aportar material: crean otro Resource bajo la misma Work. No hay un campo editorial_owner de Work derivado del primer aportante.
