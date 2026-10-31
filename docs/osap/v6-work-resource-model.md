@@ -1221,3 +1221,38 @@ Solo el compositor autenticado puede editar los metadatos catalográficos de Wor
 - En registros históricos no se presume que el primer registro encontrado, el más antiguo por fecha técnica o el único que tenga File sea el original. Solo se clasifica como original con evidencia; si no puede demostrarse, se registra un conflicto de migración y no se inventa un original.
 
 El esquema y los servicios deben garantizar un único Resource original por Work, permitir cero o más Resources de arreglo, impedir el rol compositor en créditos de Resource y crear Work + Resource original como una operación lógica atómica. La migración debe señalar Works sin original demostrable, candidatos originales múltiples y créditos de compositor incompatibles.
+
+---
+
+## Corrección vinculante: Resource de referencia, no Resource original obligatorio
+
+Esta decisión reemplaza cualquier texto anterior que indique que toda Work debe tener al menos un Resource, que el primero es necesariamente el original o que todos los Resources posteriores son arreglos.
+
+### Modelo semántico
+
+- Work representa la obra y puede existir con cero, uno o varios Resources.
+- Resource representa un material concreto asociado a Work.
+- Work puede seleccionar opcionalmente uno de sus Resources como **Resource de referencia**.
+- La referencia señala el material que queremos destacar para consultar/presentar la obra; no afirma que sea el original histórico.
+- En una obra contemporánea puede elegirse la partitura original si se conoce. En repertorio clásico puede desconocerse o no conservarse el original; se puede elegir una edición crítica, otra partitura útil o dejar la referencia sin seleccionar.
+- Original, edición, arreglo, transcripción, interpretación y grabación describen la naturaleza del Resource cuando corresponda. No se infiere originalidad por ser el primero, el más antiguo, el único con File o el procedente de una fuente concreta.
+- Crear Resources después del primero no los convierte automáticamente en arreglos.
+- No existe relación jerárquica obligatoria entre Resources.
+
+### Identificadores y DDL
+
+work_id sigue identificando la obra y resource_id identifica cada material. El Resource de referencia no es un identificador alternativo de Work ni un Resource principal obligatorio.
+
+La opción física preferida puede ser works.reference_resource_id nullable, con integridad referencial compuesta que asegure que (work_id, reference_resource_id) apunta a un Resource de esa misma Work. El diseño final debe evitar referencias cruzadas a Resources de otra Work. Como alternativa, puede usarse una relación equivalente con la misma semántica. Debe haber como máximo una referencia elegida por Work.
+
+No crear primary_resource_id ni original_resource_id como obligación. Una Work sin referencia es válida.
+
+### Migración
+
+No clasificar Resources históricos como original por orden de inserción/fecha ni por presencia de File. No bloquear la migración porque una Work clásica carezca de original demostrable. Solo migrar una referencia cuando exista un dato o decisión previa que exprese esa selección; si no, dejarla sin seleccionar.
+
+### Autoría
+
+Se mantiene la regla: compositor y coautores pertenecen exclusivamente a Work. Resource no admite el rol compositor. Los créditos personales propios del material (arreglista, editor, adaptador, intérprete, traductor, etc.) pertenecen a Resource cuando se conocen.
+
+Esta corrección prevalece sobre las secciones anteriores que describan Resource original obligatorio, primer Resource original o arreglos automáticos.
