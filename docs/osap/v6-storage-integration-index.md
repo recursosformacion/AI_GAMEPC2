@@ -59,7 +59,7 @@ No todas las clases llamadas Representation tienen por qué corresponder al conc
 El fetcher debe consumir un contrato versionado que identifique inequívocamente:
 
 - Work: `id`, título, compositor/persona canónica, catálogo, alias y metadatos.
-- Resource: `id`, tipo, origen/procedencia, licencia y características del material.
+- Resource: `id`, tipo, procedencia/aportante (PDMX, IMSLP, CPDL o usuario autenticado), derechos/licencia conocidos y características del material.
 - File: identificador si es necesario, formato, MIME, tamaño/estado y enlace de descarga generado por Storage.
 - Resource externo sin File: URL externa explícita y estado que no se confunda con un File alojado.
 - Work sin Resources: resultado válido.
@@ -107,7 +107,7 @@ Los iteradores de OMR y CPDL deben leer Works y relaciones de personas desde el 
 - IDs de File utilizados como identificadores del material;
 - rutas de descarga construidas según la estructura antigua.
 
-La información que antes estaba en Representation (procedencia, origen externo, licencia, editores, edición, arreglo, tipo) debe leerse de Resource cuando describa el material. La información de identidad, autoría principal y clasificación de la obra debe leerse de Work y sus relaciones.
+La información que antes estaba en Representation (procedencia/aportante, identificador externo del material, derechos/licencia, edición, arreglo y tipo) debe leerse de Resource cuando describa ese material. La autoría/compositoría pertenece a Work y es común a todos sus Resources; un Resource no puede introducir un compositor alternativo para la misma Work.
 
 ### 4.4 Personas y voicing
 
@@ -187,3 +187,12 @@ No desplegar Storage V6 mientras el consumidor de producción siga esperando el 
 ## 8. Área personal y aportaciones de usuarios
 
 OSAP-API debe integrar en V6 el área privada del usuario y el flujo de aportación/revisión/publicación. El catálogo sigue siendo Work → Resource → File; el espacio personal mantiene relaciones privadas con Works existentes y borradores separados, sin duplicar el catálogo. Solo las entidades publicadas se incorporan al índice general. Véase [especificación funcional en AI_osap-storage](https://github.com/recursosformacion/AI_osap-storage/blob/main/docs/v6-user-workspace-contributions.md) y [impacto de integración en OSAP-API](v6-user-workspace-contributions.md).
+
+
+## 9. Regla vinculante de autoría, procedencia y derechos
+
+- **Work:** contiene la autoría/compositoría de la obra. Todos sus Resources comparten esa autoría. Si dos materiales tienen compositores incompatibles porque son obras distintas, debe revisarse la identidad Work.
+- **Resource:** contiene la procedencia/aportante (PDMX, IMSLP, CPDL o usuario autenticado) y los derechos/licencia aplicables a ese material, cuando se conocen.
+- En altas directas de usuario, el aportante se obtiene automáticamente de la sesión autenticada; no se pregunta ni se acepta una identidad arbitraria del cliente.
+- El titular de derechos puede ser el compositor o un tercero. No se deduce del compositor ni del aportante.
+- Se conservan solo datos disponibles y necesarios. No se crean estructuras de titularidad, historiales o evidencias para escenarios hipotéticos; lo desconocido queda sin determinar.
