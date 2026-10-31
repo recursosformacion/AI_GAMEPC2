@@ -1195,3 +1195,7 @@ Las matrices y ejemplos anteriores de este documento contienen propuestas explor
 - Un identificador externo de ficha que sea necesario para reconocer/reconciliar una Work puede conservarse como dato técnico mínimo de identidad externa, pero no representa procedencia, aportante ni titularidad. Solo se mantiene si hay un uso demostrado de idempotencia o reconciliación; no se acumulan URLs, payloads o copias de la ficha.
 - `works_license` y `works_public_domain` no son atributos V6 de Work. Solo se asignan al Resource al que correspondan cuando la asociación sea inequívoca. No se trasladan a File ni se construye una jerarquía legal adicional sin necesidad funcional.
 - Cualquier texto previo que hable de procedencia transversal, licencia de Work o titular inferido queda sustituido por esta regla.
+
+## Relación entre procedencia del Resource inicial y permisos editoriales
+
+La procedencia/aportante pertenece a Resource y no se duplica en Work. La regla editorial que reserva la modificación de una Work a quien la introdujo originalmente se resuelve consultando el aportante del Resource que dio entrada a esa Work al catálogo. Aportar después otro Resource a una Work existente no concede permisos de edición sobre Work. La migración solo identifica ese Resource inicial cuando hay evidencia fiable; si no la hay, la propiedad editorial queda sin resolver y no se infiere desde `works_origin`, emails, votos o último editor.
