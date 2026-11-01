@@ -96,6 +96,7 @@ async function prefetch(pathname, searchParams) {
     system: health.ok ? { health: health.data } : undefined,
     composers: undefined,
     publicWork: undefined,
+    representation: undefined,
     classification: undefined,
     meta: null,
     status: 200,
@@ -225,6 +226,44 @@ async function prefetch(pathname, searchParams) {
     return state;
   }
 
+  const representation = /^\/representacion\/([^/]+)\/?$/.exec(pathname);
+  if (representation) {
+    const id = decodeURIComponent(representation[1]);
+    const sheet = await apiGet(`/representations/${encodeURIComponent(id)}`);
+    if (!sheet.ok) {
+      return {
+        ...state,
+        representation: { id, sheet: null, status: sheet.status === 404 ? "missing" : "loading" },
+        status: sheet.status === 404 ? 404 : 503,
+        degraded: sheet.status >= 500,
+      };
+    }
+    state.representation = { id, sheet: sheet.data, status: "ok" };
+    const title = String(sheet.data?.title ?? "Representación");
+    const composer = sheet.data?.composer ? ` de ${sheet.data.composer}` : "";
+    const provider = sheet.data?.provider ? ` · ${sheet.data.provider}` : "";
+    const format = sheet.data?.format ? ` · ${sheet.data.format}` : "";
+    state.meta = {
+      title: `${title}${composer} — Partituras | OpenMusicRepository`,
+      description: String(
+        sheet.data?.description ||
+          `Representación de ${title}${composer}${provider}${format} en OpenMusicRepository.`,
+      ).slice(0, 300),
+      canonical: `${PUBLIC_ORIGIN}/representacion/${encodeURIComponent(id)}`,
+      robots: "index, follow",
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "CreativeWork",
+        name: title,
+        composer: sheet.data?.composer || undefined,
+        url: `${PUBLIC_ORIGIN}/representacion/${encodeURIComponent(id)}`,
+        encodingFormat: sheet.data?.format || undefined,
+        isPartOf: { "@type": "MusicComposition", name: title },
+      },
+    };
+    return state;
+  }
+
   const work = /^\/obras\/([^/]+)(?:\/[^/]+)?\/?$/.exec(pathname);
   if (work) {
     const raw = decodeURIComponent(work[1]);
@@ -307,6 +346,7 @@ function inject(html, state, lang, dark) {
     composers: state.composers,
     system: state.system,
     publicWork: state.publicWork,
+    representation: state.representation,
     classification: state.classification,
   };
   const payload = `<script>window.__OSAP_STATE__=${safeJson(initialState)};window.__OSAP_SSR_PATH__=${safeJson(
@@ -329,12 +369,14 @@ async function buildPage(url, lang, dark) {
   const canonical = explicitLang && LANGS.has(explicitLang)
     ? `${PUBLIC_ORIGIN}${canonicalPath}?lang=${explicitLang}`
     : `${PUBLIC_ORIGIN}${canonicalPath}`;
+  globalThis.__OSAP_STATE__ = state;
   const html = await render(parsed.pathname + parsed.search, {
     lang,
     dark,
     composers: state.composers,
     system: state.system,
     publicWork: state.publicWork,
+    representation: state.representation,
     classification: state.classification,
   });
   return {
@@ -397,6 +439,7 @@ const server = createServer(async (req, res) => {
     pathname === "/composers" ||
     /^\/composers\/[^/]+(?:\/[^/]+)?\/?$/.test(pathname) ||
     /^\/obras\/[^/]+(?:\/[^/]+)?\/?$/.test(pathname) ||
+    /^\/representacion\/[^/]+\/?$/.test(pathname) ||
     /^\/(genres|catalogues|epochs|ensembles|instruments)\/?$/.test(pathname);
   if (!isPublic) {
     res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
@@ -442,4 +485,5 @@ const server = createServer(async (req, res) => {
 server.listen(PORT, "127.0.0.1", () => {
   console.log(`SSR escuchando en http://127.0.0.1:${PORT} (api ${API}, dev=${DEV})`);
 });
+
 

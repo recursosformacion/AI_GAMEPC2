@@ -6,6 +6,7 @@ import { Spinner } from "../components/Spinner";
 import { RepresentationActions } from "../components/RepresentationActions";
 import { VideosLink } from "../components/VideosLink";
 import { useI18n } from "../i18n/I18n";
+import { ssrRepresentation } from "../ssr/representation";
 
 // Página de una representación (SPA): misma URL canónica que la SSR `/representacion/<id>`.
 // Si el fichero es servible (propio o externo legible por el servidor) se ofrece el visor;
@@ -17,11 +18,15 @@ function appWorkPath(workId: string): string {
 export function RepresentationPage() {
   const { id = "" } = useParams();
   const { t } = useI18n();
-  const [sheet, setSheet] = useState<RepresentationSheet | null>(null);
+  const ssr = ssrRepresentation(id);
+  const [sheet, setSheet] = useState<RepresentationSheet | null>(ssr?.sheet ?? null);
   const [probe, setProbe] = useState<boolean | null>(null);
-  const [state, setState] = useState<"loading" | "ok" | "missing">("loading");
+  const [state, setState] = useState<"loading" | "ok" | "missing">(
+    ssr ? (ssr.sheet ? "ok" : "missing") : "loading",
+  );
 
   useEffect(() => {
+    if (ssr) return;
     let cancelled = false;
     setState("loading");
     setProbe(null);
@@ -49,7 +54,7 @@ export function RepresentationPage() {
     return () => {
       cancelled = true;
     };
-  }, [id]);
+  }, [id, ssr]);
 
   if (state === "loading") return <Spinner label={t("states.loading")} />;
   if (state === "missing" || sheet === null) {

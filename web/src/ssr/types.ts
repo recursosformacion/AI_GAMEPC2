@@ -10,6 +10,7 @@ import type {
   Instrument,
   InstrumentCategory,
   PublicWork,
+  RepresentationSheet,
   SystemHealth,
 } from "../api/types";
 import type { Language } from "../i18n/translations";
@@ -31,6 +32,7 @@ export interface SsrState {
   };
   system?: { health?: SystemHealth };
   publicWork?: { sheet: PublicWork | null; status: "ok" | "missing" | "loading" };
+  representation?: { id: string; sheet: RepresentationSheet | null; status: "ok" | "missing" | "loading" };
   classification?: {
     genres?: Genre[];
     catalogues?: Catalogue[];
@@ -47,3 +49,4 @@ declare global {
     __OSAP_SSR_PATH__?: string;
   }
 }
+
