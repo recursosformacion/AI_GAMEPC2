@@ -328,3 +328,35 @@ La revisión del código actual de `AI_osap-storage` confirma que OSAP-API no de
 La auditoría completa, con inventario de rutas, DTO, problemas de identidad y pruebas de aceptación, está en `AI_osap-storage/docs/v6-reconstruction-api-index-cutover.md`, sección 12. Esta evidencia complementa la auditoría de identidad de materiales de este repositorio.
 
 **Consecuencia para OSAP-API:** el adaptador OMR V6 debe consumir un contrato nuevo y explícito: Work, Resources directos (incluidos URL-only) y Files hijos. Las fuentes externas siguen siendo materiales federados en API; no se simulan como Resources de Storage. No se debe mantener una dependencia permanente de `/api/search`, `/api/download/{id}` ni de IDs numéricos ambiguos.
+
+
+## Contrato OpenAPI V6 propuesto (2026-11-01)
+
+El contrato de servicio propuesto queda documentado en `AI_osap-storage/docs/v6-openapi-contract.md` (commit Storage `de9df959845357f81d4fa973171426d5a79f1f56`). Este es el contrato de referencia para el adaptador OMR V6, no una descripción del API desplegado.
+
+### Responsabilidad del adaptador OMR V6
+
+- `GET /api/v6/works`: búsqueda paginada únicamente del catálogo OMR.
+- `GET /api/v6/works/{work_id}`: Work canónica y colección completa de Resources directos.
+- `GET /api/v6/resources/{resource_id}`: material y Files asociados.
+- `GET /api/v6/files/{file_id}`: metadatos no físicos de File.
+- `POST /api/v6/files/{file_id}/access`: acceso temporal de descarga/visualización, resuelto por Storage.
+
+El adaptador debe conservar IDs opacos sin parsearlos ni convertirlos en enteros. El ID de Resource identifica el material; el ID de File identifica una realización digital. Ningún endpoint debe reinterpretar un ID como otro tipo.
+
+### Contrato federado interno de OSAP-API
+
+La respuesta de búsqueda de OSAP-API debe separar explícitamente:
+- `omr_work`: Work canónica, con Resources OMR y Files;
+- `external_material`: material de IMSLP/CPDL/RISM u otro proveedor, con provider_id, source_id y discriminantes nativos preservados;
+- `provisional_group`: agrupación temporal de resultados, sin ID canónico persistente.
+
+No se debe insertar un resultado externo dentro de `resources` de una Work OMR salvo incorporación explícita en Storage. Los grupos provisionales no son Works persistidas. Una asociación persistente fuente externa→Work canónica requiere reconciliación/revisión cuando la identidad no sea inequívoca.
+
+### Operaciones de escritura y autorización
+
+El contrato prevé creación atómica Work + primer Resource, PATCH separado de Work/Resource, alta de Resource, selección explícita de Resource de referencia y registro de File. OSAP-API aplica las reglas de actor/compositor/creador y transmite contexto autenticado a Storage. No acepta user_id arbitrario en el body. Composer puede editar Work según la regla de identidad aprobada, pero no puede modificar Resources ajenos; el creador autorizado modifica su Resource.
+
+### Estado y siguiente cierre
+
+Este contrato es propuesta semántica. Antes de congelar el OpenAPI 3.1 hay que cerrar el inventario exacto de columnas Work y sus consumidores, vocabularios Resource, autenticación servicio-a-servicio, política de carga/Access, retención de Files y filtros/paginación. La generación del OpenAPI y pruebas de contrato deben ejecutarse en desarrollo V6; no se han ejecutado en producción ni se ha modificado código.
