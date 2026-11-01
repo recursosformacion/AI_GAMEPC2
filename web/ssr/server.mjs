@@ -177,8 +177,13 @@ async function prefetch(pathname, searchParams) {
     const title = String(sheet.data?.work?.title ?? "Obra");
     const composer = sheet.data?.work?.composer ? ` de ${sheet.data.work.composer}` : "";
     const catalogue = sheet.data?.work?.catalogue ? ` (${sheet.data.work.catalogue})` : "";
-    const canonicalWorkId = String(sheet.data?.work?.work_id ?? id).replace(/^index-/, "");
-    const canonicalPath = `/obras/${encodeURIComponent(canonicalWorkId)}`;
+    const canonicalWorkId = String(sheet.data?.work?.work_id ?? id);
+    const indexId = canonicalWorkId.startsWith("index-")
+      ? canonicalWorkId
+      : `index-${canonicalWorkId}`;
+    const pathParts = pathname.split("/").filter(Boolean);
+    const currentSlug = pathParts.length > 2 ? pathParts[2] : "";
+    const canonicalPath = `/obras/${encodeURIComponent(indexId)}${currentSlug ? `/${encodeURIComponent(currentSlug)}` : ""}`;
     state.meta = {
       title: `${title}${catalogue}${composer} — Partituras | OpenMusicRepository`,
       description: truncate(
