@@ -13,6 +13,20 @@ No se versiona cada parte por separado. Así se evita mantener una matriz de dep
 («api 3.x requiere storage 2.1»): un número describe el conjunto completo y es desplegable
 como un todo.
 
+## Regla obligatoria: índice y URLs públicas
+
+Ningún reindexado puede cambiar IDs públicos (`index-*`), slugs o URLs sin una **tabla de
+correspondencia** `id_anterior → id_nuevo` y un **301** para cada URL antigua. Antes de
+desplegar:
+
+1. Conservar la tabla anterior o generar el mapa completo.
+2. Verificar que cada URL del sitemap anterior tiene un destino 200.
+3. Añadir una prueba que recorra una muestra de IDs antiguos y compruebe el 301.
+4. No retirar el mapa hasta que Search Console deje de mostrar 404 históricos.
+
+Si no se puede garantizar el mapa, no se cambia el índice. Un 301 hacia un ID inexistente no
+es una redirección válida.
+
 ## Semántica A.B.C
 
 - **A — Orientación (MAJOR).** Cambio de orientación del conjunto: modelo/esquema de datos o
