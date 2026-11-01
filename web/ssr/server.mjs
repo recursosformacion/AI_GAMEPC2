@@ -96,9 +96,74 @@ async function prefetch(pathname, searchParams) {
     system: health.ok ? { health: health.data } : undefined,
     composers: undefined,
     publicWork: undefined,
+    classification: undefined,
     meta: null,
     status: 200,
   };
+
+  const classificationPages = {
+    "/genres": {
+      title: "Géneros musicales — Clasificación | OpenMusicRepository",
+      description:
+        "Familias y géneros musicales del catálogo de OpenMusicRepository: clásica, sacra, jazz, popular y más.",
+      endpoint: "/genres",
+      key: "genres",
+    },
+    "/catalogues": {
+      title: "Catálogos musicales — Clasificación | OpenMusicRepository",
+      description:
+        "Catálogos temáticos de obras musicales (Köchel, BWV y otros) disponibles en OpenMusicRepository.",
+      endpoint: "/catalogues",
+      key: "catalogues",
+    },
+    "/epochs": {
+      title: "Épocas históricas — Clasificación | OpenMusicRepository",
+      description:
+        "Épocas y periodos históricos de la música representados en el catálogo de OpenMusicRepository.",
+      endpoint: "/epochs",
+      key: "epochs",
+    },
+    "/ensembles": {
+      title: "Formaciones musicales — Clasificación | OpenMusicRepository",
+      description:
+        "Formaciones y ensembles vocales e instrumentales del catálogo de OpenMusicRepository.",
+      endpoint: "/ensembles",
+      key: "ensembles",
+    },
+    "/instruments": {
+      title: "Instrumentos y voces — Clasificación | OpenMusicRepository",
+      description:
+        "Instrumentos, voces y familias instrumentales presentes en el catálogo de OpenMusicRepository.",
+      endpoint: "/instruments",
+      key: "instruments",
+    },
+  };
+  const classification = classificationPages[pathname];
+  if (classification) {
+    const result = await apiGet(classification.endpoint);
+    if (!result.ok) {
+      return { ...state, degraded: result.status >= 500, status: result.status };
+    }
+    state.classification = { [classification.key]: result.data };
+    if (pathname === "/instruments") {
+      const categories = await apiGet("/instrument-categories");
+      if (categories.ok) state.classification.instrumentCategories = categories.data;
+    }
+    state.meta = {
+      title: classification.title,
+      description: classification.description,
+      canonical: `${PUBLIC_ORIGIN}${pathname}`,
+      robots: "index, follow",
+      jsonLd: {
+        "@context": "https://schema.org",
+        "@type": "CollectionPage",
+        name: classification.title,
+        description: classification.description,
+        url: `${PUBLIC_ORIGIN}${pathname}`,
+      },
+    };
+    return state;
+  }
 
   if (pathname === "/composers") {
     const q = (searchParams.get("q") ?? "").trim();
@@ -242,6 +307,7 @@ function inject(html, state, lang, dark) {
     composers: state.composers,
     system: state.system,
     publicWork: state.publicWork,
+    classification: state.classification,
   };
   const payload = `<script>window.__OSAP_STATE__=${safeJson(initialState)};window.__OSAP_SSR_PATH__=${safeJson(
     meta.canonicalPath ?? "",
@@ -269,6 +335,7 @@ async function buildPage(url, lang, dark) {
     composers: state.composers,
     system: state.system,
     publicWork: state.publicWork,
+    classification: state.classification,
   });
   return {
     status: state.status,
@@ -329,7 +396,8 @@ const server = createServer(async (req, res) => {
   const isPublic =
     pathname === "/composers" ||
     /^\/composers\/[^/]+(?:\/[^/]+)?\/?$/.test(pathname) ||
-    /^\/obras\/[^/]+(?:\/[^/]+)?\/?$/.test(pathname);
+    /^\/obras\/[^/]+(?:\/[^/]+)?\/?$/.test(pathname) ||
+    /^\/(genres|catalogues|epochs|ensembles|instruments)\/?$/.test(pathname);
   if (!isPublic) {
     res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
     res.end("not found");
@@ -374,3 +442,4 @@ const server = createServer(async (req, res) => {
 server.listen(PORT, "127.0.0.1", () => {
   console.log(`SSR escuchando en http://127.0.0.1:${PORT} (api ${API}, dev=${DEV})`);
 });
+

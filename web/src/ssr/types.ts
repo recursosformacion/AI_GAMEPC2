@@ -1,8 +1,14 @@
 import type {
+  Catalogue,
   ComposerDetail,
   ComposerList,
   ComposerWorks,
   ComposerIndexWorks,
+  Ensemble,
+  Epoch,
+  Genre,
+  Instrument,
+  InstrumentCategory,
   PublicWork,
   SystemHealth,
 } from "../api/types";
@@ -25,6 +31,14 @@ export interface SsrState {
   };
   system?: { health?: SystemHealth };
   publicWork?: { sheet: PublicWork | null; status: "ok" | "missing" | "loading" };
+  classification?: {
+    genres?: Genre[];
+    catalogues?: Catalogue[];
+    instruments?: Instrument[];
+    instrumentCategories?: InstrumentCategory[];
+    ensembles?: Ensemble[];
+    epochs?: Epoch[];
+  };
 }
 
 declare global {

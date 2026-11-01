@@ -1,11 +1,14 @@
 import { useEffect, useState } from "react";
 import { Envelope } from "../components/Envelope";
 import { useI18n } from "../i18n/I18n";
+import { ssrClassification } from "../ssr/classification";
 import { useEnsembles } from "../state/classification";
 
 export function EnsemblesPage() {
   const { t } = useI18n();
   const { data, loading, error, list } = useEnsembles();
+  const fallback = ssrClassification("ensembles");
+  const rows = data ?? fallback ?? null;
   const [q, setQ] = useState("");
 
   useEffect(() => {
@@ -29,7 +32,7 @@ export function EnsemblesPage() {
         className="w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
       />
 
-      <Envelope loading={loading} error={error} data={data} emptyMessage={t("states.empty")}>
+      <Envelope loading={loading} error={error} data={rows} emptyMessage={t("states.empty")}>
         {(ensembles) => {
           const query = q.trim().toLowerCase();
           const filtered = query
@@ -62,3 +65,4 @@ export function EnsemblesPage() {
     </div>
   );
 }
+

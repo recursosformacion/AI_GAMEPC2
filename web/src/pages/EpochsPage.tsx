@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Envelope } from "../components/Envelope";
 import { useI18n } from "../i18n/I18n";
+import { ssrClassification } from "../ssr/classification";
 import { useEpochs } from "../state/epochs";
 
 // "476–1450" | "desde X" | "hasta Y" | "" según los años disponibles.
@@ -19,6 +20,8 @@ function formatRange(
 export function EpochsPage() {
   const { t } = useI18n();
   const { data, loading, error, list } = useEpochs();
+  const fallback = ssrClassification("epochs");
+  const rows = data ?? fallback ?? null;
   useEffect(() => {
     void list();
   }, [list]);
@@ -33,7 +36,7 @@ export function EpochsPage() {
         <p className="mt-2 max-w-2xl text-sm text-osap-muted">{t("epochs.subtitle")}</p>
       </header>
 
-      <Envelope loading={loading} error={error} data={data} emptyMessage={t("states.empty")}>
+      <Envelope loading={loading} error={error} data={rows} emptyMessage={t("states.empty")}>
         {(epochs) => (
           <ul className="space-y-3">
             {epochs.map((epoch) => {
@@ -64,3 +67,4 @@ export function EpochsPage() {
     </div>
   );
 }
+

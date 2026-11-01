@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import type { Instrument, InstrumentCategory } from "../api/types";
 import { Envelope } from "../components/Envelope";
 import { useI18n } from "../i18n/I18n";
+import { ssrClassification } from "../ssr/classification";
 import { useInstrumentCategories, useInstruments } from "../state/classification";
 
 // Instrumentos presentados por familias comprensibles. `category_id` se usa SOLO para
@@ -10,6 +11,8 @@ export function InstrumentsPage() {
   const { t } = useI18n();
   const instruments = useInstruments();
   const categories = useInstrumentCategories();
+  const ssrInstruments = ssrClassification("instruments");
+  const ssrCategories = ssrClassification("instrumentCategories");
 
   useEffect(() => {
     void instruments.list();
@@ -17,7 +20,8 @@ export function InstrumentsPage() {
   }, [instruments.list, categories.list]);
 
   const grupos = useMemo(() => {
-    const byId = new Map<number, InstrumentCategory>(categories.data?.map((c) => [c.id, c]) ?? []);
+    const categoryItems = categories.data ?? ssrCategories ?? [];
+    const byId = new Map<number, InstrumentCategory>(categoryItems.map((c) => [c.id, c]));
     const rootOf = (id: number): InstrumentCategory | undefined => {
       let current = byId.get(id);
       while (current?.parent_id != null) {
@@ -28,7 +32,7 @@ export function InstrumentsPage() {
       return current;
     };
     const map = new Map<string, { sort: number; items: Instrument[] }>();
-    for (const instrument of instruments.data ?? []) {
+    for (const instrument of instruments.data ?? ssrInstruments ?? []) {
       const root = rootOf(instrument.category_id);
       const key = root?.name ?? t("instruments.other");
       const entry = map.get(key) ?? { sort: root?.sort ?? 999, items: [] };
@@ -41,7 +45,7 @@ export function InstrumentsPage() {
         name,
         items: entry.items.sort((x, y) => x.sort - y.sort || x.name_es.localeCompare(y.name_es)),
       }));
-  }, [instruments.data, categories.data, t]);
+  }, [instruments.data, categories.data, ssrInstruments, ssrCategories, t]);
 
   const loading = instruments.loading || categories.loading;
   const error = instruments.error ?? categories.error;

@@ -1,11 +1,14 @@
 import { useEffect } from "react";
 import { Envelope } from "../components/Envelope";
 import { useI18n } from "../i18n/I18n";
+import { ssrClassification } from "../ssr/classification";
 import { useGenres } from "../state/classification";
 
 export function GenresPage() {
   const { t } = useI18n();
   const { data, loading, error, list } = useGenres();
+  const fallback = ssrClassification("genres");
+  const rows = data ?? fallback ?? null;
   useEffect(() => {
     void list();
   }, [list]);
@@ -20,7 +23,7 @@ export function GenresPage() {
         <p className="mt-2 max-w-2xl text-sm text-osap-muted">{t("genres.subtitle")}</p>
       </header>
 
-      <Envelope loading={loading} error={error} data={data} emptyMessage={t("states.empty")}>
+      <Envelope loading={loading} error={error} data={rows} emptyMessage={t("states.empty")}>
         {(genres) => (
           <ul className="divide-y divide-osap-border overflow-hidden rounded-card border border-osap-border bg-osap-surface shadow-card">
             {genres.map((genre) => (
@@ -37,3 +40,4 @@ export function GenresPage() {
     </div>
   );
 }
+
