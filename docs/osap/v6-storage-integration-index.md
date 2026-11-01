@@ -311,3 +311,20 @@ La auditoría también confirma que get_representation_download() acepta un ID n
 La auditoría de los adaptadores añade un requisito estructural: OmrStorageFetcher actualmente selecciona solo el primer elemento de resources, lo renombra con el ID remoto de Work y fija el formato a MusicXML. Es incompatible con Work → Resource → File. V6 debe conservar todos los Resources OMR y todos sus Files con IDs separados.
 
 CandidateRepresentation ya dispone de remote_id, pero _to_rep() no lo utiliza como identidad estable del material. MediaWikiFetcher conserva pageid de IMSLP como remote_id, mientras RismFetcher fabrica un hash a partir del título y no conserva un ID nativo de registro. La API V6 debe propagar source_id nativo hasta el registro federado y declarar provisional cualquier identidad basada solo en título.
+
+
+## Auditoría complementaria de la superficie HTTP de osap-storage (2026-11-01)
+
+La revisión del código actual de `AI_osap-storage` confirma que OSAP-API no debe adaptar el contrato actual con simples renombrados:
+
+- `/api/search` entrega el contrato heredado `osap-provider-v1`, con `ProviderWorkRead.resources` y `representations[].resources`. No es el modelo Work→Resource→File.
+- `/api/v1/works/{work_id}` devuelve Work más una lista plana de `ResourceRead`, sin exponer la colección de Files como hijos explícitos ni representar de forma completa Resources URL-only.
+- `/api/v1/files/{file_id}` expone SHA-256, ubicaciones, proveedores y object_key. Estos datos no deben llegar al contrato público consumido por OSAP-API.
+- `/api/download/{resource_id}` convierte el identificador a entero y prioriza la búsqueda de `archive_entries` por File ID antes de probar Resource ID. El comentario del propio código reconoce la colisión de ambos espacios numéricos. V6 debe eliminar la ambigüedad: IDs opacos de Work, Resource y File separados y no intercambiables.
+- El caso de uso `GetWork` sigue agrupando Resources por `representation_id` y puede recurrir al modelo antiguo `archive_entries`. Storage V6 debe ofrecer una sola relación directa Work→Resource→File.
+- La entidad File conserva `storage_key()` derivada de SHA-256 y el baseline mantiene `UNIQUE(sha256)`; ambas decisiones se retiran en V6.
+- El contrato de búsqueda de Storage incluye RISM como corpus, aunque su materialización externa corresponde a la federación de OSAP-API, no al catálogo OMR de Storage.
+
+La auditoría completa, con inventario de rutas, DTO, problemas de identidad y pruebas de aceptación, está en `AI_osap-storage/docs/v6-reconstruction-api-index-cutover.md`, sección 12. Esta evidencia complementa la auditoría de identidad de materiales de este repositorio.
+
+**Consecuencia para OSAP-API:** el adaptador OMR V6 debe consumir un contrato nuevo y explícito: Work, Resources directos (incluidos URL-only) y Files hijos. Las fuentes externas siguen siendo materiales federados en API; no se simulan como Resources de Storage. No se debe mantener una dependencia permanente de `/api/search`, `/api/download/{id}` ni de IDs numéricos ambiguos.
