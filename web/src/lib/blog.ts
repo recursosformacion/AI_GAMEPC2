@@ -14,6 +14,11 @@ export function blogHomeUrl(): string {
   return `${blogBaseUrl()}/`;
 }
 
+export function blogLogoutUrl(next: string): string {
+  const params = new URLSearchParams({ next });
+  return `${blogBaseUrl()}/logout?${params.toString()}`;
+}
+
 // Entrada con handoff de sesión de OSAP: el blog valida el token contra `/auth/me`
 // y deja una cookie HttpOnly antes de redirigir a la portada pública.
 export function blogSessionUrl(

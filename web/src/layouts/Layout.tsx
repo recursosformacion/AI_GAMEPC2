@@ -14,7 +14,7 @@ import { useOidcLogin } from "../components/useOidcLogin";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
 import { useSeo } from "../seo/useSeo";
-import { blogHomeUrl, blogSessionUrl } from "../lib/blog";
+import { blogHomeUrl, blogLogoutUrl, blogSessionUrl } from "../lib/blog";
 import { useAuth } from "../state/auth";
 import { useNotifications } from "../state/notifications";
 import { useSystem } from "../state/system";
@@ -581,7 +581,10 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
                 </Link>
               )}
               <button
-                onClick={logout}
+                onClick={() => {
+                  logout();
+                  window.location.assign(blogLogoutUrl(`${window.location.origin}/`));
+                }}
                 className="rounded-full border border-osap-border px-3 py-1 text-sm hover:bg-osap-surface"
               >
                 {t("auth.logout")}
@@ -699,3 +702,4 @@ export function Layout(): ReactNode {
     </div>
   );
 }
+

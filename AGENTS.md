@@ -60,6 +60,19 @@ respétalo; si no encaja en la regla, no lo commitees.
 - Toda entrega añade su entrada (clasificación + alcance + evidencia) al historial de
   `docs/osap/versioning.md`.
 
+## Regla permanente: cambios de índice y correspondencia
+Ningún reindexado puede cambiar IDs públicos (`index-*`), slugs o URLs sin una **tabla de
+correspondencia explícita** `id_anterior → id_nuevo` y un **301** para cada URL antigua.
+Antes de desplegar un cambio de índice:
+
+1. Conservar la tabla anterior o generar el mapa completo.
+2. Verificar que cada URL del sitemap anterior tiene un destino 200.
+3. Añadir una prueba que recorra una muestra de IDs antiguos y compruebe el 301.
+4. No borrar la tabla/mapa hasta que Search Console deje de mostrar 404 históricos.
+
+Si no se puede garantizar el mapa, no se cambia el índice. Un 301 hacia un ID que ya no
+existe no es una redirección válida.
+
 ## Dependencias nuevas en producción
 Si un cambio añade una dependencia de Python, hay que instalarla en el venv de producción
 (el deploy solo instala lo que explicita `script/deploy.ps1`). Comprobar su presencia con
