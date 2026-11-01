@@ -177,3 +177,46 @@ Esta revisión confirma el recorrido de búsqueda, contratos, rutas HTTP, resolu
 - _merge_index_resources() no comprueba primero que el provider de cada fila sea OMR antes de extraer el número final de download_url como file_id. Por ello, además de mezclar dominios conceptuales, puede confundir una URL externa cuyo path termine en número con un File de Storage.
 
 Estos hallazgos refuerzan la regla: ninguna ruta, cuota, analítica ni composición de detalle debe deducir la identidad de un material a partir de posiciones de texto o del aspecto de su URL. El servicio de resolución debe devolver un objeto tipado y todas las operaciones posteriores deben usar sus campos ya resueltos.
+
+
+
+## 10. Auditoría de los adaptadores y del identificador nativo de origen
+
+### 10.1 El dominio ya contempla un ID remoto, pero no llega al contrato final
+
+CandidateRepresentation incluye remote_id, checksum y metadata. ProviderResultAggregator usa remote_id para deduplicar candidatos del mismo proveedor; si no existe, prueba checksum y, si tampoco existe, no aplica deduplicación por identidad de origen.
+
+Sin embargo, PlatformApiCore._to_rep() no utiliza candidate.remote_id para construir el ID público ni lo conserva explícitamente en el diccionario de resolución. Para candidatos vivos, el ID resultante se basa en URL o candidate_id. Por tanto, la identidad nativa disponible en el dominio se pierde o queda enterrada en metadata y no gobierna la resolución final.
+
+### 10.2 Adaptador OMR
+
+OmrStorageFetcher consulta el contrato /api/search de Storage. En _to_work():
+
+- calcula un remote_id a partir del ID del registro (con fallback a file_id o hash de ruta);
+- lee resources, pero selecciona únicamente resources[0];
+- construye resources_out con un solo elemento;
+- asigna ese elemento el ID remoto de la Work, no un identificador diferenciado del Resource;
+- fija el formato a musicxml;
+- no conserva los demás Resources ni la relación completa de Files.
+
+Esto no puede adaptarse a V6 manteniendo el mapeo actual. El adaptador OMR debe consumir el contrato V6 Work → Resource → File y preservar todos los Resources y Files, con sus IDs propios. No debe reutilizar el ID de Work como ID de Resource ni reducir cada Work al primer material.
+
+### 10.3 Adaptador IMSLP
+
+MediaWikiFetcher recibe pageid y descriptionurl. Conserva pageid como remote_id del registro de recurso, pero genera el ID de Work mediante hash del título. El ID público de material posterior no utiliza remote_id como clave primaria.
+
+V6 debe conservar el pageid nativo como source_id y el tipo de objeto IMSLP al que pertenece. El título puede cambiar o repetirse y no debe ser la identidad primaria.
+
+### 10.4 Adaptador RISM
+
+RismFetcher analiza el RSS extrayendo únicamente título y compositor. Genera el ID con SHA-1 del título y usa ese mismo valor para Work y Resource; no conserva un identificador nativo de registro RISM y fetch_resource() no resuelve detalle por ID.
+
+La auditoría no confirma que el RSS utilizado proporcione un identificador estable en el formato actualmente parseado. Para V6, el adaptador debe capturar el permalink/identificador nativo del registro si la fuente lo ofrece; si no lo ofrece, debe declarar la identidad como provisional y no fingir que el hash del título es un ID nativo persistente.
+
+### 10.5 Requisitos adicionales para adaptadores
+
+- Conservar remote_id/source_id nativo desde la respuesta del proveedor hasta el registro persistente de federación y el objeto de resolución.
+- Separar ID de Work externa, ID de Resource/material externo y ID de archivo/variante de acceso.
+- No sintetizar un ID nativo con el título. Si la fuente carece de identidad estable, marcarlo como provisional y aplicar una estrategia de reconciliación explícita.
+- El adaptador OMR debe devolver la cardinalidad completa de Resources y Files, no solo el primer Resource.
+- El contrato común de proveedores debe soportar cero, uno o varios materiales por Work y cero, uno o varios accesos por material.
