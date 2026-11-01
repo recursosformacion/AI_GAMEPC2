@@ -2,7 +2,7 @@
 """Notifica a IndexNow las URLs de obra actualizadas recientemente (paso final del reindexado).
 
 Lee de `index_works` (BD de osap-api) las obras con `updated_at` en los últimos N días, las
-publica como `{base}/obra/index-{id}/{slug}` usando la MISMA función canónica que el sitemap
+publica como `{base}/obras/index-{id}/{slug}` usando la MISMA función canónica que el sitemap
 (`work_canonical_slug`) y las envía a IndexNow en lotes de hasta 10.000. Es **best-effort**:
 si IndexNow no responde, se registra pero NO se interrumpe el reindexado.
 
@@ -50,7 +50,7 @@ def _recent_work_urls(cur: pymysql.cursors.Cursor, base: str, days: int, limit: 
     for work_id, title in cur.fetchall():
         if not title:
             continue
-        urls.append(f"{base}/obra/index-{int(work_id)}/{work_canonical_slug(str(title))}")
+        urls.append(f"{base}/obras/index-{int(work_id)}/{work_canonical_slug(str(title))}")
     return urls
 
 
@@ -63,7 +63,7 @@ def main() -> int:
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--user", default="osap2027")
     ap.add_argument("--password", default="2027osapdb")
-    ap.add_argument("--database", default="osap-api")
+    ap.add_argument("--database", default="osap_api")
     args = ap.parse_args()
 
     base = args.base.rstrip("/")
@@ -87,3 +87,4 @@ def main() -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
