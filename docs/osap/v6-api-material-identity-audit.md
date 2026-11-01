@@ -167,3 +167,13 @@ Las cuotas OMR, la analítica y los permisos reciben IDs tipados ya resueltos. N
 ## 8. Límites de esta auditoría
 
 Esta revisión confirma el recorrido de búsqueda, contratos, rutas HTTP, resolución del índice, composición del detalle de Work e indexación batch. No valida el contenido real de la base de datos de producción, la unicidad efectiva de los IDs nativos de cada proveedor ni la accesibilidad actual de todas las URLs. Esos puntos requieren inventario y pruebas controladas en entorno de desarrollo durante la fase de diseño/migración; no se han ejecutado aquí.
+
+
+
+## 9. Precisiones adicionales del parsing heredado
+
+- get_representation_download() tiene además un fallback que acepta cualquier representation_id numérico y lo interpreta como File ID de Storage. V6 debe eliminarlo: el endpoint de material no debe aceptar silenciosamente un ID de File como ID de material.
+- _analytics_target() interpreta el ID idx-...-resource_id-format y usa todos los segmentos desde la posición del resource_id como formato. Con el formato actual, puede registrar un valor compuesto resource_id-format en vez del formato real. Este es otro efecto de usar parsing de cadenas como contrato.
+- _merge_index_resources() no comprueba primero que el provider de cada fila sea OMR antes de extraer el número final de download_url como file_id. Por ello, además de mezclar dominios conceptuales, puede confundir una URL externa cuyo path termine en número con un File de Storage.
+
+Estos hallazgos refuerzan la regla: ninguna ruta, cuota, analítica ni composición de detalle debe deducir la identidad de un material a partir de posiciones de texto o del aspecto de su URL. El servicio de resolución debe devolver un objeto tipado y todas las operaciones posteriores deben usar sus campos ya resueltos.
