@@ -277,3 +277,23 @@ No renombrar mecánicamente todo uso de Representation: cada caso debe clasifica
 ### 10.6 Criterio de aceptación
 
 Una búsqueda debe poder devolver una Work OMR sin Resources, agrupada provisionalmente con materiales externos, y permitir resolver/descargar cada material por su ruta de origen. Una asociación persistente solo se considera confirmada cuando la reconciliación de API la ha establecido. El índice se debe poder reconstruir sin convertir resultados externos en Resources OMR.
+
+
+
+## 11. Auditoría de identidad y entrega de materiales
+
+La auditoría completa queda documentada en [v6-api-material-identity-audit.md](v6-api-material-identity-audit.md). Sus conclusiones son vinculantes para el diseño V6:
+
+- Las rutas actuales son POST /api/v1/searches, GET /api/v1/searches/{search_id}, GET /api/v1/representations/{id}, /probe y /download; existe además la ficha HTML heredada /representacion/{id}.
+- El ID de índice actual omite source_rep_id y title_provider, aunque ambos forman parte de la identidad única de index_representations. Su resolución tampoco filtra siempre por todos los discriminantes.
+- Los IDs de materiales de proveedores consultados en vivo dependen de una caché en memoria y no tienen reconstrucción general tras reiniciar API.
+- La ficha pública del índice construye IDs con la misma identidad incompleta.
+- GET /api/v1/works/{work_id} ejecuta _merge_index_resources(), que busca por título/compositor y transforma IDs extraídos de URLs en file_id de Storage. Esta mezcla debe desaparecer: Work/Resources/Files OMR y materiales federados deben devolverse como colecciones tipadas separadas.
+- Cuotas y analítica extraen datos del ID mediante parsing de cadenas. V6 debe pasar identidades tipadas ya resueltas.
+- _work_rep_cache usa título+compositor como clave; para Works reconciliadas debe usar la identidad canónica y para resultados no reconciliados una clave provisional explícita.
+
+No conservar los IDs actuales como contrato permanente. La identidad pública de material debe ser opaca, estable, reconstruible tras reinicios y conservar internamente provider_id + source_id + discriminantes nativos. La resolución de acceso se despacha por tipo de origen: Storage para Resource/File OMR y adaptador para registros externos.
+
+La tabla index_representations tiene una clave única más rica que el ID de URL actual: (work_id, provider, source_rep_id, resource_id, format, title_provider). La V6 debe definir una clave de material coherente con la identidad nativa completa; no basta con añadir un campo a la cadena actual.
+
+**Precaución CPDL:** el indexador actual afirma que parte del corpus CPDL ya está materializado en las tablas históricas de Storage (works_origin='CPDL'). La migración debe inspeccionar y clasificar esos registros por su incorporación real y sus Resources/Files, sin decidir solo por el nombre del proveedor y sin perder material existente.
