@@ -297,3 +297,9 @@ No conservar los IDs actuales como contrato permanente. La identidad pública de
 La tabla index_representations tiene una clave única más rica que el ID de URL actual: (work_id, provider, source_rep_id, resource_id, format, title_provider). La V6 debe definir una clave de material coherente con la identidad nativa completa; no basta con añadir un campo a la cadena actual.
 
 **Precaución CPDL:** el indexador actual afirma que parte del corpus CPDL ya está materializado en las tablas históricas de Storage (works_origin='CPDL'). La migración debe inspeccionar y clasificar esos registros por su incorporación real y sus Resources/Files, sin decidir solo por el nombre del proveedor y sin perder material existente.
+
+
+
+### Precisiones del parsing heredado
+
+La auditoría también confirma que get_representation_download() acepta un ID numérico como fallback y lo convierte en File ID de Storage; _analytics_target() puede interpretar el segmento resource_id como parte del formato; y _merge_index_resources() no verifica provider=OMR antes de extraer un número de la URL como file_id. Los tres comportamientos deben desaparecer en V6: la identidad tipada resuelta debe ser la única fuente para descarga, cuota, analítica y composición de detalle.
