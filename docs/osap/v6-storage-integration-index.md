@@ -303,3 +303,11 @@ La tabla index_representations tiene una clave única más rica que el ID de URL
 ### Precisiones del parsing heredado
 
 La auditoría también confirma que get_representation_download() acepta un ID numérico como fallback y lo convierte en File ID de Storage; _analytics_target() puede interpretar el segmento resource_id como parte del formato; y _merge_index_resources() no verifica provider=OMR antes de extraer un número de la URL como file_id. Los tres comportamientos deben desaparecer en V6: la identidad tipada resuelta debe ser la única fuente para descarga, cuota, analítica y composición de detalle.
+
+
+
+### Adaptadores: cardinalidad e identidad de origen
+
+La auditoría de los adaptadores añade un requisito estructural: OmrStorageFetcher actualmente selecciona solo el primer elemento de resources, lo renombra con el ID remoto de Work y fija el formato a MusicXML. Es incompatible con Work → Resource → File. V6 debe conservar todos los Resources OMR y todos sus Files con IDs separados.
+
+CandidateRepresentation ya dispone de remote_id, pero _to_rep() no lo utiliza como identidad estable del material. MediaWikiFetcher conserva pageid de IMSLP como remote_id, mientras RismFetcher fabrica un hash a partir del título y no conserva un ID nativo de registro. La API V6 debe propagar source_id nativo hasta el registro federado y declarar provisional cualquier identidad basada solo en título.
