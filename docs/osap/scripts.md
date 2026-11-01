@@ -637,3 +637,19 @@ Verificación de solo lectura contra producción: descarga con User-Agent de Goo
 fichas de obra, compositor, representación, géneros, catálogos e instrumentos y comprueba
 HTTP 200, HTML suficiente, `<title>`, canonical, ausencia del estado vacío de la SPA y sitemap.
 Uso: `pwsh -File script/smoke-seo.ps1 [-BaseUrl https://app.openmusicrepository.com]`.
+
+### `ai_enrich_prod.py` + `osap-ai-enrich.service` (osap-storage)
+Bucle de enriquecimiento en producción. Lee `secrets/gemini.prod.key`, procesa un lote de
+personas y otro de obras, aplica inmediatamente los resultados (`apply_persons_ai_json.py` y
+`apply_works_ai_json.py` con `--allow-prod`) y, ante error de cuota/API, espera 24 h antes de
+reintentar. Reanuda por el primer lote pendiente y lleva lock/log en `data/`. Servicio systemd:
+`deploy/osap-ai-enrich.service`. No hace falta reiniciarlo para reanudar; el estado son los
+ficheros de salida.
+
+### `ai_enrich_prod.py` + `osap-ai-enrich.service` (osap-storage)
+Bucle de enriquecimiento en producción. Lee `secrets/gemini.prod.key`, procesa un lote de
+personas y otro de obras, aplica inmediatamente los resultados (`apply_persons_ai_json.py` y
+`apply_works_ai_json.py` con `--allow-prod`) y, ante error de cuota/API, espera 24 h antes de
+reintentar. Reanuda por el primer lote pendiente y lleva lock/log en `data/`. Servicio systemd:
+`deploy/osap-ai-enrich.service`. El estado son los ficheros de salida; no hace falta reiniciar
+para reanudar.
