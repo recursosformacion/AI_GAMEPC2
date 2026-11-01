@@ -583,6 +583,9 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
               <button
                 onClick={() => {
                   logout();
+                  for (const key of Object.keys(localStorage)) {
+                    if (key.startsWith("osap.blog.draft.")) localStorage.removeItem(key);
+                  }
                   window.location.assign(blogLogoutUrl(`${window.location.origin}/`));
                 }}
                 className="rounded-full border border-osap-border px-3 py-1 text-sm hover:bg-osap-surface"
