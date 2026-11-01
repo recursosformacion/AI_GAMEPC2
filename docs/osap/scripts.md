@@ -631,3 +631,9 @@ Usa los títulos de las obras de personas MXL desactivadas para preguntar a Gemi
 compositor real. Si la evidencia es suficiente, renombra/activa o fusiona y reasocia las obras;
 si son tradicionales, las deja inactivas. Por defecto dry-run; `--apply` escribe.
 Lanzador: `scripts/run_resolve_inactive_mxl_composers.bat`.
+
+### `smoke-seo.ps1` (osap-api)
+Verificación de solo lectura contra producción: descarga con User-Agent de Googlebot las
+fichas de obra, compositor, representación, géneros, catálogos e instrumentos y comprueba
+HTTP 200, HTML suficiente, `<title>`, canonical, ausencia del estado vacío de la SPA y sitemap.
+Uso: `pwsh -File script/smoke-seo.ps1 [-BaseUrl https://app.openmusicrepository.com]`.
