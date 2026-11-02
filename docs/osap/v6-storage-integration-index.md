@@ -360,3 +360,14 @@ El contrato prevé creación atómica Work + primer Resource, PATCH separado de 
 ### Estado y siguiente cierre
 
 Este contrato es propuesta semántica. Antes de congelar el OpenAPI 3.1 hay que cerrar el inventario exacto de columnas Work y sus consumidores, vocabularios Resource, autenticación servicio-a-servicio, política de carga/Access, retención de Files y filtros/paginación. La generación del OpenAPI y pruebas de contrato deben ejecutarse en desarrollo V6; no se han ejecutado en producción ni se ha modificado código.
+
+## 12. Matriz de migración de campos Work V5 → V6
+
+La clasificación columna por columna del esquema SQL actual está en [v6-work-field-mapping.md del repositorio AI_osap-storage](https://github.com/recursosformacion/AI_osap-storage/blob/main/docs/v6-work-field-mapping.md).
+
+La matriz distingue los campos propios de la composición de los que describen una edición/material, un fichero o la procedencia de un registro externo. En particular, no deben pasar automáticamente a Work `works_pages`, `works_type_file`, `works_relative_path`, licencias/dominio público, identificadores de proveedor ni hashes de agrupación.
+
+La matriz también identifica como decisiones pendientes de muestreo los campos cuya semántica puede variar entre Work y Resource: tonalidad, duración, compases, partes, complejidad, descripción, voicing e instrumentación. Los casos ambiguos se revisan; no se resuelven por el nombre de la columna.
+
+**Regla de implementación:** cada campo que se conserve debe tener destino V6, semántica explícita, fuente de migración y consumidores API identificados. El documento es especificación de diseño; no modifica código, esquema ni datos.
+
