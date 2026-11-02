@@ -20,6 +20,7 @@ const PORT = Number(process.env.OSAP_SSR_PORT ?? 3000);
 const PUBLIC_ORIGIN = (process.env.OSAP_PUBLIC_ORIGIN ?? "http://osap-app").replace(/\/+$/, "");
 const DEV = process.env.OSAP_SSR_DEV === "1" || process.env.NODE_ENV !== "production";
 const TTL_MS = Number(process.env.OSAP_SSR_TTL ?? 60) * 1000;
+const API_TIMEOUT_MS = Number(process.env.OSAP_SSR_API_TIMEOUT ?? 12000);
 const STALE_MS = Number(process.env.OSAP_SSR_STALE ?? 600) * 1000;
 
 const { render } = await import(pathToFileURL(SSR_ENTRY).href);
@@ -52,7 +53,7 @@ async function apiGet(path) {
   try {
     const res = await fetch(`${API}/api/v1${path}`, {
       headers: { Accept: "application/json" },
-      signal: AbortSignal.timeout(4000),
+      signal: AbortSignal.timeout(API_TIMEOUT_MS),
     });
     if (!res.ok) return { ok: false, status: res.status, data: null };
     const body = await res.json();
@@ -433,6 +434,15 @@ const server = createServer(async (req, res) => {
   if (pathname === "/health") {
     res.writeHead(200, { "Content-Type": "text/plain" });
     res.end("ok");
+    return;
+  }
+  const numericWork = /^\/obras\/(\d+)(\/.*)?$/.exec(pathname);
+  if (numericWork) {
+    const search = new URL(url, "http://localhost").search;
+    res.writeHead(301, {
+      Location: `/obras/index-${numericWork[1]}${numericWork[2] ?? ""}${search}`,
+    });
+    res.end();
     return;
   }
   const isPublic =

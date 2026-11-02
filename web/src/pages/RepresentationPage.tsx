@@ -12,7 +12,8 @@ import { ssrRepresentation } from "../ssr/representation";
 // Si el fichero es servible (propio o externo legible por el servidor) se ofrece el visor;
 // si el proveedor pone un reto anti-bot (CPDL/Cloudflare) se ofrece abrirlo en el navegador.
 function appWorkPath(workId: string): string {
-  return `/obras/${encodeURIComponent(workId.replace(/^index-/, ""))}`;
+  const canonical = workId.startsWith("index-") ? workId : `index-${workId}`;
+  return `/obras/${encodeURIComponent(canonical)}`;
 }
 
 export function RepresentationPage() {

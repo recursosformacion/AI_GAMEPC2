@@ -55,10 +55,10 @@ export function WorkPage() {
     const raw = String(sheet.work.work_id ?? "");
     if (!raw) return;
     const actual = canonicalWorkId(raw);
-    if (actual !== canonicalId) {
-      navigate(`/obras/${encodeURIComponent(actual.replace(/^index-/, ""))}`, { replace: true });
+    if (id !== actual) {
+      navigate(`/obras/${encodeURIComponent(actual)}`, { replace: true });
     }
-  }, [canonicalId, navigate, sheet]);
+  }, [id, navigate, sheet]);
 
   useEffect(() => {
     if (!sheet) return;

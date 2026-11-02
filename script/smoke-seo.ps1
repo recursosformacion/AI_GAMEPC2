@@ -59,6 +59,38 @@ try {
     $failures.Add("sitemap: $($_.Exception.Message)")
 }
 
+try {
+    $catalog = Invoke-WebRequest -Uri "$base/catalog" -UseBasicParsing -TimeoutSec 30
+    if ($catalog.StatusCode -ne 200) { $failures.Add("catalog: HTTP $($catalog.StatusCode)") }
+    else { Write-Host "OK   catalog" }
+} catch {
+    $failures.Add("catalog: $($_.Exception.Message)")
+}
+
+try {
+    $sources = Invoke-WebRequest -Uri "$base/api/v1/repository-sources" -UseBasicParsing -TimeoutSec 30
+    $sourceCount = @(($sources.Content | ConvertFrom-Json).data).Count
+    if ($sources.StatusCode -ne 200 -or $sourceCount -eq 0) {
+        $failures.Add("repository-sources: HTTP $($sources.StatusCode), $sourceCount fuentes")
+    } else {
+        Write-Host "OK   repository-sources ($sourceCount)"
+    }
+} catch {
+    $failures.Add("repository-sources: $($_.Exception.Message)")
+}
+
+try {
+    Invoke-WebRequest -Uri "$base/obras/1" -UseBasicParsing -MaximumRedirection 0 -TimeoutSec 30 | Out-Null
+    $failures.Add("redirect numerico: no devolvio 301")
+} catch {
+    $response = $_.Exception.Response
+    if ([int]$response.StatusCode -ne 301 -or "$($response.Headers.Location)" -notmatch "/obras/index-1$") {
+        $failures.Add("redirect numerico: no apunta a /obras/index-1")
+    } else {
+        Write-Host "OK   redirect numerico"
+    }
+}
+
 if ($failures.Count -gt 0) {
     Write-Error ("Smoke SEO fallido:`n  " + ($failures -join "`n  "))
     exit 1

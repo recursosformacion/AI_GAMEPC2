@@ -9,9 +9,10 @@ import { usePopularWorks } from "../state/popularWorks";
 import { useRecentWorks } from "../state/recentWorks";
 import { useSources } from "../state/repositorySources";
 
-// Ruta de la app para una obra (`index-<n>` → `/obras/<n>`, que es la experiencia SPA).
+// La URL canónica conserva el id público `index-<n>`.
 function appWorkPath(workId: string): string {
-  return `/obras/${encodeURIComponent(workId.replace(/^index-/, ""))}`;
+  const canonical = workId.startsWith("index-") ? workId : `index-${workId}`;
+  return `/obras/${encodeURIComponent(canonical)}`;
 }
 
 function hint(query: string): string | null {
