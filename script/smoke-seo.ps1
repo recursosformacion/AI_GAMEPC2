@@ -28,7 +28,7 @@ foreach ($check in $checks) {
     $url = "$base$($check.Path)"
     try {
         $response = Invoke-WebRequest -Uri $url -UseBasicParsing -TimeoutSec 30 `
-            -Headers @{ "User-Agent" = $ua }
+            -Headers @{ "User-Agent" = $ua; "Cache-Control" = "no-cache" }
         $html = [string]$response.Content
         $problems = [System.Collections.Generic.List[string]]::new()
         if ($response.StatusCode -ne 200) { $problems.Add("HTTP $($response.StatusCode)") }
@@ -97,3 +97,4 @@ if ($failures.Count -gt 0) {
 }
 
 Write-Host "Smoke SEO correcto: las fichas públicas entregan HTML SSR."
+

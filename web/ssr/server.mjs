@@ -477,11 +477,21 @@ const server = createServer(async (req, res) => {
       res.end(spa);
       return;
     }
+    if (page.degraded || page.status >= 500) {
+      // Una ficha pública nunca debe caer al shell SPA: 503 permite reintentar y
+      // evita que Google indexe una página vacía.
+      cache.delete(key);
+      res.writeHead(503, {
+        "Content-Type": "text/html; charset=utf-8",
+        "Cache-Control": "no-store",
+        "Retry-After": "60",
+      });
+      res.end("<!doctype html><html lang=\"es\"><meta charset=\"utf-8\"><title>Servicio no disponible</title><p>La ficha no está disponible temporalmente. Inténtalo de nuevo.</p></html>");
+      return;
+    }
     res.writeHead(page.status, {
       "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": DEV
-        ? "no-store, no-cache, must-revalidate"
-        : "public, s-maxage=60, stale-while-revalidate=600",
+      "Cache-Control": "no-store",
       Vary: "Accept-Language, Cookie",
     });
     res.end(page.html);
