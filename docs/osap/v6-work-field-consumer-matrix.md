@@ -107,6 +107,9 @@ El contrato Work no incluye páginas de partitura, formato, licencia/dominio pú
 
 Estos riesgos no se corrigen añadiendo campos al DTO: requieren resolver identidad y separar las colecciones.
 
+
+La propuesta de DTO e identidad persistente entre el índice y Storage se desarrolla en [`v6-work-dto-identity-contract.md`](v6-work-dto-identity-contract.md). Es una propuesta no congelada; los campos ambiguos siguen pendientes de muestreo y los vínculos no deben inferirse por texto.
+
 ## 7. Estado de cierre
 
 | Elemento | Estado |
