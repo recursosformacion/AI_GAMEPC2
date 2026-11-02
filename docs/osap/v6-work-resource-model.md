@@ -1281,3 +1281,12 @@ Esta corrección precisa el límite del modelo Work → Resource → File y prev
 La búsqueda puede mostrar de inmediato una agrupación provisional de candidatos de distintas fuentes. El agrupamiento no debe escribir una asociación definitiva ni cambiar el catálogo. Las asociaciones persistentes se confirman en la capa de reconciliación de API mediante reglas idempotentes y revisión de los casos ambiguos. El proceso batch no debe ser requisito para que una búsqueda muestre un material externo.
 
 V6 puede modificar OSAP-API en profundidad si hace falta para mantener una identidad coherente: contratos/DTO, agrupación, matching, ranking, índice, scripts de rebuild/sync, cachés, adaptador OMR, rutas de detalle/descarga y pruebas. No se debe limitar el alcance a un simple cambio de fetcher ni hacer un renombrado mecánico de clases llamadas Representation.
+
+## Matriz de consumidores de Work en OSAP-API
+
+La matriz de columnas SQL y la trazabilidad de los consumidores de la API/web se mantienen en documentos complementarios:
+
+- [Matriz de migración Work V5 → V6 en AI_osap-storage](https://github.com/recursosformacion/AI_osap-storage/blob/main/docs/v6-work-field-mapping.md).
+- [Matriz de consumidores de Work en AI_GAMEPC2](v6-work-field-consumer-matrix.md).
+
+La segunda documenta el recorrido real de búsqueda, ficha pública/SEO y detalle enriquecido, identifica los campos que la interfaz presenta actualmente en un nivel semántico incorrecto y enumera los cambios necesarios para el contrato federado V6. Ambas matrices deben cerrarse conjuntamente antes de congelar el DTO Work/OpenAPI.
