@@ -56,29 +56,34 @@ export function ComposerDetailPage() {
   }, [biography?.name]);
 
   const indexRows = indexWorks?.items ?? [];
-  const normalizeTitle = (value: string) =>
-    value
+  const normalizeTitle = (value: string) => {
+    const text = value
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase()
-      .replace(/[^a-z0-9]+/g, " ")
-      .trim();
+      // El título del índice puede llevar catálogo detrás; no identifica la obra.
+      .replace(/\b(bwv|swv|op|kv|k|w|jwwv|gwv|rv|ljw|ijb)\s*\.?\s*\d+[a-z0-9/.-]*.*$/i, " ")
+      // Variante ortográfica alemana habitual entre índice y búsqueda.
+      .replace(/\bnoth\b/g, "not");
+    return text.replace(/[^a-z0-9]+/g, " ").trim();
+  };
   const indexByTitle = new Map(indexRows.map((w) => [normalizeTitle(w.title), w.work_id]));
+  const indexIds = new Set(indexRows.map((w) => String(w.work_id)));
   const asFichaId = (value: unknown) => {
     const text = String(value ?? "").trim();
     if (!text) return null;
     return text.startsWith("index-") ? text : `index-${text}`;
   };
   // Las obras que vienen de la búsqueda llevan `work-<uuid>`; la ficha pública usa
-  // `index-<n>`. Solo se enlaza cuando hay una obra indexada con el mismo título.
+  // `index-<n>`. Un `index-*` solo es fiable si pertenece al índice de ESTE compositor.
   const fichaIdFor = (workId: string | number, title: string): string | null => {
     const raw = String(workId ?? "");
-    if (raw.startsWith("index-")) return raw;
-    const exact = indexByTitle.get(normalizeTitle(title));
-    if (exact) return asFichaId(exact);
-    const head = title.split(" - ")[0] ?? title;
-    const fallback = indexByTitle.get(normalizeTitle(head));
-    return fallback ? asFichaId(fallback) : null;
+    if (raw.startsWith("index-") && indexIds.has(raw)) return raw;
+    for (const candidate of [title, title.split(" - ")[0] ?? title]) {
+      const found = indexByTitle.get(normalizeTitle(candidate));
+      if (found) return asFichaId(found);
+    }
+    return null;
   };
   const pipelineWorks = pipeline?.results ? groupWorks(pipeline.results) : [];
   const showPipeline = pipelineWorks.length > 0;
