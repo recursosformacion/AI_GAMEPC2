@@ -371,3 +371,6 @@ La matriz también identifica como decisiones pendientes de muestreo los campos 
 
 **Regla de implementación:** cada campo que se conserve debe tener destino V6, semántica explícita, fuente de migración y consumidores API identificados. El documento es especificación de diseño; no modifica código, esquema ni datos.
 
+### Matriz de consumidores API/web (2026-11-02)
+
+La matriz SQL de Storage se complementa con la auditoría de consumidores del repositorio API: [V6 — Matriz de consumidores de los campos de Work](v6-work-field-consumer-matrix.md). Este documento identifica las tres vistas actuales de Work (búsqueda/índice, ficha pública/SEO y detalle enriquecido OMR), los campos consumidos por la ficha web y las adaptaciones necesarias. No cierra todavía los campos ambiguos ni sustituye la auditoría pendiente de importadores, SQL, informes y procesos externos.
