@@ -213,19 +213,12 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
 
     @router.get("/compositor/{person_id}", include_in_schema=False)
     def person_legacy_root(person_id: str) -> Response:
-        if ctx.api.seo_person(person_id) is None:
-            return _html(render_not_found(), status_code=410)
+        # Los UUID de persona son estables; el 301 conserva las URLs antiguas.
         return RedirectResponse(url=f"/composers/{person_id}", status_code=301)
 
     @router.get("/compositor/{person_id}/{slug}", include_in_schema=False)
     def person_legacy_page(person_id: str, slug: str) -> Response:
-        detail = ctx.api.seo_person(person_id)
-        if detail is None:
-            return _html(render_not_found(), status_code=410)
-        expected = person_slug(str(detail.get("name") or ""))
-        if slug != expected:
-            return _html(render_not_found(), status_code=410)
-        return RedirectResponse(url=f"/composers/{person_id}/{expected}", status_code=301)
+        return RedirectResponse(url=f"/composers/{person_id}/{slug}", status_code=301)
 
     # --- «Los amigos» (grupo y artículo) -------------------------------------
 
