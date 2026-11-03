@@ -279,7 +279,11 @@ class SystemMixin(PlatformApiCore):
         if not self._oidc_pending_path:
             return
         try:
-            with open(self._oidc_pending_path, "w", encoding="utf-8") as fh:
+            from pathlib import Path
+
+            path = Path(self._oidc_pending_path)
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with open(path, "w", encoding="utf-8") as fh:
                 json.dump(self._oidc_pending, fh)
         except OSError:
             pass

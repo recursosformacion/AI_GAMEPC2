@@ -40,9 +40,12 @@ function Write-Status([string]$Message) {
     if ($script:StatusLog) { Add-Content -Path $script:StatusLog -Value $line -ErrorAction SilentlyContinue }
 }
 
+$OidcStateDir = Join-Path $env:LOCALAPPDATA "osap-dev\state"
+New-Item -ItemType Directory -Force -Path $OidcStateDir | Out-Null
+$OidcStateFile = Join-Path $OidcStateDir "oidc-pending.json"
 $services = @(
     [pscustomobject]@{ Name = "osap-storage"; Repo = "osap-storage"; Port = 8000; App = "api.main:app"; Factory = $false; Health = "http://127.0.0.1:8000/api/v1/health"; Env = @{ OSAP_CONFIG = "config.yaml" } },
-    [pscustomobject]@{ Name = "osap-api"; Repo = "osap-api"; Port = 8001; App = "src.osap.api.platform_app:create_platform_app"; Factory = $true; Health = "http://127.0.0.1:8001/api/v1/system/health"; Env = @{} },
+    [pscustomobject]@{ Name = "osap-api"; Repo = "osap-api"; Port = 8001; App = "src.osap.api.platform_app:create_platform_app"; Factory = $true; Health = "http://127.0.0.1:8001/api/v1/system/health"; Env = @{ OSAP_OIDC_STATE_FILE = $OidcStateFile } },
     [pscustomobject]@{ Name = "osap-auth"; Repo = "osap-auth"; Port = 8200; App = "api.main:create_app_from_settings"; Factory = $true; Health = "http://127.0.0.1:8200/health"; Env = @{} },
     [pscustomobject]@{ Name = "osap-support"; Repo = "osap-support"; Port = 8300; App = "api.main:create_app_from_settings"; Factory = $true; Health = "http://127.0.0.1:8300/health"; Env = @{} },
     [pscustomobject]@{ Name = "osap-ssr"; Repo = "osap-api\web"; Port = 3000; Node = $true; Health = "http://127.0.0.1:3000/health"; Env = @{ OSAP_SSR_DEV = "1"; OSAP_API_ORIGIN = "http://127.0.0.1:8001"; OSAP_PUBLIC_ORIGIN = "http://osap-app" } }
