@@ -191,7 +191,8 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
         canonical = normalize_work_id(work_id)
         data = ctx.api.seo_work(canonical) if canonical is not None else None
         if data is None:
-            return RedirectResponse(url=f"/obras/{work_id}", status_code=301)
+            # No se inventa un destino para un ID histórico que ya no existe.
+            return _html(render_not_found(), status_code=410)
         title = str(data.get("title") or "")
         expected = work_canonical_slug(title) or "obra"
         return RedirectResponse(url=f"/obras/{canonical}/{expected}", status_code=301)
@@ -201,18 +202,30 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
         canonical = normalize_work_id(work_id)
         data = ctx.api.seo_work(canonical) if canonical is not None else None
         if data is None:
-            return RedirectResponse(url=f"/obras/{work_id}/{slug}", status_code=301)
+            return _html(render_not_found(), status_code=410)
         title = str(data.get("title") or "")
         expected = work_canonical_slug(title) or "obra"
+        if slug != expected:
+            # El ID puede haberse reutilizado para otra obra tras un reindexado.
+            # Nunca redirigir una URL antigua a una ficha distinta.
+            return _html(render_not_found(), status_code=410)
         return RedirectResponse(url=f"/obras/{canonical}/{expected}", status_code=301)
 
     @router.get("/compositor/{person_id}", include_in_schema=False)
     def person_legacy_root(person_id: str) -> Response:
+        if ctx.api.seo_person(person_id) is None:
+            return _html(render_not_found(), status_code=410)
         return RedirectResponse(url=f"/composers/{person_id}", status_code=301)
 
     @router.get("/compositor/{person_id}/{slug}", include_in_schema=False)
     def person_legacy_page(person_id: str, slug: str) -> Response:
-        return RedirectResponse(url=f"/composers/{person_id}/{slug}", status_code=301)
+        detail = ctx.api.seo_person(person_id)
+        if detail is None:
+            return _html(render_not_found(), status_code=410)
+        expected = person_slug(str(detail.get("name") or ""))
+        if slug != expected:
+            return _html(render_not_found(), status_code=410)
+        return RedirectResponse(url=f"/composers/{person_id}/{expected}", status_code=301)
 
     # --- «Los amigos» (grupo y artículo) -------------------------------------
 
@@ -272,3 +285,4 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
         return _html(render_amigos_article(view))
 
     return router
+
