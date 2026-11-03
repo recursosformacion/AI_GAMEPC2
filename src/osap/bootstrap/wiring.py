@@ -489,6 +489,7 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
         config.ads_base_url,
         config.ads_service_token,
         config.ads_timeout_seconds,
+        config.ads_web_base,
     )
     composer_client = StorageComposerClient(
         base_url=storage_base,
@@ -596,3 +597,4 @@ def _build_authenticator(config: Configuration) -> IAuthenticator:
             ),
         )
     return JwtAuthenticator()
+

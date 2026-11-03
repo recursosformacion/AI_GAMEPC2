@@ -543,6 +543,27 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         return ctx.ok({"url": url})
 
     @router.get(
+        "/api/v1/admin/ads-web",
+        tags=["Ads"],
+        summary="URL de mantenimiento de publicidad",
+        description="Devuelve el panel de ai_publicidad autenticado con su service token. Exige role=admin.",
+        response_model=SuccessEnvelope[dict[str, str]] | ErrorEnvelope,
+    )
+    def ads_web(
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            url = ctx.api.ads_web(authorization)
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Login required")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        except Exception as exc:  # noqa: BLE001 — publicidad no disponible
+            return ctx.fail(503, response, "ADS_UNAVAILABLE", str(exc))
+        return ctx.ok({"url": url})
+
+    @router.get(
         "/api/v1/admin/support-web",
         tags=["System"],
         summary="Support web admin URL (reconocimientos)",

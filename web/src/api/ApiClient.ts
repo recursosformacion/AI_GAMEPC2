@@ -711,6 +711,10 @@ export class ApiClient {
     return this.get<{ url: string }>(`/admin/storage-web${qs}`);
   }
 
+  async getAdsWebUrl(): Promise<{ url: string }> {
+    return this.get<{ url: string }>("/admin/ads-web");
+  }
+
   async getSupportWebUrl(section?: string): Promise<{ url: string }> {
     const qs = section ? `?section=${encodeURIComponent(section)}` : "";
     return this.get<{ url: string }>(`/admin/support-web${qs}`);
@@ -970,3 +974,4 @@ export interface QuotaUsage {
   by_provider: { provider: string; total: number }[];
   top_works: { work_id: string; total: number }[];
 }
+

@@ -89,6 +89,15 @@ class SystemMixin(PlatformApiCore):
         base = (self._container.support_web_base() or client.base_url).rstrip("/")
         return f"{base}{path}?token={urllib.parse.quote(service_token)}"
 
+    def ads_web(self, token: str | None) -> str:
+        """URL del panel de publicidad con su service token interno."""
+        self._require_admin(token)
+        base = (self._container.ads_web_base() or self._container.ads_base_url() or "").rstrip("/")
+        service_token = self._container.ads_service_token() or ""
+        if not base or not service_token:
+            raise RuntimeError("publicidad no configurada")
+        return f"{base}/p#token={urllib.parse.quote(service_token)}"
+
     def admin_overview(self, token: str | None) -> dict[str, object]:
         stats = self.composer_review_stats(token)
         suggestions = self._store.suggestion_counts()
@@ -333,3 +342,7 @@ class SystemMixin(PlatformApiCore):
             knowledge_facts=len(base.facts),
             knowledge_suggestions=len(base.suggestions),
         )
+
+
+
+

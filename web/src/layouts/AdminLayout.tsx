@@ -25,6 +25,8 @@ interface AdminItem {
   storage?: string;
   /** Sección de la web de mantenimiento de osap-support a abrir con service token. */
   support?: string;
+  /** Panel de mantenimiento de publicidad. */
+  ads?: string;
   children?: AdminItem[];
 }
 
@@ -53,6 +55,7 @@ const SECTIONS: AdminSection[] = [
     items: [
       { to: "/admin/users", key: "adminUsers.title" },
       { to: "/admin/providers", key: "admin.providersAdmin" },
+      { ads: "admin", label: "Publicidad" },
     ],
   },
   {
@@ -132,6 +135,18 @@ export function AdminLayout(): ReactNode {
     })();
   };
 
+  const openAds = () => {
+    void (async () => {
+      try {
+        const r = await apiClient.getAdsWebUrl();
+        window.open(r.url, "_blank");
+      } catch (error) {
+        const detail = error instanceof Error ? error.message : String(error);
+        window.alert(`ai_publicidad admin no disponible · not available: ${detail}`);
+      }
+    })();
+  };
+
   const openSupport = (section: string) => {
     void (async () => {
       try {
@@ -146,7 +161,7 @@ export function AdminLayout(): ReactNode {
 
   const label = (item: AdminItem): string => item.label ?? (item.key ? t(item.key) : "");
   const itemKey = (item: AdminItem): string =>
-    (item.to ?? item.storage ?? item.support ?? "") + label(item);
+    (item.to ?? item.storage ?? item.support ?? item.ads ?? "") + label(item);
 
   if (!authenticated) {
     return (
@@ -200,9 +215,11 @@ export function AdminLayout(): ReactNode {
       <button
         type="button"
         onClick={() =>
-          item.support
-            ? openSupport(item.support)
-            : openStorage(item.storage ?? "multimantenimiento")
+          item.ads
+            ? openAds()
+            : item.support
+              ? openSupport(item.support)
+              : openStorage(item.storage ?? "multimantenimiento")
         }
         title={item.title}
         className="block w-full rounded px-3 py-1.5 text-left text-sm font-bold text-osap-muted hover:bg-osap-border hover:text-osap-ink"
@@ -273,3 +290,4 @@ export function AdminLayout(): ReactNode {
     </div>
   );
 }
+

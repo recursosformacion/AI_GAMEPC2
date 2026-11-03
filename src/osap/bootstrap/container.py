@@ -79,6 +79,7 @@ class Container:
         self._storage_web_base: str | None = None
         self._support_web_base: str | None = None
         self._ads_base_url: str | None = None
+        self._ads_web_base: str | None = None
         self._ads_service_token: str | None = None
         self._ads_timeout_seconds: float = 2.5
         self._op_store_config: dict[str, Any] | None = None
@@ -171,13 +172,23 @@ class Container:
     def support_web_base(self) -> str | None:
         return self._support_web_base
 
-    def set_ads_config(self, base_url: str | None, token: str | None, timeout: float = 2.5) -> None:
+    def set_ads_config(
+        self,
+        base_url: str | None,
+        token: str | None,
+        timeout: float = 2.5,
+        web_base: str | None = None,
+    ) -> None:
         self._ads_base_url = base_url
+        self._ads_web_base = web_base
         self._ads_service_token = token
         self._ads_timeout_seconds = max(0.5, min(10.0, timeout))
 
     def ads_base_url(self) -> str | None:
         return self._ads_base_url
+
+    def ads_web_base(self) -> str | None:
+        return self._ads_web_base or self._ads_base_url
 
     def ads_service_token(self) -> str | None:
         return self._ads_service_token
@@ -358,4 +369,5 @@ class Container:
             orchestrator=orchestrator,
             evidence_engine=EvidenceEngine(),
         )
+
 
