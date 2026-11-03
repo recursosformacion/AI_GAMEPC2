@@ -151,6 +151,7 @@ export function AppRoutes() {
           <Route path="/admin/quota" element={<AdminQuotaPage />} />
           <Route path="/admin/funnel" element={<AdminFunnelPage />} />
           <Route path="/admin/corrections" element={<AdminCorrectionsPage />} />
+          <Route path="/admin/jobs" element={<JobsPage />} />
           <Route path="/admin/work-person-ai" element={<AdminWorkPersonAiPage />} />
           <Route path="/admin/amigos" element={<AdminAmigosGroupsPage />} />
           <Route path="/admin/amigos/corales" element={<AdminAmigosGroupsPage kind="coral" />} />

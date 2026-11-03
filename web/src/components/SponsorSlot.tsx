@@ -21,7 +21,28 @@ function isActive(sponsor: Sponsor, now: Date): boolean {
   return true;
 }
 
-function House({ house }: { house: NonNullable<SponsorsConfig["house"]> }) {
+function trackAd(
+  event: "ad_impression" | "ad_click",
+  placement: string,
+  sponsorId: string,
+  sponsorName: string,
+) {
+  const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag;
+  if (typeof gtag !== "function") return;
+  gtag("event", event, {
+    ad_placement: placement,
+    ad_id: sponsorId,
+    ad_name: sponsorName,
+  });
+}
+
+function House({
+  house,
+  placement,
+}: {
+  house: NonNullable<SponsorsConfig["house"]>;
+  placement: string;
+}) {
   return (
     <aside
       className="rounded-lg border border-dashed border-osap-border-strong bg-osap-surface p-4"
@@ -30,7 +51,11 @@ function House({ house }: { house: NonNullable<SponsorsConfig["house"]> }) {
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-osap-muted">Publicidad</p>
       <p className="mt-1 font-display text-lg font-semibold text-osap-ink">{house.title}</p>
       <p className="mt-1 max-w-2xl text-sm text-osap-muted">{house.text}</p>
-      <Link to={house.url ?? FALLBACK_HOUSE.url} className="mt-2 inline-block text-sm font-semibold text-osap-accent hover:underline">
+      <Link
+        to={house.url ?? FALLBACK_HOUSE.url}
+        onClick={() => trackAd("ad_click", placement, "house", house.title ?? "house")}
+        className="mt-2 inline-block text-sm font-semibold text-osap-accent hover:underline"
+      >
         {house.cta ?? FALLBACK_HOUSE.cta} →
       </Link>
     </aside>
@@ -63,12 +88,24 @@ export function SponsorSlot({ placement }: { placement: string }) {
     return () => window.clearInterval(id);
   }, [mode, rotateMs, sponsors.length]);
 
-  if (!slot || sponsors.length === 0) {
-    return <House house={config?.house ?? FALLBACK_HOUSE} />;
-  }
-
   const current = sponsors[index] ?? sponsors[0];
   const visible = mode === "stack" ? sponsors : current ? [current] : [];
+
+  useEffect(() => {
+    if (!slot) return;
+    if (sponsors.length === 0) {
+      trackAd("ad_impression", placement, "house", config?.house?.title ?? "house");
+      return;
+    }
+    visible.forEach((sponsor) => {
+      trackAd("ad_impression", placement, sponsor.id, sponsor.name);
+    });
+  }, [placement, index, mode, slot, config?.house?.title, visible.map((sponsor) => sponsor.id).join("|")]);
+
+  if (!slot || sponsors.length === 0) {
+    return <House house={config?.house ?? FALLBACK_HOUSE} placement={placement} />;
+  }
+
   return (
     <aside className="rounded-lg border border-osap-border-strong bg-osap-surface p-4" aria-label="Patrocinadores">
       <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-osap-muted">
@@ -91,6 +128,7 @@ export function SponsorSlot({ placement }: { placement: string }) {
                 href={sponsor.url}
                 target="_blank"
                 rel="sponsored noopener noreferrer"
+                onClick={() => trackAd("ad_click", placement, sponsor.id, sponsor.name)}
                 className="mt-1 inline-block text-sm font-semibold text-osap-accent hover:underline"
               >
                 Más información →

@@ -106,7 +106,7 @@ const SECTIONS: AdminSection[] = [
     items: [
       { to: "/admin/source-suggestions", key: "admin.sourceSuggestions" },
       { to: "/admin/corrections", key: "admin.corrections" },
-      { to: "/jobs", key: "jobs" },
+      { to: "/admin/jobs", key: "jobs" },
     ],
   },
   { items: [{ storage: "multimantenimiento", key: "admin.storageMaint" }] },
