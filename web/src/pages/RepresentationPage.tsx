@@ -110,7 +110,7 @@ export function RepresentationPage() {
         labels={{
           view: t("actions.viewScore"),
           download: t("actions.download"),
-          open: `${t("work.openIn")} · ${sheet.format}`,
+          open: `${t("work.openIn")} · ${sheet.provider}`,
         }}
       />
 
@@ -126,3 +126,4 @@ export function RepresentationPage() {
     </div>
   );
 }
+

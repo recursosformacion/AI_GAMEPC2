@@ -55,14 +55,17 @@ export function getRepresentationActions(
   const id = representation.id?.trim() ?? "";
   const provider = representation.provider ?? "";
   const isOmr = provider.toLowerCase() === "omr";
-  const externalHref = representation.url && !isStorageUrl(representation.url) ? representation.url : null;
+  // OMR es interno: no debe ofrecer "Abrir en OMR". El botón externo es solo para
+  // proveedores de terceros con una página/URL propia.
+  const externalHref =
+    !isOmr && representation.url && !isStorageUrl(representation.url) ? representation.url : null;
   const localAccess =
     representation.downloadable === true || (externalHref === null && representation.available !== false);
   const canOpen = Boolean(id) && (isOmr || localAccess);
   return {
     isOmr,
     externalHref,
-    webHref: representation.url ?? null,
+    webHref: isOmr ? null : (representation.url ?? null),
     viewHref: canOpen ? representationViewHref(id, representation.format, workTitle) : null,
     downloadHref: canOpen
       ? `/api/v1/representations/${encodeURIComponent(id)}/download`
@@ -71,4 +74,5 @@ export function getRepresentationActions(
     canDownload: canOpen,
   };
 }
+
 
