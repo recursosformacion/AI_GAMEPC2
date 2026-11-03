@@ -65,6 +65,9 @@ class Configuration:
     auth_token_url: str | None = None
     auth_base_url: str | None = None
     support_base_url: str | None = None
+    ads_base_url: str | None = None
+    ads_service_token: str | None = None
+    ads_timeout_seconds: float = 2.5
     oidc_issuer: str | None = None
     oidc_client_id: str | None = None
     oidc_client_secret: str | None = None
@@ -116,6 +119,9 @@ _CONFIG_FIELDS: dict[str, tuple[str, Any]] = {
     "auth_token_url": ("OSAP_AUTH_TOKEN_URL", str),
     "auth_base_url": ("OSAP_AUTH_BASE_URL", str),
     "support_base_url": ("OSAP_SUPPORT_BASE_URL", str),
+    "ads_base_url": ("OSAP_ADS_BASE_URL", str),
+    "ads_service_token": ("OSAP_ADS_SERVICE_TOKEN", str),
+    "ads_timeout_seconds": ("OSAP_ADS_TIMEOUT_SECONDS", float),
 }
 
 # Campo -> (sección TOML, clave) para leer config desde osap.toml (precedencia media).
@@ -146,6 +152,9 @@ _TOML_SECTIONS: dict[str, tuple[str, str]] = {
     "auth_token_url": ("osap", "auth_token_url"),
     "auth_base_url": ("osap", "auth_base_url"),
     "support_base_url": ("osap", "support_base_url"),
+    "ads_base_url": ("ads", "base_url"),
+    "ads_service_token": ("ads", "service_token"),
+    "ads_timeout_seconds": ("ads", "timeout_seconds"),
 }
 
 # Reglas de validación por servicio.
@@ -408,3 +417,4 @@ def _validate_lenient(
             ConfigurationWarning,
             stacklevel=2,
         )
+

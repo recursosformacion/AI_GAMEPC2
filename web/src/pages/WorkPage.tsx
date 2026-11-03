@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { OsapWorkDetails } from "../api/types";
 import { Spinner } from "../components/Spinner";
-import { SponsorSlot } from "../components/SponsorSlot";
+import { AdSlot } from "../components/AdSlot";
 import { RepresentationActions } from "../components/RepresentationActions";
 import { VideosLink } from "../components/VideosLink";
 import { useI18n } from "../i18n/I18n";
@@ -299,7 +299,8 @@ export function WorkPage() {
           </ul>
         )}
       </section>
-      <SponsorSlot placement="work" />
+      <AdSlot placement="content_inline" pageType="work_detail" entityType="work" entityId={work.work_id ?? id} fallbackPlacement="work" minHeight={260} />
     </div>
   );
 }
+

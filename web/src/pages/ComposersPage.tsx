@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Envelope } from "../components/Envelope";
-import { SponsorSlot } from "../components/SponsorSlot";
+import { AdSlot } from "../components/AdSlot";
 import { WorksListModule, groupWorks } from "../components/WorksListModule";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
@@ -187,7 +187,7 @@ export function ComposersPage() {
           </>
         )}
       </Envelope>
-      <SponsorSlot placement="composers" />
+      <AdSlot placement="content_inline" pageType="search_results" fallbackPlacement="composers" minHeight={220} />
     </div>
   );
 }
@@ -272,5 +272,6 @@ function ComposerWorksInline({ composerName }: { composerName: string }) {
     </div>
   );
 }
+
 
 

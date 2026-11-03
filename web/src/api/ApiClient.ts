@@ -174,6 +174,25 @@ export class ApiClient {
     return this.request<T>("DELETE", path);
   }
 
+  /** Solicita a la fachada OSAP un bloque publicitario ya compuesto (HTML). */
+  async composeAd(payload: Record<string, unknown>): Promise<string> {
+    const doFetch = this.fetcher ?? globalThis.fetch.bind(globalThis);
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (this.token) headers.Authorization = `Bearer ${this.token}`;
+    const response = await doFetch(`${this.baseUrl}/ads/compose`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      throw new ApiError("ADS_UNAVAILABLE", `Publicidad no disponible (HTTP ${response.status})`);
+    }
+    if (!(response.headers.get("content-type") ?? "").includes("text/html")) {
+      throw new ApiError("ADS_INVALID_RESPONSE", "Respuesta publicitaria inválida");
+    }
+    return response.text();
+  }
+
   async put<T>(path: string, body?: unknown): Promise<T> {
     return this.request<T>("PUT", path, body);
   }

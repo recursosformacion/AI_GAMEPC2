@@ -78,6 +78,9 @@ class Container:
         self._dev_auth_bypass: bool = False
         self._storage_web_base: str | None = None
         self._support_web_base: str | None = None
+        self._ads_base_url: str | None = None
+        self._ads_service_token: str | None = None
+        self._ads_timeout_seconds: float = 2.5
         self._op_store_config: dict[str, Any] | None = None
         self._mode: str = "unknown"
         self._collaborators: ComposePublicCollaboratorsUseCase | None = None
@@ -167,6 +170,20 @@ class Container:
 
     def support_web_base(self) -> str | None:
         return self._support_web_base
+
+    def set_ads_config(self, base_url: str | None, token: str | None, timeout: float = 2.5) -> None:
+        self._ads_base_url = base_url
+        self._ads_service_token = token
+        self._ads_timeout_seconds = max(0.5, min(10.0, timeout))
+
+    def ads_base_url(self) -> str | None:
+        return self._ads_base_url
+
+    def ads_service_token(self) -> str | None:
+        return self._ads_service_token
+
+    def ads_timeout_seconds(self) -> float:
+        return self._ads_timeout_seconds
 
     def storage_info(self) -> tuple[str, bool]:
         return self._storage_target or "unknown", self._storage_read_only
@@ -341,3 +358,4 @@ class Container:
             orchestrator=orchestrator,
             evidence_engine=EvidenceEngine(),
         )
+

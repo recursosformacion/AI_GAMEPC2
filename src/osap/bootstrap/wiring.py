@@ -485,6 +485,11 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     container.set_dev_auth_bypass(config.dev_auth_bypass)
     container.set_storage_web_base("http://osap-storage" if config.dev_auth_bypass else config.storage_web_base)
     container.set_support_web_base(config.support_web_base)
+    container.set_ads_config(
+        config.ads_base_url,
+        config.ads_service_token,
+        config.ads_timeout_seconds,
+    )
     composer_client = StorageComposerClient(
         base_url=storage_base,
         token_provider=service_token_provider,
