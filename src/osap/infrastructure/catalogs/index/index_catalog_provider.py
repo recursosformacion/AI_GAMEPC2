@@ -449,6 +449,137 @@ class IndexCatalogProvider(ICatalogProvider):
             "representations": representations,
         }
 
+    def get_work_with_representations_legacy(self, work_id: str) -> dict[str, object] | None:
+        """Ficha de una obra del índice antiguo conservado en tablas legacy_*."""
+        return self._get_legacy_work_with_representations(work_id)
+
+    def _get_legacy_work_with_representations(self, work_id: str) -> dict[str, object] | None:
+        """Ficha de una obra del índice (por `index-<id>` o `<id>`) + sus representaciones.
+
+        Es la fuente de la página pública de obra (SEO): datos estables y sin búsqueda en
+        vivo. Devuelve `None` si la obra no existe en el índice o MySQL no responde.
+        """
+        work_ref = work_id[len("index-") :] if work_id.startswith("index-") else work_id
+        if not work_ref.isdigit():
+            return None
+        conn = None
+        try:
+            conn = pymysql.connect(
+                host=self._host,
+                user=self._user,
+                password=self._password,
+                database=self._database,
+                port=self._port,
+                charset="utf8mb4",
+                cursorclass=DictCursor,
+                autocommit=True,
+            )
+            with conn.cursor() as cur:
+                cur.execute(
+                "SELECT id, title, composer_name, person_id, catalogue, year, "
+                "instrumentation, source_count, updated_at FROM legacy_index_works WHERE id = %s LIMIT 1",
+                    (work_ref,),
+                )
+                work = cur.fetchone()
+                if work is None and work_ref.isdigit():
+                    # Enlaces antiguos o de storage usan el id de recurso/representación
+                    # (p. ej. /obras/121355). Se resuelve al id del índice antes de fallar.
+                    cur.execute(
+                        "SELECT work_id FROM legacy_index_representations "
+                        "WHERE source_rep_id = %s OR resource_id = %s "
+                        "ORDER BY (download_url IS NOT NULL) DESC, available DESC LIMIT 1",
+                        (work_ref, work_ref),
+                    )
+                    legacy = cur.fetchone()
+                    if legacy is not None:
+                        work_ref = str(legacy["work_id"])
+                        cur.execute(
+                            "SELECT id, title, composer_name, person_id, catalogue, year, "
+                            "instrumentation, source_count, updated_at "
+                            "FROM legacy_index_works WHERE id = %s LIMIT 1",
+                            (work_ref,),
+                        )
+                        work = cur.fetchone()
+                if work is None:
+                    return None
+                cur.execute(
+                    "SELECT provider, format, download_url, available, resource_id, title_provider, xml_title "
+                    "FROM legacy_index_representations WHERE work_id = %s ORDER BY provider, format",
+                    (work_ref,),
+                )
+                rep_rows = cur.fetchall()
+        except (pymysql.err.OperationalError, pymysql.err.ProgrammingError) as exc:
+            logger.warning("index provider: MySQL no disponible al leer la obra %s (%s)", work_id, exc)
+            return None
+        finally:
+            if conn is not None:
+                conn.close()
+        representations = [
+            {
+                # Id determinista de la representación: base de `/representacion/<id>`.
+                "id": (
+                    f"idx-{int(str(work.get('id') or 0))}-"
+                    f"{str(row.get('provider') or '')}-"
+                    f"{int(str(row.get('resource_id') or 0))}-"
+                    f"{str(row.get('format') or '')}"
+                ),
+                "provider": str(row.get("provider") or ""),
+                "format": str(row.get("format") or ""),
+                "title": str(row.get("title_provider") or row.get("xml_title") or "") or None,
+                "url": str(row.get("download_url") or "") or None,
+                "downloadable": bool(row.get("download_url"))
+                and str(row.get("provider") or "") in ("omr", "mutopia"),
+            }
+            for row in rep_rows
+        ]
+        year = work.get("year")
+        year_str = str(year or "").strip()
+        stats = self._analytics_stats(str(work_ref))
+        return {
+            "work_id": f"index-{int(str(work.get('id') or 0))}",
+            "title": str(work.get("title") or ""),
+            "composer": str(work.get("composer_name") or "") or None,
+            "composer_id": str(work.get("person_id") or "") or None,
+            "catalogue": str(work.get("catalogue") or "") or None,
+            "year": int(year_str) if year_str.isdigit() else None,
+            "instrumentation": str(work.get("instrumentation") or "") or None,
+            "source_count": int(work.get("source_count") or 0),
+            "updated_at": str(work.get("updated_at") or "") or None,
+            "stats": stats,
+            "representations": representations,
+        }
+
+    def legacy_target_id(self, work_id: str) -> str | None:
+        """Return the current index id mapped from an old id, if unambiguous."""
+        work_ref = work_id[len("index-"):] if work_id.startswith("index-") else work_id
+        if not work_ref.isdigit():
+            return None
+        conn = None
+        try:
+            conn = pymysql.connect(
+                host=self._host,
+                user=self._user,
+                password=self._password,
+                database=self._database,
+                port=self._port,
+                charset="utf8mb4",
+                cursorclass=DictCursor,
+                autocommit=True,
+            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT new_id FROM legacy_index_map WHERE old_id = %s LIMIT 1",
+                    (work_ref,),
+                )
+                row = cur.fetchone()
+                return f"index-{int(str(row['new_id']))}" if row and row.get("new_id") else None
+        except (pymysql.err.OperationalError, pymysql.err.ProgrammingError) as exc:
+            logger.warning("index provider: legacy map unavailable (%s)", exc)
+            return None
+        finally:
+            if conn is not None:
+                conn.close()
+
     def list_works_by_person(self, person_id: str, limit: int, offset: int) -> dict[str, object]:
         """Obras del índice de un compositor (`person_id`), paginadas y por título.
 

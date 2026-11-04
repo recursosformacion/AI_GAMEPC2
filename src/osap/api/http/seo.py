@@ -57,6 +57,58 @@ def _html(body: str, status_code: int = 200) -> HTMLResponse:
     )
 
 
+def _work_slug(data: dict[str, object]) -> str:
+    return work_canonical_slug(str(data.get("title") or "")) or "obra"
+
+
+def _legacy_redirect(ctx: HttpContext, canonical: str) -> str | None:
+    """Return a 301 target when an old id has exactly one current equivalent."""
+    target = ctx.api.seo_legacy_target(canonical)
+    if not target:
+        return None
+    target_data = ctx.api.seo_work(target)
+    if not isinstance(target_data, dict):
+        return None
+    return f"/obras/{target}/{_work_slug(target_data)}"
+
+
+def _resolve_work(
+    ctx: HttpContext, canonical: str | None, requested_slug: str | None
+) -> tuple[dict[str, object] | None, str | None, bool]:
+    """Resolve current/legacy by id *and* slug; never guess on an id alone."""
+    if canonical is None:
+        return None, None, False
+    api = ctx.api
+    current = api.seo_work(canonical)
+    legacy = api.seo_work_legacy(canonical)
+    current_data = current if isinstance(current, dict) else None
+    legacy_data = legacy if isinstance(legacy, dict) else None
+    current_slug = _work_slug(current_data) if current_data else None
+    legacy_slug = _work_slug(legacy_data) if legacy_data else None
+    current_match = bool(requested_slug and current_slug == requested_slug)
+    legacy_match = bool(requested_slug and legacy_slug == requested_slug)
+
+    if current_match:
+        return current_data, None, False
+    if legacy_match:
+        target = _legacy_redirect(ctx, canonical)
+        if target:
+            return current_data if current_data else legacy_data, target, True
+        return legacy_data, None, True
+    if current_data and legacy_data:
+        # The same numeric id exists in both generations and the requested slug
+        # matches neither: do not redirect to a potentially unrelated work.
+        return None, None, False
+    if current_data:
+        return current_data, f"/obras/{canonical}/{current_slug}", False
+    if legacy_data:
+        target = _legacy_redirect(ctx, canonical)
+        if target:
+            return legacy_data, target, True
+        return legacy_data, f"/obras/{canonical}/{legacy_slug}", True
+    return None, None, False
+
+
 def build_seo_router(ctx: HttpContext) -> APIRouter:
     global _NO_STORE
     router: APIRouter = APIRouter()
@@ -77,21 +129,22 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
     @router.get("/obras/{work_id}", include_in_schema=False)
     def work_canonical(work_id: str) -> Response:
         canonical = normalize_work_id(work_id)
-        data = ctx.api.seo_work(canonical) if canonical is not None else None
+        data, redirect, _ = _resolve_work(ctx, canonical, None)
         if data is None:
             return _html(render_not_found(), status_code=404)
-        slug = work_canonical_slug(str(data.get("title") or ""))
+        if redirect:
+            return RedirectResponse(url=redirect, status_code=301)
+        slug = _work_slug(data)
         return RedirectResponse(url=f"/obras/{canonical}/{slug}", status_code=301)
 
     @router.get("/obras/{work_id}/{slug}", include_in_schema=False)
     def work_page(work_id: str, slug: str, request: Request) -> Response:
         canonical = normalize_work_id(work_id)
-        data = ctx.api.seo_work(canonical) if canonical is not None else None
+        data, redirect, _ = _resolve_work(ctx, canonical, slug)
         if data is None:
             return _html(render_not_found(), status_code=404)
-        expected = work_canonical_slug(str(data.get("title") or ""))
-        if slug != expected:
-            return RedirectResponse(url=f"/obras/{canonical}/{expected}", status_code=301)
+        if redirect:
+            return RedirectResponse(url=redirect, status_code=301)
         related: list[dict[str, object]] = []
         composer_id = data.get("composer_id")
         composer_page = False
@@ -189,27 +242,23 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
     @router.get("/obra/{work_id}", include_in_schema=False)
     def work_legacy_root(work_id: str) -> Response:
         canonical = normalize_work_id(work_id)
-        data = ctx.api.seo_work(canonical) if canonical is not None else None
+        data, redirect, _ = _resolve_work(ctx, canonical, None)
         if data is None:
             # No se inventa un destino para un ID histórico que ya no existe.
             return _html(render_not_found(), status_code=410)
-        title = str(data.get("title") or "")
-        expected = work_canonical_slug(title) or "obra"
-        return RedirectResponse(url=f"/obras/{canonical}/{expected}", status_code=301)
+        if redirect:
+            return RedirectResponse(url=redirect, status_code=301)
+        return RedirectResponse(url=f"/obras/{canonical}/{_work_slug(data)}", status_code=301)
 
     @router.get("/obra/{work_id}/{slug}", include_in_schema=False)
     def work_legacy_page(work_id: str, slug: str) -> Response:
         canonical = normalize_work_id(work_id)
-        data = ctx.api.seo_work(canonical) if canonical is not None else None
+        data, redirect, _ = _resolve_work(ctx, canonical, slug)
         if data is None:
             return _html(render_not_found(), status_code=410)
-        title = str(data.get("title") or "")
-        expected = work_canonical_slug(title) or "obra"
-        if slug != expected:
-            # El ID puede haberse reutilizado para otra obra tras un reindexado.
-            # Nunca redirigir una URL antigua a una ficha distinta.
-            return _html(render_not_found(), status_code=410)
-        return RedirectResponse(url=f"/obras/{canonical}/{expected}", status_code=301)
+        if redirect:
+            return RedirectResponse(url=redirect, status_code=301)
+        return RedirectResponse(url=f"/obras/{canonical}/{_work_slug(data)}", status_code=301)
 
     @router.get("/compositor/{person_id}", include_in_schema=False)
     def person_legacy_root(person_id: str) -> Response:

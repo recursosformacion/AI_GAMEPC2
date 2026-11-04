@@ -33,6 +33,26 @@ class SeoMixin(PlatformApiCore):
             return None
         return cast("dict[str, object] | None", getter(work_id))
 
+    def seo_work_legacy(self, work_id: str) -> dict[str, object] | None:
+        """Ficha de la instantánea antigua del índice (si existe en legacy_*)."""
+        provider = self._index_provider()
+        if provider is None:
+            return None
+        getter = getattr(provider, "get_work_with_representations_legacy", None)
+        if not callable(getter):
+            return None
+        return cast("dict[str, object] | None", getter(work_id))
+
+    def seo_legacy_target(self, work_id: str) -> str | None:
+        """Id actual inequívoco para una URL del índice antiguo, si lo hay."""
+        provider = self._index_provider()
+        if provider is None:
+            return None
+        getter = getattr(provider, "legacy_target_id", None)
+        if not callable(getter):
+            return None
+        return cast("str | None", getter(work_id))
+
     def osap_work_details(self, work_id: str) -> dict[str, object] | None:
         """Pide a OSAP (osap-storage) los datos ricos de la obra al abrir la ficha.
 

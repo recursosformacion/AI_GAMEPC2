@@ -69,9 +69,17 @@ class _FakeApi:
         self._work = work
         self._person = person
         self._works = works
+        self._legacy: dict[str, object] | None = None
+        self._legacy_target: str | None = None
 
     def seo_work(self, work_id: str | None) -> dict[str, object] | None:
         return self._work if work_id == self._work.get("work_id") else None
+
+    def seo_work_legacy(self, work_id: str | None) -> dict[str, object] | None:
+        return self._legacy if work_id == (self._legacy or {}).get("work_id") else None
+
+    def seo_legacy_target(self, work_id: str) -> str | None:
+        return self._legacy_target
 
     def seo_person(self, person_id: str) -> dict[str, object] | None:
         return self._person if person_id == self._person.get("id") else None
@@ -309,3 +317,41 @@ def test_compositor_desconocido_404_html(client: TestClient) -> None:
     resp = client.get("/composers/nadie/quien-sea")
     assert resp.status_code == 404
     assert "No encontrado" in resp.text
+
+
+def test_legacy_url_sirve_la_instantanea_antigua_si_no_hay_equivalente() -> None:
+    api = _FakeApi()
+    api._legacy = {
+        "work_id": "index-808784",
+        "title": "Álfasöngur",
+        "composer": "Sigfús Einarsson",
+        "composer_id": "person-old",
+        "catalogue": "IS 15",
+        "year": None,
+        "instrumentation": None,
+        "representations": [],
+    }
+    client = _client(api)
+    resp = client.get("/obras/index-808784/alfasongur")
+    assert resp.status_code == 200
+    assert "Álfasöngur" in resp.text
+    assert 'rel="canonical" href="https://app.openmusicrepository.com/obras/index-808784/alfasongur"' in resp.text
+
+
+def test_legacy_url_se_301_al_actual_cuando_hay_mapa_inequivoco() -> None:
+    api = _FakeApi()
+    api._legacy = {
+        "work_id": "index-742973",
+        "title": "Probitate eminentem triumphali",
+        "composer": "Petrus Wilhelmi de Grudencz",
+        "composer_id": "person-old",
+        "catalogue": None,
+        "year": None,
+        "instrumentation": None,
+        "representations": [],
+    }
+    api._legacy_target = "index-7"
+    client = _client(api)
+    resp = client.get("/obras/index-742973/probitate-eminentem-triumphali", follow_redirects=False)
+    assert resp.status_code == 301
+    assert resp.headers["location"] == "/obras/index-7/ave-verum-corpus"
