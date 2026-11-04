@@ -48,8 +48,12 @@ _BOT_UA = re.compile(
 )
 
 
-def _html(body: str, status_code: int = 200) -> HTMLResponse:
-    cache = "no-store, no-cache, must-revalidate" if _NO_STORE else _CACHE_CONTROL
+def _html(body: str, status_code: int = 200, *, no_store: bool = False) -> HTMLResponse:
+    cache = (
+        "no-store, no-cache, must-revalidate"
+        if _NO_STORE or no_store
+        else _CACHE_CONTROL
+    )
     return HTMLResponse(
         content=body,
         status_code=status_code,
@@ -215,7 +219,12 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
         if term:
             params.append(f"q={urllib.parse.quote(term)}")
         canonical = f"{public_base_url()}/composers" + (f"?{'&'.join(params)}" if params else "")
-        return _html(render_composers(rows, current, pages, total, canonical, term))
+        # Pagination must never be served from a browser/CDN cache: after visiting a
+        # composer and going back, a cached page would make "Siguiente" repeat old pages.
+        return _html(
+            render_composers(rows, current, pages, total, canonical, term),
+            no_store=True,
+        )
 
 
     @router.get("/composers/{person_id}", include_in_schema=False)
