@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { OsapWorkDetails } from "../api/types";
 import { Spinner } from "../components/Spinner";
@@ -41,7 +41,6 @@ export function WorkPage() {
   const loadedId = usePublicWork((s) => s.loadedId);
   const load = usePublicWork((s) => s.load);
   const canonicalId = canonicalWorkId(id);
-  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("resumen");
   const [osap, setOsap] = useState<OsapWorkDetails | null>(null);
 
@@ -49,16 +48,6 @@ export function WorkPage() {
     if (loadedId === canonicalId) return;
     void load(canonicalId);
   }, [canonicalId, loadedId, load]);
-
-  useEffect(() => {
-    if (!sheet) return;
-    const raw = String(sheet.work.work_id ?? "");
-    if (!raw) return;
-    const actual = canonicalWorkId(raw);
-    if (id !== actual) {
-      navigate(`/obras/${encodeURIComponent(actual)}`, { replace: true });
-    }
-  }, [id, navigate, sheet]);
 
   useEffect(() => {
     if (!sheet) return;
