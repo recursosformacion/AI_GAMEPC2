@@ -169,7 +169,6 @@ const CLASSIFICATION_CHILDREN = [
 const CONTENT_ENTRIES: readonly NavEntry[] = [
   { to: "/", key: "nav.home", icon: "home" },
   { to: "/explore", key: "nav.explore", icon: "discover" },
-  { to: blogHomeUrl(), key: "nav.blog", icon: "article", external: true, sessionHandoff: true },
   { to: "/composers", key: "nav.composers", icon: "person" },
   {
     group: true,
