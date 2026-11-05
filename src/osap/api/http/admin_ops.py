@@ -546,7 +546,7 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         "/api/v1/admin/ads-web",
         tags=["Ads"],
         summary="URL de mantenimiento de publicidad",
-        description="Devuelve el panel de ai_publicidad autenticado con su service token. Exige role=admin.",
+        description="Devuelve el panel de ai_publicidad con handoff de la sesión OSAP. Exige role=admin.",
         response_model=SuccessEnvelope[dict[str, str]] | ErrorEnvelope,
     )
     def ads_web(

@@ -90,13 +90,18 @@ class SystemMixin(PlatformApiCore):
         return f"{base}{path}?token={urllib.parse.quote(service_token)}"
 
     def ads_web(self, token: str | None) -> str:
-        """URL del panel de publicidad con su service token interno."""
+        """URL del panel con handoff de la sesión OSAP del administrador."""
         self._require_admin(token)
         base = (self._container.ads_web_base() or self._container.ads_base_url() or "").rstrip("/")
-        service_token = self._container.ads_service_token() or ""
-        if not base or not service_token:
+        if not base:
             raise RuntimeError("publicidad no configurada")
-        return f"{base}/p#token={urllib.parse.quote(service_token)}"
+        panel = "/p" if base.endswith("/publicidad") else "/admin"
+        next_url = f"{base}{panel}"
+        return (
+            f"{base}/auth/session"
+            f"?token={urllib.parse.quote(token or '')}"
+            f"&next={urllib.parse.quote(next_url, safe='')}"
+        )
 
     def admin_overview(self, token: str | None) -> dict[str, object]:
         stats = self.composer_review_stats(token)
