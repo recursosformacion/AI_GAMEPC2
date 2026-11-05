@@ -1,7 +1,10 @@
 export function videosBaseUrl(): string | null {
   const configured = import.meta.env.VITE_VIDEOS_URL?.trim();
   if (configured) return configured.replace(/\/$/, "");
-  return "http://localhost:8400";
+  // Un build de producción sin variable no debe apuntar al host de desarrollo.
+  return import.meta.env.PROD
+    ? "https://videos.openmusicrepository.com"
+    : "http://localhost:8400";
 }
 
 export function videosUrl({
