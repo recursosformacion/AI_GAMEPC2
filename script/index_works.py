@@ -37,6 +37,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import ssl
 import sys
@@ -1334,7 +1335,7 @@ def main() -> int:
                         help="OMR: ya no se usa; download_url se guarda relativo (/api/download/{id})")
     parser.add_argument("--db-host", default="127.0.0.1")
     parser.add_argument("--db-user", default="osap2027")
-    parser.add_argument("--db-password", default="2027osapdb")
+    parser.add_argument("--db-password", default=os.environ.get("OSAP_INDEX_DB_PASSWORD", ""))
     parser.add_argument("--db-api", default="osap-api")
     parser.add_argument("--dry-run", action="store_true",
                         help="Recorre y valida sin escribir en el índice.")

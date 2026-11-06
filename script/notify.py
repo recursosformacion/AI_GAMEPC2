@@ -17,6 +17,7 @@ Las credenciales del job vienen de `OSAP_INDEX_DB_*` en su `EnvironmentFile`.
 from __future__ import annotations
 
 import argparse
+import os
 from datetime import UTC, datetime
 
 import pymysql
@@ -31,7 +32,7 @@ def main() -> int:
     parser.add_argument("--user", default=None, help="UUID del destinatario (vacío = global)")
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--db-user", default="osap_api")
-    parser.add_argument("--password", default="")
+    parser.add_argument("--password", default=os.environ.get("OSAP_INDEX_DB_PASSWORD", ""))
     parser.add_argument("--database", default="osap_api")
     args = parser.parse_args()
 

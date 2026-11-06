@@ -21,6 +21,7 @@ Uso (en osap-api, con PYTHONPATH=osap-api):
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -67,7 +68,7 @@ def _set_state(conn: pymysql.Connection, key: str, value: str) -> None:
 def _run_indexer(args: argparse.Namespace, extra: list[str]) -> int:
     cmd = [sys.executable, str(ROOT / "script" / "index_works.py")]
     cmd += ["--db-api", args.db_api, "--db-omr", args.db_omr,
-            "--db-user", args.db_user, "--db-password", args.db_password]
+            "--db-user", args.db_user]
     if args.db_host != "127.0.0.1":
         cmd += ["--db-host", args.db_host]
     cmd += extra
@@ -86,7 +87,7 @@ def main() -> int:
     parser.add_argument("--omr-base-url", default="http://127.0.0.1:8000")
     parser.add_argument("--db-host", default="127.0.0.1")
     parser.add_argument("--db-user", default="osap2027")
-    parser.add_argument("--db-password", default="2027osapdb")
+    parser.add_argument("--db-password", default=os.environ.get("OSAP_INDEX_DB_PASSWORD", ""))
     parser.add_argument("--db-api", default="osap-api")
     parser.add_argument("--db-omr", default="osap-storage")
     args = parser.parse_args()
@@ -123,7 +124,7 @@ def main() -> int:
                     continue
                 # estado: máximo work_id de osap-storage (nuevas obras en la siguiente pasada)
                 with conn.cursor(DictCursor) as cur:
-                    cur.execute("SELECT MAX(id) AS mx FROM works")
+                    cur.execute(f"SELECT MAX(id) AS mx FROM `{args.db_omr}`.works")
                     row = cur.fetchone()
                 if row and row["mx"] is not None:
                     _set_state(conn, state_key, str(int(row["mx"])))

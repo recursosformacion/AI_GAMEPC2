@@ -36,7 +36,7 @@ def main() -> int:
     ap.add_argument("--full", action="store_true", help="vaciado previo + reindexado completo")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--user", default="osap2027")
-    ap.add_argument("--password", default="2027osapdb")
+    ap.add_argument("--password", default=os.environ.get("OSAP_INDEX_DB_PASSWORD", ""))
     ap.add_argument("--database", default="osap-api")
     ap.add_argument("--db-omr", default="osap-storage", help="BD de osap-storage (lectura)")
     ap.add_argument("--db-api", default="osap-api", help="BD de osap-api (índice)")
@@ -63,7 +63,6 @@ def main() -> int:
            "--providers", args.providers,
            "--db-host", args.host,
            "--db-user", args.user,
-           "--db-password", args.password,
            "--db-api", args.db_api,
            "--db-omr", args.db_omr]
     print("indexando:", args.providers)
@@ -86,7 +85,7 @@ def main() -> int:
         cmd = [sys.executable, str(ROOT / "script" / "indexnow.py"),
                "--days", str(args.indexnow_days),
                "--host", args.host, "--user", args.user,
-               "--password", args.password, "--database", args.database]
+               "--database", args.database]
         if args.indexnow_base:
             cmd += ["--base", args.indexnow_base]
         if args.indexnow_key:
