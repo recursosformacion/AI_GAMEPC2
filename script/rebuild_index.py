@@ -33,6 +33,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--providers", default="omr,cpdl")
+    ap.add_argument("--limit", type=int, default=0, help="límite de obras para pruebas (0 = todas)")
     ap.add_argument("--full", action="store_true", help="vaciado previo + reindexado completo")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--user", default="osap2027")
@@ -49,6 +50,13 @@ def main() -> int:
                     help="clave de IndexNow (por defecto INDEXNOW_KEY)")
     args = ap.parse_args()
 
+    lock_conn = pymysql.connect(host=args.host, user=args.user, password=args.password,
+                                database=args.database, charset="utf8mb4", autocommit=True)
+    with lock_conn.cursor() as lock_cur:
+        lock_cur.execute("SELECT GET_LOCK('osap_index_jobs', 0) AS got")
+        if not lock_cur.fetchone()[0]:
+            print("otro job de índice está en ejecución; salgo")
+            return 75
     conn = pymysql.connect(host=args.host, user=args.user, password=args.password,
                            database=args.database, charset="utf8mb4", autocommit=True)
     if args.full:
@@ -58,13 +66,18 @@ def main() -> int:
                 print("vaciada", tbl)
     conn.close()
 
-    env = {**os.environ, "PYTHONPATH": str(ROOT)}
+    env = {
+        **os.environ,
+        "PYTHONPATH": str(ROOT),
+        "OSAP_INDEX_DB_PASSWORD": args.password,
+    }
     cmd = [sys.executable, str(ROOT / "script" / "index_works.py"),
            "--providers", args.providers,
            "--db-host", args.host,
            "--db-user", args.user,
            "--db-api", args.db_api,
-           "--db-omr", args.db_omr]
+           "--db-omr", args.db_omr,
+           "--limit", str(args.limit)]
     print("indexando:", args.providers)
     rc = subprocess.call(cmd, cwd=str(ROOT), env=env)
     if rc != 0:

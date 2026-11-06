@@ -1434,7 +1434,7 @@ def main() -> int:
                             updated += 1
             api.commit()
             elapsed = time.time() - t0
-            print(f"  obras: insertadas={inserted} errores={updated} omitidas={skipped} "
+            print(f"  obras: insertadas={inserted} actualizadas={updated} omitidas={skipped} "
                   f"({elapsed:.1f}s)", flush=True)
         print("=== RESUMEN ===")
         with api.cursor() as cur:

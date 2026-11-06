@@ -72,8 +72,9 @@ def _run_indexer(args: argparse.Namespace, extra: list[str]) -> int:
     if args.db_host != "127.0.0.1":
         cmd += ["--db-host", args.db_host]
     cmd += extra
+    env = {**os.environ, "OSAP_INDEX_DB_PASSWORD": args.db_password}
     print(f"  -> {' '.join(cmd)}", flush=True)
-    return subprocess.call(cmd)
+    return subprocess.call(cmd, env=env)
 
 
 def main() -> int:
@@ -81,6 +82,7 @@ def main() -> int:
         sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--providers", default="imslp,omr,mutopia")
+    parser.add_argument("--limit", type=int, default=0, help="límite de obras por proveedor (0 = todas)")
     parser.add_argument("--imslp-verify-ssl", action="store_true")
     parser.add_argument("--mb-dump", default=None)
     parser.add_argument("--mb-types", choices=("art", "all"), default="art")
@@ -93,6 +95,12 @@ def main() -> int:
     args = parser.parse_args()
 
     conn = _db_connect(args)
+    with conn.cursor(DictCursor) as lock_cur:
+        lock_cur.execute("SELECT GET_LOCK('osap_index_jobs', 0) AS got")
+        if not lock_cur.fetchone().get("got"):
+            print("otro job de índice está en ejecución; salgo", flush=True)
+            conn.close()
+            return 75
     try:
         for provider in [p.strip() for p in args.providers.split(",") if p.strip()]:
             print(f"=== SYNC {provider} ===", flush=True)
@@ -103,7 +111,7 @@ def main() -> int:
                 start = int(_get_state(conn, _KEYS["imslp"]) or 0)
                 print(f"  reanudando desde start={start} (0 = pasada completa)", flush=True)
                 rc = _run_indexer(args, [
-                    "--providers", "imslp", "--limit", "0",
+                    "--providers", "imslp", "--limit", str(args.limit),
                     "--imslp-start", str(start),
                 ] + (["--imslp-verify-ssl"] if args.imslp_verify_ssl else []))
                 if rc != 0:
@@ -116,7 +124,7 @@ def main() -> int:
                 from_id = int(_get_state(conn, state_key) or 0)
                 print(f"  reanudando desde work_id={from_id}", flush=True)
                 rc = _run_indexer(args, [
-                    "--providers", "omr", "--limit", "0", "--from-id", str(from_id),
+                    "--providers", "omr", "--limit", str(args.limit), "--from-id", str(from_id),
                     "--omr-base-url", args.omr_base_url,
                 ])
                 if rc != 0:
@@ -134,24 +142,24 @@ def main() -> int:
                 from_id = int(_get_state(conn, state_key) or 0)
                 print(f"  reanudando desde work_id={from_id}", flush=True)
                 rc = _run_indexer(args, [
-                    "--providers", "cpdl", "--limit", "0", "--from-id", str(from_id),
+                    "--providers", "cpdl", "--limit", str(args.limit), "--from-id", str(from_id),
                 ])
                 if rc != 0:
                     print("  error indexando cpdl", flush=True)
                     continue
                 with conn.cursor(DictCursor) as cur:
-                    cur.execute("SELECT MAX(id) AS mx FROM works WHERE works_origin='CPDL'")
+                    cur.execute(f"SELECT MAX(id) AS mx FROM `{args.db_omr}`.works WHERE works_origin='CPDL'")
                     row = cur.fetchone()
                 if row and row["mx"] is not None:
                     _set_state(conn, state_key, str(int(row["mx"])))
             elif provider == "mutopia":
-                _run_indexer(args, ["--providers", "mutopia", "--limit", "0"])
+                _run_indexer(args, ["--providers", "mutopia", "--limit", str(args.limit)])
             elif provider == "musicbrainz":
                 if not args.mb_dump:
                     print("  error: --mb-dump es obligatorio para musicbrainz", flush=True)
                     continue
                 _run_indexer(args, [
-                    "--providers", "musicbrainz", "--limit", "0",
+                    "--providers", "musicbrainz", "--limit", str(args.limit),
                     "--mb-dump", args.mb_dump, "--mb-types", args.mb_types,
                 ])
             else:
