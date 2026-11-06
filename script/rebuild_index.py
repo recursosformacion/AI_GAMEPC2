@@ -61,6 +61,25 @@ def main() -> int:
                            database=args.database, charset="utf8mb4", autocommit=True)
     if args.full:
         with conn.cursor() as cur:
+            cur.execute(
+                "CREATE TABLE IF NOT EXISTS index_id_aliases ("
+                " old_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,"
+                " new_id BIGINT UNSIGNED NOT NULL,"
+                " method VARCHAR(32) NOT NULL,"
+                " updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP"
+                "   ON UPDATE CURRENT_TIMESTAMP,"
+                " KEY ix_index_id_aliases_new (new_id)"
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4"
+            )
+            # Preserve source identities across the destructive rebuild. This
+            # snapshot is only for the mapping; the public ID is never inferred
+            # from the title.
+            cur.execute("DROP TABLE IF EXISTS index_rebuild_old_reps")
+            cur.execute(
+                "CREATE TABLE index_rebuild_old_reps AS "
+                "SELECT work_id, provider, source_rep_id, resource_id "
+                "FROM index_representations WHERE source_rep_id <> ''"
+            )
             for tbl in ("index_works", "index_representations", "index_work_voicings"):
                 cur.execute(f"TRUNCATE TABLE {tbl}")
                 print("vaciada", tbl)
@@ -87,6 +106,22 @@ def main() -> int:
     conn = pymysql.connect(host=args.host, user=args.user, password=args.password,
                            database=args.database, charset="utf8mb4", autocommit=True)
     with conn.cursor() as cur:
+        if args.full:
+            cur.execute(
+                "INSERT INTO index_id_aliases (old_id, new_id, method) "
+                "SELECT o.work_id, MIN(n.work_id), 'source_rep' "
+                "FROM index_rebuild_old_reps o "
+                "JOIN index_representations n "
+                "  ON n.provider = o.provider "
+                " AND n.source_rep_id = o.source_rep_id "
+                " AND n.source_rep_id <> '' "
+                "GROUP BY o.work_id "
+                "HAVING COUNT(DISTINCT n.work_id) = 1 "
+                "ON DUPLICATE KEY UPDATE "
+                " new_id=VALUES(new_id), method=VALUES(method), updated_at=NOW()"
+            )
+            print("mapping old_id->new_id generado:", cur.rowcount)
+            cur.execute("DROP TABLE IF EXISTS index_rebuild_old_reps")
         cur.execute(
             "DELETE FROM index_work_voicings WHERE work_id NOT IN (SELECT id FROM index_works)"
         )
