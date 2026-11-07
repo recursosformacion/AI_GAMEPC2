@@ -603,7 +603,7 @@ def _iter_cpdl(maestro: pymysql.Connection, from_id: int, limit: int, batch: int
                     (
                         fmt,
                         url,
-                        1 if row["file_id"] else 0,
+                        1 if url else 0,
                         source_rep_id,
                         int(row["res_id"] or 0),
                     )
@@ -692,7 +692,7 @@ def _iter_imslp(start: int, limit: int, verify_ssl: bool = True):
                 "provider": "imslp",
                 "format": "pdf",
                 "download_url": entry.get("permlink"),
-                "available": 0,
+                "available": 1 if entry.get("permlink") else 0,
                 "quality": 0,
             }
             n += 1
