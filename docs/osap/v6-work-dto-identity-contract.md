@@ -172,3 +172,64 @@ El detalle actual de API que busca Storage por título/compositor debe sustituir
 6. Acordar nombres finales de campos y vocabularios; este documento no congela `catalogue` frente a `catalogue_references[]`, `year` frente a `composition_year`, ni los campos musicales ambiguos.
 
 **Criterio de cierre:** no hay matching silencioso por texto; cada campo Work tiene semántica y consumidores identificados; cada vínculo API–Storage es persistente, tipado y auditable; la federación no fabrica Resources; y el DTO final se refleja en OpenAPI 3.1 y pruebas de contrato antes de implementar el corte.
+
+
+## 9. Revisión del sistema de indexación y URLs públicas (2026-11-08)
+
+Esta sección actualiza la hipótesis anterior sobre la estabilidad de los IDs. Se ha revisado el historial reciente de `AI_GAMEPC2` y el código vigente de indexación y SEO.
+
+### 9.1 Identidad pública de Work del índice
+
+- La URL canónica utiliza `/obras/index-{id}/{slug}`.
+- El prefijo `index-` distingue el ID de ficha del índice de IDs numéricos heredados.
+- El slug se deriva del título y es descriptivo; no es identidad. Si cambia, la ruta redirige con 301 conservando el ID.
+- Las rutas numéricas antiguas se redirigen a `/obras/index-{id}`.
+- El resolver dual consulta el índice actual y la instantánea antigua. Solo redirige una URL antigua a otra ficha cuando existe correspondencia inequívoca; evita redirigir a una obra distinta cuando el ID numérico se ha reutilizado.
+
+Por tanto, la propuesta V6 no debe describir el ID de índice como necesariamente efímero ni proponer sustituirlo por matching textual. Hay una estrategia deliberada de IDs públicos estables y conservación de URLs.
+
+### 9.2 Reconstrucción shadow segura
+
+El commit `3984beb833d3587d471bb4ac16d6e477eadde4f5` introduce `script/rebuild_index_safe.py`:
+- construye primero en una base de datos shadow;
+- empareja principalmente mediante `provider + source_rep_id`;
+- actualiza las filas vivas conservando sus `index_works.id`;
+- inserta una nueva fila viva cuando no encuentra una identidad de origen inequívoca;
+- sustituye las representaciones/voicings de las obras mapeadas y deja intactas las obras ausentes para una poda explícita posterior.
+
+La descripción del script menciona `title_key + person_id + catalogue`, pero la implementación revisada no usa ese fallback: el merge implementado utiliza `provider + source_rep_id` y comenta expresamente que el título no es identidad. Debe corregirse esa discrepancia documental en el propio script antes de considerarlo especificación fiable.
+
+Esta estrategia conserva el ID de una Work existente cuando al menos una identidad de representación de origen permite mapearla inequívocamente. No demuestra por sí sola estabilidad universal para registros sin `source_rep_id`, cambios de identificadores nativos, divisiones/fusiones de grupos o proveedores que alteren su identidad.
+
+### 9.3 Reconstrucción completa y tabla de alias
+
+El commit `745d7df01f0210079132be28f1b798c5c40deb02` modifica `script/rebuild_index.py --full`:
+- crea `index_id_aliases(old_id, new_id, method)`;
+- toma una instantánea de `provider, source_rep_id, resource_id`;
+- trunca `index_works`, `index_representations` e `index_work_voicings`;
+- reconstruye el índice y calcula correspondencias antiguas→nuevas por `provider + source_rep_id`.
+
+Esto conserva una relación de alias cuando la correspondencia es inequívoca, pero **no conserva el ID original como ID vivo**: el ID nuevo se asigna después del truncado. Es distinto de la reconstrucción shadow segura.
+
+Además, el servicio programado `deploy/osap-index-full.service` sigue ejecutando `script/rebuild_index.py --full`, no `rebuild_index_safe.py`. Por tanto, el procedimiento periódico desplegado en el repositorio sigue siendo el destructivo con generación de alias. No se ha comprobado aquí qué servicio está instalado/activo realmente en producción.
+
+### 9.4 Resolver de URLs antiguas: punto de integración por verificar
+
+El resolver dual añadido en noviembre consulta `legacy_index_map` mediante `legacy_target_id()`, mientras que el script de reconstrucción completa escribe `index_id_aliases`. En el código revisado no se ha localizado la creación/copia de `index_id_aliases` hacia `legacy_index_map`, ni la creación de las tablas `legacy_index_works` / `legacy_index_representations` que el resolver consulta para servir instantáneas antiguas.
+
+No se debe asumir que ambas tablas son equivalentes. Hay que localizar el proceso de snapshot/cutover y demostrar que:
+1. la instantánea antigua se conserva antes del truncado;
+2. el mapa `index_id_aliases` se publica como `legacy_index_map` o el resolver lee la tabla real de alias;
+3. las URLs antiguas se resuelven después de reinicios y despliegues;
+4. los alias ambiguos/no resueltos no redirigen a otra obra.
+
+### 9.5 Efecto sobre el diseño V6
+
+- El ID público actual `index-{id}` debe tratarse como identificador persistente de ficha API mientras se mantenga el contrato de URLs.
+- No debe equipararse automáticamente con el ID de Work de Storage. Son identidades de dos dominios, aunque una ficha indexada pueda estar asociada a una Work OMR.
+- Si V6 sustituye o reconstruye el índice, debe preservar los IDs públicos existentes o mantener un registro permanente de alias/redirecciones, con una política explícita para colisiones y ambigüedad.
+- La correspondencia API↔Storage propuesta en la sección 4 sigue siendo necesaria, pero su clave de API debe ser el ID público estable de ficha (o una identidad interna estable que lo resuelva), no un ID temporal de reconstrucción.
+- La correspondencia con proveedor sigue usando la identidad nativa tipada. `provider + source_rep_id` es clave de reconstrucción valiosa, pero debe validarse por proveedor, tipo de entidad y cardinalidad; no se debe asumir universalmente que `source_rep_id` es globalmente único.
+- No se debe cambiar un ID publicado por cambios de título, compositor, catálogo, agrupación de proveedores ni migración de Storage.
+
+**Conclusión revisada:** OSAP ya contiene mecanismos explícitos para conservar URLs y IDs de índice, y la reconstrucción shadow evita reemplazar IDs vivos en el caso de mapeo por origen. Sin embargo, el servicio programado del repositorio sigue usando la reconstrucción completa que reasigna IDs y depende de un mapa de alias. Hasta verificar el puente `index_id_aliases`→`legacy_index_map` y el snapshot histórico, no puede afirmarse que todos los IDs publicados sean inmutables en cualquier reconstrucción.
