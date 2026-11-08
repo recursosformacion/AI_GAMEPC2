@@ -137,6 +137,9 @@ class _MysqlStore(_MemoryStore):
             """
             CREATE TABLE IF NOT EXISTS index_works (
                 id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+                -- Identidad pública estable. Los IDs actuales se conservan como
+                -- `index-<id>`; las filas nuevas reciben su public_id al insertarse.
+                public_id VARCHAR(64) NULL,
                 title VARCHAR(1024) NOT NULL,
                 title_key VARCHAR(255) NOT NULL,
                 composer_name VARCHAR(255),
@@ -150,6 +153,7 @@ class _MysqlStore(_MemoryStore):
                 updated_at VARCHAR(64) NOT NULL,
                 PRIMARY KEY (id),
                 UNIQUE KEY uq_idx_title_composer (title_key(191), person_id),
+                UNIQUE KEY uq_idx_public_id (public_id),
                 KEY idx_idx_composer (person_id),
                 KEY idx_idx_composer_name (composer_name),
                 KEY idx_idx_catalogue (catalogue_key),
@@ -675,6 +679,34 @@ class _MysqlStore(_MemoryStore):
             self._run("ALTER TABLE index_works CHANGE composer_id person_id VARCHAR(36) NULL")
         elif "person_id" not in work_existing:
             self._run("ALTER TABLE index_works ADD COLUMN person_id VARCHAR(36) NULL")
+        # `public_id` es la identidad que viaja en la URL. Se conserva para siempre;
+        # el autoincremento deja de ser la identidad pública.
+        if "public_id" not in work_existing:
+            self._run("ALTER TABLE index_works ADD COLUMN public_id VARCHAR(64) NULL")
+        self._run(
+            "UPDATE index_works SET public_id = CONCAT('index-', id) "
+            "WHERE public_id IS NULL OR public_id = ''"
+        )
+        public_index = self._run(
+            "SELECT index_name FROM information_schema.statistics "
+            "WHERE table_schema = DATABASE() AND table_name = 'index_works' "
+            "AND index_name = 'uq_idx_public_id'"
+        )
+        if not public_index:
+            self._run("CREATE UNIQUE INDEX uq_idx_public_id ON index_works (public_id)")
+        # Alias table used by the old-URL resolver and by full rebuilds.
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS index_id_aliases (
+                old_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+                new_id BIGINT UNSIGNED NOT NULL,
+                method VARCHAR(32) NOT NULL,
+                updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+                    ON UPDATE CURRENT_TIMESTAMP,
+                KEY ix_index_id_aliases_new (new_id)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """
+        )
         # El anclaje por título busca por `composer_name` (LIMIT 500): sin índice era un full
         # scan de index_works por compositor (el rebuild pasaba de minutos a horas).
         composer_name_index = self._run(

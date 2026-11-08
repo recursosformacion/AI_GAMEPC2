@@ -93,6 +93,27 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.8.0 (B)** — **identidad pública estable y compatibilidad de URLs antiguas**:
+  `index_works.public_id` desacopla la URL del autoincremento; las URLs actuales
+  `index-<n>` se conservan y las obras nuevas derivan su ID de la identidad de origen.
+  El índice guarda IDs de origen estables para IMSLP (`pageid`), CPDL (`cpdlno`),
+  PDMX (`works.id`) y Mutopia (URL). Se añaden aliases antiguos por `source_rep`,
+  `source_url` y resolución determinista de ambigüedades, y el resolver devuelve 301 al
+  `public_id` actual. Evidencia: `ruff`, `mypy`, tests SEO/listados (35) y suite backend
+  (911; los fallos restantes son de entorno); smoke del indexador con `public_id` y
+  `source_rep_id`; prueba de URL opaca 200 y de colisión de IDs con 301. Desplegado en
+  producción: salud OK, **408.239** obras con `public_id` no nulo, **402.729** aliases
+  antiguos y sitemap index 200 con 21 sitemaps de obras.
+
+- **Blog 1.1.1 (B/C)** — **FAQ e imágenes en el blog**: botón FAQ con `details/summary` y
+  `FAQPage` JSON-LD generado desde preguntas visibles; escalado visual de imágenes
+  25/50/75/100%; conversión de JPEG/JFIF a WebP, límite de dimensión y conservación de
+  GIF animados. Evidencia: `pytest tests` (8), `ruff` correcto, despliegue de `osap-blog`
+  en producción con salud `1.1.1`, artículo público 200 y conversión WebP verificada;
+  mantenimiento de OSAP activado y retirado. Alcance: `osap-blog` independiente; no cambia
+  la versión del conjunto OSAP. La 1.1.1 corrige la inserción de FAQ anidadas al pulsar
+  el botón dentro de un bloque existente.
+
 - **5.7.9 (C)** — **login social directo**: el callback social sin contexto OIDC redirigía a
   `/auth/login` sin entregar tokens y parecía que la sesión no se había creado. Ahora crea la
   sesión y redirige a `/auth/account#access_token=…&refresh_token=…`; la SPA restaura la

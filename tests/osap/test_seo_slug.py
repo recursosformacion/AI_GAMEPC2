@@ -49,5 +49,6 @@ def test_normalize_work_id_acepta_index_y_numerico() -> None:
     assert normalize_work_id("index-123") == "index-123"
     assert normalize_work_id("123") == "index-123"
     assert normalize_work_id("index-000123") == "index-123"
-    assert normalize_work_id("index-abc") is None
+    assert normalize_work_id("index-abc") == "index-abc"
+    assert normalize_work_id("index-abc_def") == "index-abc_def"
     assert normalize_work_id("indice-1") is None

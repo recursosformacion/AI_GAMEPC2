@@ -71,9 +71,18 @@ class _FakeApi:
         self._works = works
         self._legacy: dict[str, object] | None = None
         self._legacy_target: str | None = None
+        self._collision: dict[str, object] | None = None
+        self._alias_target: str | None = None
 
     def seo_work(self, work_id: str | None) -> dict[str, object] | None:
-        return self._work if work_id == self._work.get("work_id") else None
+        if work_id == self._work.get("work_id"):
+            return self._work
+        if self._collision and work_id == self._collision.get("work_id"):
+            return self._collision
+        return None
+
+    def seo_alias_target(self, work_id: str) -> str | None:
+        return self._alias_target
 
     def seo_work_legacy(self, work_id: str | None) -> dict[str, object] | None:
         return self._legacy if work_id == (self._legacy or {}).get("work_id") else None
@@ -353,5 +362,32 @@ def test_legacy_url_se_301_al_actual_cuando_hay_mapa_inequivoco() -> None:
     api._legacy_target = "index-7"
     client = _client(api)
     resp = client.get("/obras/index-742973/probitate-eminentem-triumphali", follow_redirects=False)
+    assert resp.status_code == 301
+    assert resp.headers["location"] == "/obras/index-7/ave-verum-corpus"
+
+
+def test_id_antiguo_con_colision_de_id_usa_el_mapa_y_301() -> None:
+    api = _FakeApi()
+    api._collision = {
+        **_WORK,
+        "work_id": "index-370068",
+        "title": "Poetiske Klaverstykker",
+        "composer": "Niels Gade",
+    }
+    api._alias_target = "index-7"
+    client = _client(api)
+    resp = client.get(
+        "/obras/index-370068/i-shall-be-no-stranger-there", follow_redirects=False
+    )
+    assert resp.status_code == 301
+    assert resp.headers["location"] == "/obras/index-7/ave-verum-corpus"
+    assert client.get("/obras/index-370068/poetiske-klaverstykker").status_code == 200
+
+
+def test_id_antiguo_ausente_usa_el_mapa_y_301() -> None:
+    api = _FakeApi()
+    api._alias_target = "index-7"
+    client = _client(api)
+    resp = client.get("/obras/index-500000/viejo-slug", follow_redirects=False)
     assert resp.status_code == 301
     assert resp.headers["location"] == "/obras/index-7/ave-verum-corpus"

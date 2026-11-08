@@ -194,10 +194,10 @@ class IndexCatalogProvider(ICatalogProvider):
         parts = rep_id.split("-")
         if len(parts) < 5 or parts[0] != "idx":
             return None
-        work_id, provider, resource_part = parts[1], parts[2], parts[3]
+        work_ref, provider, resource_part = parts[1], parts[2], parts[3]
         fmt = "-".join(parts[4:])
-        if not work_id.isdigit():
-            return None
+        work_public = f"index-{work_ref}"
+        work_id = work_ref if work_ref.isdigit() else None
         conn = None
         try:
             conn = pymysql.connect(
@@ -215,8 +215,9 @@ class IndexCatalogProvider(ICatalogProvider):
                         "SELECT i.title, i.composer_name, i.catalogue, "
                         "r.provider, r.format, r.download_url "
                         "FROM index_representations r JOIN index_works i ON i.id = r.work_id "
-                        "WHERE r.work_id = %s AND r.provider = %s AND r.resource_id = %s LIMIT 1",
-                        (work_id, provider, resource_part),
+                        "WHERE (i.public_id = %s OR i.id = %s) "
+                        "AND r.provider = %s AND r.resource_id = %s LIMIT 1",
+                        (work_public, work_id, provider, resource_part),
                     )
                 else:
                     # Legacy (resource_id=0): se elige por formato, como antes.
@@ -224,9 +225,9 @@ class IndexCatalogProvider(ICatalogProvider):
                         "SELECT i.title, i.composer_name, i.catalogue, "
                         "r.provider, r.format, r.download_url "
                         "FROM index_representations r JOIN index_works i ON i.id = r.work_id "
-                        "WHERE r.work_id = %s AND r.provider = %s "
+                        "WHERE (i.public_id = %s OR i.id = %s) AND r.provider = %s "
                         "ORDER BY (r.format = %s) DESC, r.id LIMIT 1",
-                        (work_id, provider, fmt),
+                        (work_public, work_id, provider, fmt),
                     )
                 row = cur.fetchone()
         except Exception:  # noqa: BLE001 — nunca tumbar por el índice
@@ -353,13 +354,9 @@ class IndexCatalogProvider(ICatalogProvider):
                 conn.close()
         return stats
 
-    def get_work_with_representations(self, work_id: str) -> dict[str, object] | None:
-        """Ficha de una obra del índice (por `index-<id>` o `<id>`) + sus representaciones.
-
-        Es la fuente de la página pública de obra (SEO): datos estables y sin búsqueda en
-        vivo. Devuelve `None` si la obra no existe en el índice o MySQL no responde.
-        """
-        work_ref = work_id[len("index-") :] if work_id.startswith("index-") else work_id
+    def alias_target_id(self, work_id: str) -> str | None:
+        """Current id for an old id in index_id_aliases."""
+        work_ref = work_id[len("index-"):] if work_id.startswith("index-") else work_id
         if not work_ref.isdigit():
             return None
         conn = None
@@ -376,14 +373,54 @@ class IndexCatalogProvider(ICatalogProvider):
             )
             with conn.cursor() as cur:
                 cur.execute(
-                "SELECT id, title, composer_name, person_id, catalogue, year, "
-                "instrumentation, source_count, updated_at FROM index_works WHERE id = %s LIMIT 1",
+                    "SELECT w.public_id FROM index_id_aliases a "
+                    "JOIN index_works w ON w.id = a.new_id "
+                    "WHERE a.old_id = %s LIMIT 1",
                     (work_ref,),
+                )
+                row = cur.fetchone()
+                return str(row["public_id"]) if row and row.get("public_id") else None
+        except (pymysql.err.OperationalError, pymysql.err.ProgrammingError):
+            return None
+        finally:
+            if conn is not None:
+                conn.close()
+
+    def get_work_with_representations(self, work_id: str) -> dict[str, object] | None:
+        """Ficha de una obra del índice (por public_id o id numérico) + representaciones."""
+        requested = work_id if work_id.startswith("index-") else f"index-{work_id}"
+        work_ref = work_id[len("index-") :] if work_id.startswith("index-") else work_id
+        conn = None
+        try:
+            conn = pymysql.connect(
+                host=self._host,
+                user=self._user,
+                password=self._password,
+                database=self._database,
+                port=self._port,
+                charset="utf8mb4",
+                cursorclass=DictCursor,
+                autocommit=True,
+            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, public_id, title, composer_name, person_id, catalogue, year, "
+                    "instrumentation, source_count, updated_at "
+                    "FROM index_works WHERE public_id = %s LIMIT 1",
+                    (requested,),
                 )
                 work = cur.fetchone()
                 if work is None and work_ref.isdigit():
-                    # Enlaces antiguos o de storage usan el id de recurso/representación
-                    # (p. ej. /obras/121355). Se resuelve al id del índice antes de fallar.
+                    # Compatibilidad con enlaces antiguos que usaban el id interno.
+                    cur.execute(
+                        "SELECT id, public_id, title, composer_name, person_id, catalogue, year, "
+                        "instrumentation, source_count, updated_at "
+                        "FROM index_works WHERE id = %s LIMIT 1",
+                        (work_ref,),
+                    )
+                    work = cur.fetchone()
+                if work is None and work_ref.isdigit():
+                    # Enlaces antiguos o de storage usan el id de recurso/representación.
                     cur.execute(
                         "SELECT work_id FROM index_representations "
                         "WHERE source_rep_id = %s OR resource_id = %s "
@@ -392,20 +429,22 @@ class IndexCatalogProvider(ICatalogProvider):
                     )
                     legacy = cur.fetchone()
                     if legacy is not None:
-                        work_ref = str(legacy["work_id"])
                         cur.execute(
-                            "SELECT id, title, composer_name, person_id, catalogue, year, "
+                            "SELECT id, public_id, title, composer_name, person_id, catalogue, year, "
                             "instrumentation, source_count, updated_at "
                             "FROM index_works WHERE id = %s LIMIT 1",
-                            (work_ref,),
+                            (str(legacy["work_id"]),),
                         )
                         work = cur.fetchone()
                 if work is None:
                     return None
+                internal_id = int(str(work.get("id") or 0))
+                public_id = str(work.get("public_id") or f"index-{internal_id}")
+                public_ref = public_id[len("index-") :] if public_id.startswith("index-") else public_id
                 cur.execute(
                     "SELECT provider, format, download_url, available, resource_id, title_provider, xml_title "
                     "FROM index_representations WHERE work_id = %s ORDER BY provider, format",
-                    (work_ref,),
+                    (internal_id,),
                 )
                 rep_rows = cur.fetchall()
         except pymysql.err.OperationalError as exc:
@@ -418,7 +457,7 @@ class IndexCatalogProvider(ICatalogProvider):
             {
                 # Id determinista de la representación: base de `/representacion/<id>`.
                 "id": (
-                    f"idx-{int(str(work.get('id') or 0))}-"
+                    f"idx-{public_ref}-"
                     f"{str(row.get('provider') or '')}-"
                     f"{int(str(row.get('resource_id') or 0))}-"
                     f"{str(row.get('format') or '')}"
@@ -434,9 +473,9 @@ class IndexCatalogProvider(ICatalogProvider):
         ]
         year = work.get("year")
         year_str = str(year or "").strip()
-        stats = self._analytics_stats(str(work_ref))
+        stats = self._analytics_stats(str(internal_id))
         return {
-            "work_id": f"index-{int(str(work.get('id') or 0))}",
+            "work_id": public_id,
             "title": str(work.get("title") or ""),
             "composer": str(work.get("composer_name") or "") or None,
             "composer_id": str(work.get("person_id") or "") or None,
@@ -568,11 +607,13 @@ class IndexCatalogProvider(ICatalogProvider):
             )
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT new_id FROM legacy_index_map WHERE old_id = %s LIMIT 1",
+                    "SELECT w.public_id FROM legacy_index_map m "
+                    "JOIN index_works w ON w.id = m.new_id "
+                    "WHERE m.old_id = %s LIMIT 1",
                     (work_ref,),
                 )
                 row = cur.fetchone()
-                return f"index-{int(str(row['new_id']))}" if row and row.get("new_id") else None
+                return str(row["public_id"]) if row and row.get("public_id") else None
         except (pymysql.err.OperationalError, pymysql.err.ProgrammingError) as exc:
             logger.warning("index provider: legacy map unavailable (%s)", exc)
             return None
@@ -608,7 +649,7 @@ class IndexCatalogProvider(ICatalogProvider):
                 total_row = cur.fetchone()
                 total = int(str(total_row["total"])) if total_row else 0
                 cur.execute(
-                    "SELECT id, title, catalogue, year FROM index_works "
+                    "SELECT id, public_id, title, catalogue, year FROM index_works "
                     "WHERE person_id = %s ORDER BY title LIMIT %s OFFSET %s",
                     (person_id, limit, offset),
                 )
@@ -624,7 +665,7 @@ class IndexCatalogProvider(ICatalogProvider):
             year = str(row.get("year") or "").strip()
             items.append(
                 {
-                    "work_id": f"index-{int(str(row.get('id') or 0))}",
+                    "work_id": str(row.get("public_id") or f"index-{int(str(row.get('id') or 0))}"),
                     "title": str(row.get("title") or ""),
                     "catalogue": str(row.get("catalogue") or "") or None,
                     "year": int(year) if year.isdigit() else None,
@@ -676,7 +717,7 @@ class IndexCatalogProvider(ICatalogProvider):
             )
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT id, title, composer_name, updated_at FROM index_works "
+                    "SELECT id, public_id, title, composer_name, updated_at FROM index_works "
                     "ORDER BY id LIMIT %s OFFSET %s",
                     (limit, offset),
                 )
@@ -689,7 +730,7 @@ class IndexCatalogProvider(ICatalogProvider):
                 conn.close()
         return [
             {
-                "work_id": f"index-{int(str(row.get('id') or 0))}",
+                "work_id": str(row.get("public_id") or f"index-{int(str(row.get('id') or 0))}"),
                 "title": str(row.get("title") or ""),
                 "composer": str(row.get("composer_name") or "") or None,
                 "updated_at": str(row.get("updated_at") or "") or None,
@@ -718,7 +759,7 @@ class IndexCatalogProvider(ICatalogProvider):
             )
             with conn.cursor() as cur:
                 cur.execute(
-                    "SELECT id, title, composer_name, updated_at FROM index_works "
+                    "SELECT id, public_id, title, composer_name, updated_at FROM index_works "
                     "ORDER BY updated_at DESC, id DESC LIMIT %s",
                     (limit,),
                 )
@@ -731,7 +772,7 @@ class IndexCatalogProvider(ICatalogProvider):
                 conn.close()
         return [
             {
-                "work_id": f"index-{int(str(row.get('id') or 0))}",
+                "work_id": str(row.get("public_id") or f"index-{int(str(row.get('id') or 0))}"),
                 "title": str(row.get("title") or ""),
                 "composer": str(row.get("composer_name") or "") or None,
                 "updated_at": str(row.get("updated_at") or "") or None,
@@ -954,7 +995,7 @@ def _build_sql(
             if not providers:
                 return None, ()
     sql = (
-        "SELECT i.id, i.title, i.composer_name, i.catalogue, i.year, "
+        "SELECT i.id, i.public_id, i.title, i.composer_name, i.catalogue, i.year, "
         "r.provider, r.format, r.download_url, r.available, r.quality, "
         "r.source_rep_id, r.resource_id "
         "FROM index_works i "
@@ -970,7 +1011,8 @@ def _build_sql(
 def _row_to_candidate(row: dict[str, object]) -> CandidateRepresentation:
     fmt = _FORMAT_BY_VALUE.get(str(row.get("format") or ""), OutputFormat.SCORE)
     provider = ProviderId(str(row.get("provider") or "index"))
-    work_id = WorkId(f"index-{row['id']}")
+    public_id = str(row.get("public_id") or f"index-{row['id']}")
+    work_id = WorkId(public_id)
     composer = str(row.get("composer_name") or "") or None
     title = str(row.get("title") or "")
     catalogue = str(row.get("catalogue") or "") or None
@@ -1000,7 +1042,7 @@ def _row_to_candidate(row: dict[str, object]) -> CandidateRepresentation:
     # y proveedor compartirían candidate_id y el agrupador los colapsaría.
     resource_id = int(str(row.get("resource_id") or 0))
     return CandidateRepresentation(
-        candidate_id=CandidateId(f"index-{row['id']}-{pid}-{resource_id}"),
+        candidate_id=CandidateId(f"{public_id}-{pid}-{resource_id}"),
         work_descriptor=descriptor,
         provider_id=provider,
         format=fmt,

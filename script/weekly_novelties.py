@@ -9,8 +9,8 @@ Fases (seleccionables con `--phases`, por defecto todas):
      ensembles, idiomas, géneros/instrumentación y **resolución de personas**
      (`parse_import_persons` → `resolve_persons` → `link_*` → `populate_persons_from_import`
      → limpieza/canonización de nombres → `merge_duplicate_persons` → `mark_pseudo_persons`).
-  3. **index** — `rebuild_index.py` (sin IndexNow) → `resolve_index_composers` →
-     `finalize_index_identity` → **IndexNow** (ya con identidad coherente).
+  3. **index** — reconstrucción shadow segura (`rebuild_index_safe.py`) → identidad del
+     índice → **IndexNow** (ya con identidad coherente). No usa el rebuild destructivo.
 
 Cada paso corre en su directorio/venv (osap-storage para imports/normalización; osap-api para
 el índice). Es best-effort: un paso que falla se registra y se continúa.
@@ -113,10 +113,10 @@ def _index_steps(args: argparse.Namespace) -> list[tuple[str, str, list[str]]]:
     steps: list[tuple[str, str, list[str]]] = []
     if args.apply and not args.skip_reindex:
         steps.append(("reindex", root,
-                      [sys.executable, str(ROOT / "script" / "rebuild_index.py"),
+                      [sys.executable, str(ROOT / "script" / "rebuild_index_safe.py"),
                        "--providers", args.providers,
                        "--host", args.db_host, "--user", args.db_user,
-                       "--password", args.db_password, "--database", args.db_api,
+                       "--password", args.db_password,
                        "--db-api", args.db_api, "--db-omr", args.db_omr]))
     steps.append(("index-identity", root,
                   [sys.executable, str(ROOT / "script" / "finalize_index_identity.py"),

@@ -6,6 +6,8 @@ corto al principio (docstring en Python, comentario en PowerShell) y estar docum
 aquí. Esta regla aplica también a los scripts nuevos.
 
 Convenciones:
+- La separación operativa está en `script/README.md`: `script/` solo para scripts estables
+  (aplicación, timer o despliegue) y `script/oneoff/` para análisis/experimentos históricos.
 - Los scripts de **osap-storage** se ejecutan con el venv de storage
   (`osap-storage/.venv/bin/python scripts/<script>.py`), y por defecto usan `config.yaml`
   (la BD se elige con `OSAP_CONFIG=config.production.yaml` o `--db`).
@@ -356,9 +358,10 @@ PYTHONPATH=<osap-api> python reseed_providers.py
 - **Esquema vs datos del índice** (desacoplados):
   - `migrate_index_schema.py` — aplica el **DDL de esquema** idempotente (ALTER/index) una
     vez por despliegue. El arranque de la app **ya no migra** (`_init` solo crea tablas).
-  - `rebuild_index.py` — **procedimiento oficial de reindexado**: `--full` (vacía las tablas
-    derivadas y reindexa) o incremental (upsert); limpia huérfanos de voicing. No toca el
-    esquema. Añadir ficheros = relanzar este job. Propaga credenciales y nombres de BD a
+  - `rebuild_index.py` — **procedimiento de reindexado destructivo o incremental**: `--full`
+    vacía las tablas derivadas y **cambia IDs**, por lo que no debe usarse en producción;
+    el incremental hace upsert y conserva IDs. Para producción usar
+    `rebuild_index_safe.py` (shadow + merge). No toca el esquema. Propaga credenciales y nombres de BD a
     `index_works.py` (`--host/--user/--password/--database` + `--db-api`/`--db-omr`). En
     producción se ejecuta con el usuario dedicado `osap_indexer` (SELECT en `osap_storage`,
     DML en `osap_api`, DROP acotado a las 3 tablas del índice); secreto en
@@ -381,7 +384,7 @@ PYTHONPATH=<osap-api> python reseed_providers.py
     resolución de personas `parse_import_persons`→`resolve_persons`→`link_*`→
     `populate_persons_from_import`→limpieza de nombres→`merge_duplicate_persons`→
     `mark_pseudo_persons`; `map_instrumentation` queda fuera porque depende de la BD legacy
-    `osap-storage_v1`) y **index** (`rebuild_index.py` + `finalize_index_identity` —que resuelve
+    `osap-storage_v1`) y **index** (`rebuild_index_safe.py` + `finalize_index_identity` —que resuelve
     y fusiona en un paso; **`resolve_index_composers` no se usa** porque reescribir `person_id`
     antes de fusionar viola `uq_idx_title_composer`— y, al final, `indexnow.py`).
     Best-effort; cada paso corre en su directorio/venv (storage u osap-api). **`--apply`
@@ -499,7 +502,8 @@ Sincronización **incremental** del índice (`script/sync_index.py`, IMSLP/OMR/M
 Instalación: copiar a `/etc/systemd/system/` y `systemctl enable --now osap-index-sync.timer`.
 
 ### deploy/osap-index-full.service + .timer
-Reconstrucción **completa** (`script/rebuild_index.py --full`, propaga bajas), domingos a
+Reconstrucción **completa segura** (`script/rebuild_index_safe.py`: shadow + merge por
+identidad, sin vaciar IDs), domingos a
 las 03:30 (antes del job semanal de novedades). Timeout 6 h, prioridad baja.
 Instalación: copiar a `/etc/systemd/system/` y `systemctl enable --now osap-index-full.timer`.
 
@@ -513,7 +517,7 @@ Uso: `python script/notify.py --kind sitemap_resubmit --title "..." --body "..."
 ### Sincronización del índice (providers)
 - `osap-index-sync.timer` (cada 30 min) → `omr,cpdl,mutopia` (incremental por `works.id > último`; CPDL usa `index.cpdl.last_work_id`).
 - `osap-index-imslp.timer` (diario 04:00) → `imslp` (pasada completa: la Worklist API no tiene feed de cambios).
-- `osap-index-full.timer` (domingo 03:30) → rebuild completo (propaga bajas) + aviso de sitemap.
+- `osap-index-full.timer` (domingo 03:30) → rebuild completo **seguro** (shadow + merge; no propaga bajas) + aviso de sitemap.
 | `persons_ai_runner.py` (osap-storage) | Genera lotes de 20 personas con hasta 5 titulos de obras (`works`) y los envia a Gemini; guarda respuestas en `data/ai_out/json_personas_lote_NNN.json`. Reanudable, rota claves y solo lee la BD local. Uso: `python scripts/persons_ai_runner.py --start 6`. |
 | `apply_persons_ai_json.py` (osap-storage) | Lee las respuestas JSON y aplica a la BD solo cambios seguros (`person=sí`, sin comentarios de fusion/division/duplicado); los casos delicados van a `docs/ai/persons_ai_apply_report.csv`. `--dry-run` por defecto; `--apply`; `--allow-prod` en servidor. |
 | `works_ai_runner.py` (osap-storage) | Genera lotes de 20 obras con todos los campos y uniones (generos, ensembles, instrumentos, idiomas, compositores), los envia a Gemini y guarda respuestas en `data/works_ai_out`. `--build-only` solo crea los JSON; reanudable y con rotacion de claves. |
@@ -653,3 +657,18 @@ personas y otro de obras, aplica inmediatamente los resultados (`apply_persons_a
 reintentar. Reanuda por el primer lote pendiente y lleva lock/log en `data/`. Servicio systemd:
 `deploy/osap-ai-enrich.service`. El estado son los ficheros de salida; no hace falta reiniciar
 para reanudar.
+
+### `backfill_source_ids.py` (osap-api)
+Rellena `index_representations.source_rep_id` de IMSLP y Mutopia. Para IMSLP usa el
+`works_origin_id` (MediaWiki `pageid`) de `osap_storage` cuando la `works_source_url`
+coincide; si no, usa `imslp:sha1(permlink)`. Mutopia usa `mutopia:sha1(download_url)`.
+El backfill es idempotente. Uso:
+`python script/backfill_source_ids.py --database osap_api [--storage-db osap_storage] [--dry-run]`.
+
+### `backfill_index_url_aliases.py` (osap-api)
+Genera aliases `old_id -> new_id` a partir de una copia del índice antiguo importada en
+otra base. Primero usa `source_url` (URL única con `title_key` y `person_id` coincidentes);
+con `--resolve-ambiguous` elige un destino canónico entre varios candidatos por prioridad
+de título/persona, persona, título y `source_count`. No usa el título como identidad única.
+Uso:
+`python script/backfill_index_url_aliases.py --old-db osap_api_old --database osap_api [--resolve-ambiguous]`.

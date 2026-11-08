@@ -22,7 +22,7 @@ function allRepresentations(work: WorksListWork): RepresentationInfo[] {
 // entre un resultado de búsqueda (`work-<hash>`) y la ficha HTML.
 function indexWorkIdFromRepresentations(reps: RepresentationInfo[]): string | null {
   for (const rep of reps) {
-    const match = /^idx-(\d+)-/.exec(rep.id ?? "");
+    const match = /^idx-([A-Za-z0-9_]+)-/.exec(rep.id ?? "");
     if (match) return `index-${match[1]}`;
   }
   return null;

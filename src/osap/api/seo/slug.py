@@ -67,12 +67,19 @@ def person_slug(name: str) -> str:
 
 
 def normalize_work_id(work_id: str) -> str | None:
-    """Normaliza el id de obra a su forma canónica `index-<n>`.
+    """Normaliza el id público de una obra.
 
-    Acepta tanto `index-123` (id expuesto por la app) como `123` (id de `index_works`).
-    Devuelve `None` si no es un id numérico de obra.
+    Los IDs actuales son `index-<n>`; el mismo formato admite futuros IDs públicos
+    opacos (por ejemplo `index-<hash>`) sin cambiar la ruta.
     """
-    raw = work_id[len("index-") :] if work_id.startswith("index-") else work_id
-    if not raw.isdigit():
+    if work_id.startswith("index-"):
+        raw = work_id[len("index-") :]
+    elif work_id.isdigit():
+        raw = work_id
+    else:
         return None
-    return f"index-{int(raw)}"
+    if not raw or not re.fullmatch(r"[A-Za-z0-9_-]{1,64}", raw):
+        return None
+    if raw.isdigit():
+        return f"index-{int(raw)}"
+    return f"index-{raw}"

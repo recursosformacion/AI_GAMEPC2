@@ -1,6 +1,6 @@
-# OSAP API — timer de la reconstrucción completa del índice (domingos 03:30).
-# Va antes del job semanal de novedades (lunes 04:30) para que este trabaje con el índice
-# ya limpio. Instalar en /etc/systemd/system/osap-index-full.timer y:
+# OSAP API — timer de la reconstrucción completa SEGURA del índice (domingos 03:30).
+# Va antes del job semanal de novedades (lunes 04:30). Instalar en
+# /etc/systemd/system/osap-index-full.timer y:
 #   sudo systemctl daemon-reload && sudo systemctl enable --now osap-index-full.timer
 
 [Unit]

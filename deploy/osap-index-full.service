@@ -1,10 +1,11 @@
-# OSAP API — reconstrucción COMPLETA del índice (con borrado previo).
-# Necesaria para propagar BAJAS (el incremental no borra). Semanal.
+# OSAP API — reconstrucción COMPLETA SEGURA del índice (shadow + merge por identidad).
+# NO vacía `index_works`: conserva IDs y `public_id`; las bajas quedan pendientes de una
+# poda explícita. Semanal.
 # Instalar en /etc/systemd/system/osap-index-full.service y habilitar su timer:
 #   sudo systemctl daemon-reload && sudo systemctl enable --now osap-index-full.timer
 
 [Unit]
-Description=OSAP index full rebuild (truncate + reindex)
+Description=OSAP index full rebuild (safe shadow merge)
 After=network.target mysql.service osap-storage.service osap-api.service
 Wants=osap-api.service osap-storage.service
 
@@ -15,7 +16,7 @@ Group=ocw
 WorkingDirectory=/home/ocw/openmusicrepository.com/osap-api
 Environment=PYTHONPATH=/home/ocw/openmusicrepository.com/osap-api
 EnvironmentFile=/etc/openmusicrepository/osap-weekly-novelties.env
-ExecStart=/home/ocw/openmusicrepository.com/osap-api/.venv/bin/python script/rebuild_index.py --full --providers omr,cpdl --host ${OSAP_INDEX_DB_HOST} --user ${OSAP_INDEX_DB_USER} --password ${OSAP_INDEX_DB_PASSWORD} --database ${OSAP_INDEX_DB_API} --db-api ${OSAP_INDEX_DB_API} --db-omr ${OSAP_INDEX_DB_OMR}
+ExecStart=/home/ocw/openmusicrepository.com/osap-api/.venv/bin/python script/rebuild_index_safe.py --providers omr,cpdl,imslp,mutopia --host ${OSAP_INDEX_DB_HOST} --user ${OSAP_INDEX_DB_USER} --password ${OSAP_INDEX_DB_PASSWORD} --db-api ${OSAP_INDEX_DB_API} --db-omr ${OSAP_INDEX_DB_OMR} --omr-base-url https://storage.openmusicrepository.com
 ExecStartPost=/home/ocw/openmusicrepository.com/osap-api/.venv/bin/python script/notify.py --kind sitemap_resubmit --title "Reindexacion completa terminada" --body "Reenvia el sitemap en Search Console." --link https://app.openmusicrepository.com/sitemap.xml --host ${OSAP_INDEX_DB_HOST} --db-user ${OSAP_INDEX_DB_USER} --password ${OSAP_INDEX_DB_PASSWORD} --database ${OSAP_INDEX_DB_API}
 Nice=15
 IOSchedulingClass=idle

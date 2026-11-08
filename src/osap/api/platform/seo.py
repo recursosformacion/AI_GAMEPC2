@@ -23,6 +23,14 @@ def _norm_title(value: str) -> str:
 
 
 class SeoMixin(PlatformApiCore):
+    def seo_alias_target(self, work_id: str) -> str | None:
+        """Current id mapped from a previous index id."""
+        provider = self._index_provider()
+        if provider is None:
+            return None
+        getter = getattr(provider, "alias_target_id", None)
+        return cast("str | None", getter(work_id)) if callable(getter) else None
+
     def seo_work(self, work_id: str) -> dict[str, object] | None:
         """Ficha de obra del índice local (None si no existe o el índice no responde)."""
         provider = self._index_provider()

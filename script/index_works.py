@@ -36,6 +36,7 @@ Uso (en osap-api, con PYTHONPATH=osap-api):
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -45,6 +46,7 @@ import time
 import unicodedata
 import urllib.parse
 import urllib.request
+import uuid
 
 import pymysql
 
@@ -66,6 +68,26 @@ _USER_AGENT = (
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 )
+
+
+def _source_rep_id(provider: str, value: object) -> str:
+    """Stable source key when the provider exposes no numeric id."""
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    return f"{provider}:{hashlib.sha1(raw.encode('utf-8')).hexdigest()}"
+
+
+def _public_id_for_record(record: dict) -> str:
+    """Stable public URL id: derived from source identity on first insert."""
+    provider = str(record.get("provider") or "work")
+    source = str(record.get("source_rep_id") or "").strip()
+    if not source:
+        source = str(record.get("download_url") or "").strip()
+    if not source:
+        return f"index-{uuid.uuid4().hex[:20]}"
+    digest = hashlib.sha1(f"{provider}:{source}".encode()).hexdigest()
+    return f"index-{digest[:20]}"
 
 # MusicBrainz work types de "música artística" (las demás son pop/soundtrack/literaria).
 _MB_ART_TYPES = {
@@ -395,7 +417,6 @@ def _iter_omr(
     ``/api/download/{file_id}`` (el endpoint de storage redirige 302 al
     CDN/R2) y marca `available=1` cuando hay fichero. Pagina por PK.
     """
-    base = storage_base.rstrip("/")
     last_id = from_id
     emitted = 0
     while limit <= 0 or emitted < limit:
@@ -692,6 +713,10 @@ def _iter_imslp(start: int, limit: int, verify_ssl: bool = True):
                 "provider": "imslp",
                 "format": "pdf",
                 "download_url": entry.get("permlink"),
+                # Worklist exposes the stable MediaWiki page id in intvals.pageid;
+                # fall back to the permlink hash only for incomplete rows.
+                "source_rep_id": str(iv.get("pageid") or "").strip()
+                or _source_rep_id("imslp", entry.get("permlink")),
                 "available": 1 if entry.get("permlink") else 0,
                 "quality": 0,
             }
@@ -747,6 +772,9 @@ def _iter_mutopia(start_at: int, limit: int):
                     "provider": "mutopia",
                     "format": str(res.get("format") or "pdf"),
                     "download_url": res.get("download_url"),
+                    # The existing rows only expose the download URL. Use the same
+                    # key for old and new rows so a backfill is idempotent.
+                    "source_rep_id": _source_rep_id("mutopia", res.get("download_url")),
                     "available": 1 if res.get("available") else 0,
                     "quality": 0,
                 }
@@ -1056,6 +1084,7 @@ def _ingest_page(
             seen_page.add(dedupe_key)
             inserts.append(
                 (
+                    _public_id_for_record(record),
                     record["title"][:1024],
                     record["tk"],
                     record["composer_name"],
@@ -1078,9 +1107,9 @@ def _ingest_page(
             )
         if inserts:
             cur.executemany(
-                "INSERT INTO index_works (title, title_key, composer_name, person_id, "
+                "INSERT INTO index_works (public_id, title, title_key, composer_name, person_id, "
                 "catalogue, catalogue_key, year, instrumentation, genre_id, source_count, updated_at) "
-                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,1,NOW())",
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,1,NOW())",
                 inserts,
             )
             # Ids de lo insertado: 1 consulta por lote usando los title_key de la página.
@@ -1123,6 +1152,10 @@ def _ingest_page(
                     int(record.get("quality", 0)),
                 )
             )
+        cur.execute(
+            "UPDATE index_works SET public_id=CONCAT('index-', id) "
+            "WHERE public_id IS NULL OR public_id = ''"
+        )
         if rep_rows:
             cur.executemany(
                 "INSERT INTO index_representations (work_id, provider, source_rep_id, resource_id, "
@@ -1252,10 +1285,10 @@ def _ingest(
         if row is None:
             try:
                 cur.execute(
-                    "INSERT INTO index_works (title, title_key, composer_name, person_id, "
+                    "INSERT INTO index_works (public_id, title, title_key, composer_name, person_id, "
                     "catalogue, catalogue_key, year, instrumentation, genre_id, source_count, updated_at) "
-                    "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,1,NOW())",
-                    (title[:1024], tk, composer_name, person_id,
+                    "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,1,NOW())",
+                    (_public_id_for_record(work), title[:1024], tk, composer_name, person_id,
                      catalogue_raw, cat_key, year_int,
                      (work.get("instrumentation") or None),
                      (int(work["genre_id"]) if work.get("genre_id") is not None else None)),
@@ -1287,6 +1320,11 @@ def _ingest(
                      (int(work["genre_id"]) if work.get("genre_id") is not None else None),
                      work_id),
                 )
+        cur.execute(
+            "UPDATE index_works SET public_id=CONCAT('index-', id) "
+            "WHERE id=%s AND (public_id IS NULL OR public_id = '')",
+            (work_id,),
+        )
         cur.execute(
             "INSERT INTO index_representations (work_id, provider, source_rep_id, resource_id, "
             "format, download_url, title_provider, available, quality) "

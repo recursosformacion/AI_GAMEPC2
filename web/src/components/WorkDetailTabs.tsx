@@ -335,7 +335,7 @@ function RepresentationsTab({
     (rep) => getRepresentationActions(rep, workTitle).canDownload,
   ).length;
   const indexIdFromRep = (repId: string | null | undefined): string | null => {
-    const match = /^idx-(\d+)-/.exec(repId ?? "");
+    const match = /^idx-([A-Za-z0-9_]+)-/.exec(repId ?? "");
     return match ? `index-${match[1]}` : null;
   };
   const baseVideoWorkId =

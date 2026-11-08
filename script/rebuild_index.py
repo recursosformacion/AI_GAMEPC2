@@ -12,6 +12,10 @@ No toca el esquema (eso es `migrate_index_schema.py`); solo datos derivados.
 Un rebuild es reproducible: el índice se deriva de los proveedores + la autoridad
 (`persons` en osap-storage). Añadir ficheros = relanzar este job (o el incremental).
 
+`--full` es destructivo: cambia los ids internos (y los `public_id` de arranque) de las
+obras que no se puedan remapear. Para conservar las URLs públicas usa
+`script/rebuild_index_safe.py`, que conserva la fila viva y su `public_id`.
+
 Uso (desde osap-api):
     python script/rebuild_index.py --providers omr,cpdl
     python script/rebuild_index.py --full --providers omr,cpdl,imslp,mutopia,musicbrainz
@@ -35,6 +39,11 @@ def main() -> int:
     ap.add_argument("--providers", default="omr,cpdl")
     ap.add_argument("--limit", type=int, default=0, help="límite de obras para pruebas (0 = todas)")
     ap.add_argument("--full", action="store_true", help="vaciado previo + reindexado completo")
+    ap.add_argument(
+        "--allow-id-change",
+        action="store_true",
+        help="permite el rebuild destructivo (cambia IDs internos; no usar en producción)",
+    )
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--user", default="osap2027")
     ap.add_argument("--password", default=os.environ.get("OSAP_INDEX_DB_PASSWORD", ""))
@@ -49,6 +58,11 @@ def main() -> int:
     ap.add_argument("--indexnow-key", default=os.environ.get("INDEXNOW_KEY", ""),
                     help="clave de IndexNow (por defecto INDEXNOW_KEY)")
     args = ap.parse_args()
+    if args.full and not args.allow_id_change:
+        ap.error(
+            "--full es destructivo y cambia IDs; usa rebuild_index_safe.py o pasa "
+            "--allow-id-change solo en un entorno desechable"
+        )
 
     lock_conn = pymysql.connect(host=args.host, user=args.user, password=args.password,
                                 database=args.database, charset="utf8mb4", autocommit=True)
@@ -80,6 +94,45 @@ def main() -> int:
                 "SELECT work_id, provider, source_rep_id, resource_id "
                 "FROM index_representations WHERE source_rep_id <> ''"
             )
+            # The mapping join is otherwise quadratic on large catalogs.
+            cur.execute(
+                "CREATE INDEX ix_old_source "
+                "ON index_rebuild_old_reps (provider, source_rep_id)"
+            )
+            try:
+                cur.execute(
+                    "CREATE INDEX ix_new_source "
+                    "ON index_representations (provider, source_rep_id)"
+                )
+            except pymysql.err.OperationalError as exc:
+                if exc.args[0] != 1061:
+                    raise
+            # URL fallback: providers without a source id (IMSLP/Mutopia) still have
+            # a stable remote URL. Keep the old works' title/person so an URL match
+            # is only accepted when the public identity also agrees.
+            cur.execute("DROP TABLE IF EXISTS index_rebuild_old_works")
+            cur.execute(
+                "CREATE TABLE index_rebuild_old_works AS "
+                "SELECT id, title_key, person_id FROM index_works"
+            )
+            cur.execute("DROP TABLE IF EXISTS index_rebuild_old_urls")
+            cur.execute(
+                "CREATE TABLE index_rebuild_old_urls AS "
+                "SELECT work_id, provider, download_url FROM index_representations "
+                "WHERE download_url IS NOT NULL AND download_url <> ''"
+            )
+            cur.execute(
+                "CREATE INDEX ix_old_url ON index_rebuild_old_urls "
+                "(provider, download_url(191))"
+            )
+            try:
+                cur.execute(
+                    "CREATE INDEX ix_new_url ON index_representations "
+                    "(provider, download_url(191))"
+                )
+            except pymysql.err.OperationalError as exc:
+                if exc.args[0] != 1061:
+                    raise
             for tbl in ("index_works", "index_representations", "index_work_voicings"):
                 cur.execute(f"TRUNCATE TABLE {tbl}")
                 print("vaciada", tbl)
@@ -121,7 +174,24 @@ def main() -> int:
                 " new_id=VALUES(new_id), method=VALUES(method), updated_at=NOW()"
             )
             print("mapping old_id->new_id generado:", cur.rowcount)
+            cur.execute(
+                "INSERT IGNORE INTO index_id_aliases (old_id, new_id, method) "
+                "SELECT o.work_id, MIN(n.work_id), 'source_url' "
+                "FROM index_rebuild_old_urls o "
+                "JOIN index_rebuild_old_works ow ON ow.id = o.work_id "
+                "JOIN index_representations n "
+                "  ON n.provider = o.provider "
+                " AND n.download_url = o.download_url "
+                "JOIN index_works nw ON nw.id = n.work_id "
+                "WHERE nw.title_key = ow.title_key "
+                " AND nw.person_id <=> ow.person_id "
+                "GROUP BY o.work_id "
+                "HAVING COUNT(DISTINCT n.work_id) = 1"
+            )
+            print("mapping por URL generado:", cur.rowcount)
             cur.execute("DROP TABLE IF EXISTS index_rebuild_old_reps")
+            cur.execute("DROP TABLE IF EXISTS index_rebuild_old_works")
+            cur.execute("DROP TABLE IF EXISTS index_rebuild_old_urls")
         cur.execute(
             "DELETE FROM index_work_voicings WHERE work_id NOT IN (SELECT id FROM index_works)"
         )

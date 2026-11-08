@@ -99,10 +99,24 @@ def _resolve_work(
         if target:
             return current_data if current_data else legacy_data, target, True
         return legacy_data, None, True
+    if current_data and requested_slug and requested_slug != current_slug:
+        # An old ID may collide with a new ID. If the requested slug does not
+        # belong to the new work, prefer the old->new alias when available.
+        target = api.seo_alias_target(canonical)
+        if target:
+            target_data = api.seo_work(target)
+            if isinstance(target_data, dict):
+                return target_data, f"/obras/{target}/{_work_slug(target_data)}", False
     if current_data and legacy_data:
         # The same numeric id exists in both generations and the requested slug
         # matches neither: do not redirect to a potentially unrelated work.
         return None, None, False
+    if not current_data and not legacy_data:
+        target = api.seo_alias_target(canonical)
+        if target:
+            target_data = api.seo_work(target)
+            if isinstance(target_data, dict):
+                return target_data, f"/obras/{target}/{_work_slug(target_data)}", False
     if current_data:
         return current_data, f"/obras/{canonical}/{current_slug}", False
     if legacy_data:

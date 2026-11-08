@@ -5,10 +5,10 @@ Usage:
     python script/rebuild_index_safe.py --providers omr,cpdl --limit 0
     python script/rebuild_index_safe.py --providers omr --limit 5 --db-build osap_index_build_test
 
-The shadow database is populated by `index_works.py`. Only natural identity
-(title_key + person_id + catalogue) is used to merge; live `index_works.id`
-values are never replaced. Works absent from the shadow build are left intact
-for a later explicit pruning step.
+The shadow database is populated by `index_works.py`. Only stable source
+identity (`provider + source_rep_id`) is used to merge; title is metadata and
+never identity. Live `index_works.id` values are never replaced. Works absent
+from the shadow build are left intact for a later explicit pruning step.
 """
 
 from __future__ import annotations
@@ -33,6 +33,7 @@ def connect(host: str, user: str, password: str, database: str | None = None) ->
         password=password,
         database=database,
         charset="utf8mb4",
+        cursorclass=pymysql.cursors.DictCursor,
         autocommit=True,
     )
 
@@ -47,7 +48,8 @@ def prepare_build(conn: pymysql.Connection, build_db: str, live_db: str) -> None
 
 
 def merge(conn: pymysql.Connection, build_db: str, live_db: str) -> tuple[int, int]:
-    """Merge by source identity first, then title only as a fallback."""
+    """Merge by source identity; abort on ambiguous live mappings."""
+    conn.autocommit(False)
     with conn.cursor() as cur:
         cur.execute("DROP TEMPORARY TABLE IF EXISTS _osap_index_map")
         cur.execute(
@@ -69,12 +71,23 @@ def merge(conn: pymysql.Connection, build_db: str, live_db: str) -> tuple[int, i
             """
         )
         cur.execute(
+            "SELECT live_id, COUNT(*) AS n FROM _osap_index_map "
+            "GROUP BY live_id HAVING n > 1 LIMIT 1"
+        )
+        duplicate = cur.fetchone()
+        if duplicate:
+            raise RuntimeError(
+                f"shadow merge ambiguo: varias filas del build apuntan al live_id {duplicate['live_id']}"
+            )
+        cur.execute(
             f"""
             UPDATE `{live_db}`.index_works l
             JOIN _osap_index_map m ON m.live_id = l.id
             JOIN `{build_db}`.index_works b ON b.id = m.build_id
             SET l.title = b.title,
+                l.title_key = b.title_key,
                 l.composer_name = b.composer_name,
+                l.person_id = b.person_id,
                 l.catalogue = b.catalogue,
                 l.catalogue_key = b.catalogue_key,
                 l.year = b.year,
@@ -93,7 +106,7 @@ def merge(conn: pymysql.Connection, build_db: str, live_db: str) -> tuple[int, i
         # representation afterward.
         cur.execute(
             f"""
-            SELECT b.id, b.title, b.title_key, b.composer_name, b.person_id,
+            SELECT b.id, b.public_id, b.title, b.title_key, b.composer_name, b.person_id,
                    b.catalogue, b.catalogue_key, b.year, b.instrumentation,
                    b.source_count, b.updated_at, b.genre_id
             FROM `{build_db}`.index_works b
@@ -105,11 +118,12 @@ def merge(conn: pymysql.Connection, build_db: str, live_db: str) -> tuple[int, i
             cur.execute(
                 f"""
                 INSERT INTO `{live_db}`.index_works
-                    (title, title_key, composer_name, person_id, catalogue,
+                    (public_id, title, title_key, composer_name, person_id, catalogue,
                      catalogue_key, year, instrumentation, source_count, updated_at, genre_id)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                 """,
                 (
+                    row.get("public_id") or f"index-{row['id']}",
                     row["title"], row["title_key"], row["composer_name"], row["person_id"],
                     row["catalogue"], row["catalogue_key"], row["year"],
                     row["instrumentation"], row["source_count"], row["updated_at"],
@@ -122,6 +136,13 @@ def merge(conn: pymysql.Connection, build_db: str, live_db: str) -> tuple[int, i
             )
             inserted += 1
 
+        cur.execute(
+            f"""
+            UPDATE `{live_db}`.index_works
+            SET public_id = CONCAT('index-', id)
+            WHERE public_id IS NULL OR public_id = ''
+            """
+        )
         cur.execute(
             f"""
             DELETE r FROM `{live_db}`.index_representations r
@@ -156,7 +177,18 @@ def merge(conn: pymysql.Connection, build_db: str, live_db: str) -> tuple[int, i
             JOIN _osap_index_map m ON m.build_id = b.work_id
             """
         )
+        cur.execute(
+            f"""
+            SELECT COUNT(*) AS total FROM `{build_db}`.index_works b
+            LEFT JOIN _osap_index_map m ON m.build_id = b.id
+            WHERE m.build_id IS NULL
+            """
+        )
+        unmapped = int(cur.fetchone()["total"])
+        if unmapped:
+            raise RuntimeError(f"shadow merge incompleto: {unmapped} obras sin mapear")
         cur.execute("DROP TEMPORARY TABLE _osap_index_map")
+        conn.commit()
     return updated, inserted
 
 
@@ -178,7 +210,7 @@ def main() -> int:
     try:
         with admin.cursor() as cur:
             cur.execute("SELECT GET_LOCK('osap_index_jobs', 0) AS got")
-            if not cur.fetchone()[0]:
+            if not cur.fetchone()["got"]:
                 print("otro job de índice está en ejecución; salgo")
                 return 75
         prepare_build(admin, build_db, args.db_api)
