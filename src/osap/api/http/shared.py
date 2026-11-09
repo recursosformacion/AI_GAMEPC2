@@ -198,6 +198,10 @@ _TAGS = [
         "name": "Friends",
         "description": "«Los amigos»: grupos, miembros, artículos y moderación editorial.",
     },
+    {
+        "name": "Ads",
+        "description": "Publicidad contextual y registro de impresiones.",
+    },
 ]
 
 

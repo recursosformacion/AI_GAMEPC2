@@ -188,7 +188,10 @@ def test_works_resolve_creates_session_and_returns_202() -> None:
     assert session.status_code == 200
     sdata = session.json()["data"]
     assert sdata["session_id"] == session_id
-    assert sdata["status"] == "acquiring"
+    # El worker arranca en segundo plano al crear la sesión; entre el POST y este GET
+    # puede haber terminado ya (sin acquirers configurados pasa a `partial`). El contrato
+    # es que la sesión existe y es consultable, no que siga en `acquiring`.
+    assert sdata["status"] in {"acquiring", "partial", "complete"}
     assert sdata["query"] == "Mozart Ave Verum K.618"
     assert sdata["providers"] == ["omr", "imslp", "musicbrainz", "mutopia"]
 

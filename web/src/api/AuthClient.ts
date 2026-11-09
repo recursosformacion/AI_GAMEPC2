@@ -4,7 +4,13 @@
 // envelope de osap-api. Aquí se normalizan a ApiError (code/message).
 
 import { ApiError } from "./errors";
-import type { AuthSession } from "./types";
+import type {
+  AuthSession,
+  EntityKind,
+  EntityListItem,
+  EntityMembership,
+  EntityRequest,
+} from "./types";
 
 // URL base de osap-auth. En dev/prod el Web llama a /auth a través del mismo origen
 // (proxy inverso de osap-app → osap-auth), evitando CORS.
@@ -18,9 +24,12 @@ export interface UserProfile {
   user_id: string;
   email: string;
   name: string | null;
+  nickname?: string | null;
+  phone?: string | null;
   roles: string[];
   email_verified: boolean;
   status: string;
+  memberships?: EntityMembership[];
 }
 
 export class AuthClient {
@@ -36,8 +45,8 @@ export class AuthClient {
     return this.post<AuthSession>("/auth/login", { email, password });
   }
 
-  /** Actualiza el nombre local del usuario (el de OIDC es solo el valor inicial). */
-  async updateMe(accessToken: string, name: string): Promise<UserProfile> {
+  /** Actualiza el nombre local y, opcionalmente, el nickname. */
+  async updateMe(accessToken: string, name: string, nickname?: string): Promise<UserProfile> {
     const fetchImpl = this.fetcher ?? globalThis.fetch;
     let response: Response;
     try {
@@ -47,7 +56,7 @@ export class AuthClient {
           Authorization: `Bearer ${accessToken}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ name, ...(nickname ? { nickname } : {}) }),
       });
     } catch (cause) {
       throw new ApiError("NETWORK", "Auth service unreachable", { cause: String(cause) });
@@ -60,6 +69,44 @@ export class AuthClient {
 
   async refresh(refreshToken: string): Promise<AuthSession> {
     return this.post<AuthSession>("/auth/refresh", { refresh_token: refreshToken });
+  }
+
+  /** Teléfono voluntario para WhatsApp (`null` o vacío lo borra). */
+  async updatePhone(accessToken: string, phone: string | null): Promise<UserProfile> {
+    return this.send<UserProfile>("PUT", "/auth/me/phone", accessToken, { phone });
+  }
+
+  async listEntities(accessToken: string): Promise<EntityListItem[]> {
+    return this.send<EntityListItem[]>("GET", "/auth/entities", accessToken);
+  }
+
+  async updateMyEntity(
+    accessToken: string,
+    input: {
+      action: "join" | "leave" | "represent";
+      entity_id?: string;
+      entity_name?: string;
+      entity_kind?: EntityKind;
+    },
+  ): Promise<UserProfile> {
+    return this.send<UserProfile>("PUT", "/auth/me/entity", accessToken, input);
+  }
+
+  async listEntityRequests(accessToken: string): Promise<EntityRequest[]> {
+    return this.send<EntityRequest[]>("GET", "/auth/me/entity-requests", accessToken);
+  }
+
+  async decideEntityRequest(
+    accessToken: string,
+    id: string,
+    action: "approve" | "reject",
+  ): Promise<{ message: string }> {
+    return this.send<{ message: string }>(
+      "POST",
+      `/auth/me/entity-requests/${encodeURIComponent(id)}/decision`,
+      accessToken,
+      { action },
+    );
   }
 
   /** Perfil del usuario (nombre/email quedan fuera del JWT por privacidad). */
@@ -78,6 +125,35 @@ export class AuthClient {
       throw new ApiError(response.status === 401 ? "UNAUTHORIZED" : "AUTH_ERROR", "Profile unavailable");
     }
     return (await response.json()) as UserProfile;
+  }
+
+  private async send<T>(
+    method: string,
+    path: string,
+    accessToken: string,
+    body?: unknown,
+  ): Promise<T> {
+    const fetchImpl = this.fetcher ?? globalThis.fetch;
+    let response: Response;
+    try {
+      response = await fetchImpl.call(globalThis, `${this.baseUrl}${path}`, {
+        method,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          ...(body === undefined ? {} : { "Content-Type": "application/json" }),
+        },
+        body: body === undefined ? undefined : JSON.stringify(body),
+      });
+    } catch (cause) {
+      throw new ApiError("NETWORK", "Auth service unreachable", { cause: String(cause) });
+    }
+    if (!response.ok) {
+      throw new ApiError(
+        response.status === 401 ? "UNAUTHORIZED" : "AUTH_ERROR",
+        "Auth request failed",
+      );
+    }
+    return (await response.json()) as T;
   }
 
   private async post<T>(path: string, body: unknown): Promise<T> {

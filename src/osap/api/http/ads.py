@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 def build_ads_router(ctx: HttpContext) -> APIRouter:
     router = APIRouter()
 
-    @router.post("/api/v1/ads/compose", response_class=HTMLResponse)
+    @router.post("/api/v1/ads/compose", response_class=HTMLResponse, tags=["Ads"])
     def compose(payload: dict[str, Any], response: Response) -> Any:
         base = (ctx.container.ads_base_url() or "").rstrip("/")
         token = ctx.container.ads_service_token() or ""
@@ -46,7 +46,7 @@ def build_ads_router(ctx: HttpContext) -> APIRouter:
             headers={"Cache-Control": "no-store"},
         )
 
-    @router.post("/api/v1/ads/impression")
+    @router.post("/api/v1/ads/impression", tags=["Ads"])
     def impression(payload: dict[str, Any], response: Response) -> Any:
         base = (ctx.container.ads_base_url() or "").rstrip("/")
         token = ctx.container.ads_service_token() or ""

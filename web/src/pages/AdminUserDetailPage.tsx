@@ -11,6 +11,11 @@ import type { AdminUser } from "./AdminUsersPage";
 
 const ALL_ROLES = ["user", "moderator", "admin"];
 const STATUSES = ["active", "pending_verification", "disabled"];
+const MEMBERSHIP_STATUS: Record<string, string> = {
+  pending: "pendiente",
+  approved: "aprobada",
+  rejected: "rechazada",
+};
 
 interface AdminRecognition {
   id: number;
@@ -37,6 +42,7 @@ export function AdminUserDetailPage() {
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState("");
   const [nickname, setNickname] = useState("");
+  const [phone, setPhone] = useState("");
   const [roles, setRoles] = useState<string[]>([]);
   const [status, setStatus] = useState("");
   const [publicConsent, setPublicConsent] = useState(false);
@@ -60,6 +66,7 @@ export function AdminUserDetailPage() {
         setUser(data);
         setName(data.name ?? "");
         setNickname(data.nickname ?? "");
+        setPhone(data.phone ?? "");
         setRoles(data.roles ?? []);
         setStatus(data.status ?? "");
         setPublicConsent(Boolean(data.nickname_public_consent));
@@ -70,12 +77,18 @@ export function AdminUserDetailPage() {
 
   const save = () => {
     if (!user_id) return;
+    const cleanedPhone = phone.replace(/[\s().\-/]/g, "");
+    if (cleanedPhone && !/^\+?[0-9]{7,15}$/.test(cleanedPhone)) {
+      setError("Teléfono inválido: usa 7-15 dígitos con + opcional.");
+      return;
+    }
     setSaving(true);
     setError(null);
     void apiClient
       .patch(`/admin/users/${encodeURIComponent(user_id)}`, {
         name: name || null,
         nickname: nickname.trim() || null,
+        phone: phone.trim(),
         roles,
         status,
       })
@@ -162,6 +175,7 @@ export function AdminUserDetailPage() {
         <dl className="space-y-2 rounded border border-osap-border bg-osap-surface p-4">
           <Field label={t("adminUsers.name")}>{user.name ?? "—"}</Field>
           <Field label={t("adminUsers.nickname")}>{user.nickname ?? "—"}</Field>
+          <Field label="Teléfono">{user.phone ?? "—"}</Field>
           <Field label={t("adminUsers.email")}>{user.email}</Field>
           <Field label={t("adminUsers.roles")}>{user.roles.join(", ")}</Field>
           <Field label={t("adminUsers.status")}>{user.status}</Field>
@@ -193,6 +207,20 @@ export function AdminUserDetailPage() {
               value={nickname}
               onChange={(e) => setNickname(e.target.value)}
               placeholder="3–30, empieza por letra"
+              className="rounded border border-osap-border bg-osap-bg px-3 py-2"
+            />
+          </div>
+          <div className="grid gap-2">
+            <label className="text-sm font-medium" htmlFor="admin-phone">
+              Teléfono
+            </label>
+            <input
+              id="admin-phone"
+              type="tel"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="+34 600 123 456"
+              maxLength={32}
               className="rounded border border-osap-border bg-osap-bg px-3 py-2"
             />
           </div>
@@ -248,6 +276,23 @@ export function AdminUserDetailPage() {
           </div>
         </div>
       )}
+
+      <fieldset className="space-y-3 rounded border border-osap-border bg-osap-surface p-4">
+        <legend className="px-1 text-sm font-medium">Entidades</legend>
+        {user.memberships && user.memberships.length > 0 ? (
+          <ul className="space-y-1 text-sm">
+            {user.memberships.map((membership) => (
+              <li key={membership.id}>
+                <strong>{membership.entity_name}</strong> ({membership.entity_kind}) —{" "}
+                {MEMBERSHIP_STATUS[membership.status] ?? membership.status}
+                {membership.is_representative ? " · representante" : ""}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-osap-muted">Sin entidades.</p>
+        )}
+      </fieldset>
 
       <fieldset className="space-y-3 rounded border border-osap-border bg-osap-surface p-4">
         <legend className="px-1 text-sm font-medium">{t("adminUsers.recognitions")}</legend>

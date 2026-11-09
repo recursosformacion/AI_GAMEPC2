@@ -26,12 +26,13 @@ class _Resp:
 
 
 def _capture(monkeypatch) -> dict[str, object]:
-    seen: dict[str, object] = {}
+    seen: dict[str, object] = {"calls": 0}
 
     def _urlopen(request: urllib.request.Request, timeout: int | None = None) -> _Resp:
         assert request.data is not None
+        seen["calls"] = int(seen["calls"]) + 1
         seen["body"] = json.loads(request.data.decode())
-        return _Resp({"access_token": "tok"})
+        return _Resp({"access_token": "tok", "expires_in": 300})
 
     monkeypatch.setattr(stp.urllib.request, "urlopen", _urlopen)
     return seen
@@ -52,3 +53,16 @@ def test_sin_audience_no_envia_la_clave(monkeypatch) -> None:
     provider = stp.ClientCredentialsServiceTokenProvider("cid", "sec", "http://auth/oauth/token")
     provider.token(("storage:read",))
     assert "audience" not in seen["body"]
+
+
+def test_reutiliza_el_token_cacheado_por_scopes(monkeypatch) -> None:
+    seen = _capture(monkeypatch)
+    provider = stp.ClientCredentialsServiceTokenProvider("cid", "sec", "http://auth/oauth/token")
+
+    assert provider.token(("storage:read",)) == "tok"
+    assert provider.token(("storage:read",)) == "tok"
+    assert seen["calls"] == 1
+
+    assert provider.token(("storage:admin",)) == "tok"
+    assert seen["calls"] == 2
+    assert seen["body"]["scope"] == "storage:admin"

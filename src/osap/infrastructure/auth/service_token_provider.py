@@ -6,6 +6,8 @@ Nunca representan un usuario.
 """
 
 import json
+import threading
+import time
 import urllib.request
 
 from src.osap.ports.service_token import IServiceTokenProvider
@@ -35,8 +37,25 @@ class ClientCredentialsServiceTokenProvider(IServiceTokenProvider):
         # (tokens para storage: `aud=osap-api`). Para consumir osap-support M2M hay que pedir
         # explícitamente `aud=osap-support`, que el receptor valida (`service_audience`).
         self._audience = audience
+        # Cache por (scopes, audience). Sin cache, cada operación de storage pedía un
+        # token nuevo: un pico de tráfico podía tumbar osap-auth y disparar un bucle de
+        # reintentos con 429. El lock evita estampidas de peticiones concurrentes.
+        self._lock = threading.Lock()
+        self._cache: dict[tuple[tuple[str, ...], str | None], tuple[str, float]] = {}
 
     def token(self, scopes: tuple[str, ...]) -> str:
+        key = (tuple(scopes), self._audience)
+        now = time.monotonic()
+        with self._lock:
+            cached = self._cache.get(key)
+            if cached is not None and cached[1] > now:
+                return cached[0]
+            token, expires_in = self._request_token(scopes)
+            ttl = expires_in if expires_in > 0 else 300.0
+            self._cache[key] = (token, time.monotonic() + max(5.0, ttl - 60.0))
+            return token
+
+    def _request_token(self, scopes: tuple[str, ...]) -> tuple[str, float]:
         body: dict[str, object] = {
             "grant_type": "client_credentials",
             "client_id": self._client_id,
@@ -57,7 +76,13 @@ class ClientCredentialsServiceTokenProvider(IServiceTokenProvider):
         token = doc.get("access_token")
         if not isinstance(token, str) or not token:
             raise RuntimeError("osap-auth did not return an access_token")
-        return token
+        raw_expires = doc.get("expires_in")
+        expires_in = (
+            float(raw_expires)
+            if isinstance(raw_expires, (int, float)) and not isinstance(raw_expires, bool)
+            else 0.0
+        )
+        return token, expires_in
 
 
 class StaticServiceTokenProvider(IServiceTokenProvider):

@@ -345,6 +345,7 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
                 user_id,
                 name=cast("str | None", payload.get("name")),
                 nickname=cast("str | None", payload.get("nickname")),
+                phone=cast("str | None", payload.get("phone")),
                 roles=cast("list[str] | None", payload.get("roles")),
                 status=cast("str | None", payload.get("status")),
             )

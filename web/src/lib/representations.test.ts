@@ -17,7 +17,8 @@ describe("representation actions", () => {
     expect(actions.downloadHref).toBe(
       "/api/v1/representations/idx-456780-omr-121355-musicxml/download",
     );
-    expect(actions.externalHref).toBe("https://example.org/external");
+    // OMR es interno: ofrece visor/descarga, pero no un enlace "Abrir en OMR" externo.
+    expect(actions.externalHref).toBeNull();
   });
 
   it("mantiene los proveedores externos no OMR solo como enlace web", () => {

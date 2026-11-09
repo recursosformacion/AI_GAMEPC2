@@ -98,6 +98,9 @@ async function loadProfile(accessToken: string): Promise<Partial<FrontendUser>> 
     return {
       name: profile.name ?? undefined,
       email: profile.email ?? undefined,
+      nickname: profile.nickname ?? undefined,
+      phone: profile.phone ?? undefined,
+      memberships: profile.memberships ?? undefined,
       roles: Array.isArray(profile.roles) && profile.roles.length > 0 ? profile.roles : undefined,
     };
   } catch {

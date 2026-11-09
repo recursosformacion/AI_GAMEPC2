@@ -28,5 +28,11 @@ export default defineConfig({
     setupFiles: ["./src/test/setup.ts"],
     globals: true,
     include: ["src/**/*.test.{ts,tsx}"],
+    // Las páginas usan React.lazy. Con muchos workers en paralelo, la transformación de
+    // chunks bloquea la resolución de los imports dinámicos y los tests ven `<div />`.
+    // Serializar los ficheros hace la suite determinista.
+    fileParallelism: false,
+    maxWorkers: 1,
+    testTimeout: 30000,
   },
 });

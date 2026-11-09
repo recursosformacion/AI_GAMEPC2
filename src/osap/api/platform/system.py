@@ -133,6 +133,7 @@ class SystemMixin(PlatformApiCore):
         *,
         name: str | None = None,
         nickname: str | None = None,
+        phone: str | None = None,
         roles: list[str] | None = None,
         status: str | None = None,
     ) -> object:
@@ -143,6 +144,8 @@ class SystemMixin(PlatformApiCore):
             payload["name"] = name
         if nickname is not None:
             payload["nickname"] = nickname
+        if phone is not None:
+            payload["phone"] = phone
         if roles is not None:
             payload["roles"] = roles
         if status is not None:

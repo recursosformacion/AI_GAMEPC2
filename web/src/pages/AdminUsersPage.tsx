@@ -6,6 +6,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
+import type { EntityMembership, MembershipStatus } from "../api/types";
 import { useI18n } from "../i18n/I18n";
 
 export interface AdminUser {
@@ -13,12 +14,20 @@ export interface AdminUser {
   email: string;
   name: string | null;
   nickname?: string | null;
+  phone?: string | null;
   roles: string[];
   email_verified: boolean;
   status: string;
   created_at?: string | null;
   nickname_public_consent?: boolean;
+  memberships?: EntityMembership[];
 }
+
+const MEMBERSHIP_STATUS: Record<MembershipStatus, string> = {
+  pending: "pendiente",
+  approved: "aprobada",
+  rejected: "rechazada",
+};
 
 const ROLE_RANK: Record<string, number> = { admin: 3, moderator: 2, user: 1 };
 const ROLE_LABEL: Record<string, string> = { admin: "Admin", moderator: "Moderador", user: "Usuario" };
@@ -155,6 +164,8 @@ export function AdminUsersPage() {
             <tr>
               <th className="px-3 py-2">{t("adminUsers.name")}</th>
               <th className="px-3 py-2">{t("adminUsers.email")}</th>
+              <th className="px-3 py-2">Teléfono</th>
+              <th className="px-3 py-2">Entidades</th>
               <th className="px-3 py-2">Rol</th>
               <th className="px-3 py-2 text-center">{t("adminUsers.status")}</th>
               <th className="px-3 py-2 text-center" title="Nickname público/privado">Público</th>
@@ -189,6 +200,23 @@ export function AdminUsersPage() {
                       </span>
                     ) : null}
                   </div>
+                </td>
+                <td className="px-3 py-2">{user.phone ?? "—"}</td>
+                <td className="px-3 py-2">
+                  {user.memberships && user.memberships.length > 0 ? (
+                    <ul className="space-y-0.5">
+                      {user.memberships.map((membership) => (
+                        <li key={membership.id} className="whitespace-nowrap">
+                          {membership.entity_name}{" "}
+                          <span className="text-xs text-osap-muted">
+                            ({MEMBERSHIP_STATUS[membership.status]})
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    "—"
+                  )}
                 </td>
                 <td className="px-3 py-2">
                   <span className="rounded bg-osap-accent-soft px-2 py-0.5 text-xs">

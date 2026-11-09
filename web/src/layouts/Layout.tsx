@@ -393,7 +393,7 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
 
 function TopBar({ onMenu }: { onMenu: () => void }) {
   const { t } = useI18n();
-  const { user, logout, isAdmin, updateName } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   const [loginOpen, setLoginOpen] = useState(false);
   const [authMode, setAuthMode] = useState<"login" | "register">("login");
   const blogReturnKey = "osap.blog.return_to";
@@ -560,17 +560,13 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
             </div>
           ) : (
             <>
-              <button
-                type="button"
+              <Link
+                to="/account"
                 className="max-w-[12rem] truncate rounded-full border border-osap-border px-3 py-1 text-sm hover:border-osap-accent hover:text-osap-accent"
-                title={t("account.editName")}
-                onClick={() => {
-                  const next = window.prompt(t("account.namePrompt"), user.name ?? "");
-                  if (next && next.trim()) void updateName(next.trim());
-                }}
+                title="Mi cuenta"
               >
                 {user.name || user.email || "…"}
-              </button>
+              </Link>
               {isAdmin() && (
                 <Link
                   to="/admin"

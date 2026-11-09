@@ -16,6 +16,9 @@ def store():
         cur.execute(f"CREATE DATABASE IF NOT EXISTS {TEST_DB}")
     base.close()
 
+    # El store crea el esquema (`CREATE TABLE IF NOT EXISTS`) antes de limpiar filas;
+    # limpiar antes de construirlo fallaba cuando la BD de test estaba vacía.
+    store = build_op_store(database=TEST_DB)
     conn = pymysql.connect(
         host="127.0.0.1", user="osap2027", password="2027osapdb", database=TEST_DB, charset="utf8mb4", autocommit=True
     )
@@ -24,7 +27,7 @@ def store():
             cur.execute(f"DELETE FROM {table}")
     conn.close()
 
-    return build_op_store(database=TEST_DB)
+    return store
 
 
 def test_suggestion_roundtrip(store) -> None:
