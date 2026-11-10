@@ -102,7 +102,9 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
   por separado: vídeos 0.5.1 (menú superior y raíl vertical) y blog 1.2.1 (menú, raíl y proxy
   `/ads/compose`). Evidencia: auth 184 tests, 19 tests web, `ruff` y `mypy` limpios; osap-api
   web 155 tests y `tsc --noEmit`; ai_publicidad 53 tests; vídeos 8 y blog 13 tests de plantilla.
-  Despliegue de 5.9.0 pendiente de autorización explícita.
+  Desplegado en producción el 2026-11-10: los cuatro programas en 5.9.0, migraciones de auth
+  0011–0013 y de storage/support aplicadas, salud OK. Vídeos 0.5.1 y blog 1.2.1 desplegados
+  el mismo día; `ai_publicidad` 0.6.0 con cuatro campañas de pie activas.
 
 - **5.8.0 (B)** — **identidad pública estable y compatibilidad de URLs antiguas**:
   `index_works.public_id` desacopla la URL del autoincremento; las URLs actuales
