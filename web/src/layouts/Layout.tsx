@@ -4,6 +4,7 @@ import { Link, NavLink, Outlet, useLocation, useSearchParams } from "react-route
 import { authClient } from "../api/AuthClient";
 import { initAnalytics } from "../analytics/ga";
 import { trackPageView } from "../analytics/gtm";
+import { AdSlot } from "../components/AdSlot";
 import { CookieConsent, openCookiePreferences } from "../consent/CookieConsent";
 import { DarkModeToggle } from "../components/DarkModeToggle";
 import { GlobalSearch } from "../components/GlobalSearch";
@@ -665,6 +666,9 @@ export function StorageBanner() {
 export function Layout(): ReactNode {
   useSeo();
   const location = useLocation();
+  const showFooterAd = !["/admin", "/auth", "/account"].some((prefix) =>
+    location.pathname.startsWith(prefix),
+  );
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Carga GA solo si el usuario ya consintió la analítica (nunca antes).
@@ -692,6 +696,16 @@ export function Layout(): ReactNode {
             style={{ border: "thin solid darkgray" }}
           >
             <Outlet />
+            {showFooterAd ? (
+              <AdSlot
+                placement="content_bottom"
+                pageType="static_page"
+                fallbackPlacement="footer"
+                minHeight={300}
+                maxAds={4}
+                className="mx-auto mt-8 w-full max-w-[900px]"
+              />
+            ) : null}
           </main>
           <Footer />
         </div>

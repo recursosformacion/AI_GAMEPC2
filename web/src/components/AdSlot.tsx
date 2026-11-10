@@ -11,6 +11,7 @@ type AdSlotProps = {
   fallbackPlacement: string;
   className?: string;
   minHeight?: number;
+  maxAds?: number;
 };
 
 /**
@@ -25,6 +26,7 @@ export function AdSlot({
   fallbackPlacement,
   className = "",
   minHeight = 180,
+  maxAds = 4,
 }: AdSlotProps) {
   const { lang } = useI18n();
   const ref = useRef<HTMLDivElement>(null);
@@ -68,7 +70,7 @@ export function AdSlot({
           device: window.innerWidth < 640 ? "mobile" : "desktop",
           mode: "auto_area",
           area: { width: Math.min(area.width, 2000), height: Math.min(area.height, 1200) },
-          max_ads: 3,
+          max_ads: maxAds,
           gap: 12,
           orientation: "auto",
         })
@@ -90,7 +92,7 @@ export function AdSlot({
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [area.width, area.height, pageType, entityType, entityId, placement, lang]);
+  }, [area.width, area.height, pageType, entityType, entityId, placement, lang, maxAds]);
 
   return (
     <div ref={ref} className={className} style={{ minHeight }}>

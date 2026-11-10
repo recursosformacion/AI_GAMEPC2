@@ -3,11 +3,11 @@
 **Estado:** guía de implementación; no implica que la integración ya esté desplegada.  
 **Repositorios:** [AI_GAMEPC2 (OSAP)](https://github.com/recursosformacion/AI_GAMEPC2) y [ai_publicidad](https://github.com/recursosformacion/ai_publicidad).
 
-**Composición dinámica disponible en ai_publicidad:** `POST /api/v1/ads/compose` devuelve un fragmento HTML listo para insertar, a partir de un formato fijo o un área disponible, y puede incluir hasta tres anuncios. La emisión registra inmediatamente una impresión por anuncio y no requiere una petición de impresión posterior. La API y el laboratorio están implementados en el servicio publicitario, pero todavía falta incorporarlos a la fachada de `osap-api` y al frontend. Ver [el diseño y comportamiento actual](https://github.com/recursosformacion/ai_publicidad/blob/main/docs/ad-layout-optimization.md).
+**Composición dinámica disponible en ai_publicidad:** `POST /api/v1/ads/compose` devuelve un fragmento HTML listo para insertar, a partir de un formato fijo o un área disponible, y puede incluir hasta cuatro anuncios. La emisión registra inmediatamente una impresión por anuncio y no requiere una petición de impresión posterior. La fachada `osap-api /api/v1/ads/compose` está desplegada y la consumen el frontend React de OSAP, `osap-videos` y `osap-blog`. Ver [el diseño y comportamiento actual](https://github.com/recursosformacion/ai_publicidad/blob/main/docs/ad-layout-optimization.md).
 
 ## 1. Objetivo y estado actual
 
-Integrar `ai_publicidad` como servicio independiente de entrega de anuncios, manteniendo la aplicación React de OSAP. OSAP reserva el espacio real y le pasa sus dimensiones y ubicación; `ai_publicidad` selecciona y compone hasta tres creatividades, devuelve HTML, registra una entrega/impresión por cada anuncio emitido y recibe los clics. El endpoint antiguo `/ads/serve` seguirá disponible para consumidores que prefieran JSON y confirmación de impresión separada.
+Integrar `ai_publicidad` como servicio independiente de entrega de anuncios, manteniendo la aplicación React de OSAP. OSAP reserva el espacio real y le pasa sus dimensiones y ubicación; `ai_publicidad` selecciona y compone hasta cuatro creatividades, devuelve HTML, registra una entrega/impresión por cada anuncio emitido y recibe los clics. El endpoint antiguo `/ads/serve` seguirá disponible para consumidores que prefieran JSON y confirmación de impresión separada.
 
 La inspección de `main` confirma estos puntos de integración existentes:
 
@@ -87,7 +87,7 @@ La fachada de composición recibe el contrato de `POST /api/v1/ads/compose`. OSA
   "device": "desktop",
   "mode": "auto_area",
   "area": { "width": 640, "height": 320 },
-  "max_ads": 3,
+  "max_ads": 4,
   "gap": 12,
   "orientation": "auto"
 }
@@ -101,7 +101,7 @@ La respuesta de `/compose` es **HTML directo** (`Content-Type: text/html`), no J
 
 Antes de calcular la geometría, `ai_publicidad` filtra las campañas activas y dentro de fechas, creatividades aprobadas, reglas de ubicación/segmentación, idioma, marcas activas y cooldown temporal. Si hay inventario comercial elegible, compone solo con él; los anuncios propios son reserva cuando no existe inventario comercial compatible para esa petición.
 
-El motor intenta primero el tamaño con mayor superficie que encaje y **no mezcla tamaños dentro de un bloque**. Puede organizar hasta tres anuncios del mismo ancho y alto en fila o columna. No repite campaña ni marca y nunca combina marcas registradas como competidoras. `minimum_interval_seconds` excluye temporalmente una campaña ya emitida en la misma aplicación, tipo de página, entidad y ubicación. No es un límite por usuario; no existe identificación de visitante.
+El motor intenta primero el tamaño con mayor superficie que encaje y **no mezcla tamaños dentro de un bloque**. Puede organizar hasta cuatro anuncios del mismo ancho y alto en fila o columna. No repite campaña ni marca y nunca combina marcas registradas como competidoras. `minimum_interval_seconds` excluye temporalmente una campaña ya emitida en la misma aplicación, tipo de página, entidad y ubicación. No es un límite por usuario; no existe identificación de visitante.
 
 No están implementados todavía los presupuestos, los contratos comerciales, los topes diarios/totales de impresiones o el pacing. Cuando se incorporen, serán condiciones de elegibilidad previas a la composición, no criterios geométricos.
 
@@ -156,6 +156,25 @@ Orden de integración recomendado:
 5. Conservar los tres `SponsorSlot` actuales como respaldo hasta confirmar todas las nuevas ubicaciones. Se pueden migrar después a `AdSlot` cuando sus códigos de ubicación física estén acordados.
 
 No colocar un formato de 160×600 en una columna estrecha móvil. El catálogo lo clasifica como ubicación vertical/audiovisual, pero el anuncio de campaña inicial es textual: un formato de espacio no proporciona vídeo ni reproductor por sí mismo.
+
+**Ranura de pie ya activa.** `Layout.tsx` reserva 900×300 bajo el contenido (fuera de `/admin`, `/auth` y `/account`) con `placement="content_bottom"` y `max_ads=4`. El seed `scripts/seed_osap_footer_ads.py` de `ai_publicidad` crea cuatro creatividades 200×200 en campañas independientes (Vídeos, Blog, Apóyanos y Repertorio abierto); el compositor las coloca en una fila y, si no hay inventario comercial, usa estas house ads.
+
+### 4.4 Satélites: vídeos y blog
+
+`osap-videos` y `osap-blog` son aplicaciones server-rendered independientes del bundle React. Desde
+la versión de vídeos 0.5.1 y la del blog 1.2.1, ambas colocan la navegación en una cabecera superior
+y reservan en la columna derecha un área de 300×620 que se oculta por debajo de 1000 px de ancho.
+
+- Cada aplicación expone su propio `POST /ads/compose` como proxy servidor-a-servidor hacia
+  `osap-api /api/v1/ads/compose`. El token de servicio y la URL interna nunca llegan al navegador,
+  y el proxy responde `204` si el servicio publicitario falla.
+- La petición usa `placement="sidebar"`, `mode="auto_area"`, `max_ads=1` y el área real medida del
+  contenedor. El optimizador elige el formato con mayor cobertura (normalmente el skyscraper
+  160×600) y lo centra en el espacio disponible.
+- Si el proxy falla o devuelve `no-fill`, el hueco conserva una tarjeta de respaldo enlazada a OSAP.
+- En móvil no se solicita anuncio: el raíl se oculta y el script no envía la petición.
+- El HTML entregado conserva `data-kind` y `data-impression-id`; el clic pasa por
+  `https://app.openmusicrepository.com/r/{token}`.
 
 ## 5. Clicks: exponer únicamente la ruta de redirección
 
