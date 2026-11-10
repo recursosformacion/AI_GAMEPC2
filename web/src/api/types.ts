@@ -481,7 +481,14 @@ export interface FrontendUser {
   memberships?: EntityMembership[];
 }
 
-export type EntityKind = "coral" | "orquesta" | "grupo";
+export type EntityKind =
+  | "coral"
+  | "orquesta"
+  | "grupo"
+  | "banda"
+  | "ensemble"
+  | "escuela"
+  | "iglesia";
 export type MembershipStatus = "pending" | "approved" | "rejected";
 
 export interface EntityMembership {
@@ -489,6 +496,7 @@ export interface EntityMembership {
   entity_id: string;
   entity_name: string;
   entity_kind: EntityKind;
+  entity_email: string | null;
   status: MembershipStatus;
   is_representative: boolean;
   requested_at: string;

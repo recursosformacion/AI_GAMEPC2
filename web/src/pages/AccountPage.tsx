@@ -15,6 +15,10 @@ const KIND_LABELS: Record<EntityKind, string> = {
   coral: "Coral",
   orquesta: "Orquesta",
   grupo: "Grupo",
+  banda: "Banda",
+  ensemble: "Ensemble",
+  escuela: "Escuela / Conservatorio",
+  iglesia: "Iglesia",
 };
 
 const STATUS_LABELS: Record<MembershipStatus, string> = {
@@ -35,6 +39,7 @@ export function AccountPage() {
   const [managedEntityId, setManagedEntityId] = useState("");
   const [entityName, setEntityName] = useState("");
   const [entityKind, setEntityKind] = useState<EntityKind>("coral");
+  const [entityEmail, setEntityEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -155,11 +160,16 @@ export function AccountPage() {
     const selected = managed.find((membership) => membership.entity_id === entityId);
     setEntityName(selected?.entity_name ?? "");
     setEntityKind(selected?.entity_kind ?? "coral");
+    setEntityEmail(selected?.entity_email ?? "");
   };
 
   const represent = () => {
     if (!accessToken || !entityName.trim()) {
       setError("Indica el nombre de la entidad que representas.");
+      return;
+    }
+    if (!entityEmail.trim()) {
+      setError("Indica el correo de contacto de la entidad.");
       return;
     }
     void run(
@@ -169,6 +179,7 @@ export function AccountPage() {
           entity_id: managedEntityId || undefined,
           entity_name: entityName.trim(),
           entity_kind: entityKind,
+          entity_email: entityEmail.trim(),
         }),
       managedEntityId ? "Entidad actualizada." : "Entidad creada.",
     );
@@ -255,6 +266,7 @@ export function AccountPage() {
                 <span>
                   <strong>{membership.entity_name}</strong> ({KIND_LABELS[membership.entity_kind]}) —{" "}
                   {STATUS_LABELS[membership.status]}
+                  {membership.entity_email ? ` · ${membership.entity_email}` : ""}
                   {membership.is_representative ? " · la representas" : ""}
                 </span>
                 {membership.status !== "rejected" ? (
@@ -346,6 +358,22 @@ export function AccountPage() {
               </option>
             ))}
           </select>
+        </div>
+        <div className="grid gap-1">
+          <label className="text-sm text-osap-muted" htmlFor="account-entity-email">Correo de contacto</label>
+          <input
+            id="account-entity-email"
+            type="email"
+            value={entityEmail}
+            disabled={busy}
+            maxLength={254}
+            placeholder="contacto@entidad.example"
+            onChange={(e) => setEntityEmail(e.target.value)}
+            className="rounded border border-osap-border bg-osap-bg px-3 py-2 text-sm"
+          />
+          <p className="text-xs text-osap-muted">
+            Queda guardado con el creador como responsable; el envío se decidirá más adelante.
+          </p>
         </div>
         <button className="rounded bg-osap-accent px-3 py-1 text-sm text-white" disabled={busy} onClick={represent}>
           {managedEntityId ? "Actualizar entidad" : "Crear entidad"}

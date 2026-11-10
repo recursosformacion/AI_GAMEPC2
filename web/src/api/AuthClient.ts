@@ -87,6 +87,7 @@ export class AuthClient {
       entity_id?: string;
       entity_name?: string;
       entity_kind?: EntityKind;
+      entity_email?: string;
     },
   ): Promise<UserProfile> {
     return this.send<UserProfile>("PUT", "/auth/me/entity", accessToken, input);
