@@ -93,6 +93,17 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.9.0 (B)** — **entidades de usuario, teléfono y anuncios de pie**:
+  `osap-auth` añade entidades agregadoras (coro, orquesta, grupo), teléfono voluntario y
+  pertenencias N:M con aprobación del gestor (migraciones 0011–0013, aditivas y reversibles).
+  `osap-api` reserva un hueco de 900×300 bajo el contenido y compone hasta cuatro anuncios
+  200×200 de productos OSAP; `ai_publicidad` incorpora tarjetas compactas/verticales y el seed
+  `scripts/seed_osap_footer_ads.py` con cuatro campañas independientes. Los satélites suben
+  por separado: vídeos 0.5.1 (menú superior y raíl vertical) y blog 1.2.1 (menú, raíl y proxy
+  `/ads/compose`). Evidencia: auth 184 tests, 19 tests web, `ruff` y `mypy` limpios; osap-api
+  web 155 tests y `tsc --noEmit`; ai_publicidad 53 tests; vídeos 8 y blog 13 tests de plantilla.
+  Despliegue de 5.9.0 pendiente de autorización explícita.
+
 - **5.8.0 (B)** — **identidad pública estable y compatibilidad de URLs antiguas**:
   `index_works.public_id` desacopla la URL del autoincremento; las URLs actuales
   `index-<n>` se conservan y las obras nuevas derivan su ID de la identidad de origen.
