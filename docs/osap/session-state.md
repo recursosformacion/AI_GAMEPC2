@@ -4,7 +4,7 @@ Actualizado: 2026-11-11. Leer al empezar una sesión compactada.
 
 ## Producción
 
-- `osap-api`, `osap-auth`, `osap-storage`, `osap-support`: **5.9.0** desplegados; migraciones de auth 0011–0013 y de storage/support aplicadas; salud OK.
+- `osap-api`, `osap-auth`, `osap-storage`, `osap-support`: **5.10.0** desplegados; auth con migración 0014; salud OK.\n- **Chorus 0.2.0 en producción**: https://chorus.openmusicrepository.com (servicio `chorus` en 9600, SQLite piloto, editor en `/muse/`, OIDC `chorus-web`).
 - Satélites: vídeos **0.5.1**, blog **1.2.1**, `ai_publicidad` **0.6.0**, `ai-importacion` **0.3.0**.
 - Login con Google corregido (cliente nuevo `571610870089…`); `config.yaml` con backup `config.yaml.bak-20261110-google-fix`.
 - `FUNDING.yml` publicado en los 7 repos (`github: [recursosformacion]` + `custom: [https://app.openmusicrepository.com/support]`).

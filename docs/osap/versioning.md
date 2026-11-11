@@ -100,7 +100,7 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
   de mostrar autor/tipo/licencia por componente. Chorus **0.2.0** estrena login OIDC,
   biblioteca abrible/descargable, descarga para MuseScore y el editor con nombre de fichero
   y extensión correctos. Evidencia: auth 188 tests, osap web 155, Chorus 37, ai_publicidad
-  53. Despliegue en curso; se registrará la verificación final al cerrar la entrega.
+  53. Desplegado en producción el 2026-11-11: osap-api/auth/storage/support 5.10.0 (auth con migración 0014); Chorus 0.2.0 en https://chorus.openmusicrepository.com con servicio `chorus`, SQLite piloto y editor en `/muse/`. Verificados health, UI, editor y OIDC start; login con Google pendiente de prueba con una cuenta real.
 
 - **5.9.0 (B)** — **entidades de usuario, teléfono y anuncios de pie**:
   `osap-auth` añade entidades agregadoras (coro, orquesta, grupo), teléfono voluntario y
