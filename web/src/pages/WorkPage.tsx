@@ -92,6 +92,7 @@ export function WorkPage() {
   const providers = Array.from(new Set(sheet.representations.map((r) => r.provider)));
   // Datos ricos pedidos a OSAP al abrir la ficha; el índice queda como respaldo.
   const d = osap;
+  const sourceUrl = d?.source_url ?? null;
   const year = d?.year ?? work.year;
   const composerText = d?.composer ?? work.composer;
   const catalogue = d?.catalogue ?? work.catalogue;
@@ -138,6 +139,16 @@ export function WorkPage() {
         <p className="mt-1 text-sm text-osap-muted">
           {[work.composer, work.catalogue, attribution].filter(Boolean).join(" · ") || "—"}
         </p>
+        {sourceUrl ? (
+          <a
+            href={sourceUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-1 inline-block text-xs text-osap-accent hover:underline"
+          >
+            Página de la obra
+          </a>
+        ) : null}
         <div className="mt-2 flex flex-wrap gap-2 text-xs">
           {year != null ? <span className="rounded bg-osap-accent-soft px-2 py-0.5">{year}</span> : null}
           {musicalKey ? <span className="rounded bg-osap-accent-soft px-2 py-0.5">{musicalKey}</span> : null}

@@ -983,6 +983,7 @@ export interface OsapWorkDetails {
   genres?: string[];
   instruments?: string[];
   parts_names?: string[];
+  source_url?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 }
