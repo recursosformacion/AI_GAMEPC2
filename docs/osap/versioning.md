@@ -93,6 +93,15 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.10.0 (B)** — **correo de entidad, espacio de trabajo y licencias**:
+  `osap-auth` añade el correo de contacto de la entidad (migración 0014, aditiva) y nuevos
+  tipos; `osap-api` expone la fachada `/api/v1/workspace/library` (con el token del usuario)
+  y resuelve la licencia desde storage (representación → obra) sin tocar el índice, además
+  de mostrar autor/tipo/licencia por componente. Chorus **0.2.0** estrena login OIDC,
+  biblioteca abrible/descargable, descarga para MuseScore y el editor con nombre de fichero
+  y extensión correctos. Evidencia: auth 188 tests, osap web 155, Chorus 37, ai_publicidad
+  53. Despliegue en curso; se registrará la verificación final al cerrar la entrega.
+
 - **5.9.0 (B)** — **entidades de usuario, teléfono y anuncios de pie**:
   `osap-auth` añade entidades agregadoras (coro, orquesta, grupo), teléfono voluntario y
   pertenencias N:M con aprobación del gestor (migraciones 0011–0013, aditivas y reversibles).
