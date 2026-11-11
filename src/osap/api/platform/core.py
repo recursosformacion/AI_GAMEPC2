@@ -95,18 +95,17 @@ class PlatformApiCore:
         resource_id = int(metadata.get("resource_id") or 0) if metadata else 0
         source_rep_id = str(metadata.get("source_rep_id") or "") if metadata else ""
         candidate_id = getattr(getattr(m, "candidate_id", None), "value", "") or ""
+        # work_id de la obra (para analítica y resolución de `view`/`download` sin caché).
+        descriptor_work_id = getattr(getattr(m, "work_descriptor", None), "work_id", None)
+        work_id_value = str(getattr(descriptor_work_id, "value", "") or "")
         if candidate_id.startswith("index-"):
-            # candidate_id = "index-<work_id>-<provider>"
-            work_part = candidate_id.split("-")[1] if len(candidate_id.split("-")) > 1 else ""
+            # El id público puede contener guiones (slugs): se usa completo, no el primer
+            # segmento de candidate_id, para que `get_representation` pueda resolverlo.
+            work_part = work_id_value.removeprefix("index-")
             # El resource identifica la fila; 0 en proveedores legacy (OMR/IMSLP/MusicBrainz).
             rep_id = f"idx-{work_part}-{provider_id}-{resource_id}-{fmt_value}"
         else:
             rep_id = f"r-{stable_id(provider_id, download or view or candidate_id, fmt_value)}"
-        # work_id de la obra (para analítica y resolución de `view`/`download` sin caché).
-        descriptor_work_id = getattr(getattr(m, "work_descriptor", None), "work_id", None)
-        work_id_value = str(getattr(descriptor_work_id, "value", "") or "")
-        if candidate_id.startswith("index-") and len(candidate_id.split("-")) > 1:
-            work_id_value = candidate_id.split("-")[1] or work_id_value
         self._representations[rep_id] = {
             "download_url": download,
             "view_url": view,

@@ -197,10 +197,16 @@ class IndexCatalogProvider(ICatalogProvider):
         parts = rep_id.split("-")
         if len(parts) < 5 or parts[0] != "idx":
             return None
-        work_ref, provider, resource_part = parts[1], parts[2], parts[3]
-        fmt = "-".join(parts[4:])
+        # El id público de la obra puede contener guiones (slug): se toma todo el
+        # tramo central, no solo el primer segmento.
+        provider = parts[-3]
+        resource_part = parts[-2]
+        fmt = parts[-1]
+        work_ref = "-".join(parts[1:-3])
+        if not work_ref:
+            return None
         work_public = f"index-{work_ref}"
-        work_id = work_ref if work_ref.isdigit() else None
+        work_id = work_ref
         conn = None
         try:
             conn = pymysql.connect(

@@ -280,10 +280,10 @@ def build_representation_payload(
     `download_url` solo existe para proveedores servibles (OMR/Mutopia); en el resto se
     ofrece el sitio del proveedor (`site`), nunca el fichero externo (responde 403).
     """
-    work_numeric = str(info.get("work_id") or "")
-    if not work_numeric.isdigit():
+    work_ref = str(info.get("work_id") or "").strip()
+    if not work_ref:
         return None
-    work_id = f"index-{int(work_numeric)}"
+    work_id = work_ref if work_ref.startswith("index-") else f"index-{work_ref}"
     title = str(info.get("title") or "").strip() or "Obra"
     composer = _str_or_none(info.get("composer"))
     catalogue = _str_or_none(info.get("catalogue"))
