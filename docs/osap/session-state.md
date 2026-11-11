@@ -26,6 +26,14 @@ Actualizado: 2026-11-11. Leer al empezar una sesión compactada.
 - **Importación GitHub**: receptor JSON `osap-resource-import/1.1` por construir; campos de procedencia/bloqueo en Storage y redirección a origen. Diseño en `docs/osap/licensing-and-takedown.md`.
 - Crear alias `abuso@openmusicrepository.com` (el texto legal también usa `admin@`).
 
+## Chorus (`ai_chorus`)
+
+- Runtime FastAPI + web estática, SQLite piloto; **30 tests** en verde.
+- Piloto verificado en local contra `http://osap-app` y `http://osap-auth/auth-api`: health 200, rutas sin token 401, proxy legal 200, login inválido 401.
+- Audiencia: se usa la predeterminada `osap-api` (decisión CH-016); `chorus-api` queda como endurecimiento.
+- Implementado: propiedad de obras (`works.owner_sub`), endpoint de integridad SHA-256, biblioteca personal (`library_items`) y colecciones; listado y guardado de referencias en la web.
+- Pendiente: login real con credenciales y puente a MuseEncore (editor sin configurar), escritorio completo, motor definitivo y módulo Study. Commit local sin subir.
+
 ## Reglas operativas
 
 - No desplegar ni empujar tags/releases sin autorización explícita; las correcciones de producción sí.
