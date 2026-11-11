@@ -3,7 +3,7 @@
 
 import type { ReactNode } from "react";
 
-export const LEGAL_UPDATED = "2026-10-10";
+export const LEGAL_UPDATED = "2026-11-11";
 
 function LegalPage({ title, children }: { title: string; children: ReactNode }) {
   return (
@@ -65,6 +65,14 @@ export function LegalNoticePage() {
           licencia. La información de origen y licencia se muestra cuando está disponible; su uso
           por el usuario se realiza bajo su responsabilidad y conforme a la licencia aplicable.
         </p>
+        <p className="mt-3">
+          OpenMusicRepository actúa como <strong>agregador automatizado de buena fe</strong>:
+          cataloga metadatos públicos y licencias <strong>declaradas por la fuente</strong>. No
+          verifica la licencia de cada fichero ni garantiza que la declaración del repositorio de
+          origen sea exacta. Cuando la licencia no permite la redistribución, el fichero no se
+          aloja en OSAP y la descarga se dirige al origen para que el usuario decida bajo su
+          responsabilidad.
+        </p>
       </section>
       <section>
         <h2 className="font-semibold">6. Responsabilidad de quienes aportan</h2>
@@ -106,14 +114,41 @@ export function LegalNoticePage() {
           conforme a la normativa aplicable.
         </p>
       </section>
-      <section>
-        <h2 className="font-semibold">11. Notificación de contenidos que infrinjan derechos</h2>
+      <section id="retirada">
+        <h2 className="font-semibold">
+          11. Retirada rápida de contenidos (Notice and Takedown / DMCA)
+        </h2>
         <p>
-          Si consideras que un contenido infringe derechos, escribe a
-          admin@openmusicrepository.com indicando: identificación del contenido, tu identidad y
-          legitimación, el derecho supuestamente infringido y la documentación que lo acredite. Se
-          atenderá y, en su caso, se retirará el contenido conforme a la normativa aplicable
-          (incluido el mecanismo de la LSSI-CE).
+          Canal visible para titulares de derechos y para cualquier persona que detecte una
+          discrepancia de licencia:{" "}
+          <a className="text-osap-accent hover:underline" href="mailto:abuso@openmusicrepository.com">
+            abuso@openmusicrepository.com
+          </a>{" "}
+          (con copia a{" "}
+          <a className="text-osap-accent hover:underline" href="mailto:admin@openmusicrepository.com">
+            admin@openmusicrepository.com
+          </a>
+          ). No es necesario usar un formulario: el correo es el canal oficial.
+        </p>
+        <p>
+          La notificación debe incluir: (1) la URL o identificador del contenido en OSAP; (2) tu
+          identidad y legitimación como titular o representante; (3) el derecho supuestamente
+          infringido y la base de la reclamación; (4) la documentación que lo acredite; y (5) tus
+          datos de contacto para responder.
+        </p>
+        <p>
+          Ante una reclamación <strong>verosímil y fundamentada</strong>, OSAP retirará o bloqueará
+          el contenido de forma <strong>inmediata y cautelar</strong>, sin perjuicio para la
+          plataforma y a la espera de comprobación. Se avisará al reclamante y, cuando proceda, a
+          quien aportó el contenido, que podrá responder con una contra-notificación y la
+          documentación que acredite su derecho. Si la reclamación se refiere solo a la licencia del
+          fichero, se mantiene la ficha catalográfica, se bloquea la descarga y se redirige al
+          origen; si afecta a los metadatos, se retira también la ficha.
+        </p>
+        <p>
+          Este procedimiento se aplica sin perjuicio de las acciones legales que correspondan y de
+          los mecanismos previstos en la normativa aplicable, incluida la LSSI-CE y, en su caso, la
+          Ley de Servicios Digitales (DSA) y el procedimiento de notificación de la DMCA.
         </p>
       </section>
     </LegalPage>

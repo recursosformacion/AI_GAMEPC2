@@ -621,6 +621,10 @@ export function Footer() {
         Aviso legal
       </Link>
       {" · "}
+      <Link to="/aviso-legal#retirada" className="text-osap-accent hover:underline">
+        Retirada de contenido
+      </Link>
+      {" · "}
       <Link to="/privacidad" className="text-osap-accent hover:underline">
         Privacidad
       </Link>
