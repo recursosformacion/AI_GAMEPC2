@@ -93,6 +93,12 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.10.2 (C)** — **compositor «Apellido, Nombre»**: canonicaliza el orden para que
+  RISM/IMSLP («Mozart, Wolfgang Amadeus») compartan clave de agrupación con el índice
+  («Wolfgang Amadeus Mozart») y sus representaciones se fusionen en una sola obra.
+  Evita duplicados del mismo Ave Verum. Prueba `tests/osap/test_composer_order.py`.
+  Solo `osap-api`.
+
 - **5.10.1 (C)** — **ventana de búsqueda del índice**: eleva el límite de candidatos del
   índice de 400 a 2.000 para que las búsquedas amplias por título no excluyan obras válidas
   (Mozart «Ave verum» solo aparecía al buscar por compositor; faltaban CPDL/IMSLP/OMR).

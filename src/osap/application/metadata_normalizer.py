@@ -218,7 +218,14 @@ class MetadataNormalizer:
 
     @staticmethod
     def canonical_composer(raw: str) -> str:
-        text = transliterate_cyrillic(MetadataNormalizer._clean_text(raw))
+        # RISM/IMSLP usan "Apellido, Nombre": reordenar antes de canonicalizar para que
+        # "Mozart, Wolfgang Amadeus" y "Wolfgang Amadeus Mozart" compartan clave.
+        raw_text = str(raw or "")
+        if "," in raw_text:
+            surname, _, given = raw_text.partition(",")
+            if surname.strip() and given.strip():
+                raw_text = f"{given.strip()} {surname.strip()}"
+        text = transliterate_cyrillic(MetadataNormalizer._clean_text(raw_text))
         # Quitar contenido entre paréntesis (años, notas, "alleged").
         text = re.sub(r"\([^)]*\)", " ", text)
         # Quitar prefijos de catálogo incrustados en el campo compositor ("KV 618 - ...").
