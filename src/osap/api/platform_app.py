@@ -40,6 +40,7 @@ from src.osap.api.http.support import build_support_router
 from src.osap.api.http.system import build_system_router
 from src.osap.api.http.votes import build_votes_router
 from src.osap.api.http.works import build_works_router
+from src.osap.api.http.workspace import build_workspace_router
 from src.osap.api.platform import PlatformApi
 from src.osap.bootstrap.configuration import load_configuration
 from src.osap.bootstrap.container import Container
@@ -160,6 +161,7 @@ def create_platform_app(
     app.include_router(build_composers_router(ctx))
     app.include_router(build_persons_router(ctx))
     app.include_router(build_works_router(ctx))
+    app.include_router(build_workspace_router(ctx))
     app.include_router(build_sessions_router(ctx))
     app.include_router(build_admin_ops_router(ctx))
     app.include_router(build_quota_router(ctx))

@@ -1244,3 +1244,38 @@ export interface NotificationList {
   unread: number;
 }
 
+
+export interface WorkspaceLibraryItem {
+  id: string;
+  kind: "local_work" | "osap_reference";
+  work_id?: string | null;
+  provider?: string | null;
+  external_work_id?: string | null;
+  external_resource_id?: string | null;
+  title: string;
+  subtitle?: string | null;
+  metadata?: Record<string, unknown> | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface WorkspaceCollection {
+  id: string;
+  name: string;
+  description?: string | null;
+  item_count: number;
+}
+
+export interface WorkspaceLibrary {
+  items: WorkspaceLibraryItem[];
+  collections: WorkspaceCollection[];
+}
+
+export interface WorkspaceReferenceInput {
+  provider?: string;
+  work_id: string;
+  representation_id?: string | null;
+  title: string;
+  subtitle?: string | null;
+  metadata?: Record<string, unknown> | null;
+}

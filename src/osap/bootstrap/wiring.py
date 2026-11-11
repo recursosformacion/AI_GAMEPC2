@@ -491,6 +491,7 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
         config.ads_timeout_seconds,
         config.ads_web_base,
     )
+    container.set_chorus_config(config.chorus_api_base or "http://127.0.0.1:9600")
     composer_client = StorageComposerClient(
         base_url=storage_base,
         token_provider=service_token_provider,

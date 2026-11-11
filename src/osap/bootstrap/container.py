@@ -79,6 +79,7 @@ class Container:
         self._storage_web_base: str | None = None
         self._support_web_base: str | None = None
         self._ads_base_url: str | None = None
+        self._chorus_api_base: str | None = None
         self._ads_web_base: str | None = None
         self._ads_service_token: str | None = None
         self._ads_timeout_seconds: float = 2.5
@@ -183,6 +184,12 @@ class Container:
         self._ads_web_base = web_base
         self._ads_service_token = token
         self._ads_timeout_seconds = max(0.5, min(10.0, timeout))
+
+    def set_chorus_config(self, base_url: str | None) -> None:
+        self._chorus_api_base = base_url
+
+    def chorus_api_base(self) -> str | None:
+        return self._chorus_api_base
 
     def ads_base_url(self) -> str | None:
         return self._ads_base_url

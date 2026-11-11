@@ -66,6 +66,7 @@ class Configuration:
     auth_base_url: str | None = None
     support_base_url: str | None = None
     ads_base_url: str | None = None
+    chorus_api_base: str | None = None
     ads_web_base: str | None = None
     ads_service_token: str | None = None
     ads_timeout_seconds: float = 2.5
@@ -121,6 +122,7 @@ _CONFIG_FIELDS: dict[str, tuple[str, Any]] = {
     "auth_base_url": ("OSAP_AUTH_BASE_URL", str),
     "support_base_url": ("OSAP_SUPPORT_BASE_URL", str),
     "ads_base_url": ("OSAP_ADS_BASE_URL", str),
+    "chorus_api_base": ("OSAP_CHORUS_API_BASE", str),
     "ads_web_base": ("OSAP_ADS_WEB_BASE", str),
     "ads_service_token": ("OSAP_ADS_SERVICE_TOKEN", str),
     "ads_timeout_seconds": ("OSAP_ADS_TIMEOUT_SECONDS", float),
@@ -155,6 +157,7 @@ _TOML_SECTIONS: dict[str, tuple[str, str]] = {
     "auth_base_url": ("osap", "auth_base_url"),
     "support_base_url": ("osap", "support_base_url"),
     "ads_base_url": ("ads", "base_url"),
+    "chorus_api_base": ("chorus", "base_url"),
     "ads_web_base": ("ads", "web_base"),
     "ads_service_token": ("ads", "service_token"),
     "ads_timeout_seconds": ("ads", "timeout_seconds"),

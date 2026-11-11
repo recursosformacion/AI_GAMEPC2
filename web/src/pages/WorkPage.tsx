@@ -5,6 +5,7 @@ import type { OsapWorkDetails } from "../api/types";
 import { Spinner } from "../components/Spinner";
 import { AdSlot } from "../components/AdSlot";
 import { RepresentationActions } from "../components/RepresentationActions";
+import { SaveToWorkspaceButton } from "../components/SaveToWorkspaceButton";
 import { VideosLink } from "../components/VideosLink";
 import { useI18n } from "../i18n/I18n";
 import { usePublicWork } from "../state/publicWork";
@@ -279,6 +280,12 @@ export function WorkPage() {
                       resourceId={rep.id}
                       variant="icon"
                       label="Buscar vídeos de esta representación"
+                    />
+                    <SaveToWorkspaceButton
+                      workId={work.work_id ?? canonicalId}
+                      workTitle={work.title}
+                      composer={composerText || work.composer}
+                      representation={rep}
                     />
                     <RepresentationActions representation={rep} workTitle={work.title} variant="icons" />
                   </span>

@@ -33,7 +33,7 @@ Actualizado: 2026-11-11. Leer al empezar una sesión compactada.
 - **Login OIDC PKCE** con el cliente `chorus-web`: la pantalla de Auth ofrece Google, GitHub, correo y alta de cuenta. Flujo probado hasta `authorize` y callback inválido (400); falta completar con una cuenta real.
 - Audiencia: se usa la predeterminada `osap-api` (decisión CH-016); `chorus-api` queda como endurecimiento.
 - Implementado: propiedad de obras (`works.owner_sub`), endpoint de integridad SHA-256, biblioteca personal (`library_items`) y colecciones; listado y guardado de referencias en la web; envoltorio del editor con vuelta a Chorus.
-- Pendiente: probar el login real y el puente a MuseEncore, integración con MuseScore de escritorio, PDF→MXL (OMR), funciones de grupo y motor definitivo. Backlog en `Chorus/docs/backlog.md`. Commits locales sin subir.
+- Biblioteca: búsqueda por texto (`GET /api/v1/library?q=`) y fachada OSAP `/api/v1/workspace/library` con el token del usuario; botón “Guardar” en la ficha de obra. Pendiente: probar el login real y el puente a MuseEncore, integración con MuseScore de escritorio, PDF→MXL (OMR), funciones de grupo y motor definitivo. Backlog en `Chorus/docs/backlog.md`. Commits locales sin subir.
 
 ## Reglas operativas
 

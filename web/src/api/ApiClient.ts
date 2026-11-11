@@ -28,6 +28,9 @@ import type {
   AmigosMyPermissions,
   Catalogue,
   Collaborator,
+  WorkspaceLibrary,
+  WorkspaceLibraryItem,
+  WorkspaceReferenceInput,
   Ensemble,
   Epoch,
   Genre,
@@ -928,6 +931,15 @@ export class ApiClient {
       throw new ApiError("INVALID_RESPONSE", `Unexpected response (HTTP ${response.status})`);
     }
   }
+
+  async getWorkspaceLibrary(q?: string): Promise<WorkspaceLibrary> {
+    const suffix = q ? `?q=${encodeURIComponent(q)}` : "";
+    return this.get<WorkspaceLibrary>(`/workspace/library${suffix}`);
+  }
+
+  async saveWorkspaceReference(input: WorkspaceReferenceInput): Promise<WorkspaceLibraryItem> {
+    return this.post<WorkspaceLibraryItem>("/workspace/library", input);
+  }
 }
 
 export const apiClient = new ApiClient();
@@ -974,4 +986,6 @@ export interface QuotaUsage {
   by_provider: { provider: string; total: number }[];
   top_works: { work_id: string; total: number }[];
 }
+
+
 
