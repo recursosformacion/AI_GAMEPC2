@@ -326,7 +326,8 @@ class IndexCatalogProvider(ICatalogProvider):
                 cur.execute(
                     "SELECT wr.id AS resource_id, "
                     "r.representations_license AS rep_license, "
-                    "w.works_license AS work_license "
+                    "w.works_license AS work_license, "
+                    "w.works_source_url AS source_url "
                     "FROM works_resources wr "
                     "JOIN works w ON w.id = wr.works_resources_work_id "
                     "LEFT JOIN representations r "
@@ -343,8 +344,13 @@ class IndexCatalogProvider(ICatalogProvider):
         resolved: dict[int, dict[str, Any]] = {}
         for row in rows:
             info = resolve_license(row.get("rep_license"), row.get("work_license"))
-            if info is not None:
-                resolved[int(row["resource_id"])] = info
+            source_url = str(row.get("source_url") or "").strip() or None
+            if info is None and not source_url:
+                continue
+            entry = dict(info or {})
+            if source_url:
+                entry["source_url"] = source_url
+            resolved[int(row["resource_id"])] = entry
         return resolved
 
     def count_works_by_composer_ids(self, person_ids: list[str]) -> dict[str, int]:

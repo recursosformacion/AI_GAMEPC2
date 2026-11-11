@@ -93,6 +93,10 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.10.4 (C)** — **página de obra en la búsqueda**: el índice adjunta `source_url` de
+  storage (página CPDL/IMSLP) a cada representación, para que “ver la obra” no dependa del
+  enlace de fichero. Solo `osap-api`.
+
 - **5.10.3 (C)** — **filtros canónicos y compositor en el título**: los filtros de compositor
   y título usan claves canónicas (RISM «Mozart, Wolfgang Amadeus» ya no se separa del índice)
   y se extrae el compositor del título cuando la fuente lo marca anónimo
