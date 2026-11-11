@@ -815,7 +815,8 @@ class IndexCatalogProvider(ICatalogProvider):
                     # se revalida abajo en Python (título en título, compositor en compositor).
                     tokens = " ".join(f"+{t}*" for t in (*title_tokens, *composer_tokens))
                     sql = (
-                        "SELECT i.title, i.composer_name, r.provider, r.format, r.download_url, "
+                        "SELECT i.title, i.composer_name, i.instrumentation, r.provider, "
+                        "r.format, r.download_url, r.title_provider, r.xml_title, "
                         "r.source_rep_id, r.resource_id "
                         "FROM index_works i "
                         "JOIN index_representations r ON r.work_id = i.id "
@@ -831,8 +832,10 @@ class IndexCatalogProvider(ICatalogProvider):
                         clauses.append("i.composer_name LIKE %s")
                         args.append(f"%{token}%")
                     sql = (
-                        "SELECT i.title, i.composer_name, r.provider, r.format, r.download_url "
-                        "FROM (SELECT id, title, composer_name FROM index_works i WHERE "
+                        "SELECT w.title, w.composer_name, w.instrumentation, r.provider, "
+                        "r.format, r.download_url, r.title_provider, r.xml_title "
+                        "FROM (SELECT id, title, composer_name, instrumentation "
+                        "FROM index_works i WHERE "
                         + " AND ".join(clauses)
                         + " LIMIT 500) w "
                         "JOIN index_representations r ON r.work_id = w.id "
@@ -863,6 +866,12 @@ class IndexCatalogProvider(ICatalogProvider):
                 "download_url": str(row["download_url"]),
                 "source_rep_id": str(row.get("source_rep_id") or ""),
                 "resource_id": int(str(row.get("resource_id") or 0)),
+                "title": str(
+                    row.get("title_provider") or row.get("xml_title") or row.get("title") or ""
+                ),
+                "work_title": str(row.get("title") or ""),
+                "composer": str(row.get("composer_name") or ""),
+                "instrumentation": str(row.get("instrumentation") or ""),
             }
             for row in rows
             if _is_representable(row)
@@ -996,8 +1005,8 @@ def _build_sql(
                 return None, ()
     sql = (
         "SELECT i.id, i.public_id, i.title, i.composer_name, i.catalogue, i.year, "
-        "r.provider, r.format, r.download_url, r.available, r.quality, "
-        "r.source_rep_id, r.resource_id "
+        "i.instrumentation, r.provider, r.format, r.download_url, r.available, r.quality, "
+        "r.title_provider, r.xml_title, r.source_rep_id, r.resource_id "
         "FROM index_works i "
         "JOIN index_representations r ON r.work_id = i.id "
         f"WHERE {where} AND r.provider IN ({', '.join(['%s'] * len(providers))}) "
@@ -1058,5 +1067,10 @@ def _row_to_candidate(row: dict[str, object]) -> CandidateRepresentation:
             "available": bool(row.get("available")),
             "source_rep_id": str(row.get("source_rep_id") or ""),
             "resource_id": resource_id,
+            "representation_title": str(
+                row.get("title_provider") or row.get("xml_title") or ""
+            ),
+            "composer": composer,
+            "instrumentation": str(row.get("instrumentation") or "") or None,
         },
     )

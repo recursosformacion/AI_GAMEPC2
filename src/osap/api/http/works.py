@@ -61,6 +61,11 @@ def _merge_index_resources(ctx: HttpContext, doc: dict[str, object]) -> None:
                 "file_id": file_id,
                 "available": True,
                 "url": _shared._storage_public_url(str(rep.get("download_url") or ""), base),
+                "title": str(rep.get("title") or "") or None,
+                "composer": str(rep.get("composer") or "") or None,
+                "instrumentation": str(rep.get("instrumentation") or "") or None,
+                "provider": str(rep.get("provider") or "") or None,
+                "license": rep.get("license"),
             }
         )
 

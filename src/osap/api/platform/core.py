@@ -124,7 +124,11 @@ class PlatformApiCore:
             provider=provider_id,
             format=fmt.value if fmt is not None else "musicxml",
             confidence=confidence.value if confidence is not None else 0.0,
-            title=str(getattr(descriptor, "title", None) or ""),
+            title=str(
+                (metadata or {}).get("representation_title")
+                or getattr(descriptor, "title", None)
+                or ""
+            ),
             url=url,
             available=available,
             metadata=metadata,
