@@ -672,3 +672,10 @@ con `--resolve-ambiguous` elige un destino canónico entre varios candidatos por
 de título/persona, persona, título y `source_count`. No usa el título como identidad única.
 Uso:
 `python script/backfill_index_url_aliases.py --old-db osap_api_old --database osap_api [--resolve-ambiguous]`.
+
+## osap-storage/scripts/backfill_cpdl_source_url.py
+
+Rellena `works.works_source_url` de las obras CPDL con la página estable de ChoralWiki
+(`https://www.cpdl.org/wiki/index.php?curid=<works_origin_id>`). Simulación por defecto;
+`--apply` escribe. Ejecutado el 2026-11-11: 56.420 obras actualizadas. El importador
+`import_cpdl_works.py` ya guarda ese campo en las altas nuevas.
