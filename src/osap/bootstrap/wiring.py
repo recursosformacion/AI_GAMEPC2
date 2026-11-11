@@ -411,6 +411,7 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
             database=db_config["database"],
             port=db_config["port"],
             name="index",
+            storage_database=config.storage_db_name or "osap_storage",
         )
     )
 

@@ -167,3 +167,20 @@ metadatos, se retira también la ficha.
    descargas; panel de cambios de licencia y cola de revisión.
 4. **Legal**: aviso de agregador y retirada rápida en el aviso legal/TOS
    (ver `web/src/pages/legal/LegalPages.tsx`).
+
+## Resolución de la licencia en la API
+
+El índice **no almacena licencias**: solo conceptos buscables. Al construir la respuesta, el
+proveedor `index` recoge los `resource_id` de los resultados y hace **una consulta batch** a
+storage:
+
+- `representations.representations_license` (edición) con respaldo de `works.works_license`.
+- Devuelve `license`, `license_url` y `license_source` en el `metadata` de cada representación.
+- `licenses.py` normaliza los valores heredados: `publicdomain`/`Public Domain` → dominio
+  público; `cc-zero` → CC0 1.0; `CPDL`; `Personal`; variantes CC BY/BY-SA/BY-NC/BY-NC-SA/BY-NC-ND.
+- Los marcadores de corpus (`PDMX`) y los textos sucios se descartan; si no hay licencia
+  reconocible, la UI muestra «no indicada» en lugar de inventarla.
+- IMSLP no tiene licencia en storage (NULL); seguirá sin indicar hasta capturar su estado de
+  copyright.
+
+La consulta es una sola por búsqueda (hasta `max_results`), no una por resultado.

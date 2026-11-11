@@ -13,7 +13,7 @@ from __future__ import annotations
 import logging
 import re
 import unicodedata
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import pymysql
 from pymysql.cursors import DictCursor
@@ -33,6 +33,7 @@ from src.osap.domain.value_objects import (
     WorkId,
 )
 from src.osap.domain.work_descriptor import WorkDescriptor
+from src.osap.infrastructure.catalogs.index.licenses import resolve_license
 from src.osap.ports.catalog_provider import ICatalogProvider
 
 if TYPE_CHECKING:
@@ -125,6 +126,7 @@ class IndexCatalogProvider(ICatalogProvider):
         port: int = 3306,
         name: str = "index",
         max_results: int = 400,
+        storage_database: str = "osap_storage",
     ) -> None:
         self._provider_id = ProviderId(name)
         self._host = host
@@ -133,6 +135,7 @@ class IndexCatalogProvider(ICatalogProvider):
         self._database = database
         self._port = port
         self._max_results = max_results
+        self._storage_database = storage_database
         self._fulltext_available: bool | None = None
 
     def _has_fulltext(self, conn: pymysql.connections.Connection[DictCursor]) -> bool:
@@ -280,7 +283,62 @@ class IndexCatalogProvider(ICatalogProvider):
             return ()
         finally:
             conn.close()
-        return tuple(_row_to_candidate(r) for r in rows)
+        license_map = self._licenses_for_resources(
+            {int(r.get("resource_id") or 0) for r in rows if int(r.get("resource_id") or 0) > 0}
+        )
+        return tuple(
+            _row_to_candidate(r, license_map.get(int(r.get("resource_id") or 0))) for r in rows
+        )
+
+    def _licenses_for_resources(self, resource_ids: set[int]) -> dict[int, dict[str, Any]]:
+        """Licencias de los recursos, en una consulta batch a storage.
+
+        El índice no guarda licencias: se recuperan aquí de `representations` con
+        respaldo de `works`. Si storage no está disponible, se devuelve `{}` y los
+        recursos quedan sin licencia (la UI muestra «no indicada»).
+        """
+        if not resource_ids:
+            return {}
+        placeholders = ", ".join(["%s"] * len(resource_ids))
+        try:
+            conn = pymysql.connect(
+                host=self._host,
+                user=self._user,
+                password=self._password,
+                database=self._storage_database,
+                port=self._port,
+                charset="utf8mb4",
+                cursorclass=DictCursor,
+                autocommit=True,
+            )
+        except pymysql.err.OperationalError as exc:
+            logger.warning("index provider: storage de licencias no disponible (%s)", exc)
+            return {}
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT wr.id AS resource_id, "
+                    "r.representations_license AS rep_license, "
+                    "w.works_license AS work_license "
+                    "FROM works_resources wr "
+                    "JOIN works w ON w.id = wr.works_resources_work_id "
+                    "LEFT JOIN representations r "
+                    "ON r.id = wr.works_resources_representation_id "
+                    f"WHERE wr.id IN ({placeholders})",
+                    tuple(resource_ids),
+                )
+                rows = cur.fetchall()
+        except pymysql.err.OperationalError as exc:
+            logger.warning("index provider: error leyendo licencias (%s)", exc)
+            return {}
+        finally:
+            conn.close()
+        resolved: dict[int, dict[str, Any]] = {}
+        for row in rows:
+            info = resolve_license(row.get("rep_license"), row.get("work_license"))
+            if info is not None:
+                resolved[int(row["resource_id"])] = info
+        return resolved
 
     def count_works_by_composer_ids(self, person_ids: list[str]) -> dict[str, int]:
         """Obras del índice por `person_id` (una consulta GROUP BY). {} si falla."""
@@ -859,6 +917,13 @@ class IndexCatalogProvider(ICatalogProvider):
                 tok in row_composer for tok in composer_low
             )
 
+        license_map = self._licenses_for_resources(
+            {
+                int(str(row.get("resource_id") or 0))
+                for row in rows
+                if int(str(row.get("resource_id") or 0)) > 0
+            }
+        )
         return [
             {
                 "provider": str(row["provider"]),
@@ -872,6 +937,7 @@ class IndexCatalogProvider(ICatalogProvider):
                 "work_title": str(row.get("title") or ""),
                 "composer": str(row.get("composer_name") or ""),
                 "instrumentation": str(row.get("instrumentation") or ""),
+                **(license_map.get(int(str(row.get("resource_id") or 0))) or {}),
             }
             for row in rows
             if _is_representable(row)
@@ -1017,7 +1083,9 @@ def _build_sql(
     return sql, tuple(args)
 
 
-def _row_to_candidate(row: dict[str, object]) -> CandidateRepresentation:
+def _row_to_candidate(
+    row: dict[str, object], license_info: dict[str, Any] | None = None
+) -> CandidateRepresentation:
     fmt = _FORMAT_BY_VALUE.get(str(row.get("format") or ""), OutputFormat.SCORE)
     provider = ProviderId(str(row.get("provider") or "index"))
     public_id = str(row.get("public_id") or f"index-{row['id']}")
@@ -1056,7 +1124,7 @@ def _row_to_candidate(row: dict[str, object]) -> CandidateRepresentation:
         provider_id=provider,
         format=fmt,
         origin="index",
-        license=None,
+        license=(str(license_info["license"]) if license_info else None),
         confidence=Confidence(0.7),
         download_url=download_url,
         view_url=view_url,
@@ -1072,5 +1140,6 @@ def _row_to_candidate(row: dict[str, object]) -> CandidateRepresentation:
             ),
             "composer": composer,
             "instrumentation": str(row.get("instrumentation") or "") or None,
+            **(license_info or {}),
         },
     )
