@@ -93,6 +93,11 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.10.1 (C)** — **ventana de búsqueda del índice**: eleva el límite de candidatos del
+  índice de 400 a 2.000 para que las búsquedas amplias por título no excluyan obras válidas
+  (Mozart «Ave verum» solo aparecía al buscar por compositor; faltaban CPDL/IMSLP/OMR).
+  Prueba `tests/osap/test_index_search_window.py`. Solo `osap-api`.
+
 - **5.10.0 (B)** — **correo de entidad, espacio de trabajo y licencias**:
   `osap-auth` añade el correo de contacto de la entidad (migración 0014, aditiva) y nuevos
   tipos; `osap-api` expone la fachada `/api/v1/workspace/library` (con el token del usuario)

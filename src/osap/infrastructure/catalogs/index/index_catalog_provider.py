@@ -125,7 +125,7 @@ class IndexCatalogProvider(ICatalogProvider):
         database: str = "osap-api",
         port: int = 3306,
         name: str = "index",
-        max_results: int = 400,
+        max_results: int = 2000,
         storage_database: str = "osap_storage",
     ) -> None:
         self._provider_id = ProviderId(name)
