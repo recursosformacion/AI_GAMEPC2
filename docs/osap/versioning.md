@@ -93,6 +93,11 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.10.3 (C)** — **filtros canónicos y compositor en el título**: los filtros de compositor
+  y título usan claves canónicas (RISM «Mozart, Wolfgang Amadeus» ya no se separa del índice)
+  y se extrae el compositor del título cuando la fuente lo marca anónimo
+  («Ave Verum-Mozart-voces»). Pruebas `test_composer_order.py`. Solo `osap-api`.
+
 - **5.10.2 (C)** — **compositor «Apellido, Nombre»**: canonicaliza el orden para que
   RISM/IMSLP («Mozart, Wolfgang Amadeus») compartan clave de agrupación con el índice
   («Wolfgang Amadeus Mozart») y sus representaciones se fusionen en una sola obra.

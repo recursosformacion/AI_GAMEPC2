@@ -18,6 +18,7 @@ from typing import TYPE_CHECKING, Any
 import pymysql
 from pymysql.cursors import DictCursor
 
+from src.osap.application.metadata_normalizer import MetadataNormalizer
 from src.osap.domain.candidate_representation import CandidateRepresentation
 from src.osap.domain.catalog_capabilities import CatalogCapabilities
 from src.osap.domain.catalog_info import CatalogInfo
@@ -1098,6 +1099,10 @@ def _row_to_candidate(
     work_id = WorkId(public_id)
     composer = str(row.get("composer_name") or "") or None
     title = str(row.get("title") or "")
+    if not composer or MetadataNormalizer.comparison_composer(composer) in ("", "anonymous"):
+        extracted = MetadataNormalizer.composer_from_title(title)
+        if extracted:
+            composer = extracted
     catalogue = str(row.get("catalogue") or "") or None
     year = row.get("year")
     year_str = str(year or "").strip()

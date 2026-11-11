@@ -285,6 +285,16 @@ class MetadataNormalizer:
         return title, None
 
     @staticmethod
+    def composer_from_title(title: str) -> str | None:
+        """Compositor conocido incrustado en el título (p. ej. «...-Mozart-...»)."""
+        low = str(title or "").lower()
+        for canonical in set(_KNOWN_COMPOSERS.values()):
+            surname = canonical.split()[-1].strip(".,").lower()
+            if re.search(rf"\b{re.escape(surname)}\b", low):
+                return canonical
+        return None
+
+    @staticmethod
     def comparison_composer(raw: str) -> str:
         """Clave determinista de compositor SOLO para comparar/matching.
 

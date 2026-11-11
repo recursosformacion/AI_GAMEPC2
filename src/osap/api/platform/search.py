@@ -461,13 +461,22 @@ class SearchMixin(PlatformApiCore):
             groups: list[WorkGroup] = [score.work for score in ranking.order]
             # Strict entity filters (providers may return loose matches for free-text).
             if composer_canonical:
+                wanted_composer = _NORMALIZER.comparison_composer(composer_canonical)
                 groups = [
                     g
                     for g in groups
-                    if g.work.composer and composer_canonical.lower() in g.work.composer.lower()
+                    if g.work.composer
+                    and _NORMALIZER.comparison_composer(g.work.composer) == wanted_composer
                 ]
             if req.title:
-                groups = [g for g in groups if g.work.title and req.title.lower() in g.work.title.lower()]
+                wanted_title = _NORMALIZER.comparison_title(req.title, composer_canonical)
+                groups = [
+                    g
+                    for g in groups
+                    if wanted_title
+                    and wanted_title
+                    in _NORMALIZER.comparison_title(g.work.title or "", g.work.composer)
+                ]
             if req.catalogue:
                 from src.osap.infrastructure.catalogs.index.index_catalog_provider import (
                     _catalogue_normalized,
