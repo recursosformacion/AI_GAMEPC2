@@ -51,6 +51,25 @@ function Get-RemoteFlag {
     return ($out | Select-Object -Last 1).Trim()
 }
 
+function Set-RemotePreview([bool]$active) {
+    # El bypass de `?preview=` se valida en nginx contra el token vigente. El snippet
+    # debe existir siempre porque el vhost lo incluye (vacío cuando no hay preview).
+    if ($active) {
+        $token = Get-Token
+        if (-not $token) { throw "No hay token de preview" }
+        $line = 'if ($arg_preview = "' + $token + '") { return 302 /__osap_preview; }'
+    } else {
+        $line = '# preview de mantenimiento desactivado'
+    }
+    $tmp = [IO.Path]::GetTempFileName()
+    Set-Content -LiteralPath $tmp -Value $line -Encoding utf8
+    scp -o BatchMode=yes $tmp "${RemoteHost}:/tmp/osap-preview.conf"
+    if ($LASTEXITCODE -ne 0) { Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue; throw "Fallo al preparar el preview remoto" }
+    ssh -o BatchMode=yes $RemoteHost "sudo mkdir -p /etc/nginx/snippets && sudo mv /tmp/osap-preview.conf /etc/nginx/snippets/osap-maintenance-preview.conf && sudo nginx -t && sudo nginx -s reload"
+    Remove-Item -LiteralPath $tmp -Force -ErrorAction SilentlyContinue
+    if ($LASTEXITCODE -ne 0) { throw "Fallo al activar/desactivar el preview en nginx" }
+}
+
 if ($On) {
     $token = Get-Token
     if ($doLocal) {
@@ -60,12 +79,17 @@ if ($On) {
     }
     if ($doRemote) {
         Set-RemoteFlag $true
+        Set-RemotePreview $true
         Write-Output "PROD:  mantenimiento ACTIVO -> $ProdUrl/?preview=$token"
     }
     exit 0
 }
 if ($Off) {
-    if ($doRemote) { Set-RemoteFlag $false; Write-Output "PROD:  mantenimiento desactivado" }
+    if ($doRemote) {
+        Set-RemoteFlag $false
+        Set-RemotePreview $false
+        Write-Output "PROD:  mantenimiento desactivado"
+    }
     if ($doLocal) {
         if (Test-Path -LiteralPath $flag) { Remove-Item -LiteralPath $flag -Force }
         Write-Output "LOCAL: mantenimiento desactivado"

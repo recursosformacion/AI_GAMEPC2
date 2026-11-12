@@ -105,8 +105,9 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
   Representation, 254.035 standalone y 266.265 de referencia; 254.035 Files enlazados y
   254.049 con `storage_key`). Aceptación V6 **PASS**: 0 Works sin Resource, 0 Resources sin
   Work, 0 claves descuadradas, 14 PNG de administración excluidos. El índice público sigue
-  en v1; el corte V6 queda pendiente. Pendiente inmediato: el bypass `?preview=` fija la
-  cookie sin validar el token; cualquier valor permite revisar (corregir en 5.11.1).
+  en v1; el corte V6 queda pendiente. El bypass `?preview=<token>` se valida en nginx
+  (302 a `/__osap_preview` + cookie `osap_preview=1`): la vista pública sigue en 503 y la
+  de revisión en 200; un token incorrecto no abre la web.
 
 - **5.10.4 (C)** — **página de obra en la búsqueda**: el índice adjunta `source_url` de
   storage (página CPDL/IMSLP) a cada representación, para que “ver la obra” no dependa del

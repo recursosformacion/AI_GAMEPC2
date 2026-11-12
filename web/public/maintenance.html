@@ -40,13 +40,5 @@
       <p class="muted">Gracias por la paciencia.</p>
       <p class="en">We are updating OSAP. The catalogue will be back shortly.</p>
     </main>
-    <script>
-      (function () {
-        var m = /[?&]preview=([^&]+)/.exec(window.location.search);
-        if (!m) return;
-        document.cookie = "osap_preview=1; path=/; max-age=86400; SameSite=Lax";
-        window.location.replace(window.location.pathname + window.location.hash);
-      })();
-    </script>
   </body>
 </html>

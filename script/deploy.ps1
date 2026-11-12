@@ -79,6 +79,7 @@ $remoteCmd = "set -e; $configStep cd $BackendDir && tar -xzf ~/deploy_tmp/backen
     "rm -rf web/dist-ssr && mkdir -p web/dist-ssr && tar -xzf ~/deploy_tmp/dist-ssr.tar.gz -C web/dist-ssr && " +
     "cp ~/deploy_tmp/server.mjs web/ssr/server.mjs && " +
     "cd $SpaDir && rm -rf assets index.html manual && tar -xzf ~/deploy_tmp/dist.tar.gz && " +
+    "sudo mkdir -p /etc/nginx/snippets; sudo test -f /etc/nginx/snippets/osap-maintenance-preview.conf || (echo '# preview desactivado' | sudo tee /etc/nginx/snippets/osap-maintenance-preview.conf >/dev/null); " +
     "sudo cp ~/deploy_tmp/app.conf /etc/nginx/sites-enabled/app.openmusicrepository.com.conf && " +
     "sudo nginx -t && sudo nginx -s reload && " +
     "rm -rf ~/deploy_tmp && sudo systemctl restart osap-api.service && sudo systemctl restart osap-ssr.service && echo RESTART_DONE"
