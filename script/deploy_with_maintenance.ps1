@@ -26,6 +26,14 @@ Write-Host "== [1/2] Activando mantenimiento en producción ==" -ForegroundColor
 & pwsh -NoProfile -File (Join-Path $root "web\scripts\maintenance.ps1") -RemoteOnly -On
 if ($LASTEXITCODE -ne 0) { throw "No se pudo activar el mantenimiento" }
 
+# Verifica que el público ve la PANTALLA de mantenimiento, no un 503 genérico.
+# Sin esta comprobación, un fallo de nginx deja la web caída con la página por defecto.
+$maint = Invoke-WebRequest -Uri "https://app.openmusicrepository.com/" -TimeoutSec 20 -UseBasicParsing -SkipHttpErrorCheck
+if ([int]$maint.StatusCode -ne 503 -or $maint.Content -notmatch "Estamos actualizando OSAP") {
+    throw "La pantalla de mantenimiento no está activa (status $($maint.StatusCode)). Abortado antes de desplegar."
+}
+Write-Host "Mantenimiento verificado: 503 + pantalla OSAP" -ForegroundColor Green
+
 Write-Host "== [2/2] Desplegando (SPA + SSR + backends) ==" -ForegroundColor Cyan
 $deployArgs = @("-NoProfile", "-File", (Join-Path $root "script\deploy_all.ps1"), "-HostAlias", $HostAlias)
 if ($SkipBuild) { $deployArgs += "-SkipBuild" }
