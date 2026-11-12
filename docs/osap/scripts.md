@@ -679,3 +679,10 @@ Rellena `works.works_source_url` de las obras CPDL con la página estable de Cho
 (`https://www.cpdl.org/wiki/index.php?curid=<works_origin_id>`). Simulación por defecto;
 `--apply` escribe. Ejecutado el 2026-11-11: 56.420 obras actualizadas. El importador
 `import_cpdl_works.py` ya guarda ese campo en las altas nuevas.
+
+## script/v6_index_preview.py
+
+Previsualización del índice V6 sin escribir. Consume el feed
+`/api/v6/index/works` (fichero o URL) y compara con un sitemap de works; conserva
+`index-<works.id>` y deriva el slug del título. Uso:
+`python script/v6_index_preview.py --feed var/v6-feed.json --sitemap var/works-1.xml`.
