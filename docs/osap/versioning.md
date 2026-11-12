@@ -93,6 +93,21 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.11.0 (B)** — **preparación aditiva V6 (2026-11-12)**: `osap-storage` incorpora
+  Resource/File con `storage_key`, migraciones 026–028 (aditivas), API `/api/v6` con feed
+  `index-<works.id>` y extractor unificado de metadatos (tonalidad, créditos, ensembles,
+  instrumentos, título limpio frente al crudo). `osap-api` añade la previsualización y el
+  staging del índice V6 y la comprobación de estabilidad de URLs; se declara el tag OpenAPI
+  `Workspace`. **No cambia el índice público, los IDs ni los slugs**.
+  Evidencia: storage 583 passed/47 skipped, osap-api 930/2, auth 188, support 194, web 155;
+  `ruff` y `mypy` limpios. Desplegado en producción el 2026-11-12 con mantenimiento:
+  migraciones 026–028 aplicadas y mapeo ejecutado (602.283 Resources: 81.983 desde
+  Representation, 254.035 standalone y 266.265 de referencia; 254.035 Files enlazados y
+  254.049 con `storage_key`). Aceptación V6 **PASS**: 0 Works sin Resource, 0 Resources sin
+  Work, 0 claves descuadradas, 14 PNG de administración excluidos. El índice público sigue
+  en v1; el corte V6 queda pendiente. Pendiente inmediato: el bypass `?preview=` fija la
+  cookie sin validar el token; cualquier valor permite revisar (corregir en 5.11.1).
+
 - **5.10.4 (C)** — **página de obra en la búsqueda**: el índice adjunta `source_url` de
   storage (página CPDL/IMSLP) a cada representación, para que “ver la obra” no dependa del
   enlace de fichero. Solo `osap-api`.
