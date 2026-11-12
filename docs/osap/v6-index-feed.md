@@ -48,3 +48,22 @@ distingue coincidencia canónica, slug histórico, obra ausente y URL mal formad
 
 Resultado de la muestra real (2026-11-12, 500 URLs): 500 documentos, 0 ausentes,
 166 coincidencias canónicas, 334 slugs históricos (200) y 0 malformadas.
+## Deriva de títulos entre índice actual y feed V6
+
+Comparación de 500 Works presentes en `index_works`:
+
+- 275 títulos distintos entre el índice actual y `works_title` de Storage.
+- 246 slugs distintos.
+- Ejemplos: `Humours of Lissadell` vs `The Humours Of Lissadell`; `Allegro. RDO.35` vs
+  `Allegro`; `Little Bag of Potatoes` vs `The Little Bag of Potatoes`.
+- Causa: el índice conserva títulos de una construcción anterior; Storage tiene títulos
+  más limpios. Es deriva previa a V6, no del mapeo.
+
+**Regla de corte**: para Works ya indexadas se conservan `public_id`, título y slug del
+índice actual; el feed V6 aporta Resources/Files y sirve para Works nuevas. La limpieza de
+títulos se hará con tabla de correspondencia + 301, nunca sobrescribiendo el índice en el
+corte.
+
+`script/v6_index_preview.py --index --stage-db ...` escribe el staging con
+`title_source=index` para los IDs existentes (500/500 en la muestra) y deja constancia de
+la deriva.
