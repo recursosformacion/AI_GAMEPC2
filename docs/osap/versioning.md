@@ -93,6 +93,13 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.11.1 (C) — `osap-auth`**: el login con Google fuerza el selector de cuenta
+  (`prompt=select_account`), de modo que tras cerrar sesión no reutiliza la última cuenta.
+  La web de administración de auth muestra las entidades del usuario (pertenece a /
+  representa a, tipo, estado, correo y marca de representante). Evidencia: 14 tests de
+  social, `tsc --noEmit` y build de la web de auth; desplegado el 2026-11-12 y verificado
+  el `302` a Google con `prompt=select_account`.
+
 - **5.11.0 (B)** — **preparación aditiva V6 (2026-11-12)**: `osap-storage` incorpora
   Resource/File con `storage_key`, migraciones 026–028 (aditivas), API `/api/v6` con feed
   `index-<works.id>` y extractor unificado de metadatos (tonalidad, créditos, ensembles,
