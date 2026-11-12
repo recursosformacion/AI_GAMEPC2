@@ -75,6 +75,59 @@ class AuthProxyClient:
         """Baja definitiva: osap-auth elimina/anonimiza la cuenta (irreversible)."""
         return self._call_bearer("DELETE", f"/auth/admin/users/{user_id}", access_token)
 
+    # -- entidades y pertenencias (role=admin en osap-auth) -------------------
+
+    def admin_entities(self, access_token: str) -> tuple[int, object]:
+        return self._call_bearer("GET", "/auth/admin/entities", access_token)
+
+    def admin_add_membership(
+        self,
+        access_token: str,
+        user_id: str,
+        entity_id: str,
+        status: str,
+        representative: bool,
+    ) -> tuple[int, object]:
+        return self._call_bearer(
+            "POST",
+            f"/auth/admin/users/{user_id}/memberships",
+            access_token,
+            {
+                "entity_id": entity_id,
+                "status": status,
+                "representative": representative,
+            },
+        )
+
+    def admin_decide_membership(
+        self, access_token: str, user_id: str, membership_id: str, action: str
+    ) -> tuple[int, object]:
+        return self._call_bearer(
+            "POST",
+            f"/auth/admin/users/{user_id}/memberships/{membership_id}/decision",
+            access_token,
+            {"action": action},
+        )
+
+    def admin_delete_membership(
+        self, access_token: str, user_id: str, membership_id: str
+    ) -> tuple[int, object]:
+        return self._call_bearer(
+            "DELETE",
+            f"/auth/admin/users/{user_id}/memberships/{membership_id}",
+            access_token,
+        )
+
+    def admin_set_representative(
+        self, access_token: str, entity_id: str, user_id: str
+    ) -> tuple[int, object]:
+        return self._call_bearer(
+            "POST",
+            f"/auth/admin/entities/{entity_id}/representative",
+            access_token,
+            {"user_id": user_id},
+        )
+
     # -- helpers -------------------------------------------------------------
 
     def _call_bearer(

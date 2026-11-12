@@ -93,6 +93,15 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.12.0 (B)** — **administración de entidades**: `osap-auth` añade los endpoints admin
+  para listar entidades, añadir/quitar pertenencias, aprobar/rechazar solicitudes y
+  transferir la representación; `osap-api` los reenvía y la ficha de usuario del admin
+  permite gestionarlos (con correo, tipo, estado y representante). Incluye el fix de
+  Google `prompt=select_account` de 5.11.1. En `osap-videos` 0.5.2 (C) el raíl publicitario
+  vertical usa el fondo cálido del sitio en vez del blanco del HTML de la creatividad.
+  Evidencia: auth 193 tests, osap-api suite completa, `tsc --noEmit` y builds de ambas
+  webs; desplegado el 2026-11-12.
+
 - **5.11.1 (C) — `osap-auth`**: el login con Google fuerza el selector de cuenta
   (`prompt=select_account`), de modo que tras cerrar sesión no reutiliza la última cuenta.
   La web de administración de auth muestra las entidades del usuario (pertenece a /

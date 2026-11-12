@@ -509,6 +509,15 @@ export interface EntityListItem {
   kind: EntityKind;
 }
 
+export interface AdminEntity {
+  id: string;
+  name: string;
+  kind: EntityKind;
+  email: string | null;
+  representative_user_id: string | null;
+  representative_name: string | null;
+}
+
 export interface EntityRequest {
   id: string;
   entity_id: string;

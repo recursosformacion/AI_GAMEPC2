@@ -393,6 +393,149 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(502, response, "AUTH_UNAVAILABLE", str(exc))
         return ctx.ok(data)
 
+    @router.get(
+        "/api/v1/admin/entities",
+        tags=["Admin"],
+        summary="List entities with representative (admin)",
+        description="Entidades de osap-auth con su representante, para el selector del admin.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, 403: _shared._FORBIDDEN_403},
+    )
+    def admin_entities_list(
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            data = ctx.api.admin_entities(authorization)
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        except Exception as exc:  # noqa: BLE001 — osap-auth no disponible
+            return ctx.fail(502, response, "AUTH_UNAVAILABLE", str(exc))
+        return ctx.ok(data)
+
+    @router.post(
+        "/api/v1/admin/users/{user_id}/memberships",
+        tags=["Admin"],
+        summary="Add or change entity membership (admin)",
+        description="Añade o cambia la pertenencia de un usuario; puede marcarlo representante.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("User", _shared._example({})),
+            401: _shared._UNAUTHORIZED_401,
+            403: _shared._FORBIDDEN_403,
+            404: _shared._NOT_FOUND_404,
+        },
+    )
+    def admin_user_membership_add(
+        user_id: str,
+        payload: dict[str, object],
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        entity_id = str(payload.get("entity_id") or "").strip()
+        status = str(payload.get("status") or "approved")
+        if not entity_id or status not in {"approved", "pending", "rejected"}:
+            return ctx.fail(400, response, "INVALID_REQUEST", "entity_id o status inválido")
+        try:
+            data = ctx.api.admin_add_membership(
+                authorization, user_id, entity_id, status, bool(payload.get("representative"))
+            )
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return ctx.fail(404, response, "NOT_FOUND", "User or entity not found")
+        except Exception as exc:  # noqa: BLE001 — osap-auth no disponible
+            return ctx.fail(502, response, "AUTH_UNAVAILABLE", str(exc))
+        return ctx.ok(data)
+
+    @router.post(
+        "/api/v1/admin/users/{user_id}/memberships/{membership_id}/decision",
+        tags=["Admin"],
+        summary="Approve or reject entity membership (admin)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, 403: _shared._FORBIDDEN_403},
+    )
+    def admin_user_membership_decide(
+        user_id: str,
+        membership_id: str,
+        payload: dict[str, object],
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        action = str(payload.get("action") or "")
+        if action not in {"approve", "reject"}:
+            return ctx.fail(400, response, "INVALID_REQUEST", "action inválida")
+        try:
+            data = ctx.api.admin_decide_membership(
+                authorization, user_id, membership_id, action
+            )
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return ctx.fail(404, response, "NOT_FOUND", "Membership not found")
+        except Exception as exc:  # noqa: BLE001 — osap-auth no disponible
+            return ctx.fail(502, response, "AUTH_UNAVAILABLE", str(exc))
+        return ctx.ok(data)
+
+    @router.delete(
+        "/api/v1/admin/users/{user_id}/memberships/{membership_id}",
+        tags=["Admin"],
+        summary="Remove entity membership (admin)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, 403: _shared._FORBIDDEN_403},
+    )
+    def admin_user_membership_delete(
+        user_id: str,
+        membership_id: str,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            data = ctx.api.admin_delete_membership(authorization, user_id, membership_id)
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return ctx.fail(404, response, "NOT_FOUND", "Membership not found")
+        except Exception as exc:  # noqa: BLE001 — osap-auth no disponible
+            return ctx.fail(502, response, "AUTH_UNAVAILABLE", str(exc))
+        return ctx.ok(data)
+
+    @router.post(
+        "/api/v1/admin/entities/{entity_id}/representative",
+        tags=["Admin"],
+        summary="Transfer entity representation (admin)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, 403: _shared._FORBIDDEN_403},
+    )
+    def admin_entity_set_representative(
+        entity_id: str,
+        payload: dict[str, object],
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        user_id = str(payload.get("user_id") or "").strip()
+        if not user_id:
+            return ctx.fail(400, response, "INVALID_REQUEST", "user_id requerido")
+        try:
+            data = ctx.api.admin_set_representative(authorization, entity_id, user_id)
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return ctx.fail(404, response, "NOT_FOUND", "User or entity not found")
+        except Exception as exc:  # noqa: BLE001 — osap-auth no disponible
+            return ctx.fail(502, response, "AUTH_UNAVAILABLE", str(exc))
+        return ctx.ok(data)
+
     def _support_detail(doc: object) -> str:
         if isinstance(doc, dict):
             return str(doc.get("detail") or doc)

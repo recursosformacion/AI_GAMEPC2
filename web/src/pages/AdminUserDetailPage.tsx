@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
+import type { AdminEntity } from "../api/types";
 import { Button } from "../components/Button";
 import { useI18n } from "../i18n/I18n";
 import type { AdminUser } from "./AdminUsersPage";
@@ -49,6 +50,11 @@ export function AdminUserDetailPage() {
   const [savingConsent, setSavingConsent] = useState(false);
   const [recognitions, setRecognitions] = useState<AdminRecognition[]>([]);
   const [savingRec, setSavingRec] = useState(false);
+  const [entities, setEntities] = useState<AdminEntity[]>([]);
+  const [entityId, setEntityId] = useState("");
+  const [entityRepresentative, setEntityRepresentative] = useState(false);
+  const [savingEntity, setSavingEntity] = useState(false);
+  const [entityError, setEntityError] = useState<string | null>(null);
   const user_id = userId;
 
   const loadRecognitions = (id: string) => {
@@ -73,6 +79,10 @@ export function AdminUserDetailPage() {
         loadRecognitions(user_id);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "admin.error"));
+    void apiClient
+      .get<AdminEntity[]>("/admin/entities")
+      .then(setEntities)
+      .catch(() => setEntities([]));
   }, [user_id]);
 
   const save = () => {
@@ -101,7 +111,85 @@ export function AdminUserDetailPage() {
       });
   };
 
-  // Autorización pública del nickname: operación INDEPENDIENTE (auditada por separado).
+  // Entidades: alta/baja de pertenencia, decisión y representación (admin).
+  const addMembership = () => {
+    if (!user_id || !entityId) return;
+    setSavingEntity(true);
+    setEntityError(null);
+    void apiClient
+      .post<AdminUser>(`/admin/users/${encodeURIComponent(user_id)}/memberships`, {
+        entity_id: entityId,
+        status: "approved",
+        representative: entityRepresentative,
+      })
+      .then((data) => {
+        setUser(data);
+        setEntityId("");
+        setEntityRepresentative(false);
+        setSavingEntity(false);
+      })
+      .catch((e) => {
+        setEntityError(e instanceof Error ? e.message : "admin.error");
+        setSavingEntity(false);
+      });
+  };
+
+  const decideMembership = (membershipId: string, action: "approve" | "reject") => {
+    if (!user_id) return;
+    setSavingEntity(true);
+    setEntityError(null);
+    void apiClient
+      .post<AdminUser>(
+        `/admin/users/${encodeURIComponent(user_id)}/memberships/${encodeURIComponent(membershipId)}/decision`,
+        { action },
+      )
+      .then((data) => {
+        setUser(data);
+        setSavingEntity(false);
+      })
+      .catch((e) => {
+        setEntityError(e instanceof Error ? e.message : "admin.error");
+        setSavingEntity(false);
+      });
+  };
+
+  const removeMembership = (membershipId: string) => {
+    if (!user_id) return;
+    setSavingEntity(true);
+    setEntityError(null);
+    void apiClient
+      .delete<AdminUser>(
+        `/admin/users/${encodeURIComponent(user_id)}/memberships/${encodeURIComponent(membershipId)}`,
+      )
+      .then((data) => {
+        setUser(data);
+        setSavingEntity(false);
+      })
+      .catch((e) => {
+        setEntityError(e instanceof Error ? e.message : "admin.error");
+        setSavingEntity(false);
+      });
+  };
+
+  const makeRepresentative = (membershipEntityId: string) => {
+    if (!user_id) return;
+    setSavingEntity(true);
+    setEntityError(null);
+    void apiClient
+      .post<AdminUser>(
+        `/admin/entities/${encodeURIComponent(membershipEntityId)}/representative`,
+        { user_id },
+      )
+      .then((data) => {
+        setUser(data);
+        setSavingEntity(false);
+      })
+      .catch((e) => {
+        setEntityError(e instanceof Error ? e.message : "admin.error");
+        setSavingEntity(false);
+      });
+  };
+
   const setConsent = (value: boolean) => {
     if (!user_id) return;
     setSavingConsent(true);
@@ -280,18 +368,92 @@ export function AdminUserDetailPage() {
       <fieldset className="space-y-3 rounded border border-osap-border bg-osap-surface p-4">
         <legend className="px-1 text-sm font-medium">Entidades</legend>
         {user.memberships && user.memberships.length > 0 ? (
-          <ul className="space-y-1 text-sm">
+          <ul className="space-y-2 text-sm">
             {user.memberships.map((membership) => (
-              <li key={membership.id}>
-                <strong>{membership.entity_name}</strong> ({membership.entity_kind}) —{" "}
-                {MEMBERSHIP_STATUS[membership.status] ?? membership.status}
-                {membership.is_representative ? " · representante" : ""}
+              <li
+                key={membership.id}
+                className="flex flex-wrap items-center gap-2 border-b border-osap-border pb-2 last:border-0"
+              >
+                <div className="min-w-0 flex-1">
+                  <strong>{membership.entity_name}</strong> ({membership.entity_kind}) —{" "}
+                  {MEMBERSHIP_STATUS[membership.status] ?? membership.status}
+                  {membership.is_representative ? " · representante" : ""}
+                  {membership.entity_email ? (
+                    <span className="text-xs text-osap-muted"> · {membership.entity_email}</span>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap gap-1">
+                  {membership.status === "pending" ? (
+                    <>
+                      <Button
+                        disabled={savingEntity}
+                        onClick={() => decideMembership(membership.id, "approve")}
+                      >
+                        Aprobar
+                      </Button>
+                      <Button
+                        disabled={savingEntity}
+                        onClick={() => decideMembership(membership.id, "reject")}
+                      >
+                        Rechazar
+                      </Button>
+                    </>
+                  ) : null}
+                  {!membership.is_representative ? (
+                    <Button
+                      disabled={savingEntity}
+                      onClick={() => makeRepresentative(membership.entity_id)}
+                    >
+                      Hacer representante
+                    </Button>
+                  ) : null}
+                  <Button
+                    disabled={savingEntity}
+                    onClick={() => removeMembership(membership.id)}
+                  >
+                    Quitar
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
         ) : (
           <p className="text-sm text-osap-muted">Sin entidades.</p>
         )}
+        <div className="flex flex-wrap items-end gap-2 border-t border-osap-border pt-3">
+          <label className="text-sm">
+            Añadir a entidad
+            <select
+              className="mt-1 block w-64 max-w-full rounded border border-osap-border bg-osap-surface px-2 py-1"
+              value={entityId}
+              onChange={(e) => setEntityId(e.target.value)}
+            >
+              <option value="">— Elegir entidad —</option>
+              {entities
+                .filter(
+                  (entity) =>
+                    !(user.memberships ?? []).some((m) => m.entity_id === entity.id),
+                )
+                .map((entity) => (
+                  <option key={entity.id} value={entity.id}>
+                    {entity.name} ({entity.kind})
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label className="flex items-center gap-1 pb-1 text-sm">
+            <input
+              type="checkbox"
+              checked={entityRepresentative}
+              onChange={(e) => setEntityRepresentative(e.target.checked)}
+            />
+            Representante
+          </label>
+          <Button disabled={!entityId || savingEntity} onClick={addMembership}>
+            Añadir
+          </Button>
+        </div>
+        {entityError && <p className="text-sm text-red-500">{entityError}</p>}
       </fieldset>
 
       <fieldset className="space-y-3 rounded border border-osap-border bg-osap-surface p-4">
@@ -326,3 +488,4 @@ export function AdminUserDetailPage() {
     </div>
   );
 }
+

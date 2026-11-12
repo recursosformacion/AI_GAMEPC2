@@ -163,6 +163,55 @@ class SystemMixin(PlatformApiCore):
             *self._container.auth_proxy().admin_set_public_consent(bearer, user_id, bool(value))
         )
 
+    def admin_entities(self, token: str | None) -> object:
+        self._require_admin(token)
+        return self._auth_result(*self._container.auth_proxy().admin_entities(token or ""))
+
+    def admin_add_membership(
+        self,
+        token: str | None,
+        user_id: str,
+        entity_id: str,
+        status: str,
+        representative: bool,
+    ) -> object:
+        self._require_admin(token)
+        return self._auth_result(
+            *self._container.auth_proxy().admin_add_membership(
+                token or "", user_id, entity_id, status, bool(representative)
+            )
+        )
+
+    def admin_decide_membership(
+        self, token: str | None, user_id: str, membership_id: str, action: str
+    ) -> object:
+        self._require_admin(token)
+        return self._auth_result(
+            *self._container.auth_proxy().admin_decide_membership(
+                token or "", user_id, membership_id, action
+            )
+        )
+
+    def admin_delete_membership(
+        self, token: str | None, user_id: str, membership_id: str
+    ) -> object:
+        self._require_admin(token)
+        return self._auth_result(
+            *self._container.auth_proxy().admin_delete_membership(
+                token or "", user_id, membership_id
+            )
+        )
+
+    def admin_set_representative(
+        self, token: str | None, entity_id: str, user_id: str
+    ) -> object:
+        self._require_admin(token)
+        return self._auth_result(
+            *self._container.auth_proxy().admin_set_representative(
+                token or "", entity_id, user_id
+            )
+        )
+
     def admin_user_recognitions(self, token: str | None, user_id: str) -> tuple[int, object]:
         self._require_admin(token)
         return self._container.support_admin_recognitions().list_for_user(user_id)
