@@ -371,9 +371,6 @@ export function AccountPage() {
             onChange={(e) => setEntityEmail(e.target.value)}
             className="rounded border border-osap-border bg-osap-bg px-3 py-2 text-sm"
           />
-          <p className="text-xs text-osap-muted">
-            Queda guardado con el creador como responsable; el envío se decidirá más adelante.
-          </p>
         </div>
         <button className="rounded bg-osap-accent px-3 py-1 text-sm text-white" disabled={busy} onClick={represent}>
           {managedEntityId ? "Actualizar entidad" : "Crear entidad"}

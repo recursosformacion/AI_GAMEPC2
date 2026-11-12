@@ -9,12 +9,17 @@ import { Spinner } from "./Spinner";
 export function GlobalSearch() {
   const { t } = useI18n();
   const navigate = useNavigate();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(() =>
+    typeof sessionStorage !== "undefined"
+      ? sessionStorage.getItem("osap:last-query") ?? ""
+      : "",
+  );
   const searching = useSearches((s) => s.loading);
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     if (!query.trim()) return;
+    sessionStorage.setItem("osap:last-query", query);
     void searchAndGo(navigate, { query, limit: 30 });
   };
 

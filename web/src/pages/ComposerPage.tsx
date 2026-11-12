@@ -16,7 +16,17 @@ export function ComposerPage() {
   if (loading) {
     return <Spinner label={t("states.loading")} />;
   }
-  const searching = data?.status === "running" || data?.status === undefined;
+  if (data === null) {
+    return (
+      <div className="space-y-1 py-16 text-center">
+        <p className="text-osap-ink">No hay una búsqueda activa.</p>
+        <p className="text-sm text-osap-muted">
+          Usa el buscador de la cabecera; conserva el último término al recargar.
+        </p>
+      </div>
+    );
+  }
+  const searching = data.status === "running" || data.status === undefined;
   if (searching && (data?.results.length ?? 0) === 0) {
     return (
       <div className="space-y-2 py-16 text-center">
