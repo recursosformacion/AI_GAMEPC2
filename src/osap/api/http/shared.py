@@ -202,6 +202,10 @@ _TAGS = [
         "name": "Ads",
         "description": "Publicidad contextual y registro de impresiones.",
     },
+    {
+        "name": "Workspace",
+        "description": "Espacio de trabajo del usuario: biblioteca y borradores en Chorus.",
+    },
 ]
 
 

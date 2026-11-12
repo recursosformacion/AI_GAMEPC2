@@ -210,6 +210,7 @@ def test_tags_grouped() -> None:
         "Votes",
         "Work attribution",
         "Works",
+        "Workspace",
     }
     declared = {tag["name"] for tag in spec.get("tags", [])}
     assert tags <= declared, f"tags used but not declared in openapi_tags: {tags - declared}"
