@@ -93,6 +93,12 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.13.0 (B) — `osap-api`**: el visor de obras ofrece **Abrir en MuseEncore** y usa el
+  visor/reproductor de Chorus (MuseEncore Viewer) en `/muse-viewer/`. Se añade
+  `/api/v1/representations/{id}/download/{filename}` para conservar la extensión (MuseEncore
+  deduce el formato por ella) y CORS restringido al origen de Chorus para esas descargas
+  públicas. Verificado con `Ave verum corpus` (render y reproducción, también a 500 px).
+
 - **5.12.1 (C) — `osap-api`**: corrige la búsqueda del índice cuando un recurso tiene
   `source_url` pero ninguna licencia reconocible (`KeyError` en `_row_to_candidate` que
   abortaba la búsqueda y dejaba «Licencia no indicada»). Se restaura además el

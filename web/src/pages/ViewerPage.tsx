@@ -174,11 +174,32 @@ export function ViewerPage() {
     playerRef.current?.setTempo(value);
   };
 
+  const openMuseEncore = () => {
+    if (!rep) return;
+    const source = new URL(
+      `/api/v1/representations/${encodeURIComponent(rep)}/download/viewer.mxl?view=1`,
+      window.location.origin,
+    ).toString();
+    const viewerBase =
+      import.meta.env.VITE_MUSEENCORE_VIEWER_URL ||
+      "https://chorus.openmusicrepository.com/muse-viewer/";
+    window.open(`${viewerBase}?url=${encodeURIComponent(source)}`, "_blank", "noopener");
+  };
+
   return (
     <div className="mx-auto max-w-5xl space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-xl font-semibold">{title || t("viewer.title")}</h1>
         <div className="flex items-center gap-3">
+          {state === "ready" && rep ? (
+            <button
+              type="button"
+              onClick={openMuseEncore}
+              className="rounded border border-osap-border px-3 py-1 text-sm text-osap-ink hover:border-osap-accent"
+            >
+              {t("viewer.openMuseEncore")}
+            </button>
+          ) : null}
           {(state === "ready" || state === "midi") && audioReady ? (
             <div className="flex items-center gap-2">
               <button

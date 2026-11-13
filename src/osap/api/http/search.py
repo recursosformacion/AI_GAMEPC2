@@ -189,6 +189,16 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
         return ctx.ok({**_probe_external(view_url), "origin": "provider"})
 
     @router.get(
+        "/api/v1/representations/{representation_id}/download/{filename}",
+        tags=["Searches"],
+        summary="Download a representation (filename-preserving view)",
+        description=(
+            "Variante de /download que conserva la extensión en la URL para visores "
+            "que deducen el tipo por el nombre."
+        ),
+        response_model=None,
+    )
+    @router.get(
         "/api/v1/representations/{representation_id}/download",
         tags=["Searches"],
         summary="Download a representation",
@@ -204,6 +214,7 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
         request: Request,
         response: Response,
         view: int = Query(default=0, ge=0, le=1),
+        filename: str | None = None,
         authorization: str | None = Header(default=None),
     ) -> Response | ErrorEnvelope:
         info = ctx.api.get_representation_download(representation_id)
@@ -404,4 +415,6 @@ def build_search_router(ctx: HttpContext) -> APIRouter:
         return ctx.ok(search)
 
     return router
+
+
 

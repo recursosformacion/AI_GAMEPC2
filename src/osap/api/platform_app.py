@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 
 from src.osap.api.http.admin import build_admin_router
 from src.osap.api.http.admin_ops import build_admin_ops_router
@@ -82,6 +82,31 @@ def create_platform_app(
     )
 
     ctx = HttpContext(api, container)
+
+    # El editor/reproductor MuseEncore de Chorus carga el MusicXML desde otro origen.
+    # Solo se abre CORS para las descargas públicas de representaciones y solo al
+    # origen del editor; el resto de la API mantiene su política.
+    _viewer_origins = {
+        "https://chorus.openmusicrepository.com",
+        "http://chorus-app",
+        "http://127.0.0.1:9600",
+    }
+
+    @app.middleware("http")
+    async def chorus_viewer_cors(request: Request, call_next):  # type: ignore[no-untyped-def]
+        if (
+            request.method == "GET"
+            and request.url.path.startswith("/api/v1/representations/")
+            and "/download" in request.url.path
+        ):
+            origin = request.headers.get("origin")
+            if origin in _viewer_origins:
+                response = await call_next(request)
+                response.headers["Access-Control-Allow-Origin"] = origin
+                response.headers["Vary"] = "Origin"
+                return response
+        return await call_next(request)
+
 
 
     # --- search model (Search Studio is driven by it) ------------------------

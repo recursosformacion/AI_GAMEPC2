@@ -7,6 +7,8 @@ interface ImportMetaEnv {
   readonly VITE_VIDEOS_URL?: string;
   /** URL pública del blog (por defecto, http://osap-blog). */
   readonly VITE_BLOG_URL?: string;
+  /** URL del visor/reproductor MuseEncore (Chorus). */
+  readonly VITE_MUSEENCORE_VIEWER_URL?: string;
 }
 
 interface ImportMeta {
