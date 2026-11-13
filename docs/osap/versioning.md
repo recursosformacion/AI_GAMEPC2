@@ -93,6 +93,12 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.12.1 (C) — `osap-api`**: corrige la búsqueda del índice cuando un recurso tiene
+  `source_url` pero ninguna licencia reconocible (`KeyError` en `_row_to_candidate` que
+  abortaba la búsqueda y dejaba «Licencia no indicada»). Se restaura además el
+  `GRANT SELECT` de `osap_api` sobre `osap_storage`. Evidencia: test de regresión y
+  búsqueda en producción con 322 representaciones y licencia.
+
 - **5.12.0 (B)** — **administración de entidades**: `osap-auth` añade los endpoints admin
   para listar entidades, añadir/quitar pertenencias, aprobar/rechazar solicitudes y
   transferir la representación; `osap-api` los reenvía y la ficha de usuario del admin
