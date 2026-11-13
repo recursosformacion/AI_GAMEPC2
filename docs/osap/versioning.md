@@ -93,6 +93,13 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.13.1 (C) — `osap-api`/web**: el refresco de `/composers` servía un HTML legado de
+  osap-api (sin CSS/JS, fondo transparente); ahora nginx lo manda al SSR React, igual que
+  la navegación desde el menú. El buscador superior ya no rellena el término desde
+  `sessionStorage` (provocaba un desajuste de hidratación) y Enter lanza la búsqueda.
+  Verificado: `/composers` carga `index-*.css/js`, “Bach” + Enter abre J. S. Bach; OMR
+  responde 1.331 candidatos internos para “Bach”.
+
 - **5.13.0 (B) — `osap-api`**: el visor de obras ofrece **Abrir en MuseEncore** y usa el
   visor/reproductor de Chorus (MuseEncore Viewer) en `/muse-viewer/`. Se añade
   `/api/v1/representations/{id}/download/{filename}` para conservar la extensión (MuseEncore
