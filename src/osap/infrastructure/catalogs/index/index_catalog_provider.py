@@ -1141,7 +1141,11 @@ def _row_to_candidate(
         provider_id=provider,
         format=fmt,
         origin="index",
-        license=(str(license_info["license"]) if license_info else None),
+        license=(
+            str(license_info["license"])
+            if license_info and license_info.get("license")
+            else None
+        ),
         confidence=Confidence(0.7),
         download_url=download_url,
         view_url=view_url,

@@ -31,3 +31,27 @@ def test_representation_license_wins_and_work_is_fallback():
     assert fallback["license"] == "CC0 1.0"
     assert fallback["license_source"] == "works"
     assert resolve_license("PDMX", None) is None
+
+def test_candidate_con_solo_source_url_no_falla():
+    from src.osap.infrastructure.catalogs.index.index_catalog_provider import _row_to_candidate
+
+    row = {
+        "id": 1,
+        "public_id": "index-1",
+        "provider": "omr",
+        "format": "musicxml",
+        "composer_name": "Compositor",
+        "title": "Obra",
+        "catalogue": None,
+        "year": None,
+        "download_url": "/api/download/1",
+        "resource_id": 123,
+        "available": True,
+        "source_rep_id": "1",
+        "title_provider": "Obra",
+        "instrumentation": None,
+    }
+    candidate = _row_to_candidate(row, {"source_url": "https://example.org/obra"})
+
+    assert candidate.license is None
+    assert (candidate.metadata or {}).get("source_url") == "https://example.org/obra"
