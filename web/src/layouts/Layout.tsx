@@ -16,6 +16,7 @@ import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
 import { useSeo } from "../seo/useSeo";
 import { blogHomeUrl, blogLogoutUrl, blogSessionUrl } from "../lib/blog";
+import { chorusHomeUrl } from "../lib/chorus";
 import { useAuth } from "../state/auth";
 import { useNotifications } from "../state/notifications";
 import { useSystem } from "../state/system";
@@ -145,6 +146,8 @@ interface NavItem {
   external?: boolean;
   /** Enlace externo que recibe la sesión de OSAP (handoff del blog). */
   sessionHandoff?: boolean;
+  /** Abrir en pestaña nueva. */
+  newTab?: boolean;
 }
 
 interface NavGroupItem {
@@ -197,6 +200,7 @@ const FRIENDS_NAV: readonly NavItem[] = [
     sessionHandoff: true,
   },
   { to: "/amigos/mis-articulos", key: "nav.myArticles", icon: "article" },
+  { to: chorusHomeUrl(), key: "nav.chorus", icon: "article", external: true, newTab: true },
 ];
 
 // Fondo del sidebar: exactamente dos entradas, como el diseño.
@@ -294,6 +298,8 @@ function SidebarSection({
               {entry.external ? (
                 <a
                   href={hrefFor(entry)}
+                  target={entry.newTab ? "_blank" : undefined}
+                  rel={entry.newTab ? "noopener noreferrer" : undefined}
                   onClick={onNavigate}
                   className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-bold ${
                     location.pathname === entry.to
@@ -718,4 +724,5 @@ export function Layout(): ReactNode {
     </div>
   );
 }
+
 

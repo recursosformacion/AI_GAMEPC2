@@ -9,8 +9,11 @@ interface ImportMetaEnv {
   readonly VITE_BLOG_URL?: string;
   /** URL del visor/reproductor MuseEncore (Chorus). */
   readonly VITE_MUSEENCORE_VIEWER_URL?: string;
+  /** URL pública de Chorus (por defecto, http://chorus-app). */
+  readonly VITE_CHORUS_URL?: string;
 }
 
 interface ImportMeta {
   readonly env: ImportMetaEnv;
 }
+
