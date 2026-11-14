@@ -437,6 +437,7 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
             "kind": kind,
             "email": payload.get("email") or None,
             "manager_user_id": payload.get("manager_user_id") or None,
+            "entity_id": payload.get("entity_id") or None,
         }
         try:
             result = ctx.api.admin_entity_create(authorization, data)
@@ -1293,4 +1294,5 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", "Storage admin service unavailable")
 
     return router
+
 

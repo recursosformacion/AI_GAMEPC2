@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chorus-study-generator"
-version = "5.14.1"
+version = "5.14.2"
 description = "Chorus Study Generator with Open Score Acquisition Platform"
 requires-python = ">=3.12"
 license = {text = "GPL-3.0-only"}
@@ -72,6 +72,7 @@ omit = ["tests/*"]
 [tool.coverage.report]
 show_missing = true
 fail_under = 50
+
 
 
 

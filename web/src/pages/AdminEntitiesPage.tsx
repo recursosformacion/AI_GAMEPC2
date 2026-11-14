@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { apiClient } from "../api/ApiClient";
 import { Button } from "../components/Button";
+import type { AmigosGroup } from "../api/types";
 
 interface Manager {
   user_id: string;
@@ -37,17 +38,25 @@ const KINDS = [
 ] as const;
 
 type Draft = {
+  group_id: string;
   name: string;
   kind: string;
   email: string;
   manager_user_id: string;
 };
 
-const EMPTY_DRAFT: Draft = { name: "", kind: "coral", email: "", manager_user_id: "" };
+const EMPTY_DRAFT: Draft = {
+  group_id: "",
+  name: "",
+  kind: "coral",
+  email: "",
+  manager_user_id: "",
+};
 
 export default function AdminEntitiesPage() {
   const [entities, setEntities] = useState<AdminEntity[]>([]);
   const [users, setUsers] = useState<AdminUserOption[]>([]);
+  const [groups, setGroups] = useState<AmigosGroup[]>([]);
   const [selected, setSelected] = useState<AdminEntity | null>(null);
   const [creating, setCreating] = useState(false);
   const [draft, setDraft] = useState<Draft>(EMPTY_DRAFT);
@@ -57,12 +66,14 @@ export default function AdminEntitiesPage() {
   const [saving, setSaving] = useState(false);
 
   const load = async () => {
-    const [entityRows, userRows] = await Promise.all([
+    const [entityRows, userRows, groupRows] = await Promise.all([
       apiClient.get<AdminEntity[]>("/admin/entities"),
       apiClient.get<AdminUserOption[]>("/admin/users"),
+      apiClient.getAmigosGroups(true),
     ]);
     setEntities(entityRows);
     setUsers(userRows);
+    setGroups(groupRows);
     setSelected((current) =>
       current ? entityRows.find((item) => item.id === current.id) ?? null : null,
     );
@@ -92,6 +103,7 @@ export default function AdminEntitiesPage() {
     setCreating(false);
     setSelected(entity);
     setDraft({
+      group_id: entity.id,
       name: entity.name,
       kind: entity.kind,
       email: entity.email ?? "",
@@ -112,6 +124,7 @@ export default function AdminEntitiesPage() {
           kind: draft.kind,
           email: draft.email.trim() || null,
           manager_user_id: draft.manager_user_id || null,
+          entity_id: draft.group_id || null,
         });
         setMessage("Entidad creada.");
         setCreating(false);
@@ -183,8 +196,8 @@ export default function AdminEntitiesPage() {
           </p>
           <h1 className="mt-1 text-3xl font-semibold">Entidades</h1>
           <p className="mt-1 max-w-2xl text-sm text-osap-muted">
-            Crea la entidad, asigna uno o varios gestores y mantén sus datos. Los gestores
-            pueden editar la entidad y crear grupos en Chorus.
+            Acceso y gestores de las entidades. Los datos públicos se mantienen en
+            Amigos · Corales; aquí se enlaza el grupo y se asignan sus gestores de Chorus.
           </p>
         </div>
         <Button onClick={beginCreate}>Nueva entidad</Button>
@@ -236,6 +249,43 @@ export default function AdminEntitiesPage() {
               <h2 className="text-lg font-semibold">
                 {creating ? "Nueva entidad" : `Editar ${selected?.name}`}
               </h2>
+              {creating ? (
+                <label className="block text-sm">
+                  Grupo de Amigos
+                  <select
+                    className="mt-1 w-full rounded border border-osap-border px-2 py-1.5"
+                    value={draft.group_id}
+                    onChange={(e) => {
+                      const group = groups.find((item) => item.id === e.target.value);
+                      setDraft({
+                        ...draft,
+                        group_id: e.target.value,
+                        name: group?.name ?? "",
+                        kind: group?.kind ?? "coral",
+                        email: group?.email ?? "",
+                      });
+                    }}
+                  >
+                    <option value="">— Elegir grupo —</option>
+                    {groups
+                      .filter((group) => !entities.some((entity) => entity.id === group.id))
+                      .map((group) => (
+                        <option key={group.id} value={group.id}>
+                          {group.name} ({group.kind})
+                        </option>
+                      ))}
+                  </select>
+                </label>
+              ) : selected ? (
+                <a
+                  href={`/admin/amigos/${encodeURIComponent(selected.id)}?mode=edit`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm text-osap-accent hover:underline"
+                >
+                  Editar la ficha pública en Amigos →
+                </a>
+              ) : null}
               <label className="block text-sm">
                 Nombre
                 <input
@@ -282,7 +332,7 @@ export default function AdminEntitiesPage() {
                 </label>
               ) : null}
               <div className="flex gap-2">
-                <Button disabled={saving || !draft.name.trim()} onClick={() => void save()}>
+                <Button disabled={saving || !draft.name.trim() || (creating && !draft.group_id)} onClick={() => void save()}>
                   {creating ? "Crear" : "Guardar"}
                 </Button>
                 <Button onClick={() => { setCreating(false); setSelected(null); }}>Cancelar</Button>
@@ -327,4 +377,6 @@ export default function AdminEntitiesPage() {
     </div>
   );
 }
+
+
 
