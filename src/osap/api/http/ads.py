@@ -25,7 +25,7 @@ def build_ads_router(ctx: HttpContext) -> APIRouter:
         base = (ctx.container.ads_base_url() or "").rstrip("/")
         token = ctx.container.ads_service_token() or ""
         if not base or not token:
-            return ctx.fail(503, response, "ADS_UNAVAILABLE", "Publicidad no configurada")
+            return HTMLResponse("<!-- ADS_UNAVAILABLE -->", status_code=503, headers={"Cache-Control": "no-store"})
         try:
             upstream = requests.post(
                 f"{base}/api/v1/ads/compose",
@@ -34,12 +34,12 @@ def build_ads_router(ctx: HttpContext) -> APIRouter:
                 timeout=ctx.container.ads_timeout_seconds(),
             )
         except requests.RequestException:
-            return ctx.fail(503, response, "ADS_UNAVAILABLE", "Publicidad no disponible")
+            return HTMLResponse("<!-- ADS_UNAVAILABLE -->", status_code=503, headers={"Cache-Control": "no-store"})
 
         if upstream.status_code != 200:
-            return ctx.fail(503, response, "ADS_UNAVAILABLE", "Publicidad no disponible")
+            return HTMLResponse("<!-- ADS_UNAVAILABLE -->", status_code=503, headers={"Cache-Control": "no-store"})
         if "text/html" not in upstream.headers.get("content-type", "").lower():
-            return ctx.fail(502, response, "ADS_INVALID_RESPONSE", "Respuesta publicitaria inválida")
+            return HTMLResponse("<!-- ADS_INVALID_RESPONSE -->", status_code=502, headers={"Cache-Control": "no-store"})
         return HTMLResponse(
             content=upstream.text,
             status_code=200,
@@ -51,7 +51,7 @@ def build_ads_router(ctx: HttpContext) -> APIRouter:
         base = (ctx.container.ads_base_url() or "").rstrip("/")
         token = ctx.container.ads_service_token() or ""
         if not base or not token:
-            return ctx.fail(503, response, "ADS_UNAVAILABLE", "Publicidad no configurada")
+            return HTMLResponse("<!-- ADS_UNAVAILABLE -->", status_code=503, headers={"Cache-Control": "no-store"})
         try:
             upstream = requests.post(
                 f"{base}/api/v1/events/impression",
@@ -60,9 +60,10 @@ def build_ads_router(ctx: HttpContext) -> APIRouter:
                 timeout=ctx.container.ads_timeout_seconds(),
             )
         except requests.RequestException:
-            return ctx.fail(503, response, "ADS_UNAVAILABLE", "Publicidad no disponible")
+            return HTMLResponse("<!-- ADS_UNAVAILABLE -->", status_code=503, headers={"Cache-Control": "no-store"})
         if upstream.status_code != 200:
-            return ctx.fail(503, response, "ADS_UNAVAILABLE", "Publicidad no disponible")
+            return HTMLResponse("<!-- ADS_UNAVAILABLE -->", status_code=503, headers={"Cache-Control": "no-store"})
         return ctx.ok(upstream.json().get("data", upstream.json()))
 
     return router
+
