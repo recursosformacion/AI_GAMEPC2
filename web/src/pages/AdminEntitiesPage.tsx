@@ -83,6 +83,8 @@ export default function AdminEntitiesPage() {
     load().catch((e) => setError(e instanceof Error ? e.message : "Error al cargar"));
   }, []);
 
+  const selectedGroup = groups.find((group) => group.id === selected?.id);
+
   const availableManagers = useMemo(
     () =>
       users.filter(
@@ -144,6 +146,25 @@ export default function AdminEntitiesPage() {
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo guardar");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const syncFromAmigos = async () => {
+    if (!selected || !selectedGroup) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const updated = await apiClient.patch<AdminEntity>(
+        `/admin/entities/${encodeURIComponent(selected.id)}`,
+        { name: selectedGroup.name, kind: selectedGroup.kind, email: selectedGroup.email || null },
+      );
+      setSelected(updated);
+      setMessage("Datos sincronizados desde Amigos.");
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo sincronizar");
     } finally {
       setSaving(false);
     }
@@ -286,11 +307,20 @@ export default function AdminEntitiesPage() {
                   Editar la ficha pública en Amigos →
                 </a>
               ) : null}
+              <p className="text-xs text-osap-muted">
+                Nombre, tipo y correo se mantienen en Amigos; aquí solo se sincronizan.
+              </p>
+              {selectedGroup ? (
+                <Button disabled={saving} onClick={() => void syncFromAmigos()}>
+                  Sincronizar desde Amigos
+                </Button>
+              ) : null}
               <label className="block text-sm">
                 Nombre
                 <input
-                  className="mt-1 w-full rounded border border-osap-border px-2 py-1.5"
+                  className="mt-1 w-full rounded border border-osap-border bg-osap-bg px-2 py-1.5"
                   value={draft.name}
+                  readOnly
                   onChange={(e) => setDraft({ ...draft, name: e.target.value })}
                 />
               </label>
@@ -298,8 +328,9 @@ export default function AdminEntitiesPage() {
                 <label className="block text-sm">
                   Tipo
                   <select
-                    className="mt-1 w-full rounded border border-osap-border px-2 py-1.5"
+                    className="mt-1 w-full rounded border border-osap-border bg-osap-bg px-2 py-1.5"
                     value={draft.kind}
+                    disabled
                     onChange={(e) => setDraft({ ...draft, kind: e.target.value })}
                   >
                     {KINDS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
@@ -308,8 +339,9 @@ export default function AdminEntitiesPage() {
                 <label className="block text-sm">
                   Correo de contacto
                   <input
-                    className="mt-1 w-full rounded border border-osap-border px-2 py-1.5"
+                    className="mt-1 w-full rounded border border-osap-border bg-osap-bg px-2 py-1.5"
                     value={draft.email}
+                    readOnly
                     onChange={(e) => setDraft({ ...draft, email: e.target.value })}
                   />
                 </label>
@@ -377,6 +409,8 @@ export default function AdminEntitiesPage() {
     </div>
   );
 }
+
+
 
 
 
