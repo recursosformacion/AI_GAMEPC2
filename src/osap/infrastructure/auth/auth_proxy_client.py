@@ -128,6 +128,37 @@ class AuthProxyClient:
             {"user_id": user_id},
         )
 
+    def admin_create_entity(
+        self, access_token: str, payload: dict[str, object]
+    ) -> tuple[int, object]:
+        return self._call_bearer("POST", "/auth/admin/entities", access_token, payload)
+
+    def admin_update_entity(
+        self, access_token: str, entity_id: str, payload: dict[str, object]
+    ) -> tuple[int, object]:
+        return self._call_bearer(
+            "PATCH", f"/auth/admin/entities/{entity_id}", access_token, payload
+        )
+
+    def admin_add_entity_manager(
+        self, access_token: str, entity_id: str, user_id: str
+    ) -> tuple[int, object]:
+        return self._call_bearer(
+            "POST",
+            f"/auth/admin/entities/{entity_id}/managers",
+            access_token,
+            {"user_id": user_id},
+        )
+
+    def admin_remove_entity_manager(
+        self, access_token: str, entity_id: str, user_id: str
+    ) -> tuple[int, object]:
+        return self._call_bearer(
+            "DELETE",
+            f"/auth/admin/entities/{entity_id}/managers/{user_id}",
+            access_token,
+        )
+
     # -- helpers -------------------------------------------------------------
 
     def _call_bearer(

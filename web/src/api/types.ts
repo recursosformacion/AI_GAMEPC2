@@ -499,6 +499,7 @@ export interface EntityMembership {
   entity_email: string | null;
   status: MembershipStatus;
   is_representative: boolean;
+  is_manager?: boolean;
   requested_at: string;
   decided_at: string | null;
 }
@@ -1289,3 +1290,4 @@ export interface WorkspaceReferenceInput {
   subtitle?: string | null;
   metadata?: Record<string, unknown> | null;
 }
+

@@ -93,6 +93,8 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **5.14.0 (B) — `osap-api` + `osap-auth`**: CRUD de entidades en el admin (crear/editar), rol de **gestor múltiple** en `entity_memberships.role` (migración 0015; los representantes actuales pasan a gestores) y página **Entidades** en el admin con asignación de gestores. La ficha de usuario separa “pertenece” de “gestiona”; Chorus reconoce a los gestores para crear grupos. Evidencia: auth 194 tests, osap-api 931, `tsc` y `mypy` limpios.
+
 - **5.13.1 (C) — `osap-api`/web**: el refresco de `/composers` servía un HTML legado de
   osap-api (sin CSS/JS, fondo transparente); ahora nginx lo manda al SSR React, igual que
   la navegación desde el menú. El buscador superior ya no rellena el término desde
@@ -396,16 +398,21 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
   emite el `code` sin onboarding (`OnboardingRequiredError` en `CompleteAuthorizationUseCase`);
   `/auth/authorize/complete` → `409 onboarding_required` (el login embebido va al onboarding y
   reanuda); el callback **social** sin onboarding redirige al onboarding con los tokens en el
-  fragmento + contexto OIDC. Incluye la **edición de `nickname`** en el admin de usuarios.
-- **5.1.1 (C) — `osap-auth`**: **aviso por email** al usuario cuando el admin le asigna el `nickname`
-  (best-effort); incluye el soporte de `nickname` en el update admin.
+  fragmento + contexto OIDC. Incluye la **edición de 
+ickname`** en el admin de usuarios.
+- **5.1.1 (C) — `osap-auth`**: **aviso por email** al usuario cuando el admin le asigna el 
+ickname`
+  (best-effort); incluye el soporte de 
+ickname` en el update admin.
 - **5.1.1 (C)** — `osap-api` **en solitario** (decisión explícita: es cambio de SPA/admin, no se
   comparte con el resto de programas).
   - Diseño público: fondo de partitura en el área derecha con **`--bg` en `header`/`main`/`footer`**,
     tesela **tenue** (capa translúcida del color base), menú de admin con fondo `--bg`.
   - Listado de compositores: **filtro de revisión solo para admin**, `review_status` fuera de la
-    vista pública, y **`nacionalidad · birth–death`**.
-  - Admin: **edición de `nickname`** de usuario.
+    vista pública, y **
+acionalidad · birth–death`**.
+  - Admin: **edición de 
+ickname`** de usuario.
   - Alcance: `osap-api`. Evidencia: suite osap-api 817, ruff/mypy limpios; smoke en Prod.
 - **5.1.0 (B)** — modelo canónico de formaciones vocales (`osap-storage`) y contexto de formación
   en representaciones.
@@ -440,9 +447,11 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
     mantenimiento OFF.
 - **4.3.0 (B)** — capa pública SEO: `osap-api` sirve HTML server-rendered de `/compositor/{id}/{slug}`
   y `/obra/{id}/{slug}` (title/description/canonical, `<h1>`, JSON-LD `MusicComposition`/`Person`/
-  `BreadcrumbList`, enlaces internos y 301 al canónico; 404 HTML `noindex`), **sitemap dinámico**
+  `BreadcrumbList`, enlaces internos y 301 al canónico; 404 HTML 
+oindex`), **sitemap dinámico**
   (`/sitemap.xml` + `/sitemaps/works-N.xml|persons-N.xml`) y, en la SPA, `useSeo` con
-  `noindex` en rutas internas. Infra: nginx/`.htaccess` proxya las rutas SEO. Compatible; alcance:
+  
+oindex` en rutas internas. Infra: nginx/`.htaccess` proxya las rutas SEO. Compatible; alcance:
   `osap-api` (backend + SPA) + nginx. Evidencia: 732 tests backend, 99 frontend, smoke E2E local y
   en producción. Dependencia nueva: `Jinja2`.
 - **4.2.2** — admin: "Dar de baja" **anonimiza** la cuenta (incluye pendientes de verificar)
@@ -631,3 +640,4 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
   elimina la reutilización dev/prod. Los datos de dev se migraron y se **revirtieron** para
   dejarlo consistente con su `osap-auth` en marcha (el proceso de dev no era reiniciable
   desde esta sesión); consistencia verificada (13/13) y health 200.
+

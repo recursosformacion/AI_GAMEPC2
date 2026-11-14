@@ -54,6 +54,7 @@ const SECTIONS: AdminSection[] = [
     caption: "Mantenimiento de datos",
     items: [
       { to: "/admin/users", key: "adminUsers.title" },
+      { to: "/admin/entities", label: "Entidades" },
       { to: "/admin/providers", key: "admin.providersAdmin" },
       { ads: "admin", label: "Publicidad" },
     ],
@@ -290,4 +291,5 @@ export function AdminLayout(): ReactNode {
     </div>
   );
 }
+
 

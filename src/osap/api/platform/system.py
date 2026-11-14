@@ -212,6 +212,44 @@ class SystemMixin(PlatformApiCore):
             )
         )
 
+    def admin_entity_create(
+        self, token: str | None, payload: dict[str, object]
+    ) -> object:
+        self._require_admin(token)
+        return self._auth_result(
+            *self._container.auth_proxy().admin_create_entity(token or "", payload)
+        )
+
+    def admin_entity_update(
+        self, token: str | None, entity_id: str, payload: dict[str, object]
+    ) -> object:
+        self._require_admin(token)
+        return self._auth_result(
+            *self._container.auth_proxy().admin_update_entity(
+                token or "", entity_id, payload
+            )
+        )
+
+    def admin_entity_add_manager(
+        self, token: str | None, entity_id: str, user_id: str
+    ) -> object:
+        self._require_admin(token)
+        return self._auth_result(
+            *self._container.auth_proxy().admin_add_entity_manager(
+                token or "", entity_id, user_id
+            )
+        )
+
+    def admin_entity_remove_manager(
+        self, token: str | None, entity_id: str, user_id: str
+    ) -> object:
+        self._require_admin(token)
+        return self._auth_result(
+            *self._container.auth_proxy().admin_remove_entity_manager(
+                token or "", entity_id, user_id
+            )
+        )
+
     def admin_user_recognitions(self, token: str | None, user_id: str) -> tuple[int, object]:
         self._require_admin(token)
         return self._container.support_admin_recognitions().list_for_user(user_id)

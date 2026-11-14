@@ -121,6 +121,7 @@ export function AdminUserDetailPage() {
         entity_id: entityId,
         status: "approved",
         representative: entityRepresentative,
+        manager: entityRepresentative,
       })
       .then((data) => {
         setUser(data);
@@ -377,7 +378,7 @@ export function AdminUserDetailPage() {
                 <div className="min-w-0 flex-1">
                   <strong>{membership.entity_name}</strong> ({membership.entity_kind}) —{" "}
                   {MEMBERSHIP_STATUS[membership.status] ?? membership.status}
-                  {membership.is_representative ? " · representante" : ""}
+                  {(membership.is_manager || membership.is_representative) ? " · gestor" : ""}
                   {membership.entity_email ? (
                     <span className="text-xs text-osap-muted"> · {membership.entity_email}</span>
                   ) : null}
@@ -399,12 +400,12 @@ export function AdminUserDetailPage() {
                       </Button>
                     </>
                   ) : null}
-                  {!membership.is_representative ? (
+                  {!(membership.is_manager || membership.is_representative) ? (
                     <Button
                       disabled={savingEntity}
                       onClick={() => makeRepresentative(membership.entity_id)}
                     >
-                      Hacer representante
+                      Hacer gestor
                     </Button>
                   ) : null}
                   <Button
@@ -447,7 +448,7 @@ export function AdminUserDetailPage() {
               checked={entityRepresentative}
               onChange={(e) => setEntityRepresentative(e.target.checked)}
             />
-            Representante
+            Gestor de la entidad
           </label>
           <Button disabled={!entityId || savingEntity} onClick={addMembership}>
             Añadir
@@ -488,4 +489,5 @@ export function AdminUserDetailPage() {
     </div>
   );
 }
+
 

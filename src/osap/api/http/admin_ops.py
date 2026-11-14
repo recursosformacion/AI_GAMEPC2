@@ -416,6 +416,126 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         return ctx.ok(data)
 
     @router.post(
+        "/api/v1/admin/entities",
+        tags=["Admin"],
+        summary="Create entity (admin)",
+        description="Crea una entidad y asigna un gestor inicial opcional.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, 403: _shared._FORBIDDEN_403},
+    )
+    def admin_entity_create(
+        payload: dict[str, object],
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        name = str(payload.get("name") or "").strip()
+        kind = str(payload.get("kind") or "").strip()
+        if not name or not kind:
+            return ctx.fail(400, response, "INVALID_REQUEST", "name y kind son obligatorios")
+        data = {
+            "name": name,
+            "kind": kind,
+            "email": payload.get("email") or None,
+            "manager_user_id": payload.get("manager_user_id") or None,
+        }
+        try:
+            result = ctx.api.admin_entity_create(authorization, data)
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return ctx.fail(404, response, "NOT_FOUND", "Manager or entity not found")
+        except Exception as exc:  # noqa: BLE001
+            return ctx.fail(502, response, "AUTH_UNAVAILABLE", str(exc))
+        return ctx.ok(result)
+
+    @router.patch(
+        "/api/v1/admin/entities/{entity_id}",
+        tags=["Admin"],
+        summary="Update entity (admin)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, 403: _shared._FORBIDDEN_403},
+    )
+    def admin_entity_update(
+        entity_id: str,
+        payload: dict[str, object],
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        data: dict[str, object] = {
+            key: payload[key]
+            for key in ("name", "kind", "email")
+            if key in payload
+        }
+        try:
+            result = ctx.api.admin_entity_update(authorization, entity_id, data)
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return ctx.fail(404, response, "NOT_FOUND", "Entity not found")
+        except Exception as exc:  # noqa: BLE001
+            return ctx.fail(502, response, "AUTH_UNAVAILABLE", str(exc))
+        return ctx.ok(result)
+
+    @router.post(
+        "/api/v1/admin/entities/{entity_id}/managers",
+        tags=["Admin"],
+        summary="Add entity manager (admin)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, 403: _shared._FORBIDDEN_403},
+    )
+    def admin_entity_manager_add(
+        entity_id: str,
+        payload: dict[str, object],
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        user_id = str(payload.get("user_id") or "").strip()
+        if not user_id:
+            return ctx.fail(400, response, "INVALID_REQUEST", "user_id requerido")
+        try:
+            result = ctx.api.admin_entity_add_manager(authorization, entity_id, user_id)
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return ctx.fail(404, response, "NOT_FOUND", "Entity or user not found")
+        except Exception as exc:  # noqa: BLE001
+            return ctx.fail(502, response, "AUTH_UNAVAILABLE", str(exc))
+        return ctx.ok(result)
+
+    @router.delete(
+        "/api/v1/admin/entities/{entity_id}/managers/{user_id}",
+        tags=["Admin"],
+        summary="Remove entity manager (admin)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, 403: _shared._FORBIDDEN_403},
+    )
+    def admin_entity_manager_remove(
+        entity_id: str,
+        user_id: str,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            result = ctx.api.admin_entity_remove_manager(
+                authorization, entity_id, user_id
+            )
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        except WorkNotFoundError:
+            return ctx.fail(404, response, "NOT_FOUND", "Entity or manager not found")
+        except Exception as exc:  # noqa: BLE001
+            return ctx.fail(502, response, "AUTH_UNAVAILABLE", str(exc))
+        return ctx.ok(result)
+
+    @router.post(
         "/api/v1/admin/users/{user_id}/memberships",
         tags=["Admin"],
         summary="Add or change entity membership (admin)",
@@ -1173,3 +1293,4 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", "Storage admin service unavailable")
 
     return router
+

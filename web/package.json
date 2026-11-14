@@ -1,7 +1,7 @@
 {
   "name": "osap-web",
   "private": true,
-  "version": "5.13.1",
+  "version": "5.14.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -40,6 +40,7 @@
     "onlyBuiltDependencies": ["esbuild"]
   }
 }
+
 
 
 
