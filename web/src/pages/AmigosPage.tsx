@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Card } from "../components/Card";
 import { useI18n } from "../i18n/I18n";
 import { useAuth } from "../state/auth";
-import { chorusHomeUrl } from "../lib/chorus";
+import { chorusSessionUrl } from "../lib/chorus";
 
 // «Los amigos»: entrada de la sección. Presenta las subsecciones (hoy «Corales») y el
 // espacio personal del usuario autenticado (mis artículos). No lista artículos aquí: los
@@ -11,6 +11,8 @@ export function AmigosPage() {
   const { t } = useI18n();
   const user = useAuth((s) => s.user);
   const isAdmin = useAuth((s) => s.isAdmin());
+  const token = useAuth((s) => s.accessToken);
+  const refreshToken = useAuth((s) => s.refreshToken);
 
   return (
     <div className="space-y-6">
@@ -36,9 +38,10 @@ export function AmigosPage() {
         <Card title={t("friends.chorusTitle")}>
           <p className="text-sm text-osap-muted">{t("friends.chorusSubtitle")}</p>
           <a
-            href={chorusHomeUrl()}
+            href={chorusSessionUrl(token, refreshToken)}
             target="_blank"
             rel="noopener noreferrer"
+            referrerPolicy="no-referrer"
             className="mt-3 inline-block rounded-md border border-osap-accent px-4 py-2 text-sm font-medium text-osap-accent hover:bg-osap-accent-soft"
           >
             {t("friends.openChorus")} →
@@ -79,4 +82,5 @@ export function AmigosPage() {
     </div>
   );
 }
+
 

@@ -16,7 +16,7 @@ import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
 import { useSeo } from "../seo/useSeo";
 import { blogHomeUrl, blogLogoutUrl, blogSessionUrl } from "../lib/blog";
-import { chorusHomeUrl } from "../lib/chorus";
+import { chorusHomeUrl, chorusSessionUrl } from "../lib/chorus";
 import { useAuth } from "../state/auth";
 import { useNotifications } from "../state/notifications";
 import { useSystem } from "../state/system";
@@ -148,6 +148,8 @@ interface NavItem {
   sessionHandoff?: boolean;
   /** Abrir en pestaña nueva. */
   newTab?: boolean;
+  /** Handoff de sesión OSAP hacia Chorus. */
+  chorusHandoff?: boolean;
 }
 
 interface NavGroupItem {
@@ -200,7 +202,7 @@ const FRIENDS_NAV: readonly NavItem[] = [
     sessionHandoff: true,
   },
   { to: "/amigos/mis-articulos", key: "nav.myArticles", icon: "article" },
-  { to: chorusHomeUrl(), key: "nav.chorus", icon: "article", external: true, newTab: true },
+  { to: chorusHomeUrl(), key: "nav.chorus", icon: "article", external: true, newTab: true, chorusHandoff: true },
 ];
 
 // Fondo del sidebar: exactamente dos entradas, como el diseño.
@@ -285,7 +287,11 @@ function SidebarSection({
   const token = useAuth((s) => s.accessToken);
   const refreshToken = useAuth((s) => s.refreshToken);
   const hrefFor = (entry: NavItem) =>
-    entry.sessionHandoff ? blogSessionUrl(token, refreshToken, "/admin") : entry.to;
+    entry.sessionHandoff
+      ? blogSessionUrl(token, refreshToken, "/admin")
+      : entry.chorusHandoff
+        ? chorusSessionUrl(token, refreshToken)
+        : entry.to;
   return (
     <div className="mt-5">
       <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-osap-muted">{title}</p>
@@ -300,6 +306,7 @@ function SidebarSection({
                   href={hrefFor(entry)}
                   target={entry.newTab ? "_blank" : undefined}
                   rel={entry.newTab ? "noopener noreferrer" : undefined}
+                  referrerPolicy={entry.chorusHandoff ? "no-referrer" : undefined}
                   onClick={onNavigate}
                   className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-bold ${
                     location.pathname === entry.to
@@ -724,5 +731,7 @@ export function Layout(): ReactNode {
     </div>
   );
 }
+
+
 
 

@@ -12,3 +12,15 @@ export function chorusBaseUrl(): string {
 export function chorusHomeUrl(): string {
   return `${chorusBaseUrl()}/`;
 }
+
+export function chorusSessionUrl(
+  token?: string | null,
+  refreshToken?: string | null,
+): string {
+  const base = chorusBaseUrl();
+  if (!token) return `${base}/`;
+  const params = new URLSearchParams({ token });
+  if (refreshToken) params.set("refresh_token", refreshToken);
+  return `${base}/?${params.toString()}`;
+}
+
