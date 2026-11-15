@@ -101,6 +101,30 @@ export default function AdminEntitiesPage() {
     setError(null);
   };
 
+  const manageGroup = (group: AmigosGroup) => {
+    const entity = entities.find((item) => item.id === group.id);
+    if (entity) {
+      beginEdit(entity);
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    void apiClient
+      .post<AdminEntity>("/admin/entities", {
+        entity_id: group.id,
+        name: group.name,
+        kind: String(group.kind),
+        email: group.email ?? null,
+        manager_user_id: null,
+      })
+      .then((created) => {
+        beginEdit(created);
+        void load();
+      })
+      .catch((e) => setError(e instanceof Error ? e.message : "No se pudo abrir la entidad"))
+      .finally(() => setSaving(false));
+  };
+
   const beginLinkGroup = (group: AmigosGroup) => {
     setCreating(true);
     setSelected(null);
@@ -231,8 +255,8 @@ export default function AdminEntitiesPage() {
           </p>
           <h1 className="mt-1 text-3xl font-semibold">Entidades</h1>
           <p className="mt-1 max-w-2xl text-sm text-osap-muted">
-            Acceso y gestores de las entidades. Los datos públicos se mantienen en
-            Amigos · Corales; aquí se enlaza el grupo y se asignan sus gestores de Chorus.
+            Todos los grupos de Amigos son entidades. Aquí se asignan sus gestores de
+            Chorus; los datos públicos se mantienen en la ficha del grupo.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -244,7 +268,6 @@ export default function AdminEntitiesPage() {
           >
             Crear entidad en Amigos
           </a>
-          <Button onClick={beginCreate}>Vincular grupo existente</Button>
         </div>
       </header>
 
@@ -272,7 +295,6 @@ export default function AdminEntitiesPage() {
                     <td className="p-3">
                       <strong>{group.name}</strong>
                       {group.email ? <div className="text-xs text-osap-muted">{group.email}</div> : null}
-                      {entity ? null : <span className="ml-2 text-xs text-osap-muted">Sin acceso</span>}
                     </td>
                     <td className="p-3">{group.kind}</td>
                     <td className="p-3">
@@ -281,11 +303,7 @@ export default function AdminEntitiesPage() {
                         : entity.managers.map((manager) => manager.name || manager.user_id).join(", ")}
                     </td>
                     <td className="p-3 text-right">
-                      {entity ? (
-                        <Button onClick={() => beginEdit(entity)}>Gestionar</Button>
-                      ) : (
-                        <Button onClick={() => beginLinkGroup(group)}>Vincular</Button>
-                      )}
+                      <Button onClick={() => void manageGroup(group)}>Gestionar</Button>
                     </td>
                   </tr>
                 );
@@ -441,6 +459,7 @@ export default function AdminEntitiesPage() {
     </div>
   );
 }
+
 
 
 
