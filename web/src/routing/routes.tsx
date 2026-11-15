@@ -95,6 +95,7 @@ export function AppRoutes() {
           <Route path="/discover" element={<DiscoverPage />} />
           <Route path="/support" element={<SupportOsapPage />} />
           <Route path="/amigos" element={<AmigosPage />} />
+          <Route path="/amigos/grupos" element={<AmigosGroupsPage />} />
           <Route path="/amigos/corales" element={<AmigosGroupsPage />} />
           <Route path="/amigos/eventos" element={<AmigosEventsPage />} />
           <Route path="/amigos/articulos" element={<AmigosBlogPage />} />
@@ -169,4 +170,5 @@ export function AppRoutes() {
     </Suspense>
   );
 }
+
 

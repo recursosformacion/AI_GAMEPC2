@@ -101,6 +101,20 @@ export default function AdminEntitiesPage() {
     setError(null);
   };
 
+  const beginLinkGroup = (group: AmigosGroup) => {
+    setCreating(true);
+    setSelected(null);
+    setDraft({
+      group_id: group.id,
+      name: group.name,
+      kind: String(group.kind),
+      email: group.email ?? "",
+      manager_user_id: "",
+    });
+    setMessage(null);
+    setError(null);
+  };
+
   const beginEdit = (entity: AdminEntity) => {
     setCreating(false);
     setSelected(entity);
@@ -249,25 +263,33 @@ export default function AdminEntitiesPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-osap-border">
-              {entities.length === 0 ? (
-                <tr><td className="p-4 text-osap-muted" colSpan={4}>Sin entidades.</td></tr>
-              ) : entities.map((entity) => (
-                <tr key={entity.id} className={selected?.id === entity.id ? "bg-osap-bg" : ""}>
-                  <td className="p-3">
-                    <strong>{entity.name}</strong>
-                    {entity.email ? <div className="text-xs text-osap-muted">{entity.email}</div> : null}
-                  </td>
-                  <td className="p-3">{entity.kind}</td>
-                  <td className="p-3">
-                    {entity.managers.length === 0
-                      ? <span className="text-osap-muted">Sin gestor</span>
-                      : entity.managers.map((manager) => manager.name || manager.user_id).join(", ")}
-                  </td>
-                  <td className="p-3 text-right">
-                    <Button onClick={() => beginEdit(entity)}>Editar</Button>
-                  </td>
-                </tr>
-              ))}
+              {groups.length === 0 ? (
+                <tr><td className="p-4 text-osap-muted" colSpan={4}>Sin grupos en Amigos.</td></tr>
+              ) : groups.map((group) => {
+                const entity = entities.find((item) => item.id === group.id);
+                return (
+                  <tr key={group.id} className={selected?.id === group.id ? "bg-osap-bg" : ""}>
+                    <td className="p-3">
+                      <strong>{group.name}</strong>
+                      {group.email ? <div className="text-xs text-osap-muted">{group.email}</div> : null}
+                      {entity ? null : <span className="ml-2 text-xs text-osap-muted">Sin acceso</span>}
+                    </td>
+                    <td className="p-3">{group.kind}</td>
+                    <td className="p-3">
+                      {!entity || entity.managers.length === 0
+                        ? <span className="text-osap-muted">Sin gestor</span>
+                        : entity.managers.map((manager) => manager.name || manager.user_id).join(", ")}
+                    </td>
+                    <td className="p-3 text-right">
+                      {entity ? (
+                        <Button onClick={() => beginEdit(entity)}>Gestionar</Button>
+                      ) : (
+                        <Button onClick={() => beginLinkGroup(group)}>Vincular</Button>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </section>
@@ -419,6 +441,8 @@ export default function AdminEntitiesPage() {
     </div>
   );
 }
+
+
 
 
 
