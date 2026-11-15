@@ -93,14 +93,6 @@ export default function AdminEntitiesPage() {
     [users, selected],
   );
 
-  const beginCreate = () => {
-    setCreating(true);
-    setSelected(null);
-    setDraft(EMPTY_DRAFT);
-    setMessage(null);
-    setError(null);
-  };
-
   const manageGroup = (group: AmigosGroup) => {
     const entity = entities.find((item) => item.id === group.id);
     if (entity) {
@@ -123,20 +115,6 @@ export default function AdminEntitiesPage() {
       })
       .catch((e) => setError(e instanceof Error ? e.message : "No se pudo abrir la entidad"))
       .finally(() => setSaving(false));
-  };
-
-  const beginLinkGroup = (group: AmigosGroup) => {
-    setCreating(true);
-    setSelected(null);
-    setDraft({
-      group_id: group.id,
-      name: group.name,
-      kind: String(group.kind),
-      email: group.email ?? "",
-      manager_user_id: "",
-    });
-    setMessage(null);
-    setError(null);
   };
 
   const beginEdit = (entity: AdminEntity) => {
