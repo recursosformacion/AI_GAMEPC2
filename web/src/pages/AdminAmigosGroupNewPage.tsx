@@ -93,7 +93,13 @@ export function AdminAmigosGroupNewPage() {
               onChange={(e) => setKind(e.target.value)}
               className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
             >
-              <option value="coral">{t("nav.corales")}</option>
+              <option value="coral">Coral</option>
+              <option value="grupo">Grupo</option>
+              <option value="banda">Banda</option>
+              <option value="orquesta">Orquesta</option>
+              <option value="ensemble">Ensemble</option>
+              <option value="escuela">Escuela</option>
+              <option value="iglesia">Iglesia</option>
             </select>
           </label>
           <label className="text-xs text-osap-muted">
@@ -239,3 +245,5 @@ export function AdminAmigosGroupNewPage() {
     </div>
   );
 }
+
+
