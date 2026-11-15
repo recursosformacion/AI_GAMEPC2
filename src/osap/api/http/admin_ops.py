@@ -348,6 +348,9 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
                 phone=cast("str | None", payload.get("phone")),
                 roles=cast("list[str] | None", payload.get("roles")),
                 status=cast("str | None", payload.get("status")),
+                news_opt_in=cast("bool | None", payload.get("news_opt_in")),
+                news_language=cast("str | None", payload.get("news_language")),
+                news_topics=cast("list[str] | None", payload.get("news_topics")),
             )
         except UnauthenticatedError:
             return ctx.fail(401, response, "UNAUTHORIZED", "Missing or invalid access token")
@@ -1294,5 +1297,6 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", "Storage admin service unavailable")
 
     return router
+
 
 

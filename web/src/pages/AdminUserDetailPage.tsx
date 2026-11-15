@@ -11,6 +11,25 @@ import { useI18n } from "../i18n/I18n";
 import type { AdminUser } from "./AdminUsersPage";
 
 const ALL_ROLES = ["user", "moderator", "admin"];
+const NEWS_LANGUAGES = [
+  ["es", "Español"],
+  ["ca", "Català"],
+  ["fr", "Français"],
+  ["en", "English"],
+  ["de", "Deutsch"],
+] as const;
+const NEWS_TOPICS = [
+  ["coral", "Música coral y vocal"],
+  ["clasica", "Música clásica"],
+  ["antigua", "Música antigua"],
+  ["opera", "Ópera"],
+  ["instrumentos", "Instrumentos y técnica"],
+  ["educacion", "Educación y formación"],
+  ["patrimonio", "Partituras y patrimonio"],
+  ["concursos", "Concursos y convocatorias"],
+  ["industria", "Industria y tecnología"],
+] as const;
+
 const STATUSES = ["active", "pending_verification", "disabled"];
 const MEMBERSHIP_STATUS: Record<string, string> = {
   pending: "pendiente",
@@ -47,6 +66,9 @@ export function AdminUserDetailPage() {
   const [roles, setRoles] = useState<string[]>([]);
   const [status, setStatus] = useState("");
   const [publicConsent, setPublicConsent] = useState(false);
+  const [newsOptIn, setNewsOptIn] = useState(false);
+  const [newsLanguage, setNewsLanguage] = useState("es");
+  const [newsTopics, setNewsTopics] = useState<string[]>([]);
   const [savingConsent, setSavingConsent] = useState(false);
   const [recognitions, setRecognitions] = useState<AdminRecognition[]>([]);
   const [savingRec, setSavingRec] = useState(false);
@@ -76,6 +98,9 @@ export function AdminUserDetailPage() {
         setRoles(data.roles ?? []);
         setStatus(data.status ?? "");
         setPublicConsent(Boolean(data.nickname_public_consent));
+        setNewsOptIn(Boolean(data.news_opt_in));
+        setNewsLanguage(data.news_language ?? "es");
+        setNewsTopics(data.news_topics ?? []);
         loadRecognitions(user_id);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "admin.error"));
@@ -101,6 +126,9 @@ export function AdminUserDetailPage() {
         phone: phone.trim(),
         roles,
         status,
+        news_opt_in: newsOptIn,
+        news_language: newsLanguage,
+        news_topics: newsTopics,
       })
       .then(() => {
         window.location.href = "/admin/users";
@@ -356,6 +384,47 @@ export function AdminUserDetailPage() {
               {t("adminUsers.publicOn")}
             </label>
           </div>
+          <fieldset className="space-y-3 rounded border border-osap-border bg-osap-surface p-4">
+            <legend className="px-1 text-sm font-medium">Noticias</legend>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={newsOptIn}
+                onChange={(e) => setNewsOptIn(e.target.checked)}
+              />
+              Quiere recibir noticias
+            </label>
+            <label className="block text-sm">
+              Idioma
+              <select
+                className="mt-1 w-full rounded border border-osap-border px-2 py-1.5"
+                value={newsLanguage}
+                onChange={(e) => setNewsLanguage(e.target.value)}
+              >
+                {NEWS_LANGUAGES.map(([value, label]) => (
+                  <option key={value} value={value}>{label}</option>
+                ))}
+              </select>
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {NEWS_TOPICS.map(([code, label]) => (
+                <label key={code} className="flex items-center gap-1 rounded border border-osap-border px-2 py-1 text-xs">
+                  <input
+                    type="checkbox"
+                    checked={newsTopics.includes(code)}
+                    onChange={(e) =>
+                      setNewsTopics(
+                        e.target.checked
+                          ? [...newsTopics, code]
+                          : newsTopics.filter((topic) => topic !== code),
+                      )
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
           {error && <p className="text-sm text-red-500">{error}</p>}
           <div className="flex gap-2">
             <Button onClick={save} disabled={saving}>
@@ -368,6 +437,15 @@ export function AdminUserDetailPage() {
 
       <fieldset className="space-y-3 rounded border border-osap-border bg-osap-surface p-4">
         <legend className="px-1 text-sm font-medium">Entidades</legend>
+        <p className="text-xs text-osap-muted">
+          <a href="/admin/amigos/nuevo" target="_blank" rel="noreferrer" className="text-osap-accent hover:underline">
+            Crear entidad en Amigos
+          </a>
+          {" · "}
+          <a href="/admin/entities" className="text-osap-accent hover:underline">
+            Gestionar accesos y gestores
+          </a>
+        </p>
         {user.memberships && user.memberships.length > 0 ? (
           <ul className="space-y-2 text-sm">
             {user.memberships.map((membership) => (
@@ -489,5 +567,6 @@ export function AdminUserDetailPage() {
     </div>
   );
 }
+
 
 

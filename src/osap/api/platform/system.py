@@ -136,6 +136,9 @@ class SystemMixin(PlatformApiCore):
         phone: str | None = None,
         roles: list[str] | None = None,
         status: str | None = None,
+        news_opt_in: bool | None = None,
+        news_language: str | None = None,
+        news_topics: list[str] | None = None,
     ) -> object:
         self._require_admin(token)
         bearer = token or ""
@@ -150,6 +153,12 @@ class SystemMixin(PlatformApiCore):
             payload["roles"] = roles
         if status is not None:
             payload["status"] = status
+        if news_opt_in is not None:
+            payload["news_opt_in"] = news_opt_in
+        if news_language is not None:
+            payload["news_language"] = news_language
+        if news_topics is not None:
+            payload["news_topics"] = news_topics
         return self._auth_result(
             *self._container.auth_proxy().admin_update_user(bearer, user_id, payload)
         )
@@ -441,6 +450,7 @@ class SystemMixin(PlatformApiCore):
             knowledge_facts=len(base.facts),
             knowledge_suggestions=len(base.suggestions),
         )
+
 
 
 

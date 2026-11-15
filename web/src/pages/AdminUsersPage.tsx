@@ -20,6 +20,9 @@ export interface AdminUser {
   status: string;
   created_at?: string | null;
   nickname_public_consent?: boolean;
+  news_opt_in?: boolean;
+  news_language?: string;
+  news_topics?: string[];
   memberships?: EntityMembership[];
 }
 
@@ -147,7 +150,15 @@ export function AdminUsersPage() {
   return (
     <div className="mx-auto max-w-5xl">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h1 className="text-xl font-semibold">{t("adminUsers.title")}</h1>
+        <div className="flex items-center gap-3">
+          <h1 className="text-xl font-semibold">{t("adminUsers.title")}</h1>
+          <a href="/admin/entities" className="text-sm text-osap-accent hover:underline">
+            Entidades y gestores
+          </a>
+          <a href="/admin/amigos/nuevo" target="_blank" rel="noreferrer" className="text-sm text-osap-accent hover:underline">
+            Crear entidad
+          </a>
+        </div>
         <label className="flex items-center gap-2 text-sm text-osap-muted">
           <input
             type="checkbox"
@@ -316,3 +327,5 @@ export function AdminUsersPage() {
     </div>
   );
 }
+
+

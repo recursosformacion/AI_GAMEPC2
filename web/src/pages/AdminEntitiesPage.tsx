@@ -221,7 +221,17 @@ export default function AdminEntitiesPage() {
             Amigos · Corales; aquí se enlaza el grupo y se asignan sus gestores de Chorus.
           </p>
         </div>
-        <Button onClick={beginCreate}>Nueva entidad</Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <a
+            href="/admin/amigos/nuevo"
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm text-osap-accent hover:underline"
+          >
+            Crear entidad en Amigos
+          </a>
+          <Button onClick={beginCreate}>Vincular grupo existente</Button>
+        </div>
       </header>
 
       {error && <p className="rounded border border-red-200 bg-red-50 p-2 text-sm text-red-700">{error}</p>}
@@ -409,6 +419,7 @@ export default function AdminEntitiesPage() {
     </div>
   );
 }
+
 
 
 
