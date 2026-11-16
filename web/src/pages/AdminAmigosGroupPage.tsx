@@ -91,8 +91,11 @@ export function AdminAmigosGroupPage() {
   const [error, setError] = useState<string | null>(null);
 
   const [name, setName] = useState("");
+  const [kind, setKind] = useState("coral");
   const [description, setDescription] = useState("");
   const [technicalDescription, setTechnicalDescription] = useState("");
+  const [adminRoles, setAdminRoles] = useState("");
+  const [musicalRoles, setMusicalRoles] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [website, setWebsite] = useState("");
   const [email, setEmail] = useState("");
@@ -118,8 +121,11 @@ export function AdminAmigosGroupPage() {
       setGroup(found);
       if (found) {
         setName(found.name);
+        setKind(found.kind || "coral");
         setDescription(found.description ?? "");
         setTechnicalDescription(found.technical_description ?? "");
+        setAdminRoles((found.admin_roles ?? []).join(", "));
+        setMusicalRoles((found.musical_roles ?? []).join(", "));
         setImageUrl(found.image_url ?? "");
         setWebsite(found.website ?? "");
         setEmail(found.email ?? "");
@@ -199,8 +205,11 @@ export function AdminAmigosGroupPage() {
     guard(async () => {
       await apiClient.updateAmigosGroup(groupId, {
         name: name.trim(),
+        kind,
         description: description.trim() || null,
         technical_description: technicalDescription.trim() || null,
+        admin_roles: splitCsv(adminRoles),
+        musical_roles: splitCsv(musicalRoles),
         image_url: imageUrl.trim() || null,
         website: website.trim() || null,
         email: email.trim() || null,
@@ -333,6 +342,19 @@ export function AdminAmigosGroupPage() {
             placeholder={t("friends.groupName")}
             className="rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm disabled:opacity-60"
           />
+          <label className="text-xs text-osap-muted">
+            Tipo de grupo/entidad
+            <select
+              value={kind}
+              disabled={viewMode}
+              onChange={(e) => setKind(e.target.value)}
+              className="mt-1 block w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm disabled:opacity-60"
+            >
+              {["coral","grupo","banda","orquesta","ensemble","escuela","iglesia"].map((value) => (
+                <option key={value} value={value}>{value.charAt(0).toUpperCase() + value.slice(1)}</option>
+              ))}
+            </select>
+          </label>
           <AmigosImageField groupId={groupId} label={t("friends.imageUrl")} value={imageUrl} onChange={setImageUrl} disabled={viewMode} />
           <input
             value={description}
@@ -485,6 +507,7 @@ export function AdminAmigosGroupPage() {
         <Card title={t("friends.coralFicha")}>
           <p className="mb-2 text-xs text-osap-muted">{t("friends.coralFichaHint")}</p>
           <fieldset disabled={viewMode} className="grid gap-2 sm:grid-cols-2">
+            {kind === "coral" ? (
             <label className="text-xs text-osap-muted">
               {t("friends.formation")}
               <select
@@ -500,6 +523,7 @@ export function AdminAmigosGroupPage() {
                 ))}
               </select>
             </label>
+            ) : null}
             <label className="text-xs text-osap-muted">
               {t("friends.memberCount")}
               <input
@@ -614,14 +638,24 @@ export function AdminAmigosGroupPage() {
       ) : null}
 
       <Card title="Cargos del grupo">
-        <p className="text-sm text-osap-ink">
-          <strong>Administrativos:</strong>{" "}
-          {group.admin_roles?.length ? group.admin_roles.join(", ") : "—"}
-        </p>
-        <p className="mt-1 text-sm text-osap-ink">
-          <strong>Musicales:</strong>{" "}
-          {group.musical_roles?.length ? group.musical_roles.join(", ") : "—"}
-        </p>
+        {viewMode ? (
+          <>
+            <p className="text-sm text-osap-ink"><strong>Administrativos:</strong> {group.admin_roles?.join(", ") || "—"}</p>
+            <p className="mt-1 text-sm text-osap-ink"><strong>Musicales:</strong> {group.musical_roles?.join(", ") || "—"}</p>
+          </>
+        ) : (
+          <div className="grid gap-3">
+            <label className="text-xs text-osap-muted">
+              Cargos administrativos (separados por comas)
+              <input value={adminRoles} onChange={(e) => setAdminRoles(e.target.value)} className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm" />
+            </label>
+            <label className="text-xs text-osap-muted">
+              Roles musicales (separados por comas)
+              <input value={musicalRoles} onChange={(e) => setMusicalRoles(e.target.value)} className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm" />
+            </label>
+            <p className="text-xs text-osap-muted">Se guardan con “Guardar cambios”.</p>
+          </div>
+        )}
       </Card>
 
       <Card title="Historial de altas y bajas">
@@ -788,4 +822,7 @@ export function AdminAmigosGroupPage() {
     </div>
   );
 }
+
+
+
 

@@ -1398,7 +1398,7 @@ class _MysqlStore(_MemoryStore):
         return self._run(f"SELECT * FROM amigos_groups {where} ORDER BY name", tuple(args))
 
     def update_amigos_group(self, group_id: str, **changes: object) -> dict[str, object] | None:
-        allowed = {"name", "description", "technical_description", "image_url",
+        allowed = {"name", "kind", "description", "technical_description", "image_url",
                    "admin_roles_json", "musical_roles_json", "editorial_mode", "status",
                    "website", "email", "logo_url"}
         fields = [k for k in changes if k in allowed]
@@ -1974,4 +1974,5 @@ def _encode_description(description: dict[str, str] | str | None) -> str | None:
     if isinstance(description, str):
         return json.dumps({"en": description}, ensure_ascii=False)
     return json.dumps(description, ensure_ascii=False)
+
 

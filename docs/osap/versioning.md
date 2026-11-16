@@ -93,6 +93,17 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **6.0.0 (A) — conjunto OSAP + Chorus 0.9.0 (2026-11-16)**: salto de orientación que
+  incorpora noticias al ecosistema y unifica grupos/entidades. `osap-auth` añade
+  `news_languages` (migración 0018) y el feed interno de suscriptores; `osap-api` añade
+  `/api/v1/news`, la librería `src/osap/news_digest` y el cron de boletín; `osap-support`
+  añade cuerpo HTML y `dedupe_key` a `CommunicationEvent` (migraciones 0003/0004); Chorus
+  0.9.0 incorpora mensajería de grupo, sincronización de grupos de «Los amigos», edición de
+  grupo, favicon/SEO y migración 009. Se mantienen IDs, slugs y URLs públicas. Punto de
+  control: `v5.15.0` + `mantenimiento/5.15.x` en los cuatro repos. Evidencia: OSAP 939/2,
+  auth 198, support 195, Chorus 42, ai_noticias 40, web 155, `tsc`/`mypy` limpios y prueba
+  de un ciclo dry-run + cola + worker del boletín.
+
 - **5.14.0 (B) — `osap-api` + `osap-auth`**: CRUD de entidades en el admin (crear/editar), rol de **gestor múltiple** en `entity_memberships.role` (migración 0015; los representantes actuales pasan a gestores) y página **Entidades** en el admin con asignación de gestores. La ficha de usuario separa “pertenece” de “gestiona”; Chorus reconoce a los gestores para crear grupos. Evidencia: auth 194 tests, osap-api 931, `tsc` y `mypy` limpios.
 
 - **5.13.1 (C) — `osap-api`/web**: el refresco de `/composers` servía un HTML legado de

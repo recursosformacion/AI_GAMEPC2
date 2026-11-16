@@ -183,6 +183,7 @@ class AmigosService:
         is_global_admin: bool,
         group_id: str,
         name: str | None = None,
+        kind: str | None = None,
         description: str | None = None,
         technical_description: str | None = None,
         admin_roles: list[str] | None = None,
@@ -197,6 +198,10 @@ class AmigosService:
     ) -> dict[str, object]:
         self._require_group_admin(group_id, actor_user_id, is_global_admin)
         changes: dict[str, object] = {}
+        if kind is not None:
+            if kind not in GROUP_KINDS:
+                raise AmigosError(422, "INVALID_KIND", "Tipo de grupo no soportado")
+            changes["kind"] = kind
         if name is not None:
             clean = name.strip()
             if not clean:
@@ -1509,6 +1514,7 @@ def _clean_media(items: list[dict[str, Any]]) -> list[dict[str, object]]:
             }
         )
     return cleaned
+
 
 
 

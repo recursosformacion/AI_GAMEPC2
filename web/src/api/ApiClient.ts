@@ -402,8 +402,11 @@ export class ApiClient {
     groupId: string,
     input: {
       name?: string;
+      kind?: string;
       description?: string | null;
       technical_description?: string | null;
+      admin_roles?: string[];
+      musical_roles?: string[];
       image_url?: string | null;
       editorial_mode?: string;
       status?: string;
@@ -1031,5 +1034,6 @@ export interface QuotaUsage {
   by_provider: { provider: string; total: number }[];
   top_works: { work_id: string; total: number }[];
 }
+
 
 
