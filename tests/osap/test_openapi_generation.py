@@ -200,6 +200,7 @@ def test_tags_grouped() -> None:
         "Friends",
         "Jobs",
         "Knowledge",
+        "News",
         "Notifications",
         "Providers",
         "Quota",

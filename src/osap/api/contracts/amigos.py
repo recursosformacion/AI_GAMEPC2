@@ -7,6 +7,8 @@ el artículo. La fecha del evento (`event_date`) es independiente de `published_
 
 from __future__ import annotations
 
+from pydantic import Field
+
 from .base import _Frozen
 
 
@@ -54,6 +56,9 @@ class AmigosGroupCreateRequest(_Frozen):
     kind: str = "coral"
     slug: str | None = None
     description: str | None = None
+    technical_description: str | None = None
+    admin_roles: list[str] = Field(default_factory=list)
+    musical_roles: list[str] = Field(default_factory=list)
     image_url: str | None = None
     editorial_mode: str = "moderated"
     website: str | None = None
@@ -65,6 +70,9 @@ class AmigosGroupCreateRequest(_Frozen):
 class AmigosGroupUpdateRequest(_Frozen):
     name: str | None = None
     description: str | None = None
+    technical_description: str | None = None
+    admin_roles: list[str] | None = None
+    musical_roles: list[str] | None = None
     image_url: str | None = None
     editorial_mode: str | None = None
     status: str | None = None
@@ -95,6 +103,9 @@ class AmigosGroupRead(_Frozen):
     name: str
     kind: str
     description: str | None = None
+    technical_description: str | None = None
+    admin_roles: list[str] = Field(default_factory=list)
+    musical_roles: list[str] = Field(default_factory=list)
     image_url: str | None = None
     website: str | None = None
     email: str | None = None
@@ -308,3 +319,5 @@ class AmigosAuthorizationRead(_Frozen):
 class AmigosAuthorizationListRead(_Frozen):
     items: list[AmigosAuthorizationRead]
     total: int
+
+

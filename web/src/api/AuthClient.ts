@@ -29,6 +29,10 @@ export interface UserProfile {
   roles: string[];
   email_verified: boolean;
   status: string;
+  news_opt_in?: boolean;
+  news_language?: string;
+  news_languages?: string[];
+  news_topics?: string[];
   memberships?: EntityMembership[];
 }
 
@@ -74,6 +78,13 @@ export class AuthClient {
   /** Teléfono voluntario para WhatsApp (`null` o vacío lo borra). */
   async updatePhone(accessToken: string, phone: string | null): Promise<UserProfile> {
     return this.send<UserProfile>("PUT", "/auth/me/phone", accessToken, { phone });
+  }
+
+  async updateNewsPreferences(
+    accessToken: string,
+    input: { news_opt_in: boolean; news_language: string; news_languages: string[]; news_topics: string[] },
+  ): Promise<UserProfile> {
+    return this.send<UserProfile>("PUT", "/auth/me/news", accessToken, input);
   }
 
   async listEntities(accessToken: string): Promise<EntityListItem[]> {

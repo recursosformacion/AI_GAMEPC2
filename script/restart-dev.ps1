@@ -4,8 +4,8 @@
 # command line) y los vuelve a levantar en segundo plano, esperando a que cada uno
 # responda en su healthcheck. Pensado para lanzarse desde el escritorio antes de probar.
 #
-# Servicios (host 127.0.0.1): osap-storage 8000, osap-api 8001, osap-auth 8200,
-# osap-support 8300, ai-publicidad 8305 y osap-ssr 3000 (Node: HTML SSR de
+# Servicios (host 127.0.0.1): osap-storage 8000, osap-api 8001, ai-noticias 8400, osap-auth 8200,
+# osap-support 8300, chorus 9600, ai-publicidad 8305 y osap-ssr 3000 (Node: HTML SSR de
 # compositores y obras).
 # Apache (osap-app) NO se toca: sirve la SPA y hace de proxy.
 #
@@ -44,11 +44,24 @@ function Write-Status([string]$Message) {
 $OidcStateDir = Join-Path $env:LOCALAPPDATA "osap-dev\state"
 New-Item -ItemType Directory -Force -Path $OidcStateDir | Out-Null
 $OidcStateFile = Join-Path $OidcStateDir "oidc-pending.json"
+$TokenDir = Join-Path $env:LOCALAPPDATA "osap-dev"
+function Read-DevToken([string]$Name, [string]$Default) {
+    $path = Join-Path $TokenDir $Name
+    if (Test-Path $path) {
+        $value = (Get-Content $path -Raw).Trim()
+        if ($value) { return $value }
+    }
+    return $Default
+}
+$InternalToken = Read-DevToken "internal-token.txt" "osap-dev-internal-token"
+$NewsToken = Read-DevToken "news-token.txt" "osap-dev-news-token"
 $services = @(
     [pscustomobject]@{ Name = "osap-storage"; Repo = "osap-storage"; Port = 8000; App = "api.main:app"; Factory = $false; Health = "http://127.0.0.1:8000/api/v1/health"; Env = @{ OSAP_CONFIG = "config.yaml" } },
-    [pscustomobject]@{ Name = "osap-api"; Repo = "osap-api"; Port = 8001; App = "src.osap.api.platform_app:create_platform_app"; Factory = $true; Health = "http://127.0.0.1:8001/api/v1/system/health"; Env = @{ OSAP_OIDC_STATE_FILE = $OidcStateFile; OSAP_ADS_BASE_URL = "http://127.0.0.1:8305"; OSAP_ADS_SERVICE_TOKEN = "osap-dev-ads-token"; OSAP_ADS_WEB_BASE = "http://127.0.0.1:8305"; OSAP_ADS_TIMEOUT_SECONDS = "2.5" } },
-    [pscustomobject]@{ Name = "osap-auth"; Repo = "osap-auth"; Port = 8200; App = "api.main:create_app_from_settings"; Factory = $true; Health = "http://127.0.0.1:8200/health"; Env = @{} },
-    [pscustomobject]@{ Name = "osap-support"; Repo = "osap-support"; Port = 8300; App = "api.main:create_app_from_settings"; Factory = $true; Health = "http://127.0.0.1:8300/health"; Env = @{} },
+    [pscustomobject]@{ Name = "osap-api"; Repo = "osap-api"; Port = 8001; App = "src.osap.api.platform_app:create_platform_app"; Factory = $true; Health = "http://127.0.0.1:8001/api/v1/system/health"; Env = @{ OSAP_OIDC_STATE_FILE = $OidcStateFile; OSAP_ADS_BASE_URL = "http://127.0.0.1:8305"; OSAP_ADS_SERVICE_TOKEN = "osap-dev-ads-token"; OSAP_ADS_WEB_BASE = "http://127.0.0.1:8305"; OSAP_ADS_TIMEOUT_SECONDS = "2.5"; OSAP_NEWS_API_BASE = "http://127.0.0.1:8400"; OSAP_NEWS_API_TOKEN = $NewsToken; OSAP_INTERNAL_SERVICE_TOKEN = $InternalToken; OSAP_AUTH_INTERNAL_URL = "http://127.0.0.1:8200"; OSAP_SUPPORT_INTERNAL_URL = "http://127.0.0.1:8300" } },
+    [pscustomobject]@{ Name = "ai-noticias"; Repo = "ai_noticias"; Port = 8400; App = "app.api:app"; Factory = $false; Health = "http://127.0.0.1:8400/health"; Env = @{ OSAP_NEWS_API_TOKEN = $NewsToken } },
+    [pscustomobject]@{ Name = "osap-auth"; Repo = "osap-auth"; Port = 8200; App = "api.main:create_app_from_settings"; Factory = $true; Health = "http://127.0.0.1:8200/health"; Env = @{ OSAP_INTERNAL_SERVICE_TOKEN = $InternalToken } },
+    [pscustomobject]@{ Name = "osap-support"; Repo = "osap-support"; Port = 8300; App = "api.main:create_app_from_settings"; Factory = $true; Health = "http://127.0.0.1:8300/health"; Env = @{ OSAP_INTERNAL_SERVICE_TOKEN = $InternalToken } },
+    [pscustomobject]@{ Name = "chorus"; Repo = "Chorus"; Port = 9600; App = "app.main:app"; Factory = $false; Health = "http://127.0.0.1:9600/health"; Env = @{ CHORUS_CONFIG = "osap.toml" } },
     [pscustomobject]@{ Name = "ai-publicidad"; Repo = "ai_publicidad"; Port = 8305; App = "api.main:app"; Factory = $false; Health = "http://127.0.0.1:8305/health"; Env = @{ AI_PUBLICIDAD_ENV = "development"; AI_PUBLICIDAD_SERVICE_TOKEN = "osap-dev-ads-token"; AI_PUBLICIDAD_PUBLIC_BASE_URL = "http://127.0.0.1:8305"; AI_PUBLICIDAD_PACKAGE_CONTENT_BASE_URL = "http://127.0.0.1:8305"; AI_PUBLICIDAD_PACKAGE_FRAME_ANCESTORS = "http://osap-app http://127.0.0.1:8001 http://localhost:8001"; AI_PUBLICIDAD_PACKAGE_ROOT = "data/packages"; AI_PUBLICIDAD_IMAGE_ROOT = "data/media"; AI_PUBLICIDAD_AUTH_URL = "http://127.0.0.1:8200"; AI_PUBLICIDAD_OSAP_PUBLIC_URL = "http://osap-app"; AI_PUBLICIDAD_VISITOR_HASH_SECRET = "osap-dev-visitor-hash" } },
     [pscustomobject]@{ Name = "osap-ssr"; Repo = "osap-api\web"; Port = 3000; Node = $true; Health = "http://127.0.0.1:3000/health"; Env = @{ OSAP_SSR_DEV = "1"; OSAP_API_ORIGIN = "http://127.0.0.1:8001"; OSAP_PUBLIC_ORIGIN = "http://osap-app" } }
 )
@@ -99,7 +112,7 @@ function Stop-OsapProcesses {
         foreach ($procId in (Get-PortPids $service.Port)) { [void]$targets.Add([int]$procId) }
     }
     $stray = Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object {
-        $_.CommandLine -and $_.CommandLine -match "(?i)uvicorn" -and $_.CommandLine -match "(?i)osap-(api|storage|support|auth)|ai-publicidad"
+        $_.CommandLine -and $_.CommandLine -match "(?i)uvicorn" -and $_.CommandLine -match "(?i)osap-(api|storage|support|auth)|ai-publicidad|ai_noticias"
     }
     foreach ($proc in $stray) { [void]$targets.Add([int]$proc.ProcessId) }
 
@@ -242,8 +255,7 @@ Write-Host "Web dev:  http://osap-app" -ForegroundColor Cyan
 Write-Host "Logs:     $logDir" -ForegroundColor Cyan
 if ($failed.Count -gt 0) {
     Write-Host "Servicios con fallo: $($failed -join ', ')" -ForegroundColor Red
-    Write-Host "Pulsa una tecla para cerrar..." -ForegroundColor Yellow
-    $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    Write-Host "Revisa los logs en $logDir y vuelve a ejecutar el script." -ForegroundColor Yellow
     exit 1
 }
 Write-Host "Entorno listo." -ForegroundColor Green

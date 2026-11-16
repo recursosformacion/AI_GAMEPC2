@@ -38,6 +38,7 @@ from src.osap.infrastructure.jobs import InMemoryJobEngine
 from src.osap.infrastructure.mediawiki import MediaWikiClient
 from src.osap.infrastructure.merge import MergeEngine
 from src.osap.infrastructure.metrics import InMemoryMetricsCollector
+from src.osap.infrastructure.news.client import NewsClient
 from src.osap.infrastructure.persistence.storage_vote_store import StorageVoteStore
 from src.osap.infrastructure.providers.adapters.generic_provider_adapter import (
     ProviderDefinition,
@@ -493,6 +494,13 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
         config.ads_web_base,
     )
     container.set_chorus_config(config.chorus_api_base or "http://127.0.0.1:9600")
+    container.set_news_client(
+        NewsClient(
+            base_url=config.news_api_base or "http://127.0.0.1:8400",
+            token=config.news_api_token,
+            timeout=config.news_timeout_seconds,
+        )
+    )
     composer_client = StorageComposerClient(
         base_url=storage_base,
         token_provider=service_token_provider,
@@ -599,4 +607,3 @@ def _build_authenticator(config: Configuration) -> IAuthenticator:
             ),
         )
     return JwtAuthenticator()
-

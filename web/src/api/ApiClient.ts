@@ -77,6 +77,8 @@ import type {
   RepresentationSheet,
   RepresentationProbe,
   NotificationList,
+  NewsFeed,
+  NewsTopic,
 } from "./types";
 import { ApiError } from "./errors";
 
@@ -264,6 +266,21 @@ export class ApiClient {
     return this.post<{ ok: boolean }>("/notifications/read-all", {});
   }
 
+  async getNews(params: { limit?: number; days?: number; topics?: string[]; language?: string; languages?: string[] } = {}): Promise<NewsFeed> {
+    const query = new URLSearchParams();
+    if (params.limit !== undefined) query.set("limit", String(params.limit));
+    if (params.days !== undefined) query.set("days", String(params.days));
+    if (params.language) query.set("language", params.language);
+    if (params.languages) query.set("languages", params.languages.join(","));
+    if (params.topics) query.set("topics", params.topics.join(","));
+    const qs = query.toString();
+    return this.get<NewsFeed>(`/news${qs ? `?${qs}` : ""}`);
+  }
+
+  async getNewsTopics(): Promise<{ items: NewsTopic[]; count: number }> {
+    return this.get<{ items: NewsTopic[]; count: number }>("/news/topics");
+  }
+
   /** Ficha de una representación (obra, proveedor, formato y acciones). */
   async getRepresentation(representationId: string): Promise<RepresentationSheet> {
     return this.get<RepresentationSheet>(
@@ -368,6 +385,9 @@ export class ApiClient {
     kind?: string;
     slug?: string | null;
     description?: string | null;
+    technical_description?: string | null;
+    admin_roles?: string[];
+    musical_roles?: string[];
     image_url?: string | null;
     editorial_mode?: string;
     website?: string | null;
@@ -383,6 +403,7 @@ export class ApiClient {
     input: {
       name?: string;
       description?: string | null;
+      technical_description?: string | null;
       image_url?: string | null;
       editorial_mode?: string;
       status?: string;
@@ -395,10 +416,34 @@ export class ApiClient {
     return this.patch<AmigosGroup>(`/admin/amigos/groups/${encodeURIComponent(groupId)}`, input);
   }
 
+  async getAmigosRoleTemplates(kind: string): Promise<{ admin: string[]; musical: string[] }> {
+    return this.get<{ admin: string[]; musical: string[] }>(
+      `/amigos/role-templates/${encodeURIComponent(kind)}`,
+    );
+  }
+
+  async getAmigosGroupHistory(groupId: string): Promise<Array<{
+    id: string; event_type: string; member_user_id?: string | null;
+    role?: string | null; start_date?: string | null; end_date?: string | null;
+    notes?: string | null; created_at?: string;
+  }>> {
+    return this.get<Array<{
+      id: string; event_type: string; member_user_id?: string | null;
+      role?: string | null; start_date?: string | null; end_date?: string | null;
+      notes?: string | null; created_at?: string;
+    }>>(`/admin/amigos/groups/${encodeURIComponent(groupId)}/history`);
+  }
+
   async getAmigosMembers(groupId: string): Promise<AmigosMemberList> {
     return this.get<AmigosMemberList>(
       `/admin/amigos/groups/${encodeURIComponent(groupId)}/members`,
     );
+  }
+
+  getAmigosUserGroups(userId: string): Promise<
+    Array<{ group_id: string; name: string; kind: string; role: string; status: string }>
+  > {
+    return this.get(`/admin/users/${encodeURIComponent(userId)}/friends-groups`);
   }
 
   async grantAmigosMember(
@@ -986,6 +1031,5 @@ export interface QuotaUsage {
   by_provider: { provider: string; total: number }[];
   top_works: { work_id: string; total: number }[];
 }
-
 
 

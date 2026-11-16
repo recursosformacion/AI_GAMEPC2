@@ -12,9 +12,44 @@ from __future__ import annotations
 # Tipos/categorías de agrupación. La categoría de navegación («Corales») equivale al
 # tipo de grupo: los grupos concretos (CTV) son instancias de un tipo. La lista es aditiva
 # (futuras orquestas, entidades anunciantes… se añaden sin rehacer el modelo).
-GROUP_KINDS = frozenset({"coral"})
+GROUP_KINDS = frozenset({"coral", "grupo", "banda", "orquesta", "ensemble", "escuela", "iglesia"})
 
 # Estados de un grupo. «disuelto» es un estado terminal que NO borra historial ni relaciones.
+# Cargos propuestos por tipo de grupo. El alta permite editarlos y se guardan en el
+# grupo para que cada entidad mantenga su propio organigrama.
+_ADMIN_ROLES = ("Presidencia", "Secretaría", "Tesorería", "Vocalía")
+GROUP_ROLE_TEMPLATES: dict[str, dict[str, tuple[str, ...]]] = {
+    "coral": {
+        "admin": _ADMIN_ROLES,
+        "musical": ("Dirección", "Subdirección", "Preparación vocal", "Sopranos",
+                     "Contraltos", "Tenores", "Bajos"),
+    },
+    "banda": {
+        "admin": _ADMIN_ROLES,
+        "musical": ("Dirección", "Subdirección", "Jefatura de sección", "Músicos"),
+    },
+    "orquesta": {
+        "admin": _ADMIN_ROLES,
+        "musical": ("Dirección", "Concertino", "Jefatura de sección", "Músicos"),
+    },
+    "grupo": {
+        "admin": _ADMIN_ROLES,
+        "musical": ("Dirección", "Coordinación", "Componentes"),
+    },
+    "ensemble": {
+        "admin": _ADMIN_ROLES,
+        "musical": ("Dirección", "Coordinación", "Componentes"),
+    },
+    "escuela": {
+        "admin": _ADMIN_ROLES,
+        "musical": ("Dirección", "Coordinación pedagógica", "Profesorado", "Alumnado"),
+    },
+    "iglesia": {
+        "admin": _ADMIN_ROLES,
+        "musical": ("Dirección", "Organista", "Coro", "Instrumentistas"),
+    },
+}
+
 GROUP_STATUSES = frozenset({"active", "inactive", "dissolved"})
 
 # Modalidades editoriales por grupo (decisión del administrador del grupo).
@@ -85,4 +120,6 @@ AUTHORIZATION_SCOPES = frozenset({"blog", "events"})
 
 # Ámbito de un artículo: ligado a un grupo, o general (blog).
 ARTICLE_SCOPES = frozenset({"group", "general"})
+
+
 

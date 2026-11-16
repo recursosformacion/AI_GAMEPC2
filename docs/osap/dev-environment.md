@@ -37,8 +37,16 @@ http://osap-app                     Apache (XAMPP) — VirtualHost *:80
 | `osap-storage` | Open Music Repository / storage (uvicorn 8000) |
 | `osap-blog` | Blog independiente (uvicorn 8500, VirtualHost Apache) |
 | `ai-publicidad` | Publicidad local (uvicorn 8305; panel `/admin` con token local) |
+| `ai-noticias` | Corpus de noticias de solo lectura (uvicorn 8400; API interna con `X-OSAP-News-Token`) |
+| `chorus` | Área de trabajo y mensajería de grupos (uvicorn 9600; migraciones SQLite al arrancar) |
 
 Todos apuntan a `127.0.0.1`.
+
+`restart-dev.ps1` arranca `ai-noticias` en 8400, `chorus` en 9600 y pasa a osap-api
+`OSAP_NEWS_API_BASE`/`OSAP_NEWS_API_TOKEN`. También reparte
+`OSAP_INTERNAL_SERVICE_TOKEN` entre auth/support/api para el boletín. La lectura de
+noticias usa la sesión OSAP (`/noticias`); el correo no es una vía de acceso. Detalle en
+[`news-integration.md`](news-integration.md) y [`news-digest.md`](news-digest.md).
 
 ---
 

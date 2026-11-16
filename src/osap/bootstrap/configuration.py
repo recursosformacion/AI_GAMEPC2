@@ -68,6 +68,9 @@ class Configuration:
     support_base_url: str | None = None
     ads_base_url: str | None = None
     chorus_api_base: str | None = None
+    news_api_base: str | None = None
+    news_api_token: str | None = None
+    news_timeout_seconds: float = 8.0
     ads_web_base: str | None = None
     ads_service_token: str | None = None
     ads_timeout_seconds: float = 2.5
@@ -125,6 +128,9 @@ _CONFIG_FIELDS: dict[str, tuple[str, Any]] = {
     "support_base_url": ("OSAP_SUPPORT_BASE_URL", str),
     "ads_base_url": ("OSAP_ADS_BASE_URL", str),
     "chorus_api_base": ("OSAP_CHORUS_API_BASE", str),
+    "news_api_base": ("OSAP_NEWS_API_BASE", str),
+    "news_api_token": ("OSAP_NEWS_API_TOKEN", str),
+    "news_timeout_seconds": ("OSAP_NEWS_API_TIMEOUT_SECONDS", float),
     "ads_web_base": ("OSAP_ADS_WEB_BASE", str),
     "ads_service_token": ("OSAP_ADS_SERVICE_TOKEN", str),
     "ads_timeout_seconds": ("OSAP_ADS_TIMEOUT_SECONDS", float),
@@ -161,6 +167,9 @@ _TOML_SECTIONS: dict[str, tuple[str, str]] = {
     "support_base_url": ("osap", "support_base_url"),
     "ads_base_url": ("ads", "base_url"),
     "chorus_api_base": ("chorus", "base_url"),
+    "news_api_base": ("news", "base_url"),
+    "news_api_token": ("news", "service_token"),
+    "news_timeout_seconds": ("news", "timeout_seconds"),
     "ads_web_base": ("ads", "web_base"),
     "ads_service_token": ("ads", "service_token"),
     "ads_timeout_seconds": ("ads", "timeout_seconds"),
@@ -426,5 +435,3 @@ def _validate_lenient(
             ConfigurationWarning,
             stacklevel=2,
         )
-
-

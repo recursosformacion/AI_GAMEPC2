@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
-import type { AdminEntity } from "../api/types";
+import type { AmigosGroup } from "../api/types";
 import { Button } from "../components/Button";
 import { useI18n } from "../i18n/I18n";
 import type { AdminUser } from "./AdminUsersPage";
@@ -31,11 +31,6 @@ const NEWS_TOPICS = [
 ] as const;
 
 const STATUSES = ["active", "pending_verification", "disabled"];
-const MEMBERSHIP_STATUS: Record<string, string> = {
-  pending: "pendiente",
-  approved: "aprobada",
-  rejected: "rechazada",
-};
 
 interface AdminRecognition {
   id: number;
@@ -68,15 +63,17 @@ export function AdminUserDetailPage() {
   const [publicConsent, setPublicConsent] = useState(false);
   const [newsOptIn, setNewsOptIn] = useState(false);
   const [newsLanguage, setNewsLanguage] = useState("es");
+  const [newsLanguages, setNewsLanguages] = useState<string[]>(["es"]);
   const [newsTopics, setNewsTopics] = useState<string[]>([]);
   const [savingConsent, setSavingConsent] = useState(false);
   const [recognitions, setRecognitions] = useState<AdminRecognition[]>([]);
   const [savingRec, setSavingRec] = useState(false);
-  const [entities, setEntities] = useState<AdminEntity[]>([]);
-  const [entityId, setEntityId] = useState("");
-  const [entityRepresentative, setEntityRepresentative] = useState(false);
   const [savingEntity, setSavingEntity] = useState(false);
   const [entityError, setEntityError] = useState<string | null>(null);
+  const [amigosGroups, setAmigosGroups] = useState<AmigosGroup[]>([]);
+  const [friendsGroups, setFriendsGroups] = useState<Array<{ group_id: string; name: string; kind: string; role: string; status: string }>>([]);
+  const [friendsGroupId, setFriendsGroupId] = useState("");
+  const [friendsRole, setFriendsRole] = useState<"collaborator" | "admin">("collaborator");
   const user_id = userId;
 
   const loadRecognitions = (id: string) => {
@@ -100,14 +97,25 @@ export function AdminUserDetailPage() {
         setPublicConsent(Boolean(data.nickname_public_consent));
         setNewsOptIn(Boolean(data.news_opt_in));
         setNewsLanguage(data.news_language ?? "es");
+        setNewsLanguages(data.news_languages?.length ? data.news_languages : [data.news_language ?? "es"]);
         setNewsTopics(data.news_topics ?? []);
         loadRecognitions(user_id);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "admin.error"));
     void apiClient
-      .get<AdminEntity[]>("/admin/entities")
-      .then(setEntities)
-      .catch(() => setEntities([]));
+      .getAmigosGroups(true)
+      .then(setAmigosGroups)
+      .catch((e) => {
+        setAmigosGroups([]);
+        setEntityError(e instanceof Error ? e.message : "admin.error");
+      });
+    void apiClient
+      .getAmigosUserGroups(user_id)
+      .then(setFriendsGroups)
+      .catch((e) => {
+        setFriendsGroups([]);
+        setEntityError(e instanceof Error ? e.message : "admin.error");
+      });
   }, [user_id]);
 
   const save = () => {
@@ -127,7 +135,8 @@ export function AdminUserDetailPage() {
         roles,
         status,
         news_opt_in: newsOptIn,
-        news_language: newsLanguage,
+        news_language: newsLanguages[0] ?? newsLanguage,
+        news_languages: newsLanguages.length ? newsLanguages : [newsLanguage],
         news_topics: newsTopics,
       })
       .then(() => {
@@ -139,84 +148,19 @@ export function AdminUserDetailPage() {
       });
   };
 
-  // Entidades: alta/baja de pertenencia, decisión y representación (admin).
-  const addMembership = () => {
-    if (!user_id || !entityId) return;
+  const addFriendGroup = () => {
+    if (!user_id || !friendsGroupId) return;
     setSavingEntity(true);
     setEntityError(null);
     void apiClient
-      .post<AdminUser>(`/admin/users/${encodeURIComponent(user_id)}/memberships`, {
-        entity_id: entityId,
-        status: "approved",
-        representative: entityRepresentative,
-        manager: entityRepresentative,
+      .grantAmigosMember(friendsGroupId, user_id, friendsRole)
+      .then(() => apiClient.getAmigosUserGroups(user_id))
+      .then((rows) => {
+        setFriendsGroups(rows);
+        setFriendsGroupId("");
       })
-      .then((data) => {
-        setUser(data);
-        setEntityId("");
-        setEntityRepresentative(false);
-        setSavingEntity(false);
-      })
-      .catch((e) => {
-        setEntityError(e instanceof Error ? e.message : "admin.error");
-        setSavingEntity(false);
-      });
-  };
-
-  const decideMembership = (membershipId: string, action: "approve" | "reject") => {
-    if (!user_id) return;
-    setSavingEntity(true);
-    setEntityError(null);
-    void apiClient
-      .post<AdminUser>(
-        `/admin/users/${encodeURIComponent(user_id)}/memberships/${encodeURIComponent(membershipId)}/decision`,
-        { action },
-      )
-      .then((data) => {
-        setUser(data);
-        setSavingEntity(false);
-      })
-      .catch((e) => {
-        setEntityError(e instanceof Error ? e.message : "admin.error");
-        setSavingEntity(false);
-      });
-  };
-
-  const removeMembership = (membershipId: string) => {
-    if (!user_id) return;
-    setSavingEntity(true);
-    setEntityError(null);
-    void apiClient
-      .delete<AdminUser>(
-        `/admin/users/${encodeURIComponent(user_id)}/memberships/${encodeURIComponent(membershipId)}`,
-      )
-      .then((data) => {
-        setUser(data);
-        setSavingEntity(false);
-      })
-      .catch((e) => {
-        setEntityError(e instanceof Error ? e.message : "admin.error");
-        setSavingEntity(false);
-      });
-  };
-
-  const makeRepresentative = (membershipEntityId: string) => {
-    if (!user_id) return;
-    setSavingEntity(true);
-    setEntityError(null);
-    void apiClient
-      .post<AdminUser>(
-        `/admin/entities/${encodeURIComponent(membershipEntityId)}/representative`,
-        { user_id },
-      )
-      .then((data) => {
-        setUser(data);
-        setSavingEntity(false);
-      })
-      .catch((e) => {
-        setEntityError(e instanceof Error ? e.message : "admin.error");
-        setSavingEntity(false);
-      });
+      .catch((e) => setEntityError(e instanceof Error ? e.message : "admin.error"))
+      .finally(() => setSavingEntity(false));
   };
 
   const setConsent = (value: boolean) => {
@@ -315,6 +259,7 @@ export function AdminUserDetailPage() {
               className="rounded border border-osap-border bg-osap-bg px-3 py-2"
             />
           </div>
+          <div className="grid gap-3 sm:grid-cols-2">
           <div className="grid gap-2">
             <label className="text-sm font-medium" htmlFor="admin-nickname">
               {t("adminUsers.nickname")}
@@ -341,7 +286,8 @@ export function AdminUserDetailPage() {
               className="rounded border border-osap-border bg-osap-bg px-3 py-2"
             />
           </div>
-          <div className="grid gap-2">
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm font-medium">{t("adminUsers.roles")}</span>
             {ALL_ROLES.map((role) => (
               <label key={role} className="flex items-center gap-2 text-sm">
@@ -358,7 +304,7 @@ export function AdminUserDetailPage() {
               </label>
             ))}
           </div>
-          <div className="grid gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             <label className="text-sm font-medium">{t("adminUsers.status")}</label>
             <select
               value={status}
@@ -372,7 +318,7 @@ export function AdminUserDetailPage() {
               ))}
             </select>
           </div>
-          <div className="grid gap-2">
+          <div className="flex flex-wrap items-center gap-3">
             <span className="text-sm font-medium">{t("adminUsers.publicTitle")}</span>
             <label className="flex items-center gap-2 text-sm">
               <input
@@ -394,36 +340,66 @@ export function AdminUserDetailPage() {
               />
               Quiere recibir noticias
             </label>
-            <label className="block text-sm">
-              Idioma
-              <select
-                className="mt-1 w-full rounded border border-osap-border px-2 py-1.5"
-                value={newsLanguage}
-                onChange={(e) => setNewsLanguage(e.target.value)}
-              >
-                {NEWS_LANGUAGES.map(([value, label]) => (
-                  <option key={value} value={value}>{label}</option>
-                ))}
-              </select>
-            </label>
-            <div className="flex flex-wrap gap-2">
-              {NEWS_TOPICS.map(([code, label]) => (
-                <label key={code} className="flex items-center gap-1 rounded border border-osap-border px-2 py-1 text-xs">
-                  <input
-                    type="checkbox"
-                    checked={newsTopics.includes(code)}
-                    onChange={(e) =>
-                      setNewsTopics(
-                        e.target.checked
-                          ? [...newsTopics, code]
-                          : newsTopics.filter((topic) => topic !== code),
-                      )
-                    }
-                  />
-                  {label}
-                </label>
-              ))}
-            </div>
+            {newsOptIn ? (
+              <>
+                <div>
+                  <p className="text-sm">Idiomas</p>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {NEWS_LANGUAGES.map(([value, label]) => (
+                      <label key={value} className="flex items-center gap-1 rounded border border-osap-border px-2 py-1 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={newsLanguages.includes(value)}
+                          onChange={(e) =>
+                            setNewsLanguages(
+                              e.target.checked
+                                ? [...newsLanguages, value]
+                                : newsLanguages.filter((language) => language !== value),
+                            )
+                          }
+                        />
+                        {label}
+                      </label>
+                    ))}
+                    <button
+                      type="button"
+                      className="rounded bg-osap-accent px-3 py-1 text-xs font-medium text-white hover:bg-osap-accent/90"
+                      onClick={() => setNewsLanguages(NEWS_LANGUAGES.map(([value]) => value))}
+                    >
+                      Todos
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-sm">Temas</p>
+                  <div className="mt-1 flex flex-wrap gap-2">
+                    {NEWS_TOPICS.map(([code, label]) => (
+                      <label key={code} className="flex items-center gap-1 rounded border border-osap-border px-2 py-1 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={newsTopics.includes(code)}
+                          onChange={(e) =>
+                            setNewsTopics(
+                              e.target.checked
+                                ? [...newsTopics, code]
+                                : newsTopics.filter((topic) => topic !== code),
+                            )
+                          }
+                        />
+                        {label}
+                      </label>
+                    ))}
+                    <button
+                      type="button"
+                      className="rounded bg-osap-accent px-3 py-1 text-xs font-medium text-white hover:bg-osap-accent/90"
+                      onClick={() => setNewsTopics(NEWS_TOPICS.map(([code]) => code))}
+                    >
+                      Marcar todos los temas
+                    </button>
+                  </div>
+                </div>
+              </>
+            ) : null}
           </fieldset>
           {error && <p className="text-sm text-red-500">{error}</p>}
           <div className="flex gap-2">
@@ -436,99 +412,59 @@ export function AdminUserDetailPage() {
       )}
 
       <fieldset className="space-y-3 rounded border border-osap-border bg-osap-surface p-4">
-        <legend className="px-1 text-sm font-medium">Entidades</legend>
-        <p className="text-xs text-osap-muted">
-          <a href="/admin/amigos/nuevo" target="_blank" rel="noreferrer" className="text-osap-accent hover:underline">
-            Crear entidad en Amigos
-          </a>
-          {" · "}
-          <a href="/admin/entities" className="text-osap-accent hover:underline">
-            Gestionar accesos y gestores
-          </a>
-        </p>
-        {user.memberships && user.memberships.length > 0 ? (
-          <ul className="space-y-2 text-sm">
-            {user.memberships.map((membership) => (
-              <li
-                key={membership.id}
-                className="flex flex-wrap items-center gap-2 border-b border-osap-border pb-2 last:border-0"
-              >
-                <div className="min-w-0 flex-1">
-                  <strong>{membership.entity_name}</strong> ({membership.entity_kind}) —{" "}
-                  {MEMBERSHIP_STATUS[membership.status] ?? membership.status}
-                  {(membership.is_manager || membership.is_representative) ? " · gestor" : ""}
-                  {membership.entity_email ? (
-                    <span className="text-xs text-osap-muted"> · {membership.entity_email}</span>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {membership.status === "pending" ? (
-                    <>
-                      <Button
-                        disabled={savingEntity}
-                        onClick={() => decideMembership(membership.id, "approve")}
-                      >
-                        Aprobar
-                      </Button>
-                      <Button
-                        disabled={savingEntity}
-                        onClick={() => decideMembership(membership.id, "reject")}
-                      >
-                        Rechazar
-                      </Button>
-                    </>
-                  ) : null}
-                  {!(membership.is_manager || membership.is_representative) ? (
-                    <Button
-                      disabled={savingEntity}
-                      onClick={() => makeRepresentative(membership.entity_id)}
-                    >
-                      Hacer gestor
-                    </Button>
-                  ) : null}
-                  <Button
-                    disabled={savingEntity}
-                    onClick={() => removeMembership(membership.id)}
-                  >
-                    Quitar
-                  </Button>
-                </div>
+        <legend className="px-1 text-sm font-medium">Grupos de Amigos</legend>
+        {friendsGroups.length > 0 ? (
+          <ul className="space-y-1 text-sm">
+            {friendsGroups.map((item) => (
+              <li key={item.group_id}>
+                <a
+                  href={`/admin/amigos/${encodeURIComponent(item.group_id)}?mode=edit`}
+                  className="text-osap-accent hover:underline"
+                >
+                  {item.name}
+                </a>{" "}
+                <span className="text-osap-muted">
+                  ({item.kind}) · {item.role === "admin" ? "administrador" : "colaborador"} ·{" "}
+                  {item.status}
+                </span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-sm text-osap-muted">Sin entidades.</p>
+          <p className="text-sm text-osap-muted">Sin grupos de Amigos.</p>
         )}
         <div className="flex flex-wrap items-end gap-2 border-t border-osap-border pt-3">
           <label className="text-sm">
-            Añadir a entidad
+            Añadir a grupo
             <select
               className="mt-1 block w-64 max-w-full rounded border border-osap-border bg-osap-surface px-2 py-1"
-              value={entityId}
-              onChange={(e) => setEntityId(e.target.value)}
+              value={friendsGroupId}
+              onChange={(e) => setFriendsGroupId(e.target.value)}
             >
-              <option value="">— Elegir entidad —</option>
-              {entities
-                .filter(
-                  (entity) =>
-                    !(user.memberships ?? []).some((m) => m.entity_id === entity.id),
-                )
-                .map((entity) => (
-                  <option key={entity.id} value={entity.id}>
-                    {entity.name} ({entity.kind})
+              <option value="">— Elegir grupo —</option>
+              {amigosGroups
+                .filter((group) => !friendsGroups.some((item) => item.group_id === group.id))
+                .map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name} ({group.kind})
                   </option>
                 ))}
             </select>
           </label>
-          <label className="flex items-center gap-1 pb-1 text-sm">
-            <input
-              type="checkbox"
-              checked={entityRepresentative}
-              onChange={(e) => setEntityRepresentative(e.target.checked)}
-            />
-            Gestor de la entidad
+          <label className="text-sm">
+            Rol
+            <select
+              className="mt-1 block rounded border border-osap-border bg-osap-surface px-2 py-1"
+              value={friendsRole}
+              onChange={(e) =>
+                setFriendsRole(e.target.value === "admin" ? "admin" : "collaborator")
+              }
+            >
+              <option value="collaborator">Colaborador</option>
+              <option value="admin">Administrador</option>
+            </select>
           </label>
-          <Button disabled={!entityId || savingEntity} onClick={addMembership}>
+          <Button disabled={!friendsGroupId || savingEntity} onClick={addFriendGroup}>
             Añadir
           </Button>
         </div>
@@ -567,6 +503,4 @@ export function AdminUserDetailPage() {
     </div>
   );
 }
-
-
 

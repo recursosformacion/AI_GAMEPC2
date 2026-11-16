@@ -7,6 +7,7 @@ Parte de la división de `op_store.py` (F5.2): almacén en memoria puro, sin SQL
 from __future__ import annotations
 
 import json
+import secrets
 from datetime import UTC, datetime
 
 
@@ -533,6 +534,9 @@ class MemoryStore:
         website: str | None = None,
         email: str | None = None,
         logo_url: str | None = None,
+        technical_description: str | None = None,
+        admin_roles: list[str] | None = None,
+        musical_roles: list[str] | None = None,
     ) -> dict[str, object]:
         ts = now()
         row: dict[str, object] = {
@@ -541,6 +545,9 @@ class MemoryStore:
             "name": name,
             "kind": kind,
             "description": description,
+            "technical_description": technical_description,
+            "admin_roles": list(admin_roles or []),
+            "musical_roles": list(musical_roles or []),
             "image_url": image_url,
             "website": website,
             "email": email,
@@ -863,6 +870,50 @@ class MemoryStore:
     def list_amigos_memberships_by_user(self, user_id: str) -> list[dict[str, object]]:
         return [dict(r) for r in self._amigos_members.values() if r["user_id"] == user_id]
 
+    def _history_rows(self) -> list[dict[str, object]]:
+        if not hasattr(self, "_amigos_group_history"):
+            self._amigos_group_history: list[dict[str, object]] = []
+        return self._amigos_group_history
+
+    def add_amigos_group_history(
+        self,
+        *,
+        group_id: str,
+        event_type: str,
+        member_user_id: str | None = None,
+        role: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        notes: str | None = None,
+    ) -> dict[str, object]:
+        row: dict[str, object] = {
+            "id": secrets.token_hex(16),
+            "group_id": group_id,
+            "event_type": event_type,
+            "member_user_id": member_user_id,
+            "role": role,
+            "start_date": start_date,
+            "end_date": end_date,
+            "notes": notes,
+        }
+        self._history_rows().append(row)
+        return row
+
+    def list_amigos_group_history(self, group_id: str) -> list[dict[str, object]]:
+        rows = [dict(r) for r in self._history_rows() if r["group_id"] == group_id]
+        rows.sort(key=lambda r: str(r.get("start_date") or ""), reverse=True)
+        return rows
+
+    def close_amigos_group_history(
+        self, group_id: str, member_user_id: str, end_date: str
+    ) -> None:
+        for row in self._history_rows():
+            if (
+                row["group_id"] == group_id
+                and row["member_user_id"] == member_user_id
+                and not row.get("end_date")
+            ):
+                row["end_date"] = end_date
     # --- «Los amigos»: ficha de coral (especialización por tipo) -------------
 
     def get_amigos_coral_details(self, group_id: str) -> dict[str, object] | None:
@@ -1097,3 +1148,4 @@ class MemoryStore:
         ]
         rows.sort(key=lambda e: int(str(e.get("id") or 0)))
         return rows
+

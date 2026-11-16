@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import type { AmigosGroupLink } from "../api/types";
@@ -14,6 +14,9 @@ export function AdminAmigosGroupNewPage() {
   const [slug, setSlug] = useState("");
   const [kind, setKind] = useState("coral");
   const [description, setDescription] = useState("");
+  const [technicalDescription, setTechnicalDescription] = useState("");
+  const [adminRoles, setAdminRoles] = useState("");
+  const [musicalRoles, setMusicalRoles] = useState("");
   const [mode, setMode] = useState<"direct" | "moderated">("moderated");
   const [website, setWebsite] = useState("");
   const [email, setEmail] = useState("");
@@ -22,6 +25,16 @@ export function AdminAmigosGroupNewPage() {
   const logoInputRef = useRef<HTMLInputElement>(null);
   const [groupLinks, setGroupLinks] = useState<AmigosGroupLink[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    void apiClient
+      .getAmigosRoleTemplates(kind)
+      .then((templates) => {
+        setAdminRoles(templates.admin.join(", "));
+        setMusicalRoles(templates.musical.join(", "));
+      })
+      .catch(() => undefined);
+  }, [kind]);
   const [busy, setBusy] = useState(false);
 
   const create = async () => {
@@ -37,6 +50,9 @@ export function AdminAmigosGroupNewPage() {
         slug: slug.trim() || null,
         kind,
         description: description.trim() || null,
+        technical_description: technicalDescription.trim() || null,
+        admin_roles: adminRoles.split(",").map((role) => role.trim()).filter(Boolean),
+        musical_roles: musicalRoles.split(",").map((role) => role.trim()).filter(Boolean),
         editorial_mode: mode,
         website: website.trim() || null,
         email: email.trim() || null,
@@ -48,8 +64,8 @@ export function AdminAmigosGroupNewPage() {
         await apiClient.updateAmigosGroup(group.id, { logo_url: uploaded.url });
       }
       navigate(`/admin/amigos/${encodeURIComponent(group.id)}?mode=edit`);
-    } catch {
-      setError(t("friends.errorSaving"));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t("friends.errorSaving"));
     } finally {
       setBusy(false);
     }
@@ -67,7 +83,11 @@ export function AdminAmigosGroupNewPage() {
       </div>
 
       <Card title={t("friends.adminNewGroup")}>
-        {error ? <p className="mb-2 text-sm text-red-500">{error}</p> : null}
+        {error ? (
+          <div className="mb-4 rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+            {error}
+          </div>
+        ) : null}
         <div className="grid gap-2 sm:grid-cols-2">
           <label className="text-xs text-osap-muted">
             {t("friends.groupName")} *
@@ -83,6 +103,22 @@ export function AdminAmigosGroupNewPage() {
               value={slug}
               onChange={(e) => setSlug(e.target.value)}
               placeholder="ctv"
+              className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="text-xs text-osap-muted sm:col-span-2">
+            Cargos administrativos (separados por comas)
+            <input
+              value={adminRoles}
+              onChange={(e) => setAdminRoles(e.target.value)}
+              className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="text-xs text-osap-muted sm:col-span-2">
+            Roles musicales (separados por comas)
+            <input
+              value={musicalRoles}
+              onChange={(e) => setMusicalRoles(e.target.value)}
               className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
             />
           </label>
@@ -118,6 +154,17 @@ export function AdminAmigosGroupNewPage() {
             <input
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="text-xs text-osap-muted sm:col-span-2">
+            Descripción técnica
+            <textarea
+              value={technicalDescription}
+              maxLength={1000}
+              rows={4}
+              onChange={(e) => setTechnicalDescription(e.target.value)}
+              placeholder="Formación, secciones, plantilla, instrumentación…"
               className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
             />
           </label>
@@ -245,5 +292,4 @@ export function AdminAmigosGroupNewPage() {
     </div>
   );
 }
-
 

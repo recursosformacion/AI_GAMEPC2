@@ -54,7 +54,6 @@ const SECTIONS: AdminSection[] = [
     caption: "Mantenimiento de datos",
     items: [
       { to: "/admin/users", key: "adminUsers.title" },
-      { to: "/admin/entities", label: "Entidades" },
       { to: "/admin/providers", key: "admin.providersAdmin" },
       { ads: "admin", label: "Publicidad" },
     ],
@@ -62,7 +61,7 @@ const SECTIONS: AdminSection[] = [
   {
     caption: "Los amigos",
     items: [
-      { to: "/admin/amigos", key: "friends.adminGrupos" },
+      { to: "/admin/amigos", label: "Grupo/Entidad" },
       { to: "/admin/amigos/eventos", key: "nav.events" },
       { to: "/admin/amigos/blog", key: "nav.articles" },
       { to: "/admin/amigos/autorizaciones", key: "friends.authorizations" },
@@ -290,6 +289,3 @@ export function AdminLayout(): ReactNode {
     </div>
   );
 }
-
-
-

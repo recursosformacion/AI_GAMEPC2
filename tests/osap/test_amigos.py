@@ -54,6 +54,41 @@ def _raw(service: AmigosService, group_id: str, **overrides: Any) -> dict[str, o
 
 
 class TestGroupsAndMembership:
+    def test_grupos_de_un_usuario_con_su_rol(self) -> None:
+        from src.osap.api.platform.amigos import AmigosMixin
+
+        store = _MemoryStore()
+        service = AmigosService(store)
+        group = service.create_group(
+            actor_user_id=_ADMIN, is_global_admin=True, name="Coral CTV", slug="ctv"
+        )
+        gid = str(group["id"])
+        service.grant_member(
+            actor_user_id=_ADMIN, is_global_admin=True, group_id=gid, user_id="u1", role="admin"
+        )
+
+        class _Api(AmigosMixin):
+            def __init__(self) -> None:
+                self._store = store
+
+            def _amigos_is_global_admin(self, token: str | None) -> bool:
+                return True
+
+            def _amigos_service(self) -> AmigosService:
+                return service
+
+        rows = _Api().amigos_user_groups("token", "u1")
+
+        assert rows == [
+            {
+                "group_id": gid,
+                "name": "Coral CTV",
+                "kind": "coral",
+                "role": "admin",
+                "status": "active",
+            }
+        ]
+
     def test_solo_admin_global_crea_grupos(self) -> None:
         store = _MemoryStore()
         service = AmigosService(store)
@@ -1153,3 +1188,23 @@ class TestSeo:
         node = next(n for n in payload["@graph"] if n["@type"] == "Article")
         assert node["headline"] == "Concierto de Navidad"
         assert node["datePublished"] == "2026-12-20"
+
+def test_historial_registra_alta_y_baja() -> None:
+    from src.osap.infrastructure.state.op.memory import MemoryStore
+
+    store = MemoryStore()
+    service = AmigosService(store)
+    group = service.create_group(actor_user_id=_ADMIN, is_global_admin=True, name="Coral X", slug="x")
+    gid = str(group["id"])
+    service.grant_member(
+        actor_user_id=_ADMIN, is_global_admin=True, group_id=gid, user_id="u1", role="collaborator"
+    )
+    rows = service.list_group_history(actor_user_id=_ADMIN, is_global_admin=True, group_id=gid)
+    assert rows[0]["event_type"] == "member_join"
+    assert rows[0]["start_date"]
+    service.revoke_member(
+        actor_user_id=_ADMIN, is_global_admin=True, group_id=gid, user_id="u1"
+    )
+    rows = service.list_group_history(actor_user_id=_ADMIN, is_global_admin=True, group_id=gid)
+    assert rows[0]["end_date"]
+

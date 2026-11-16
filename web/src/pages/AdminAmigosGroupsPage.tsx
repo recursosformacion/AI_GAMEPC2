@@ -93,7 +93,16 @@ export function AdminAmigosGroupsPage({ kind }: { kind?: string } = {}) {
     }
   };
 
-  const kindLabel = (k: string) => (k === "coral" ? t("nav.corales") : k);
+  const kindLabel = (k: string) =>
+    ({
+      coral: "Coral",
+      grupo: "Grupo",
+      banda: "Banda",
+      orquesta: "Orquesta",
+      ensemble: "Ensemble",
+      escuela: "Escuela",
+      iglesia: "Iglesia",
+    })[k] ?? k;
   const iconBtn = "rounded p-1.5 hover:bg-osap-surface";
   const Th = ({ k, label }: { k: SortKey; label: string }) => (
     <th className="px-3 py-2">
@@ -143,7 +152,7 @@ export function AdminAmigosGroupsPage({ kind }: { kind?: string } = {}) {
               <tr>
                 <Th k="name" label={t("friends.groupName")} />
                 <Th k="slug" label={t("friends.slug")} />
-                <Th k="kind" label={t("friends.kind")} />
+                <Th k="kind" label="Tipo de grupo" />
                 <Th k="editorial_mode" label={t("friends.editorialMode")} />
                 <Th k="status" label={t("friends.active")} />
                 <th className="px-3 py-2 text-right">{t("adminUsers.actions")}</th>

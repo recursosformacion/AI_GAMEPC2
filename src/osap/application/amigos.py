@@ -32,6 +32,7 @@ from src.osap.domain.amigos import (
     FORMATION_TYPES,
     GROUP_KINDS,
     GROUP_LINK_KINDS,
+    GROUP_ROLE_TEMPLATES,
     GROUP_STATUSES,
     IMAGE_MIME_TYPES,
     MAX_IMAGE_BYTES,
@@ -131,6 +132,9 @@ class AmigosService:
         kind: str = "coral",
         slug: str | None = None,
         description: str | None = None,
+        technical_description: str | None = None,
+        admin_roles: list[str] | None = None,
+        musical_roles: list[str] | None = None,
         image_url: str | None = None,
         editorial_mode: str = "moderated",
         website: str | None = None,
@@ -147,6 +151,7 @@ class AmigosService:
             raise AmigosError(422, "INVALID_KIND", "Tipo de grupo no soportado")
         if editorial_mode not in EDITORIAL_MODES:
             raise AmigosError(422, "INVALID_EDITORIAL_MODE", "Modalidad editorial inválida")
+        template = GROUP_ROLE_TEMPLATES.get(kind, GROUP_ROLE_TEMPLATES["grupo"])
         clean_slug = _slugify(slug or clean_name, max_len=96) or "grupo"
         if self._store.get_amigos_group_by_slug(clean_slug) is not None:
             raise AmigosError(409, "SLUG_TAKEN", "Ese slug de grupo ya existe")
@@ -157,6 +162,9 @@ class AmigosService:
                 name=clean_name,
                 kind=kind,
                 description=description,
+                technical_description=(technical_description or "").strip()[:1000] or None,
+                admin_roles=list(admin_roles or template["admin"]),
+                musical_roles=list(musical_roles or template["musical"]),
                 image_url=_clean_url(image_url),
                 editorial_mode=editorial_mode,
                 created_by=actor_user_id,
@@ -176,6 +184,9 @@ class AmigosService:
         group_id: str,
         name: str | None = None,
         description: str | None = None,
+        technical_description: str | None = None,
+        admin_roles: list[str] | None = None,
+        musical_roles: list[str] | None = None,
         image_url: str | None = None,
         editorial_mode: str | None = None,
         status: str | None = None,
@@ -193,6 +204,16 @@ class AmigosService:
             changes["name"] = clean
         if description is not None:
             changes["description"] = description
+        if technical_description is not None:
+            changes["technical_description"] = (technical_description or "").strip()[:1000] or None
+        if admin_roles is not None:
+            changes["admin_roles_json"] = _json([
+                str(role).strip() for role in admin_roles if str(role).strip()
+            ])
+        if musical_roles is not None:
+            changes["musical_roles_json"] = _json([
+                str(role).strip() for role in musical_roles if str(role).strip()
+            ])
         if image_url is not None:
             changes["image_url"] = _clean_url(image_url)
         if website is not None:
@@ -259,6 +280,13 @@ class AmigosService:
             actor=actor_user_id,
             detail_json=_json({"user_id": target, "role": role}),
         )
+        self._store.add_amigos_group_history(
+            group_id=group_id,
+            event_type="director_join" if role == "admin" else "member_join",
+            member_user_id=target,
+            role=role,
+            start_date=date.today().isoformat(),
+        )
         return dict(row)
 
     def revoke_member(
@@ -283,6 +311,9 @@ class AmigosService:
             status="revoked",
             granted_by=actor_user_id,
         )
+        self._store.close_amigos_group_history(
+            group_id, user_id, date.today().isoformat()
+        )
         # Revocar NO elimina artículos publicados (trazabilidad).
         self._store.add_amigos_event(
             group_id=group_id,
@@ -293,11 +324,22 @@ class AmigosService:
         )
         return dict(row) if row is not None else {"group_id": group_id, "user_id": user_id, "status": "revoked"}
 
+    def list_group_history(
+        self, *, actor_user_id: str, is_global_admin: bool, group_id: str
+    ) -> list[dict[str, object]]:
+        self._require_group_admin(group_id, actor_user_id, is_global_admin)
+        rows: list[dict[str, object]] = self._store.list_amigos_group_history(group_id)
+        return rows
+
     def list_members(
         self, *, actor_user_id: str, is_global_admin: bool, group_id: str
     ) -> list[dict[str, object]]:
         self._require_group_admin(group_id, actor_user_id, is_global_admin)
-        return list(self._store.list_amigos_members(group_id))
+        return [
+            dict(row)
+            for row in self._store.list_amigos_members(group_id)
+            if str(row.get("status")) == "active"
+        ]
 
     # --- especialización por tipo: ficha de coral ---------------------------
 
@@ -1295,7 +1337,7 @@ class AmigosService:
         return candidate
 
 
-def _json(payload: dict[str, object]) -> str:
+def _json(payload: object) -> str:
     import json
 
     return json.dumps(payload, ensure_ascii=False)
@@ -1467,3 +1509,7 @@ def _clean_media(items: list[dict[str, Any]]) -> list[dict[str, object]]:
             }
         )
     return cleaned
+
+
+
+

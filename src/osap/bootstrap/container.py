@@ -25,6 +25,7 @@ from src.osap.infrastructure.events import InMemoryEventBus
 from src.osap.infrastructure.jobs import InMemoryJobEngine
 from src.osap.infrastructure.merge import MergeEngine
 from src.osap.infrastructure.metrics import InMemoryMetricsCollector
+from src.osap.infrastructure.news.client import NewsClient
 from src.osap.infrastructure.storage.contribution_uploads import (
     StorageContributionClient,
 )
@@ -80,6 +81,7 @@ class Container:
         self._support_web_base: str | None = None
         self._ads_base_url: str | None = None
         self._chorus_api_base: str | None = None
+        self._news_client: NewsClient | None = None
         self._ads_web_base: str | None = None
         self._ads_service_token: str | None = None
         self._ads_timeout_seconds: float = 2.5
@@ -190,6 +192,14 @@ class Container:
 
     def chorus_api_base(self) -> str | None:
         return self._chorus_api_base
+
+    def set_news_client(self, client: NewsClient) -> None:
+        self._news_client = client
+
+    def news_client(self) -> NewsClient:
+        if self._news_client is None:
+            raise RuntimeError("News client not wired")
+        return self._news_client
 
     def ads_base_url(self) -> str | None:
         return self._ads_base_url
@@ -376,5 +386,3 @@ class Container:
             orchestrator=orchestrator,
             evidence_engine=EvidenceEngine(),
         )
-
-

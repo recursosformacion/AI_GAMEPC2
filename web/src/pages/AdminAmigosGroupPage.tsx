@@ -81,6 +81,10 @@ export function AdminAmigosGroupPage() {
 
   const [group, setGroup] = useState<AmigosGroup | null>(null);
   const [members, setMembers] = useState<AmigosMember[]>([]);
+  const [history, setHistory] = useState<Array<{
+    id: string; event_type: string; member_user_id?: string | null; role?: string | null;
+    start_date?: string | null; end_date?: string | null; notes?: string | null;
+  }>>([]);
   const [articles, setArticles] = useState<AmigosArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState<string | null>(null);
@@ -88,6 +92,7 @@ export function AdminAmigosGroupPage() {
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [technicalDescription, setTechnicalDescription] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [website, setWebsite] = useState("");
   const [email, setEmail] = useState("");
@@ -114,6 +119,7 @@ export function AdminAmigosGroupPage() {
       if (found) {
         setName(found.name);
         setDescription(found.description ?? "");
+        setTechnicalDescription(found.technical_description ?? "");
         setImageUrl(found.image_url ?? "");
         setWebsite(found.website ?? "");
         setEmail(found.email ?? "");
@@ -153,11 +159,13 @@ export function AdminAmigosGroupPage() {
           }
         }
       }
-      const [memberList, articleList] = await Promise.all([
+      const [memberList, historyList, articleList] = await Promise.all([
         apiClient.getAmigosMembers(groupId),
+        apiClient.getAmigosGroupHistory(groupId),
         apiClient.getAmigosGroupArticlesAdmin(groupId),
       ]);
       setMembers(memberList.items);
+      setHistory(historyList);
       setArticles(articleList.items);
       try {
         setUsers(await apiClient.get<DirectoryUser[]>("/admin/users"));
@@ -192,6 +200,7 @@ export function AdminAmigosGroupPage() {
       await apiClient.updateAmigosGroup(groupId, {
         name: name.trim(),
         description: description.trim() || null,
+        technical_description: technicalDescription.trim() || null,
         image_url: imageUrl.trim() || null,
         website: website.trim() || null,
         email: email.trim() || null,
@@ -330,6 +339,15 @@ export function AdminAmigosGroupPage() {
             disabled={viewMode}
             onChange={(e) => setDescription(e.target.value)}
             placeholder={t("friends.description")}
+            className="rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm disabled:opacity-60 sm:col-span-2"
+          />
+          <textarea
+            value={technicalDescription}
+            disabled={viewMode}
+            maxLength={1000}
+            onChange={(e) => setTechnicalDescription(e.target.value)}
+            placeholder="Descripción técnica (formación, secciones, plantilla…)"
+            rows={4}
             className="rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm disabled:opacity-60 sm:col-span-2"
           />
           <input
@@ -595,6 +613,39 @@ export function AdminAmigosGroupPage() {
         </Card>
       ) : null}
 
+      <Card title="Cargos del grupo">
+        <p className="text-sm text-osap-ink">
+          <strong>Administrativos:</strong>{" "}
+          {group.admin_roles?.length ? group.admin_roles.join(", ") : "—"}
+        </p>
+        <p className="mt-1 text-sm text-osap-ink">
+          <strong>Musicales:</strong>{" "}
+          {group.musical_roles?.length ? group.musical_roles.join(", ") : "—"}
+        </p>
+      </Card>
+
+      <Card title="Historial de altas y bajas">
+        {history.length === 0 ? (
+          <p className="text-sm text-osap-muted">
+            Sin entradas todavía. Se registran al dar de alta o de baja a un componente.
+          </p>
+        ) : (
+          <ul className="divide-y divide-osap-border text-sm">
+            {history.map((item) => (
+              <li key={item.id} className="flex flex-wrap justify-between gap-2 py-2">
+                <span>
+                  {item.event_type === "director_join" ? "Alta de dirección" : "Alta de componente"}
+                  {item.role === "admin" ? " (dirección)" : ""}
+                </span>
+                <span className="text-osap-muted">
+                  {formatEuroDate(item.start_date) || "—"} → {item.end_date ? formatEuroDate(item.end_date) : "actualidad"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
       <Card title={t("friends.members")}>
         {viewMode ? null : (
           <div className="flex flex-wrap gap-2">
@@ -737,3 +788,4 @@ export function AdminAmigosGroupPage() {
     </div>
   );
 }
+

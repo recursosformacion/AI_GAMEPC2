@@ -55,6 +55,16 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
     # --- lectura pública -----------------------------------------------------
 
     @router.get(
+        "/api/v1/amigos/role-templates/{kind}",
+        tags=["Friends"],
+        summary="Cargos propuestos para un tipo de grupo",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+    )
+    def role_templates(
+        kind: str, response: Response
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(ctx, response, lambda: ctx.api.amigos_role_templates(kind))
+    @router.get(
         "/api/v1/amigos/groups",
         tags=["Friends"],
         summary="Grupos de «Los amigos» (público)",
@@ -651,6 +661,31 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
     # --- membresías ----------------------------------------------------------
 
     @router.get(
+        "/api/v1/admin/users/{user_id}/friends-groups",
+        tags=["Friends"],
+        summary="Grupos de Amigos de un usuario (admin global)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={401: _shared._UNAUTHORIZED_401, **_shared._standard_errors(403)},
+    )
+    def user_groups(
+        user_id: str, response: Response, authorization: str | None = Header(default=None)
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(
+            ctx, response, lambda: ctx.api.amigos_user_groups(authorization, user_id)
+        )
+
+    @router.get(
+        "/api/v1/admin/amigos/groups/{group_id}/history",
+        tags=["Friends"],
+        summary="Historial de altas y bajas del grupo",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+    )
+    def group_history(
+        group_id: str, response: Response, authorization: str | None = Header(default=None)
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(ctx, response, lambda: ctx.api.amigos_group_history(authorization, group_id))
+
+    @router.get(
         "/api/v1/admin/amigos/groups/{group_id}/members",
         tags=["Friends"],
         summary="Miembros de un grupo (admin del grupo o global)",
@@ -783,3 +818,4 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         return _call(ctx, response, lambda: ctx.api.amigos_audit(authorization, group_id))
 
     return router
+

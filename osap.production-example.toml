@@ -25,3 +25,10 @@ token_issuer = "https://auth.openmusicrepository.com"
 # Pon aquí el client_secret real (o en la env OSAP_OIDC_CLIENT_SECRET, con prioridad).
 # En prod el secret va en el osap.toml del servidor / env del servicio; NO commitees el real.
 client_secret = ""
+
+[news]
+# Servicio interno ai_noticias. No exponerlo fuera de la red del servidor.
+base_url = "http://127.0.0.1:8400"
+# Token de servicio; en producción va por entorno (OSAP_NEWS_API_TOKEN).
+service_token = ""
+timeout_seconds = 8

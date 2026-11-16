@@ -7,6 +7,7 @@ la identidad autenticada; nunca del cuerpo. El rol global `admin` se comprueba a
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import threading
@@ -139,6 +140,13 @@ class AmigosMixin(PlatformApiCore):
 
     # --- lectura pública -----------------------------------------------------
 
+    def amigos_role_templates(self, kind: str) -> dict[str, list[str]]:
+        from src.osap.domain.amigos import GROUP_KINDS, GROUP_ROLE_TEMPLATES
+
+        if kind not in GROUP_KINDS:
+            raise AmigosError(422, "INVALID_KIND", "Tipo de grupo no soportado")
+        template = GROUP_ROLE_TEMPLATES[kind]
+        return {"admin": list(template["admin"]), "musical": list(template["musical"])}
     def amigos_list_groups(
         self, *, token: str | None = None, include_inactive: bool = False, kind: str | None = None
     ) -> list[AmigosGroupRead]:
@@ -220,6 +228,27 @@ class AmigosMixin(PlatformApiCore):
                 {
                     "group": self._amigos_group_read(group).model_dump(),
                     "role": str(membership.get("role") or "collaborator"),
+                }
+            )
+        return out
+
+    def amigos_user_groups(self, token: str | None, user_id: str) -> list[dict[str, object]]:
+        """Grupos de Amigos de un usuario (solo admin global)."""
+        if not self._amigos_is_global_admin(token):
+            raise AmigosError(403, "FORBIDDEN", "Solo la administración global puede ver grupos de otro usuario")
+        service = self._amigos_service()
+        out: list[dict[str, object]] = []
+        for membership in self._store.list_amigos_memberships_by_user(user_id):
+            group = service.get_group(str(membership.get("group_id")))
+            if group is None:
+                continue
+            out.append(
+                {
+                    "group_id": str(group.get("id")),
+                    "name": str(group.get("name")),
+                    "kind": str(group.get("kind")),
+                    "role": str(membership.get("role") or "collaborator"),
+                    "status": str(membership.get("status") or "active"),
                 }
             )
         return out
@@ -313,6 +342,9 @@ class AmigosMixin(PlatformApiCore):
             kind=payload.kind,
             slug=payload.slug,
             description=payload.description,
+            technical_description=payload.technical_description,
+            admin_roles=payload.admin_roles,
+            musical_roles=payload.musical_roles,
             image_url=payload.image_url,
             editorial_mode=payload.editorial_mode,
             website=payload.website,
@@ -332,6 +364,9 @@ class AmigosMixin(PlatformApiCore):
             group_id=group_id,
             name=payload.name,
             description=payload.description,
+            technical_description=payload.technical_description,
+            admin_roles=payload.admin_roles,
+            musical_roles=payload.musical_roles,
             image_url=payload.image_url,
             editorial_mode=payload.editorial_mode,
             status=payload.status,
@@ -422,6 +457,15 @@ class AmigosMixin(PlatformApiCore):
         )
         return AmigosMemberListRead(items=[self._amigos_member_read(r) for r in rows], total=len(rows))
 
+    def amigos_group_history(
+        self, token: str | None, group_id: str
+    ) -> list[dict[str, object]]:
+        actor = self._amigos_user(token)
+        return self._amigos_service().list_group_history(
+            actor_user_id=actor,
+            is_global_admin=self._amigos_is_global_admin(token),
+            group_id=group_id,
+        )
     # --- agenda: actuaciones y eventos --------------------------------------
 
     def amigos_list_events(
@@ -866,8 +910,16 @@ class AmigosMixin(PlatformApiCore):
 
     # --- serialización -------------------------------------------------------
 
-    @staticmethod
-    def _str_or_none(value: object) -> str | None:
+    def _json_list(self, value: object) -> list[str]:
+        if isinstance(value, list):
+            return [str(item) for item in value]
+        try:
+            parsed = json.loads(str(value)) if value else []
+        except (TypeError, ValueError):
+            return []
+        return [str(item) for item in parsed] if isinstance(parsed, list) else []
+
+    def _str_or_none(self, value: object) -> str | None:
         text = str(value).strip() if value is not None else ""
         return text or None
 
@@ -886,6 +938,9 @@ class AmigosMixin(PlatformApiCore):
             name=str(row["name"]),
             kind=str(row["kind"]),
             description=self._str_or_none(row.get("description")),
+            technical_description=self._str_or_none(row.get("technical_description")),
+            admin_roles=self._json_list(row.get("admin_roles_json") or row.get("admin_roles")),
+            musical_roles=self._json_list(row.get("musical_roles_json") or row.get("musical_roles")),
             image_url=self._str_or_none(row.get("image_url")),
             website=self._str_or_none(row.get("website")),
             email=self._str_or_none(row.get("email")),
@@ -992,3 +1047,8 @@ class AmigosMixin(PlatformApiCore):
     @staticmethod
     def _article_dict(article: AmigosArticleRead) -> dict[str, object]:
         return article.model_dump()
+
+
+
+
+

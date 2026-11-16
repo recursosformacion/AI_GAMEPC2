@@ -753,6 +753,8 @@ export interface ActivityDownloadRow {
   day: string;
   provider: string;
   work_id: string;
+  title?: string;
+  path?: string | null;
   format: string;
   quantity: number;
   bytes: number;
@@ -1020,6 +1022,9 @@ export interface AmigosGroup {
   name: string;
   kind: AmigosGroupKind | string;
   description?: string | null;
+  technical_description?: string | null;
+  admin_roles?: string[];
+  musical_roles?: string[];
   image_url?: string | null;
   website?: string | null;
   email?: string | null;
@@ -1163,6 +1168,9 @@ export interface AmigosEvent {
   title: string;
   summary?: string | null;
   description?: string | null;
+  technical_description?: string | null;
+  admin_roles?: string[];
+  musical_roles?: string[];
   image_url?: string | null;
   kind: string;
   modality: string;
@@ -1290,4 +1298,37 @@ export interface WorkspaceReferenceInput {
   subtitle?: string | null;
   metadata?: Record<string, unknown> | null;
 }
+
+
+export interface NewsItem {
+  news_item_id: number;
+  publication_id: number | null;
+  title: string;
+  summary: string;
+  url: string | null;
+  published_at: string | null;
+  publisher: string | null;
+  channel: string | null;
+  language: string;
+  content_type: string | null;
+  score: number;
+  matched: string[];
+}
+
+export interface NewsFeed {
+  items: NewsItem[];
+  language: string;
+  languages: string[];
+  topics: string[];
+  opt_in: boolean;
+  personalized: boolean;
+  window_days: number;
+}
+
+export interface NewsTopic {
+  code: string;
+  name: string;
+  description: string;
+}
+
 

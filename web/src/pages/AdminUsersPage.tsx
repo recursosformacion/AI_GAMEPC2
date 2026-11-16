@@ -22,6 +22,7 @@ export interface AdminUser {
   nickname_public_consent?: boolean;
   news_opt_in?: boolean;
   news_language?: string;
+  news_languages?: string[];
   news_topics?: string[];
   memberships?: EntityMembership[];
 }
@@ -152,11 +153,8 @@ export function AdminUsersPage() {
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-3">
           <h1 className="text-xl font-semibold">{t("adminUsers.title")}</h1>
-          <a href="/admin/entities" className="text-sm text-osap-accent hover:underline">
-            Entidades y gestores
-          </a>
           <a href="/admin/amigos/nuevo" target="_blank" rel="noreferrer" className="text-sm text-osap-accent hover:underline">
-            Crear entidad
+            Crear grupo/entidad
           </a>
         </div>
         <label className="flex items-center gap-2 text-sm text-osap-muted">
@@ -176,7 +174,7 @@ export function AdminUsersPage() {
               <th className="px-3 py-2">{t("adminUsers.name")}</th>
               <th className="px-3 py-2">{t("adminUsers.email")}</th>
               <th className="px-3 py-2">Teléfono</th>
-              <th className="px-3 py-2">Entidades</th>
+              <th className="px-3 py-2">Grupos</th>
               <th className="px-3 py-2">Rol</th>
               <th className="px-3 py-2 text-center">{t("adminUsers.status")}</th>
               <th className="px-3 py-2 text-center" title="Nickname público/privado">Público</th>
@@ -327,5 +325,3 @@ export function AdminUsersPage() {
     </div>
   );
 }
-
-

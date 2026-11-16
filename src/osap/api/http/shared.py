@@ -168,6 +168,7 @@ _TAGS = [
     {"name": "Jobs", "description": "Orchestrate long-running tasks."},
     {"name": "Providers", "description": "Provider state and capabilities."},
     {"name": "Knowledge", "description": "Learned knowledge (read-only)."},
+    {"name": "News", "description": "Noticias musicales para la sesión del usuario."},
     {"name": "Notifications", "description": "Bandeja de avisos de la app (campana)."},
     {"name": "Votes", "description": "Votación de obras y estadísticas agregadas."},
     {"name": "System", "description": "Health, version and statistics."},
@@ -873,4 +874,3 @@ def _standard_errors(*codes: int) -> dict[int | str, dict[str, Any]]:
         elif code == 404:
             by_code[404] = _NOT_FOUND_404
     return by_code
-

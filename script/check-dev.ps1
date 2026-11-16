@@ -10,7 +10,11 @@ $services = @(
     [pscustomobject]@{ Name = "osap-storage"; Port = 8000; Health = "http://127.0.0.1:8000/api/v1/health" },
     [pscustomobject]@{ Name = "osap-api"; Port = 8001; Health = "http://127.0.0.1:8001/api/v1/system/health" },
     [pscustomobject]@{ Name = "osap-auth"; Port = 8200; Health = "http://127.0.0.1:8200/health" },
-    [pscustomobject]@{ Name = "osap-support"; Port = 8300; Health = "http://127.0.0.1:8300/health" }
+    [pscustomobject]@{ Name = "osap-support"; Port = 8300; Health = "http://127.0.0.1:8300/health" },
+    [pscustomobject]@{ Name = "ai-noticias"; Port = 8400; Health = "http://127.0.0.1:8400/health" },
+    [pscustomobject]@{ Name = "chorus"; Port = 9600; Health = "http://127.0.0.1:9600/health" },
+    [pscustomobject]@{ Name = "ai-publicidad"; Port = 8305; Health = "http://127.0.0.1:8305/health" },
+    [pscustomobject]@{ Name = "osap-ssr"; Port = 3000; Health = "http://127.0.0.1:3000/health" }
 )
 $logDir = Join-Path $env:LOCALAPPDATA "osap-dev\logs"
 

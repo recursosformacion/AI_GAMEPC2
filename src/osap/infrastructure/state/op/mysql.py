@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import secrets
 
 import pymysql
 from pymysql.cursors import DictCursor
@@ -548,6 +549,9 @@ class _MysqlStore(_MemoryStore):
         self._ensure_column("amigos_groups", "website", "VARCHAR(1024) NULL")
         self._ensure_column("amigos_groups", "email", "VARCHAR(254) NULL")
         self._ensure_column("amigos_groups", "logo_url", "VARCHAR(1024) NULL")
+        self._ensure_column("amigos_groups", "technical_description", "TEXT NULL")
+        self._ensure_column("amigos_groups", "admin_roles_json", "TEXT NULL")
+        self._ensure_column("amigos_groups", "musical_roles_json", "TEXT NULL")
 
     def _ensure_column(self, table: str, column: str, ddl: str) -> None:
         # Nunca debe abortar el arranque del store: el usuario de la app puede no tener
@@ -1296,18 +1300,82 @@ class _MysqlStore(_MemoryStore):
         website: str | None = None,
         email: str | None = None,
         logo_url: str | None = None,
+        technical_description: str | None = None,
+        admin_roles: list[str] | None = None,
+        musical_roles: list[str] | None = None,
     ) -> dict[str, object]:
         self._run(
             "INSERT INTO amigos_groups (id, slug, name, kind, description, image_url, "
-            "website, email, logo_url, status, editorial_mode, created_by) "
-            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,'active',%s,%s)",
+            "website, email, logo_url, technical_description, admin_roles_json, "
+            "musical_roles_json, status, editorial_mode, created_by) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'active',%s,%s)",
             (group_id, slug, name, kind, description, image_url, website, email, logo_url,
-             editorial_mode, created_by),
+             technical_description, json.dumps(admin_roles or [], ensure_ascii=False),
+             json.dumps(musical_roles or [], ensure_ascii=False), editorial_mode, created_by),
         )
         row = self.get_amigos_group(group_id)
         assert row is not None
         return row
 
+    def _ensure_amigos_group_history(self) -> None:
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS amigos_group_history (
+                id CHAR(32) PRIMARY KEY,
+                group_id CHAR(32) NOT NULL,
+                event_type VARCHAR(32) NOT NULL,
+                member_user_id CHAR(36) NULL,
+                person_name VARCHAR(255) NULL,
+                role VARCHAR(16) NULL,
+                start_date DATE NULL,
+                end_date DATE NULL,
+                notes TEXT NULL,
+                created_at DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+                KEY idx_amigos_history_group (group_id, start_date),
+                CONSTRAINT fk_amigos_history_group FOREIGN KEY (group_id)
+                    REFERENCES amigos_groups(id) ON DELETE CASCADE
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+            """
+        )
+
+    def add_amigos_group_history(
+        self,
+        *,
+        group_id: str,
+        event_type: str,
+        member_user_id: str | None = None,
+        role: str | None = None,
+        start_date: str | None = None,
+        end_date: str | None = None,
+        notes: str | None = None,
+    ) -> dict[str, object]:
+        self._ensure_amigos_group_history()
+        history_id = secrets.token_hex(16)
+        self._run(
+            "INSERT INTO amigos_group_history "
+            "(id, group_id, event_type, member_user_id, role, start_date, end_date, notes) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
+            (history_id, group_id, event_type, member_user_id, role, start_date, end_date, notes),
+        )
+        return {"id": history_id}
+
+    def list_amigos_group_history(self, group_id: str) -> list[dict[str, object]]:
+        self._ensure_amigos_group_history()
+        return self._run(
+            "SELECT * FROM amigos_group_history WHERE group_id = %s "
+            "ORDER BY COALESCE(start_date, DATE(created_at)) DESC, created_at DESC",
+            (group_id,),
+        )
+
+    def close_amigos_group_history(
+        self, group_id: str, member_user_id: str, end_date: str
+    ) -> None:
+        self._ensure_amigos_group_history()
+        self._run(
+            "UPDATE amigos_group_history SET end_date = %s "
+            "WHERE group_id = %s AND member_user_id = %s AND end_date IS NULL",
+            (end_date, group_id, member_user_id),
+        )
     def get_amigos_group(self, group_id: str) -> dict[str, object] | None:
         rows = self._run("SELECT * FROM amigos_groups WHERE id = %s", (group_id,))
         return rows[0] if rows else None
@@ -1330,7 +1398,8 @@ class _MysqlStore(_MemoryStore):
         return self._run(f"SELECT * FROM amigos_groups {where} ORDER BY name", tuple(args))
 
     def update_amigos_group(self, group_id: str, **changes: object) -> dict[str, object] | None:
-        allowed = {"name", "description", "image_url", "editorial_mode", "status",
+        allowed = {"name", "description", "technical_description", "image_url",
+                   "admin_roles_json", "musical_roles_json", "editorial_mode", "status",
                    "website", "email", "logo_url"}
         fields = [k for k in changes if k in allowed]
         if fields:
@@ -1905,5 +1974,4 @@ def _encode_description(description: dict[str, str] | str | None) -> str | None:
     if isinstance(description, str):
         return json.dumps({"en": description}, ensure_ascii=False)
     return json.dumps(description, ensure_ascii=False)
-
 

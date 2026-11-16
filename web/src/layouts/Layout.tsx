@@ -186,7 +186,10 @@ const CONTENT_ENTRIES: readonly NavEntry[] = [
   { to: "/corrections?kind=contact", key: "nav.contact", icon: "mail" },
 ];
 
-const SPACE_NAV: readonly NavItem[] = [{ to: "/activity", key: "nav.activity", icon: "activity" }];
+const SPACE_NAV: readonly NavItem[] = [
+  { to: "/activity", key: "nav.activity", icon: "activity" },
+  { to: "/noticias", key: "nav.news", icon: "article" },
+];
 
 // «Los amigos»: grupo de menú propio (como «Tu espacio»), con la jerarquía
 // Los amigos → Grupos (coral es un tipo de grupo). El blog general vive en su aplicación independiente.
@@ -731,8 +734,3 @@ export function Layout(): ReactNode {
     </div>
   );
 }
-
-
-
-
-

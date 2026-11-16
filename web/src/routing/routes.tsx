@@ -18,6 +18,7 @@ function AppAlias({ base }: { base: "composers" | "obras" }) {
 const AboutPage = lazy(() => import("../pages/AboutPage").then((m) => ({ default: m.AboutPage })));
 const ActivityPage = lazy(() => import("../pages/ActivityPage").then((m) => ({ default: m.ActivityPage })));
 const AccountPage = lazy(() => import("../pages/AccountPage").then((m) => ({ default: m.AccountPage })));
+const NewsPage = lazy(() => import("../pages/NewsPage").then((m) => ({ default: m.NewsPage })));
 const NotificationsPage = lazy(() => import("../pages/NotificationsPage").then((m) => ({ default: m.NotificationsPage })));
 const AdminAmigosGroupsPage = lazy(() => import("../pages/AdminAmigosGroupsPage").then((m) => ({ default: m.AdminAmigosGroupsPage })));
 const AdminAmigosGroupNewPage = lazy(() => import("../pages/AdminAmigosGroupNewPage").then((m) => ({ default: m.AdminAmigosGroupNewPage })));
@@ -39,7 +40,6 @@ const AdminCorrectionsPage = lazy(() => import("../pages/AdminCorrectionsPage").
 const AdminFunnelPage = lazy(() => import("../pages/AdminFunnelPage").then((m) => ({ default: m.AdminFunnelPage })));
 const AdminUserDetailPage = lazy(() => import("../pages/AdminUserDetailPage").then((m) => ({ default: m.AdminUserDetailPage })));
 const AdminUsersPage = lazy(() => import("../pages/AdminUsersPage").then((m) => ({ default: m.AdminUsersPage })));
-const AdminEntitiesPage = lazy(() => import("../pages/AdminEntitiesPage"));
 const AdminWorkPersonAiPage = lazy(() => import("../pages/AdminWorkPersonAiPage").then((m) => ({ default: m.AdminWorkPersonAiPage })));
 const AdminPaymentsPage = lazy(() => import("../pages/AdminPaymentsPage").then((m) => ({ default: m.AdminPaymentsPage })));
 const AdminPage = lazy(() => import("../pages/AdminPage").then((m) => ({ default: m.AdminPage })));
@@ -119,6 +119,7 @@ export function AppRoutes() {
           <Route path="/ensembles" element={<EnsemblesPage />} />
           <Route path="/activity" element={<ActivityPage />} />
           <Route path="/account" element={<AccountPage />} />
+          <Route path="/noticias" element={<NewsPage />} />
           <Route path="/notifications" element={<NotificationsPage />} />
           <Route path="/composers/:personId/:slug?" element={<ComposerDetailPage />} />
           <Route path="/about" element={<AboutPage />} />
@@ -145,7 +146,6 @@ export function AppRoutes() {
         <Route element={<AdminLayout />}>
           <Route path="/admin" element={<AdminPage />} />
           <Route path="/admin/users" element={<AdminUsersPage />} />
-          <Route path="/admin/entities" element={<AdminEntitiesPage />} />
           <Route path="/admin/payments" element={<AdminPaymentsPage />} />
           <Route path="/admin/users/:userId" element={<AdminUserDetailPage />} />
           <Route path="/admin/composers" element={<AdminComposersPage />} />
@@ -170,5 +170,3 @@ export function AppRoutes() {
     </Suspense>
   );
 }
-
-

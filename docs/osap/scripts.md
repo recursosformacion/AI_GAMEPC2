@@ -686,3 +686,23 @@ Previsualización del índice V6 sin escribir. Consume el feed
 `/api/v6/index/works` (fichero o URL) y compara con un sitemap de works; conserva
 `index-<works.id>` y deriva el slug del título. Uso:
 `python script/v6_index_preview.py --feed var/v6-feed.json --sitemap var/works-1.xml`.
+
+
+## script/run-news-digest.ps1
+
+Lanza una pasada del boletín de noticias en dev con los tokens y endpoints locales. Por
+defecto es dry-run y deja `.eml` + `report.json` en `var/news-digest/`; con `-Send` encola
+en `osap-support`. Uso:
+
+pwsh script/run-news-digest.ps1 [-UserId <uuid>] [-Limit 8] [-Days 30] [-Send]
+
+## script/install-dev-autostart.ps1
+
+Registra (o elimina con `-Remove`) la tarea `OSAP dev services`, que ejecuta
+`restart-dev.ps1` al iniciar sesión. Evita quedarse sin servicios tras un reinicio.
+
+## script/rotate-dev-tokens.ps1
+
+Genera tokens aleatorios para osap-internal y ai-noticias, los guarda en
+`%LOCALAPPDATA%\osap-dev\*.txt`, reinicia los servicios y puede registrar la tarea
+semanal `OSAP dev token rotation` con `-ScheduleWeekly`.

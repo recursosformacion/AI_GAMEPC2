@@ -6,6 +6,7 @@ import type { TKey } from "../i18n/translations";
 import { useActivityMe } from "../state/activityMe";
 import { useAnalyticsMe } from "../state/analyticsMe";
 import { useAuth } from "../state/auth";
+import { formatEuroDate } from "../utils/dates";
 
 // Qué encontrará el usuario en su espacio (vista anónima).
 const ANON_ITEMS: { icon: string; key: TKey }[] = [
@@ -169,7 +170,7 @@ export function ActivityPage(): ReactNode {
                         {c.target_kind} {c.target_id ?? "—"}
                       </td>
                       <td className="py-1">{c.status}</td>
-                      <td className="py-1">{c.created_at}</td>
+                      <td className="py-1">{formatEuroDate(c.created_at)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -233,7 +234,7 @@ export function ActivityPage(): ReactNode {
                   <ul className="mt-1 space-y-1 text-sm text-osap-ink">
                     {activity.data.stats.downloads_by_day.map((d) => (
                       <li key={d.day} className="flex items-center gap-2">
-                        <span className="w-24 text-osap-muted">{d.day}</span>
+                        <span className="w-24 text-osap-muted">{formatEuroDate(d.day)}</span>
                         <span className="inline-block h-2 rounded bg-osap-accent" style={{ width: `${Math.min(d.downloads * 8, 160)}px` }} />
                         <span>{d.downloads}</span>
                       </li>
@@ -251,7 +252,7 @@ export function ActivityPage(): ReactNode {
                   <ul className="mt-1 space-y-1 text-sm text-osap-ink">
                     {activity.data.stats.contributions_by_day.map((d) => (
                       <li key={d.day} className="flex items-center gap-2">
-                        <span className="w-24 text-osap-muted">{d.day}</span>
+                        <span className="w-24 text-osap-muted">{formatEuroDate(d.day)}</span>
                         <span className="inline-block h-2 rounded bg-osap-accent" style={{ width: `${Math.min(d.count * 8, 160)}px` }} />
                         <span>{d.count}</span>
                       </li>
@@ -280,8 +281,16 @@ export function ActivityPage(): ReactNode {
                 <tbody>
                   {activity.data.my_downloads.map((d, i) => (
                     <tr key={`${d.day}-${d.work_id}-${i}`} className="border-t border-osap-border">
-                      <td className="py-1">{d.day}</td>
-                      <td className="py-1">{d.work_id}</td>
+                      <td className="py-1">{formatEuroDate(d.day)}</td>
+                      <td className="py-1">
+                        {d.path ? (
+                          <Link to={d.path} className="text-osap-accent hover:underline">
+                            {d.title ?? d.work_id}
+                          </Link>
+                        ) : (
+                          (d.title ?? d.work_id)
+                        )}
+                      </td>
                       <td className="py-1">{d.provider}</td>
                       <td className="py-1">{d.format}</td>
                       <td className="py-1">{d.quantity}</td>
@@ -333,3 +342,4 @@ export function ActivityPage(): ReactNode {
     </div>
   );
 }
+

@@ -61,6 +61,8 @@ Chorus (producto independiente): `docs/chorus-vision.md` (visión),
   servidor, verificación por `?preview` y rollback; **no** incluye el SSR de React.
 - **Mantenimiento y token de revisión** (`maintenance.md`): cómo activar/desactivar y dónde
   está el enlace `?preview=<TOKEN>` (impreso por el script y en `web/dist/maintenance.token`).
+- **Noticias en OSAP** (`news-integration.md`): acceso por sesión, preferencias en `osap-auth` y consulta interna a `ai_noticias`; el correo queda fuera de la vía de acceso.
+- **Boletín de noticias** (`news-digest.md`): librería común, cron, idempotencia y worker de `osap-support`.
 - **V6 — Work/Resource/File** (`v6-work-resource-model.md`): plan para sustituir los tres
   niveles actuales (storage works, índice index_works, representaciones/ficheros) por un
   modelo con Work + Resource + File, reparto de campos, IDs estables, migración y preguntas

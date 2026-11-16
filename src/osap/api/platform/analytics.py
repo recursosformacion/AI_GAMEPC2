@@ -230,7 +230,9 @@ class AnalyticsMixin(PlatformApiCore):
             "access": base["access"],
             "quota": base["quota"],
             "summary": summary,
-            "my_downloads": self._analytics_store.list_user_downloads(uid, limit=50),
+            "my_downloads": self._downloads_with_titles(
+                self._analytics_store.list_user_downloads(uid, limit=50)
+            ),
             "my_works": self._my_works(rows),
             "my_contributions": contribs,
             "pending": pending,
@@ -239,6 +241,33 @@ class AnalyticsMixin(PlatformApiCore):
             "recent": self._recent(rows),
         }
 
+    def _work_title(self, raw_id: str) -> tuple[str, str] | None:
+        canonical_id = normalize_work_id(raw_id)
+        if canonical_id is None:
+            return None
+        numeric_id = canonical_id[len("index-") :]
+        index_work = self.seo_work(canonical_id)
+        if isinstance(index_work, dict) and index_work.get("title"):
+            title = str(index_work["title"])
+            return title, f"/obras/{canonical_id}/{work_canonical_slug(title)}"
+        detail = self.composers().get_work(numeric_id) or self.composers().get_work(raw_id)
+        work = detail.get("work") if isinstance(detail, dict) else None
+        if isinstance(work, dict) and work.get("title"):
+            title = str(work["title"])
+            return title, f"/obras/{canonical_id}/{work_canonical_slug(title)}"
+        return None
+
+    def _downloads_with_titles(
+        self, rows: list[dict[str, object]]
+    ) -> list[dict[str, object]]:
+        result: list[dict[str, object]] = []
+        for row in rows:
+            item = dict(row)
+            found = self._work_title(str(row.get("work_id") or ""))
+            item["title"] = found[0] if found else str(row.get("work_id") or "")
+            item["path"] = found[1] if found else None
+            result.append(item)
+        return result
     def _my_works(self, rows: list[dict[str, object]]) -> list[dict[str, object]]:
         """Obras/recursos del usuario a partir de los eventos `materialized`."""
         seen: set[int] = set()
@@ -312,3 +341,4 @@ class AnalyticsMixin(PlatformApiCore):
                 )
         items.sort(key=lambda item: str(item["at"]), reverse=True)
         return items[:limit]
+

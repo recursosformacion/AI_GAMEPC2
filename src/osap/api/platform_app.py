@@ -23,6 +23,7 @@ from src.osap.api.http.context import HttpContext
 from src.osap.api.http.contributions import build_contributions_router
 from src.osap.api.http.jobs import build_jobs_router
 from src.osap.api.http.knowledge import build_knowledge_router
+from src.osap.api.http.news import build_news_router
 from src.osap.api.http.notifications import build_notifications_router
 from src.osap.api.http.omr import build_omr_router
 from src.osap.api.http.persons import build_persons_router
@@ -142,6 +143,7 @@ def create_platform_app(
     app.include_router(build_knowledge_router(ctx))
     app.include_router(build_system_router(ctx))
 
+    app.include_router(build_news_router(ctx))
     app.include_router(build_notifications_router(ctx))
     app.include_router(build_votes_router(ctx))
     app.include_router(build_analytics_router(ctx))
@@ -199,4 +201,3 @@ def create_platform_app(
     app.include_router(build_sitemap_router(ctx))
 
     return app
-
