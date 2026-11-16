@@ -67,7 +67,7 @@ export function AmigosGroupsPage() {
                 <div className="min-w-0 flex-1">
                   {/* Página pública del coral = servida por osap-api (SSR): navegación completa. */}
                   <a
-                    href={`/amigos/corales/${encodeURIComponent(g.id)}`}
+                    href={`/amigos/grupo/${encodeURIComponent(g.id)}`}
                     className="font-display text-lg font-semibold text-osap-ink hover:text-osap-accent"
                   >
                     {g.name}
@@ -82,7 +82,7 @@ export function AmigosGroupsPage() {
                         : t("friends.modeModerated")}
                     </span>
                     <a
-                      href={`/amigos/corales/${encodeURIComponent(g.id)}`}
+                      href={`/amigos/grupo/${encodeURIComponent(g.id)}`}
                       className="text-xs text-osap-accent hover:underline"
                     >
                       {t("friends.openGroup")} →
@@ -97,3 +97,4 @@ export function AmigosGroupsPage() {
     </div>
   );
 }
+

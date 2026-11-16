@@ -30,6 +30,7 @@ const AmigosEventsPage = lazy(() => import("../pages/AmigosEventsPage").then((m)
 const AmigosBlogPage = lazy(() => import("../pages/AmigosBlogPage").then((m) => ({ default: m.AmigosBlogPage })));
 const AmigosEditorPage = lazy(() => import("../pages/AmigosEditorPage").then((m) => ({ default: m.AmigosEditorPage })));
 const AmigosGroupsPage = lazy(() => import("../pages/AmigosGroupsPage").then((m) => ({ default: m.AmigosGroupsPage })));
+const AmigosGroupDetailPage = lazy(() => import("../pages/AmigosGroupDetailPage").then((m) => ({ default: m.AmigosGroupDetailPage })));
 const AmigosMyArticlesPage = lazy(() => import("../pages/AmigosMyArticlesPage").then((m) => ({ default: m.AmigosMyArticlesPage })));
 const AmigosPage = lazy(() => import("../pages/AmigosPage").then((m) => ({ default: m.AmigosPage })));
 const AdminComposerDetailPage = lazy(() => import("../pages/AdminComposerDetailPage").then((m) => ({ default: m.AdminComposerDetailPage })));
@@ -97,6 +98,7 @@ export function AppRoutes() {
           <Route path="/amigos" element={<AmigosPage />} />
           <Route path="/amigos/grupos" element={<AmigosGroupsPage />} />
           <Route path="/amigos/corales" element={<AmigosGroupsPage />} />
+          <Route path="/amigos/grupo/:groupId" element={<AmigosGroupDetailPage />} />
           <Route path="/amigos/eventos" element={<AmigosEventsPage />} />
           <Route path="/amigos/articulos" element={<AmigosBlogPage />} />
           <Route path="/amigos/mis-articulos" element={<AmigosMyArticlesPage />} />
@@ -170,3 +172,4 @@ export function AppRoutes() {
     </Suspense>
   );
 }
+

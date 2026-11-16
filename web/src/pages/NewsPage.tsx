@@ -51,6 +51,12 @@ export function NewsPage(): ReactNode {
       setNewsLanguage(me.news_language ?? "es");
       setNewsLanguages(me.news_languages?.length ? me.news_languages : [me.news_language ?? "es"]);
       setNewsTopics(me.news_topics ?? []);
+      if (
+        localStorage.getItem("osap.news.preferencesCollapsed") === null &&
+        ((me.news_languages?.length ?? 0) > 0 || (me.news_topics?.length ?? 0) > 0)
+      ) {
+        setShowPreferences(false);
+      }
       setTopicsCatalog(topics.items);
       setFeed(nextFeed);
     } catch {
@@ -134,7 +140,7 @@ export function NewsPage(): ReactNode {
             <button
               type="button"
               onClick={() => setShowPreferences((value) => !value)}
-              className="rounded-full border border-osap-border px-3 py-1 text-xs text-osap-ink hover:border-osap-accent"
+              className="rounded-full border-2 border-osap-accent bg-osap-accent px-4 py-2 text-sm font-semibold text-white hover:bg-osap-accent/90"
             >
               {showPreferences ? t("news.hidePreferences") : t("news.editPreferences")}
             </button>
@@ -171,7 +177,7 @@ export function NewsPage(): ReactNode {
                       : [...current, code],
                   )
                 }
-                className={`rounded-full border px-3 py-1 text-xs ${
+                className={`rounded-full border px-4 py-2 text-sm font-medium ${
                   newsLanguages.includes(code)
                     ? "border-osap-accent bg-osap-accent text-white"
                     : "border-osap-border text-osap-ink hover:border-osap-accent"
@@ -183,7 +189,7 @@ export function NewsPage(): ReactNode {
             <button
               type="button"
               onClick={() => setNewsLanguages(NEWS_LANGUAGES.map(([code]) => code))}
-              className="rounded-full border border-osap-border px-3 py-1 text-xs text-osap-ink hover:border-osap-accent"
+              className="rounded-full border-2 border-osap-accent bg-osap-accent px-4 py-2 text-sm font-semibold text-white hover:bg-osap-accent/90"
             >
               {t("news.allLanguages")}
             </button>
@@ -198,7 +204,7 @@ export function NewsPage(): ReactNode {
                   key={topic.code}
                   type="button"
                   onClick={() => toggleTopic(topic.code)}
-                  className={`rounded-full border px-3 py-1 text-xs ${
+                  className={`rounded-full border px-4 py-2 text-sm font-medium ${
                     newsTopics.includes(topic.code)
                       ? "border-osap-accent bg-osap-accent text-white"
                       : "border-osap-border text-osap-ink hover:border-osap-accent"
@@ -211,7 +217,7 @@ export function NewsPage(): ReactNode {
               <button
                 type="button"
                 onClick={() => setNewsTopics(topicsCatalog.map((topic) => topic.code))}
-                className="rounded-full border border-osap-border px-3 py-1 text-xs text-osap-ink hover:border-osap-accent"
+                className="rounded-full border-2 border-osap-accent bg-osap-accent px-4 py-2 text-sm font-semibold text-white hover:bg-osap-accent/90"
               >
                 {t("news.allTopics")}
               </button>
@@ -281,6 +287,8 @@ export function NewsPage(): ReactNode {
     </div>
   );
 }
+
+
 
 
 

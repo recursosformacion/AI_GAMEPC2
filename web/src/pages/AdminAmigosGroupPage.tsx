@@ -324,7 +324,7 @@ export function AdminAmigosGroupPage() {
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-xl font-semibold">{group.name}</h1>
+        <div className="flex items-center gap-2"><h1 className="text-xl font-semibold">{group.name}</h1><span className="rounded bg-osap-accent-soft px-2 py-0.5 text-xs text-osap-accent">{kind === "coral" ? "Coral" : kind}</span></div>
         <Link to="/admin/amigos" className="text-sm text-osap-accent hover:underline">
           ← {t("friends.adminGroups")}
         </Link>
@@ -822,6 +822,7 @@ export function AdminAmigosGroupPage() {
     </div>
   );
 }
+
 
 
 

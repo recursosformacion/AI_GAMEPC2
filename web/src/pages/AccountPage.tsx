@@ -1,70 +1,31 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { apiClient } from "../api/ApiClient";
 import { authClient, type UserProfile } from "../api/AuthClient";
-import type {
-  EntityKind,
-  EntityListItem,
-  EntityMembership,
-  EntityRequest,
-  MembershipStatus,
-} from "../api/types";
+import type { AmigosMyGroup } from "../api/types";
 import { useAuth } from "../state/auth";
-
-const KIND_LABELS: Record<EntityKind, string> = {
-  coral: "Coral",
-  orquesta: "Orquesta",
-  grupo: "Grupo",
-  banda: "Banda",
-  ensemble: "Ensemble",
-  escuela: "Escuela / Conservatorio",
-  iglesia: "Iglesia",
-};
-
-const STATUS_LABELS: Record<MembershipStatus, string> = {
-  pending: "Pendiente de aprobación",
-  approved: "Aprobada",
-  rejected: "Rechazada",
-};
 
 export function AccountPage() {
   const { user, accessToken, refreshProfile, isAuthenticated } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [entities, setEntities] = useState<EntityListItem[]>([]);
-  const [requests, setRequests] = useState<EntityRequest[]>([]);
+  const [groups, setGroups] = useState<AmigosMyGroup[]>([]);
   const [name, setName] = useState(user?.name ?? "");
   const [nickname, setNickname] = useState(user?.nickname ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
-  const [joinEntityId, setJoinEntityId] = useState("");
-  const [managedEntityId, setManagedEntityId] = useState("");
-  const [entityName, setEntityName] = useState("");
-  const [entityKind, setEntityKind] = useState<EntityKind>("coral");
-  const [entityEmail, setEntityEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  const memberships: EntityMembership[] = profile?.memberships ?? [];
-  const managed = memberships.filter((membership) => membership.is_representative);
-  const joinable = entities.filter(
-    (entity) =>
-      !memberships.some(
-        (membership) =>
-          membership.entity_id === entity.id && membership.status !== "rejected",
-      ),
-  );
-
   const reload = async () => {
     if (!accessToken) return;
     try {
-      const [me, ents, reqs] = await Promise.all([
+      const [me, myGroups] = await Promise.all([
         authClient.me(accessToken),
-        authClient.listEntities(accessToken),
-        authClient.listEntityRequests(accessToken),
+        apiClient.getAmigosMyGroups().catch(() => []),
       ]);
       setProfile(me);
-      setEntities(ents);
-      setRequests(reqs);
+      setGroups(myGroups);
       setName(me.name ?? "");
       setNickname(me.nickname ?? "");
       setPhone(me.phone ?? "");
@@ -83,7 +44,10 @@ export function AccountPage() {
     return (
       <div className="mx-auto max-w-2xl">
         <p className="text-sm text-osap-muted">
-          Inicia sesión para ver tu ficha. <Link to="/" className="text-osap-accent">Volver</Link>
+          Inicia sesión para ver tu ficha.{" "}
+          <Link to="/" className="text-osap-accent">
+            Volver
+          </Link>
         </p>
       </div>
     );
@@ -132,69 +96,6 @@ export function AccountPage() {
     );
   };
 
-  const join = () => {
-    if (!accessToken || !joinEntityId) {
-      setError("Elige una entidad de la lista.");
-      return;
-    }
-    void run(
-      () => authClient.updateMyEntity(accessToken, { action: "join", entity_id: joinEntityId }),
-      "Solicitud enviada. La entidad debe aprobarla para que seas miembro.",
-    );
-  };
-
-  const leave = (membership: EntityMembership) => {
-    if (!accessToken) return;
-    void run(
-      () =>
-        authClient.updateMyEntity(accessToken, {
-          action: "leave",
-          entity_id: membership.entity_id,
-        }),
-      `Has dejado «${membership.entity_name}».`,
-    );
-  };
-
-  const selectManaged = (entityId: string) => {
-    setManagedEntityId(entityId);
-    const selected = managed.find((membership) => membership.entity_id === entityId);
-    setEntityName(selected?.entity_name ?? "");
-    setEntityKind(selected?.entity_kind ?? "coral");
-    setEntityEmail(selected?.entity_email ?? "");
-  };
-
-  const represent = () => {
-    if (!accessToken || !entityName.trim()) {
-      setError("Indica el nombre de la entidad que representas.");
-      return;
-    }
-    if (!entityEmail.trim()) {
-      setError("Indica el correo de contacto de la entidad.");
-      return;
-    }
-    void run(
-      () =>
-        authClient.updateMyEntity(accessToken, {
-          action: "represent",
-          entity_id: managedEntityId || undefined,
-          entity_name: entityName.trim(),
-          entity_kind: entityKind,
-          entity_email: entityEmail.trim(),
-        }),
-      managedEntityId ? "Entidad actualizada." : "Entidad creada.",
-    );
-  };
-
-  const decide = (request: EntityRequest, action: "approve" | "reject") => {
-    if (!accessToken) return;
-    void run(
-      () => authClient.decideEntityRequest(accessToken, request.id, action),
-      action === "approve"
-        ? `Incorporación de «${request.nickname ?? request.name ?? request.user_id}» aprobada.`
-        : `Solicitud de «${request.nickname ?? request.name ?? request.user_id}» rechazada.`,
-    );
-  };
-
   return (
     <div className="mx-auto max-w-2xl space-y-4">
       <h1 className="text-xl font-semibold">Mi cuenta</h1>
@@ -203,44 +104,38 @@ export function AccountPage() {
 
       <section className="space-y-3 rounded border border-osap-border bg-osap-surface p-4">
         <h2 className="text-sm font-semibold">Datos de cuenta</h2>
-        <div className="grid gap-1">
-          <label className="text-sm text-osap-muted" htmlFor="account-name">Nombre visible</label>
-          <input
-            id="account-name"
-            value={name}
-            disabled={busy}
-            onChange={(e) => setName(e.target.value)}
-            className="rounded border border-osap-border bg-osap-bg px-3 py-2 text-sm"
-          />
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="grid gap-1 text-sm text-osap-muted">
+            Nombre visible
+            <input
+              value={name}
+              disabled={busy}
+              onChange={(e) => setName(e.target.value)}
+              className="rounded border border-osap-border bg-osap-bg px-3 py-2 text-sm"
+            />
+          </label>
+          <label className="grid gap-1 text-sm text-osap-muted">
+            Nickname
+            <input
+              value={nickname}
+              disabled={busy}
+              onChange={(e) => setNickname(e.target.value)}
+              className="rounded border border-osap-border bg-osap-bg px-3 py-2 text-sm"
+            />
+          </label>
         </div>
-        <div className="grid gap-1">
-          <label className="text-sm text-osap-muted" htmlFor="account-nickname">Nickname</label>
-          <input
-            id="account-nickname"
-            value={nickname}
-            disabled={busy}
-            minLength={3}
-            maxLength={30}
-            placeholder="3-30 caracteres"
-            onChange={(e) => setNickname(e.target.value)}
-            className="rounded border border-osap-border bg-osap-bg px-3 py-2 text-sm"
-          />
-        </div>
-        <button className="rounded bg-osap-accent px-3 py-1 text-sm text-white" disabled={busy} onClick={saveName}>
+        <button
+          className="rounded bg-osap-accent px-3 py-1 text-sm text-white"
+          disabled={busy}
+          onClick={saveName}
+        >
           Guardar nombre y nickname
         </button>
-        <div className="grid gap-1 text-sm">
-          <span className="text-osap-muted">Email</span>
-          <span>{profile?.email ?? user?.email ?? "—"}</span>
-        </div>
-        <div className="grid gap-1">
-          <label className="text-sm text-osap-muted" htmlFor="account-phone">
-            Teléfono (opcional, para WhatsApp)
-          </label>
+        <p className="text-sm text-osap-muted">Email: {profile?.email ?? user?.email ?? "—"}</p>
+        <label className="grid gap-1 text-sm text-osap-muted">
+          Teléfono (opcional, para WhatsApp)
           <div className="flex gap-2">
             <input
-              id="account-phone"
-              type="tel"
               value={phone}
               disabled={busy}
               maxLength={32}
@@ -248,164 +143,65 @@ export function AccountPage() {
               onChange={(e) => setPhone(e.target.value)}
               className="flex-1 rounded border border-osap-border bg-osap-bg px-3 py-2 text-sm"
             />
-            <button className="rounded border border-osap-border px-3 py-1 text-sm" disabled={busy} onClick={savePhone}>
+            <button
+              className="rounded border border-osap-border px-3 py-1 text-sm"
+              disabled={busy}
+              onClick={savePhone}
+            >
               Guardar
             </button>
           </div>
-        </div>
+        </label>
       </section>
 
       <section className="space-y-3 rounded border border-osap-border bg-osap-surface p-4">
-        <h2 className="text-sm font-semibold">Entidades</h2>
-        {memberships.length === 0 ? (
-          <p className="text-sm text-osap-muted">No tienes ninguna pertenencia ni solicitud.</p>
+        <div className="flex items-center justify-between gap-2">
+          <h2 className="text-sm font-semibold">Grupos y entidades</h2>
+          <Link to="/noticias" className="text-sm text-osap-accent hover:underline">
+            Noticias
+          </Link>
+        </div>
+        {groups.length === 0 ? (
+          <p className="text-sm text-osap-muted">
+            No tienes ningún grupo activo. Los gestores pueden invitarte desde la ficha del grupo.
+          </p>
         ) : (
           <ul className="space-y-2 text-sm">
-            {memberships.map((membership) => (
-              <li key={membership.id} className="flex flex-wrap items-center gap-2">
+            {groups.map(({ group, role }) => (
+              <li key={group.id} className="flex flex-wrap items-center justify-between gap-2">
                 <span>
-                  <strong>{membership.entity_name}</strong> ({KIND_LABELS[membership.entity_kind]}) —{" "}
-                  {STATUS_LABELS[membership.status]}
-                  {membership.entity_email ? ` · ${membership.entity_email}` : ""}
-                  {membership.is_representative ? " · la representas" : ""}
+                  <strong>{group.name}</strong>{" "}
+                  <span className="text-osap-muted">
+                    ({group.kind === "coral" ? "Coral" : group.kind}) ·{" "}
+                    {role === "admin" ? "administración" : "colaborador"}
+                  </span>
                 </span>
-                {membership.status !== "rejected" ? (
-                  <button
-                    className="rounded border border-red-300 px-2 py-0.5 text-xs text-red-600"
-                    disabled={busy}
-                    onClick={() => leave(membership)}
-                  >
-                    Dejar
-                  </button>
-                ) : null}
+                <Link
+                  to={
+                    role === "admin"
+                      ? `/mis/corales/${encodeURIComponent(group.id)}`
+                      : `/amigos/corales/${encodeURIComponent(group.id)}`
+                  }
+                  className="text-osap-accent hover:underline"
+                >
+                  Abrir
+                </Link>
               </li>
             ))}
           </ul>
         )}
-        <p className="text-xs text-osap-muted">
-          Una solicitud no es una pertenencia hasta que el gestor de la entidad la aprueba.
-        </p>
-        <div className="grid gap-1">
-          <label className="text-sm text-osap-muted" htmlFor="account-join">Solicitar pertenecer a</label>
-          <div className="flex gap-2">
-            <select
-              id="account-join"
-              value={joinEntityId}
-              disabled={busy}
-              onChange={(e) => setJoinEntityId(e.target.value)}
-              className="flex-1 rounded border border-osap-border bg-osap-bg px-3 py-2 text-sm"
-            >
-              <option value="">— Ninguna —</option>
-              {joinable.map((entity) => (
-                <option key={entity.id} value={entity.id}>
-                  {entity.name} ({KIND_LABELS[entity.kind]})
-                </option>
-              ))}
-            </select>
-            <button className="rounded bg-osap-accent px-3 py-1 text-sm text-white" disabled={busy || !joinEntityId} onClick={join}>
-              Enviar solicitud
-            </button>
-          </div>
-        </div>
       </section>
 
-      <section className="space-y-3 rounded border border-osap-border bg-osap-surface p-4">
-        <h2 className="text-sm font-semibold">Representar una entidad</h2>
-        <p className="text-xs text-osap-muted">
-          Crea una entidad nueva o actualiza una que ya gestionas. Su nombre se ofrecerá a futuros usuarios.
+      <section className="rounded border border-osap-border bg-osap-surface p-4">
+        <h2 className="text-sm font-semibold">Noticias</h2>
+        <p className="mt-1 text-sm text-osap-muted">
+          Tus idiomas y temas se eligen en{" "}
+          <Link to="/noticias" className="text-osap-accent hover:underline">
+            Noticias
+          </Link>
+          . La lectura no envía correos; el resumen por correo es opcional.
         </p>
-        <div className="grid gap-1">
-          <label className="text-sm text-osap-muted" htmlFor="account-managed">Entidad que gestionas</label>
-          <select
-            id="account-managed"
-            value={managedEntityId}
-            disabled={busy}
-            onChange={(e) => selectManaged(e.target.value)}
-            className="rounded border border-osap-border bg-osap-bg px-3 py-2 text-sm"
-          >
-            <option value="">— Nueva entidad —</option>
-            {managed.map((membership) => (
-              <option key={membership.id} value={membership.entity_id}>
-                {membership.entity_name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="grid gap-1">
-          <label className="text-sm text-osap-muted" htmlFor="account-entity-name">Nombre</label>
-          <input
-            id="account-entity-name"
-            value={entityName}
-            disabled={busy}
-            maxLength={120}
-            placeholder="Coral nnnnn / Orquesta kkkkk / Grup sss"
-            onChange={(e) => setEntityName(e.target.value)}
-            className="rounded border border-osap-border bg-osap-bg px-3 py-2 text-sm"
-          />
-        </div>
-        <div className="grid gap-1">
-          <label className="text-sm text-osap-muted" htmlFor="account-entity-kind">Tipo</label>
-          <select
-            id="account-entity-kind"
-            value={entityKind}
-            disabled={busy}
-            onChange={(e) => setEntityKind(e.target.value as EntityKind)}
-            className="rounded border border-osap-border bg-osap-bg px-3 py-2 text-sm"
-          >
-            {Object.entries(KIND_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="grid gap-1">
-          <label className="text-sm text-osap-muted" htmlFor="account-entity-email">Correo de contacto</label>
-          <input
-            id="account-entity-email"
-            type="email"
-            value={entityEmail}
-            disabled={busy}
-            maxLength={254}
-            placeholder="contacto@entidad.example"
-            onChange={(e) => setEntityEmail(e.target.value)}
-            className="rounded border border-osap-border bg-osap-bg px-3 py-2 text-sm"
-          />
-        </div>
-        <button className="rounded bg-osap-accent px-3 py-1 text-sm text-white" disabled={busy} onClick={represent}>
-          {managedEntityId ? "Actualizar entidad" : "Crear entidad"}
-        </button>
       </section>
-
-      {requests.length > 0 ? (
-        <section className="space-y-3 rounded border border-osap-border bg-osap-surface p-4">
-          <h2 className="text-sm font-semibold">Solicitudes de ingreso pendientes</h2>
-          <ul className="space-y-2 text-sm">
-            {requests.map((request) => (
-              <li key={request.id} className="flex flex-wrap items-center gap-2">
-                <span>
-                  <strong>{request.nickname ?? request.name ?? request.user_id}</strong> solicita unirse a{" "}
-                  <strong>{request.entity_name}</strong> ({KIND_LABELS[request.entity_kind]})
-                </span>
-                <button
-                  className="rounded bg-osap-accent px-2 py-0.5 text-xs text-white"
-                  disabled={busy}
-                  onClick={() => decide(request, "approve")}
-                >
-                  Aprobar
-                </button>
-                <button
-                  className="rounded border border-red-300 px-2 py-0.5 text-xs text-red-600"
-                  disabled={busy}
-                  onClick={() => decide(request, "reject")}
-                >
-                  Rechazar
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
     </div>
   );
 }
