@@ -50,6 +50,64 @@ GROUP_ROLE_TEMPLATES: dict[str, dict[str, tuple[str, ...]]] = {
     },
 }
 
+GROUP_CATALOG_TEMPLATES: dict[str, dict[str, list[tuple[str, str]]]] = {
+    "coral": {
+        "admin": [("president", "Presidencia"), ("secretary", "Secretaría"),
+                   ("treasurer", "Tesorería"), ("board_member", "Vocalía")],
+        "musical": [("music_director", "Dirección"), ("assistant_director", "Subdirección"),
+                     ("vocal_coach", "Preparación vocal"), ("singer", "Coralista")],
+        "section": [("soprano", "Soprano"), ("alto", "Contralto"),
+                     ("tenor", "Tenor"), ("bass", "Bajo")],
+    },
+    "banda": {
+        "admin": [("president", "Presidencia"), ("secretary", "Secretaría"),
+                   ("treasurer", "Tesorería"), ("board_member", "Vocalía")],
+        "musical": [("music_director", "Dirección"), ("assistant_director", "Subdirección"),
+                     ("section_leader", "Jefe de sección"), ("musician", "Músico")],
+        "section": [("flute", "Flauta"), ("oboe", "Oboe"), ("clarinet", "Clarinete"),
+                     ("saxophone", "Saxofón"), ("trumpet", "Trompeta"), ("horn", "Trompa"),
+                     ("trombone", "Trombón"), ("tuba", "Tuba"), ("percussion", "Percusión")],
+    },
+    "orquesta": {
+        "admin": [("president", "Presidencia"), ("secretary", "Secretaría"),
+                   ("treasurer", "Tesorería"), ("board_member", "Vocalía")],
+        "musical": [("music_director", "Dirección"), ("concertmaster", "Concertino"),
+                     ("section_leader", "Jefe de sección"), ("musician", "Músico")],
+        "section": [("violin_1", "Violín I"), ("violin_2", "Violín II"), ("viola", "Viola"),
+                     ("cello", "Violonchelo"), ("double_bass", "Contrabajo"), ("flute", "Flauta"),
+                     ("oboe", "Oboe"), ("clarinet", "Clarinete"), ("bassoon", "Fagot"),
+                     ("horn", "Trompa"), ("trumpet", "Trompeta"), ("trombone", "Trombón"),
+                     ("tuba", "Tuba"), ("percussion", "Percusión"), ("harp", "Arpa")],
+    },
+    "grupo": {
+        "admin": [("president", "Presidencia"), ("secretary", "Secretaría"),
+                   ("treasurer", "Tesorería")],
+        "musical": [("music_director", "Dirección"), ("coordinator", "Coordinación"),
+                     ("musician", "Componente")],
+        "section": [],
+    },
+    "ensemble": {
+        "admin": [("president", "Presidencia"), ("secretary", "Secretaría")],
+        "musical": [("music_director", "Dirección"), ("coordinator", "Coordinación"),
+                     ("musician", "Componente")],
+        "section": [],
+    },
+    "escuela": {
+        "admin": [("president", "Presidencia"), ("secretary", "Secretaría"),
+                   ("treasurer", "Tesorería")],
+        "musical": [("music_director", "Dirección"), ("pedagogical_coordinator", "Coordinación pedagógica"),
+                     ("teacher", "Profesorado"), ("student", "Alumnado")],
+        "section": [],
+    },
+    "iglesia": {
+        "admin": [("president", "Presidencia"), ("secretary", "Secretaría"),
+                   ("treasurer", "Tesorería")],
+        "musical": [("music_director", "Dirección"), ("organist", "Organista"),
+                     ("choir_member", "Coro"), ("instrumentalist", "Instrumentista")],
+        "section": [],
+    },
+}
+
 GROUP_STATUSES = frozenset({"active", "inactive", "dissolved"})
 
 # Modalidades editoriales por grupo (decisión del administrador del grupo).
@@ -120,6 +178,7 @@ AUTHORIZATION_SCOPES = frozenset({"blog", "events"})
 
 # Ámbito de un artículo: ligado a un grupo, o general (blog).
 ARTICLE_SCOPES = frozenset({"group", "general"})
+
 
 
 

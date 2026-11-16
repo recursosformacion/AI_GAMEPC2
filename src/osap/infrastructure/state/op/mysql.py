@@ -552,6 +552,9 @@ class _MysqlStore(_MemoryStore):
         self._ensure_column("amigos_groups", "technical_description", "TEXT NULL")
         self._ensure_column("amigos_groups", "admin_roles_json", "TEXT NULL")
         self._ensure_column("amigos_groups", "musical_roles_json", "TEXT NULL")
+        self._ensure_column("amigos_members", "admin_role_id", "CHAR(32) NULL")
+        self._ensure_column("amigos_members", "musical_role_id", "CHAR(32) NULL")
+        self._ensure_column("amigos_members", "section_id", "CHAR(32) NULL")
 
     def _ensure_column(self, table: str, column: str, ddl: str) -> None:
         # Nunca debe abortar el arranque del store: el usuario de la app puede no tener
@@ -1376,6 +1379,70 @@ class _MysqlStore(_MemoryStore):
             "WHERE group_id = %s AND member_user_id = %s AND end_date IS NULL",
             (end_date, group_id, member_user_id),
         )
+    def _ensure_amigos_group_catalog(self) -> None:
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS amigos_group_catalog (
+                id CHAR(32) PRIMARY KEY,
+                group_id CHAR(32) NOT NULL,
+                scope VARCHAR(16) NOT NULL,
+                code VARCHAR(64) NOT NULL,
+                name VARCHAR(120) NOT NULL,
+                parent_id CHAR(32) NULL,
+                sort_order INT NOT NULL DEFAULT 0,
+                active TINYINT(1) NOT NULL DEFAULT 1,
+                KEY idx_amigos_catalog_group (group_id, scope, sort_order),
+                CONSTRAINT fk_amigos_catalog_group FOREIGN KEY (group_id)
+                    REFERENCES amigos_groups(id) ON DELETE CASCADE
+            ) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_unicode_ci
+            """
+        )
+
+    def list_amigos_group_catalog(self, group_id: str) -> list[dict[str, object]]:
+        self._ensure_amigos_group_catalog()
+        return self._run(
+            "SELECT * FROM amigos_group_catalog WHERE group_id = %s "
+            "ORDER BY scope, sort_order, name",
+            (group_id,),
+        )
+
+    def replace_amigos_group_catalog(
+        self, group_id: str, items: list[dict[str, object]]
+    ) -> None:
+        self._ensure_amigos_group_catalog()
+        existing = {
+            str(row["id"]): row for row in self.list_amigos_group_catalog(group_id)
+        }
+        keep: set[str] = set()
+        for index, item in enumerate(items):
+            item_id = str(item.get("id") or "")
+            scope = str(item.get("scope") or "")
+            name = str(item.get("name") or "").strip()
+            if not scope or not name:
+                continue
+            code = str(item.get("code") or "").strip() or f"custom_{secrets.token_hex(6)}"
+            if item_id and item_id in existing:
+                keep.add(item_id)
+                self._run(
+                    "UPDATE amigos_group_catalog SET scope=%s, code=%s, name=%s, "
+                    "parent_id=%s, sort_order=%s, active=%s WHERE id=%s AND group_id=%s",
+                    (scope, code, name, item.get("parent_id"), index,
+                     1 if item.get("active", True) else 0, item_id, group_id),
+                )
+            else:
+                new_id = secrets.token_hex(16)
+                keep.add(new_id)
+                self._run(
+                    "INSERT INTO amigos_group_catalog "
+                    "(id,group_id,scope,code,name,parent_id,sort_order,active) "
+                    "VALUES (%s,%s,%s,%s,%s,%s,%s,1)",
+                    (new_id, group_id, scope, code, name, item.get("parent_id"), index),
+                )
+        for old_id in set(existing) - keep:
+            self._run(
+                "DELETE FROM amigos_group_catalog WHERE id=%s AND group_id=%s",
+                (old_id, group_id),
+            )
     def get_amigos_group(self, group_id: str) -> dict[str, object] | None:
         rows = self._run("SELECT * FROM amigos_groups WHERE id = %s", (group_id,))
         return rows[0] if rows else None
@@ -1660,13 +1727,18 @@ class _MysqlStore(_MemoryStore):
     # --- «Los amigos»: membresias (MySQL) ------------------------------------
 
     def set_amigos_member(
-        self, *, group_id: str, user_id: str, role: str, status: str, granted_by: str | None
+        self, *, group_id: str, user_id: str, role: str, status: str, granted_by: str | None,
+        admin_role_id: str | None = None, musical_role_id: str | None = None,
+        section_id: str | None = None,
     ) -> dict[str, object]:
         self._run(
-            "INSERT INTO amigos_members (group_id, user_id, role, status, granted_by) "
-            "VALUES (%s,%s,%s,%s,%s) ON DUPLICATE KEY UPDATE role = VALUES(role), "
-            "status = VALUES(status), granted_by = VALUES(granted_by)",
-            (group_id, user_id, role, status, granted_by),
+            "INSERT INTO amigos_members "
+            "(group_id, user_id, role, status, granted_by, admin_role_id, musical_role_id, section_id) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s) "
+            "ON DUPLICATE KEY UPDATE role = VALUES(role), status = VALUES(status), "
+            "granted_by = VALUES(granted_by), admin_role_id = VALUES(admin_role_id), "
+            "musical_role_id = VALUES(musical_role_id), section_id = VALUES(section_id)",
+            (group_id, user_id, role, status, granted_by, admin_role_id, musical_role_id, section_id),
         )
         row = self.get_amigos_member(group_id, user_id)
         assert row is not None
@@ -1974,5 +2046,7 @@ def _encode_description(description: dict[str, str] | str | None) -> str | None:
     if isinstance(description, str):
         return json.dumps({"en": description}, ensure_ascii=False)
     return json.dumps(description, ensure_ascii=False)
+
+
 
 

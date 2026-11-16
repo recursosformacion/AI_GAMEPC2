@@ -3,13 +3,19 @@ import { Link } from "react-router-dom";
 
 import { apiClient } from "../api/ApiClient";
 import { authClient, type UserProfile } from "../api/AuthClient";
-import type { AmigosMyGroup } from "../api/types";
+import type { AmigosGroup, AmigosGroupCatalog, AmigosMyGroup } from "../api/types";
 import { useAuth } from "../state/auth";
 
 export function AccountPage() {
   const { user, accessToken, refreshProfile, isAuthenticated } = useAuth();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [groups, setGroups] = useState<AmigosMyGroup[]>([]);
+  const [allGroups, setAllGroups] = useState<AmigosGroup[]>([]);
+  const [requestGroupId, setRequestGroupId] = useState("");
+  const [requestCatalog, setRequestCatalog] = useState<AmigosGroupCatalog>({ admin: [], musical: [], section: [] });
+  const [requestAdmin, setRequestAdmin] = useState("");
+  const [requestMusical, setRequestMusical] = useState("");
+  const [requestSection, setRequestSection] = useState("");
   const [name, setName] = useState(user?.name ?? "");
   const [nickname, setNickname] = useState(user?.nickname ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
@@ -20,12 +26,14 @@ export function AccountPage() {
   const reload = async () => {
     if (!accessToken) return;
     try {
-      const [me, myGroups] = await Promise.all([
+      const [me, myGroups, visibleGroups] = await Promise.all([
         authClient.me(accessToken),
         apiClient.getAmigosMyGroups().catch(() => []),
+        apiClient.getAmigosGroups().catch(() => []),
       ]);
       setProfile(me);
       setGroups(myGroups);
+      setAllGroups(visibleGroups);
       setName(me.name ?? "");
       setNickname(me.nickname ?? "");
       setPhone(me.phone ?? "");
@@ -67,6 +75,33 @@ export function AccountPage() {
       setBusy(false);
     }
   };
+
+  const submitRequest = async () => {
+    if (!requestGroupId) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await apiClient.requestAmigosMembership(requestGroupId, {
+        admin_role_id: requestAdmin || null,
+        musical_role_id: requestMusical || null,
+        section_id: requestSection || null,
+      });
+      setMessage("Solicitud enviada; la administración del grupo debe aprobarla.");
+      setRequestGroupId("");
+    } catch {
+      setError("No se pudo enviar la solicitud.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!requestGroupId) return;
+    void apiClient
+      .getAmigosGroupCatalog(requestGroupId)
+      .then(setRequestCatalog)
+      .catch(() => setRequestCatalog({ admin: [], musical: [], section: [] }));
+  }, [requestGroupId]);
 
   const saveName = () => {
     if (!accessToken || !name.trim()) {
@@ -192,6 +227,79 @@ export function AccountPage() {
         )}
       </section>
 
+      <section className="space-y-3 rounded border border-osap-border bg-osap-surface p-4">
+        <h2 className="text-sm font-semibold">Solicitar acceso a un grupo</h2>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="text-sm text-osap-muted">
+            Nombre del grupo
+            <select
+              value={requestGroupId}
+              onChange={(e) => setRequestGroupId(e.target.value)}
+              className="mt-1 w-full rounded border border-osap-border bg-osap-bg px-2 py-2 text-sm"
+            >
+              <option value="">— Elegir grupo —</option>
+              {allGroups
+                .filter(
+                  (group) =>
+                    !groups.some(({ group: mine, role }) => mine.id === group.id && role),
+                )
+                .map((group) => (
+                  <option key={group.id} value={group.id}>
+                    {group.name} ({group.kind})
+                  </option>
+                ))}
+            </select>
+          </label>
+          <label className="text-sm text-osap-muted">
+            Cargo administrativo
+            <select
+              value={requestAdmin}
+              onChange={(e) => setRequestAdmin(e.target.value)}
+              className="mt-1 w-full rounded border border-osap-border bg-osap-bg px-2 py-2 text-sm"
+            >
+              <option value="">Sin cargo</option>
+              {requestCatalog.admin.map((item) => (
+                <option key={item.id ?? item.name} value={item.id ?? ""}>{item.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm text-osap-muted">
+            Rol musical
+            <select
+              value={requestMusical}
+              onChange={(e) => setRequestMusical(e.target.value)}
+              className="mt-1 w-full rounded border border-osap-border bg-osap-bg px-2 py-2 text-sm"
+            >
+              <option value="">Sin rol musical</option>
+              {requestCatalog.musical.map((item) => (
+                <option key={item.id ?? item.name} value={item.id ?? ""}>{item.name}</option>
+              ))}
+            </select>
+          </label>
+          <label className="text-sm text-osap-muted">
+            Sección / cuerda
+            <select
+              value={requestSection}
+              onChange={(e) => setRequestSection(e.target.value)}
+              className="mt-1 w-full rounded border border-osap-border bg-osap-bg px-2 py-2 text-sm"
+            >
+              <option value="">Sin sección</option>
+              {requestCatalog.section.map((item) => (
+                <option key={item.id ?? item.name} value={item.id ?? ""}>{item.name}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <button
+          type="button"
+          disabled={!requestGroupId || busy}
+          onClick={() => void submitRequest()}
+          className="rounded bg-osap-accent px-3 py-2 text-sm text-white disabled:opacity-50"
+        >
+          Enviar solicitud
+        </button>
+      </section>
+
       <section className="rounded border border-osap-border bg-osap-surface p-4">
         <h2 className="text-sm font-semibold">Noticias</h2>
         <p className="mt-1 text-sm text-osap-muted">
@@ -205,3 +313,6 @@ export function AccountPage() {
     </div>
   );
 }
+
+
+

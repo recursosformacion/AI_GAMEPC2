@@ -85,6 +85,15 @@ class AmigosGroupUpdateRequest(_Frozen):
 class AmigosMemberGrantRequest(_Frozen):
     user_id: str
     role: str = "collaborator"  # collaborator | admin
+    admin_role_id: str | None = None
+    musical_role_id: str | None = None
+    section_id: str | None = None
+
+
+class AmigosMembershipRequest(_Frozen):
+    admin_role_id: str | None = None
+    musical_role_id: str | None = None
+    section_id: str | None = None
 
 
 class AmigosMediaRead(_Frozen):
@@ -146,6 +155,9 @@ class AmigosMemberRead(_Frozen):
     user_id: str
     role: str
     status: str
+    admin_role_id: str | None = None
+    musical_role_id: str | None = None
+    section_id: str | None = None
     created_at: str = ""
     updated_at: str = ""
 
@@ -319,5 +331,25 @@ class AmigosAuthorizationRead(_Frozen):
 class AmigosAuthorizationListRead(_Frozen):
     items: list[AmigosAuthorizationRead]
     total: int
+
+
+class AmigosCatalogItem(_Frozen):
+    id: str | None = None
+    scope: str
+    code: str | None = None
+    name: str
+    parent_id: str | None = None
+    sort_order: int = 0
+
+
+class AmigosGroupCatalogRead(_Frozen):
+    admin: list[AmigosCatalogItem] = Field(default_factory=list)
+    musical: list[AmigosCatalogItem] = Field(default_factory=list)
+    section: list[AmigosCatalogItem] = Field(default_factory=list)
+
+
+class AmigosGroupCatalogUpdate(_Frozen):
+    items: list[AmigosCatalogItem] = Field(default_factory=list)
+
 
 

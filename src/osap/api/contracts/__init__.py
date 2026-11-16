@@ -33,6 +33,7 @@ from .amigos import (
     AmigosCoralDetailsRead,
     AmigosCoralDetailsUpdate,
     AmigosEventGroup,
+    AmigosGroupCatalogUpdate,
     AmigosGroupCreateRequest,
     AmigosGroupLink,
     AmigosGroupRead,
@@ -40,6 +41,7 @@ from .amigos import (
     AmigosMediaRead,
     AmigosMediaRequest,
     AmigosMemberGrantRequest,
+    AmigosMembershipRequest,
     AmigosMemberListRead,
     AmigosMemberRead,
 )
@@ -185,6 +187,7 @@ __all__ = [
     'AmigosAuthorizationRequest',
     'AmigosCoralDetailsRead',
     'AmigosCoralDetailsUpdate',
+    'AmigosGroupCatalogUpdate',
     'AmigosGroupCreateRequest',
     'AmigosGroupLink',
     'AmigosGroupRead',
@@ -192,6 +195,7 @@ __all__ = [
     'AmigosMediaRead',
     'AmigosMediaRequest',
     'AmigosMemberGrantRequest',
+    'AmigosMembershipRequest',
     'AmigosMemberListRead',
     'AmigosMemberRead',
     'AnalyticsOverviewResponse',
@@ -310,3 +314,4 @@ __all__ = [
     'WorksResolvedWork',
     '_Frozen',
 ]
+

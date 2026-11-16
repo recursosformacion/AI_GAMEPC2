@@ -30,6 +30,7 @@ from src.osap.domain.amigos import (
     EVENT_MODALITIES,
     EVENT_STATUSES,
     FORMATION_TYPES,
+    GROUP_CATALOG_TEMPLATES,
     GROUP_KINDS,
     GROUP_LINK_KINDS,
     GROUP_ROLE_TEMPLATES,
@@ -174,6 +175,7 @@ class AmigosService:
             )
         )
         self._store.replace_amigos_group_links(str(row["id"]), _clean_links(links))
+        self._seed_group_catalog(str(row["id"]), kind)
         return row
 
     def update_group(
@@ -263,6 +265,9 @@ class AmigosService:
         group_id: str,
         user_id: str,
         role: str = "collaborator",
+        admin_role_id: str | None = None,
+        musical_role_id: str | None = None,
+        section_id: str | None = None,
     ) -> dict[str, object]:
         target = (user_id or "").strip()
         if not target:
@@ -276,7 +281,9 @@ class AmigosService:
         if self._store.get_amigos_group(group_id) is None:
             raise AmigosError(404, "GROUP_NOT_FOUND", "Grupo no encontrado")
         row = self._store.set_amigos_member(
-            group_id=group_id, user_id=target, role=role, status="active", granted_by=actor_user_id
+            group_id=group_id, user_id=target, role=role, status="active",
+            granted_by=actor_user_id, admin_role_id=admin_role_id,
+            musical_role_id=musical_role_id, section_id=section_id,
         )
         self._store.add_amigos_event(
             group_id=group_id,
@@ -294,6 +301,39 @@ class AmigosService:
         )
         return dict(row)
 
+    def request_membership(
+        self,
+        *,
+        user_id: str,
+        group_id: str,
+        admin_role_id: str | None = None,
+        musical_role_id: str | None = None,
+        section_id: str | None = None,
+    ) -> dict[str, object]:
+        group = self._store.get_amigos_group(group_id)
+        if group is None or str(group.get("status")) != "active":
+            raise AmigosError(404, "GROUP_NOT_FOUND", "Grupo no encontrado")
+        current = self._store.get_amigos_member(group_id, user_id)
+        if current is not None and str(current.get("status")) == "active":
+            raise AmigosError(409, "ALREADY_MEMBER", "Ya perteneces a este grupo")
+        row = self._store.set_amigos_member(
+            group_id=group_id,
+            user_id=user_id,
+            role="collaborator",
+            status="pending",
+            granted_by=user_id,
+            admin_role_id=admin_role_id,
+            musical_role_id=musical_role_id,
+            section_id=section_id,
+        )
+        self._store.add_amigos_event(
+            group_id=group_id,
+            article_id=None,
+            event_type="membership_requested",
+            actor=user_id,
+            detail_json=_json({"user_id": user_id}),
+        )
+        return row  # type: ignore[no-any-return]
     def revoke_member(
         self,
         *,
@@ -329,6 +369,40 @@ class AmigosService:
         )
         return dict(row) if row is not None else {"group_id": group_id, "user_id": user_id, "status": "revoked"}
 
+    def _seed_group_catalog(self, group_id: str, kind: str) -> None:
+        template = GROUP_CATALOG_TEMPLATES.get(kind, GROUP_CATALOG_TEMPLATES["grupo"])
+        items: list[dict[str, object]] = []
+        for scope in ("admin", "musical", "section"):
+            for index, (code, name) in enumerate(template[scope]):
+                items.append(
+                    {"scope": scope, "code": code, "name": name, "sort_order": index}
+                )
+        self._store.replace_amigos_group_catalog(group_id, items)
+
+    def get_group_catalog(self, group_id: str) -> dict[str, list[dict[str, object]]]:
+        group = self._store.get_amigos_group(group_id)
+        if group is None:
+            raise AmigosError(404, "GROUP_NOT_FOUND", "Grupo no encontrado")
+        rows = self._store.list_amigos_group_catalog(group_id)
+        if not rows:
+            self._seed_group_catalog(group_id, str(group.get("kind") or "grupo"))
+            rows = self._store.list_amigos_group_catalog(group_id)
+        result: dict[str, list[dict[str, object]]] = {"admin": [], "musical": [], "section": []}
+        for row in rows:
+            result.setdefault(str(row.get("scope")), []).append(dict(row))
+        return result
+
+    def update_group_catalog(
+        self,
+        *,
+        actor_user_id: str,
+        is_global_admin: bool,
+        group_id: str,
+        items: list[dict[str, object]],
+    ) -> dict[str, list[dict[str, object]]]:
+        self._require_group_admin(group_id, actor_user_id, is_global_admin)
+        self._store.replace_amigos_group_catalog(group_id, items)
+        return self.get_group_catalog(group_id)
     def list_group_history(
         self, *, actor_user_id: str, is_global_admin: bool, group_id: str
     ) -> list[dict[str, object]]:
@@ -346,6 +420,15 @@ class AmigosService:
             if str(row.get("status")) == "active"
         ]
 
+    def list_pending_members(
+        self, *, actor_user_id: str, is_global_admin: bool, group_id: str
+    ) -> list[dict[str, object]]:
+        self._require_group_admin(group_id, actor_user_id, is_global_admin)
+        return [
+            dict(row)
+            for row in self._store.list_amigos_members(group_id)
+            if str(row.get("status")) == "pending"
+        ]
     # --- especialización por tipo: ficha de coral ---------------------------
 
     def get_coral_details(self, group_id: str) -> dict[str, object] | None:
@@ -1514,6 +1597,15 @@ def _clean_media(items: list[dict[str, Any]]) -> list[dict[str, object]]:
             }
         )
     return cleaned
+
+
+
+
+
+
+
+
+
 
 
 

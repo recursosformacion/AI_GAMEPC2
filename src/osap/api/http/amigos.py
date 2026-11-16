@@ -20,9 +20,11 @@ from src.osap.api.contracts import (
     AmigosArticleUpdateRequest,
     AmigosAuthorizationRequest,
     AmigosCoralDetailsUpdate,
+    AmigosGroupCatalogUpdate,
     AmigosGroupCreateRequest,
     AmigosGroupUpdateRequest,
     AmigosMemberGrantRequest,
+    AmigosMembershipRequest,
     ErrorEnvelope,
     SuccessEnvelope,
 )
@@ -84,6 +86,36 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
             ),
         )
 
+    @router.get(
+        "/api/v1/amigos/groups/{group_id}/catalog",
+        tags=["Friends"],
+        summary="Cargos, roles musicales y secciones del grupo",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+    )
+    def group_catalog(
+        group_id: str, response: Response
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(ctx, response, lambda: ctx.api.amigos_group_catalog(group_id))
+
+    @router.put(
+        "/api/v1/admin/amigos/groups/{group_id}/catalog",
+        tags=["Friends"],
+        summary="Guardar cargos, roles y secciones del grupo",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+    )
+    def update_group_catalog(
+        group_id: str,
+        payload: AmigosGroupCatalogUpdate,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(
+            ctx,
+            response,
+            lambda: ctx.api.amigos_update_group_catalog(
+                authorization, group_id, payload
+            ),
+        )
     @router.get(
         "/api/v1/amigos/groups/{group_id}/articles",
         tags=["Friends"],
@@ -698,6 +730,35 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         return _call(ctx, response, lambda: ctx.api.amigos_list_members(authorization, group_id))
 
     @router.post(
+        "/api/v1/amigos/groups/{group_id}/request",
+        tags=["Friends"],
+        summary="Solicitar acceso a un grupo",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+    )
+    def request_membership(
+        group_id: str,
+        payload: AmigosMembershipRequest,
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(
+            ctx,
+            response,
+            lambda: ctx.api.amigos_request_membership(
+                authorization, group_id, payload
+            ),
+        )
+    @router.get(
+        "/api/v1/admin/amigos/groups/{group_id}/requests",
+        tags=["Friends"],
+        summary="Solicitudes pendientes de acceso al grupo",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+    )
+    def group_requests(
+        group_id: str, response: Response, authorization: str | None = Header(default=None)
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(ctx, response, lambda: ctx.api.amigos_list_requests(authorization, group_id))
+    @router.post(
         "/api/v1/admin/amigos/groups/{group_id}/members",
         tags=["Friends"],
         summary="Autorizar a un usuario en el grupo",
@@ -818,4 +879,8 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         return _call(ctx, response, lambda: ctx.api.amigos_audit(authorization, group_id))
 
     return router
+
+
+
+
 

@@ -838,13 +838,17 @@ class MemoryStore:
     # --- «Los amigos»: membresías --------------------------------------------
 
     def set_amigos_member(
-        self, *, group_id: str, user_id: str, role: str, status: str, granted_by: str | None
+        self, *, group_id: str, user_id: str, role: str, status: str, granted_by: str | None,
+        admin_role_id: str | None = None, musical_role_id: str | None = None,
+        section_id: str | None = None,
     ) -> dict[str, object]:
         key = (group_id, user_id)
         existing = self._amigos_members.get(key)
         ts = now()
         if existing is not None:
-            existing.update({"role": role, "status": status, "granted_by": granted_by, "updated_at": ts})
+            existing.update({"role": role, "status": status, "granted_by": granted_by,
+                "admin_role_id": admin_role_id, "musical_role_id": musical_role_id,
+                "section_id": section_id, "updated_at": ts})
             return dict(existing)
         row: dict[str, object] = {
             "group_id": group_id,
@@ -852,6 +856,9 @@ class MemoryStore:
             "role": role,
             "status": status,
             "granted_by": granted_by,
+            "admin_role_id": admin_role_id,
+            "musical_role_id": musical_role_id,
+            "section_id": section_id,
             "created_at": ts,
             "updated_at": ts,
         }
@@ -870,6 +877,33 @@ class MemoryStore:
     def list_amigos_memberships_by_user(self, user_id: str) -> list[dict[str, object]]:
         return [dict(r) for r in self._amigos_members.values() if r["user_id"] == user_id]
 
+    def _catalog_rows(self) -> list[dict[str, object]]:
+        if not hasattr(self, "_amigos_group_catalog"):
+            self._amigos_group_catalog: list[dict[str, object]] = []
+        return self._amigos_group_catalog
+
+    def list_amigos_group_catalog(self, group_id: str) -> list[dict[str, object]]:
+        return [dict(row) for row in self._catalog_rows() if row["group_id"] == group_id]
+
+    def replace_amigos_group_catalog(
+        self, group_id: str, items: list[dict[str, object]]
+    ) -> None:
+        self._amigos_group_catalog = [
+            row for row in self._catalog_rows() if row["group_id"] != group_id
+        ]
+        for index, item in enumerate(items):
+            self._catalog_rows().append(
+                {
+                    "id": secrets.token_hex(16),
+                    "group_id": group_id,
+                    "scope": item.get("scope"),
+                    "code": item.get("code") or f"custom_{secrets.token_hex(6)}",
+                    "name": item.get("name"),
+                    "parent_id": item.get("parent_id"),
+                    "sort_order": index,
+                    "active": 1,
+                }
+            )
     def _history_rows(self) -> list[dict[str, object]]:
         if not hasattr(self, "_amigos_group_history"):
             self._amigos_group_history: list[dict[str, object]] = []
@@ -1148,4 +1182,7 @@ class MemoryStore:
         ]
         rows.sort(key=lambda e: int(str(e.get("id") or 0)))
         return rows
+
+
+
 

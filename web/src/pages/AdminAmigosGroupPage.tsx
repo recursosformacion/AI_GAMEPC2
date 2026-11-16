@@ -1,7 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
-import type { AmigosArticle, AmigosGroup, AmigosGroupLink, AmigosMember } from "../api/types";
+import type {
+  AmigosArticle,
+  AmigosCatalogItem,
+  AmigosGroup,
+  AmigosGroupCatalog,
+  AmigosGroupLink,
+  AmigosMember,
+} from "../api/types";
 import { AmigosImageField } from "../components/AmigosImageField";
 import { Card } from "../components/Card";
 import { Spinner } from "../components/Spinner";
@@ -81,6 +88,9 @@ export function AdminAmigosGroupPage() {
 
   const [group, setGroup] = useState<AmigosGroup | null>(null);
   const [members, setMembers] = useState<AmigosMember[]>([]);
+  const [catalog, setCatalog] = useState<AmigosGroupCatalog>({ admin: [], musical: [], section: [] });
+  const [requests, setRequests] = useState<AmigosMember[]>([]);
+  const [catalogMessage, setCatalogMessage] = useState<string | null>(null);
   const [history, setHistory] = useState<Array<{
     id: string; event_type: string; member_user_id?: string | null; role?: string | null;
     start_date?: string | null; end_date?: string | null; notes?: string | null;
@@ -110,6 +120,9 @@ export function AdminAmigosGroupPage() {
 
   const [newUserId, setNewUserId] = useState("");
   const [newRole, setNewRole] = useState<"collaborator" | "admin">("collaborator");
+  const [newAdminRole, setNewAdminRole] = useState("");
+  const [newMusicalRole, setNewMusicalRole] = useState("");
+  const [newSection, setNewSection] = useState("");
   const [users, setUsers] = useState<DirectoryUser[]>([]);
   const [usersUnavailable, setUsersUnavailable] = useState(false);
 
@@ -165,13 +178,17 @@ export function AdminAmigosGroupPage() {
           }
         }
       }
-      const [memberList, historyList, articleList] = await Promise.all([
+      const [memberList, historyList, articleList, catalogData, requestList] = await Promise.all([
         apiClient.getAmigosMembers(groupId),
         apiClient.getAmigosGroupHistory(groupId),
         apiClient.getAmigosGroupArticlesAdmin(groupId),
+        apiClient.getAmigosGroupCatalog(groupId),
+        apiClient.getAmigosGroupRequests(groupId),
       ]);
       setMembers(memberList.items);
       setHistory(historyList);
+      setCatalog(catalogData);
+      setRequests(requestList.items);
       setArticles(articleList.items);
       try {
         setUsers(await apiClient.get<DirectoryUser[]>("/admin/users"));
@@ -220,6 +237,17 @@ export function AdminAmigosGroupPage() {
       });
       setMessage(t("friends.saved"));
       await load();
+    });
+
+  const saveCatalog = () =>
+    guard(async () => {
+      const items: AmigosCatalogItem[] = [
+        ...catalog.admin.map((item, index) => ({ ...item, scope: "admin" as const, sort_order: index })),
+        ...catalog.musical.map((item, index) => ({ ...item, scope: "musical" as const, sort_order: index })),
+        ...catalog.section.map((item, index) => ({ ...item, scope: "section" as const, sort_order: index })),
+      ];
+      setCatalog(await apiClient.updateAmigosGroupCatalog(groupId, items));
+      setCatalogMessage("Cargos guardados.");
     });
 
   const saveCoral = () =>
@@ -279,7 +307,11 @@ export function AdminAmigosGroupPage() {
       // Se admite el email (buscado en el directorio) o el propio user_id.
       const resolved = resolveUser(query);
       const userId = resolved !== null ? resolved.user_id : query;
-      await apiClient.grantAmigosMember(groupId, userId, newRole);
+      await apiClient.grantAmigosMember(groupId, userId, newRole, {
+        admin_role_id: newAdminRole || null,
+        musical_role_id: newMusicalRole || null,
+        section_id: newSection || null,
+      });
       setNewUserId("");
       await load();
     });
@@ -551,6 +583,7 @@ export function AdminAmigosGroupPage() {
                 className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
               />
             </label>
+            <p className="mt-2 text-xs font-semibold uppercase tracking-wide text-osap-muted sm:col-span-2">Dirección</p>
             <label className="text-xs text-osap-muted">
               {t("friends.locality")}
               <input
@@ -584,14 +617,7 @@ export function AdminAmigosGroupPage() {
                 className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
               />
             </label>
-            <label className="text-xs text-osap-muted">
-              {t("friends.director")}
-              <input
-                value={coralForm.director_label}
-                onChange={(e) => setCoralField({ director_label: e.target.value })}
-                className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm"
-              />
-            </label>
+            {/* La dirección musical es un rol del catálogo del grupo. */}
             <label className="text-xs text-osap-muted">
               {t("friends.linkedEntity")}
               <input
@@ -637,23 +663,77 @@ export function AdminAmigosGroupPage() {
         </Card>
       ) : null}
 
-      <Card title="Cargos del grupo">
-        {viewMode ? (
-          <>
-            <p className="text-sm text-osap-ink"><strong>Administrativos:</strong> {group.admin_roles?.join(", ") || "—"}</p>
-            <p className="mt-1 text-sm text-osap-ink"><strong>Musicales:</strong> {group.musical_roles?.join(", ") || "—"}</p>
-          </>
-        ) : (
-          <div className="grid gap-3">
-            <label className="text-xs text-osap-muted">
-              Cargos administrativos (separados por comas)
-              <input value={adminRoles} onChange={(e) => setAdminRoles(e.target.value)} className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm" />
-            </label>
-            <label className="text-xs text-osap-muted">
-              Roles musicales (separados por comas)
-              <input value={musicalRoles} onChange={(e) => setMusicalRoles(e.target.value)} className="mt-1 w-full rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm" />
-            </label>
-            <p className="text-xs text-osap-muted">Se guardan con “Guardar cambios”.</p>
+      <Card title="Cargos, roles musicales y secciones">
+        <div className="grid gap-4 md:grid-cols-3">
+          {([
+            ["admin", "Cargos administrativos"],
+            ["musical", "Roles musicales"],
+            ["section", "Secciones / cuerdas"],
+          ] as const).map(([scope, title]) => (
+            <div key={scope} className="space-y-2">
+              <h3 className="text-sm font-semibold text-osap-ink">{title}</h3>
+              {catalog[scope].map((item, index) => (
+                <div key={item.id ?? `${scope}-${index}`} className="flex items-center gap-1">
+                  <input
+                    value={item.name}
+                    disabled={viewMode}
+                    onChange={(e) =>
+                      setCatalog((current) => ({
+                        ...current,
+                        [scope]: current[scope].map((row, i) =>
+                          i === index ? { ...row, name: e.target.value } : row,
+                        ),
+                      }))
+                    }
+                    className="min-w-0 flex-1 rounded border border-osap-border bg-osap-surface px-2 py-1 text-sm disabled:opacity-60"
+                  />
+                  {viewMode ? null : (
+                    <button
+                      type="button"
+                      title="Quitar"
+                      onClick={() =>
+                        setCatalog((current) => ({
+                          ...current,
+                          [scope]: current[scope].filter((_, i) => i !== index),
+                        }))
+                      }
+                      className="rounded border border-osap-border px-2 py-1 text-xs text-osap-danger"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+              {viewMode ? null : (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setCatalog((current) => ({
+                      ...current,
+                      [scope]: [
+                        ...current[scope],
+                        { scope, name: "Nuevo", code: null, parent_id: null },
+                      ],
+                    }))
+                  }
+                  className="rounded border border-osap-border px-2 py-1 text-xs text-osap-accent"
+                >
+                  + Añadir
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        {viewMode ? null : (
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={saveCatalog}
+              className="rounded-md bg-osap-accent px-4 py-2 text-sm font-medium text-white"
+            >
+              Guardar cargos
+            </button>
+            {catalogMessage ? <span className="text-sm text-osap-muted">{catalogMessage}</span> : null}
           </div>
         )}
       </Card>
@@ -673,6 +753,43 @@ export function AdminAmigosGroupPage() {
                 </span>
                 <span className="text-osap-muted">
                   {formatEuroDate(item.start_date) || "—"} → {item.end_date ? formatEuroDate(item.end_date) : "actualidad"}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+
+      <Card title="Solicitudes pendientes">
+        {requests.length === 0 ? (
+          <p className="text-sm text-osap-muted">No hay solicitudes pendientes.</p>
+        ) : (
+          <ul className="divide-y divide-osap-border text-sm">
+            {requests.map((request) => (
+              <li key={request.user_id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                <span className="text-xs">{request.user_id}</span>
+                <span className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => void guard(async () => {
+                      await apiClient.grantAmigosMember(groupId, request.user_id, "collaborator", {
+                        admin_role_id: request.admin_role_id,
+                        musical_role_id: request.musical_role_id,
+                        section_id: request.section_id,
+                      });
+                      await load();
+                    })}
+                    className="rounded bg-osap-accent px-2 py-1 text-xs text-white"
+                  >
+                    Aprobar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void revokeMember(request.user_id)}
+                    className="rounded border border-osap-border px-2 py-1 text-xs"
+                  >
+                    Rechazar
+                  </button>
                 </span>
               </li>
             ))}
@@ -712,6 +829,18 @@ export function AdminAmigosGroupPage() {
             >
               <option value="collaborator">{t("friends.roleCollaborator")}</option>
               <option value="admin">{t("friends.roleAdmin")}</option>
+            </select>
+            <select value={newAdminRole} onChange={(e) => setNewAdminRole(e.target.value)} className="rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm">
+              <option value="">Cargo administrativo</option>
+              {catalog.admin.map((item) => <option key={item.id ?? item.name} value={item.id ?? ""}>{item.name}</option>)}
+            </select>
+            <select value={newMusicalRole} onChange={(e) => setNewMusicalRole(e.target.value)} className="rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm">
+              <option value="">Rol musical</option>
+              {catalog.musical.map((item) => <option key={item.id ?? item.name} value={item.id ?? ""}>{item.name}</option>)}
+            </select>
+            <select value={newSection} onChange={(e) => setNewSection(e.target.value)} className="rounded-md border border-osap-border bg-osap-surface px-3 py-2 text-sm">
+              <option value="">Sección</option>
+              {catalog.section.map((item) => <option key={item.id ?? item.name} value={item.id ?? ""}>{item.name}</option>)}
             </select>
             <button
               type="button"
@@ -822,6 +951,12 @@ export function AdminAmigosGroupPage() {
     </div>
   );
 }
+
+
+
+
+
+
 
 
 

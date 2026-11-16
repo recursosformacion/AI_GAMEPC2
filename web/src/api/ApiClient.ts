@@ -10,6 +10,8 @@
 
 import type {
   AmigosArticle,
+  AmigosCatalogItem,
+  AmigosGroupCatalog,
   AmigosArticleCreateInput,
   AmigosArticleList,
   AmigosArticleUpdateInput,
@@ -419,9 +421,31 @@ export class ApiClient {
     return this.patch<AmigosGroup>(`/admin/amigos/groups/${encodeURIComponent(groupId)}`, input);
   }
 
+  async getAmigosGroupCatalog(groupId: string): Promise<AmigosGroupCatalog> {
+    return this.get<AmigosGroupCatalog>(
+      `/amigos/groups/${encodeURIComponent(groupId)}/catalog`,
+    );
+  }
+
+  async updateAmigosGroupCatalog(
+    groupId: string,
+    items: AmigosCatalogItem[],
+  ): Promise<AmigosGroupCatalog> {
+    return this.put<AmigosGroupCatalog>(
+      `/admin/amigos/groups/${encodeURIComponent(groupId)}/catalog`,
+      { items },
+    );
+  }
+
   async getAmigosRoleTemplates(kind: string): Promise<{ admin: string[]; musical: string[] }> {
     return this.get<{ admin: string[]; musical: string[] }>(
       `/amigos/role-templates/${encodeURIComponent(kind)}`,
+    );
+  }
+
+  async getAmigosGroupRequests(groupId: string): Promise<AmigosMemberList> {
+    return this.get<AmigosMemberList>(
+      `/admin/amigos/groups/${encodeURIComponent(groupId)}/requests`,
     );
   }
 
@@ -449,14 +473,28 @@ export class ApiClient {
     return this.get(`/admin/users/${encodeURIComponent(userId)}/friends-groups`);
   }
 
+  async requestAmigosMembership(
+    groupId: string,
+    input: { admin_role_id?: string | null; musical_role_id?: string | null; section_id?: string | null },
+  ): Promise<AmigosMember> {
+    return this.post<AmigosMember>(
+      `/amigos/groups/${encodeURIComponent(groupId)}/request`,
+      input,
+    );
+  }
+
   async grantAmigosMember(
     groupId: string,
     userId: string,
     role: "admin" | "collaborator" = "collaborator",
+    catalog?: { admin_role_id?: string | null; musical_role_id?: string | null; section_id?: string | null },
   ): Promise<AmigosMember> {
     return this.post<AmigosMember>(`/admin/amigos/groups/${encodeURIComponent(groupId)}/members`, {
       user_id: userId,
       role,
+      admin_role_id: catalog?.admin_role_id ?? null,
+      musical_role_id: catalog?.musical_role_id ?? null,
+      section_id: catalog?.section_id ?? null,
     });
   }
 
@@ -1034,6 +1072,10 @@ export interface QuotaUsage {
   by_provider: { provider: string; total: number }[];
   top_works: { work_id: string; total: number }[];
 }
+
+
+
+
 
 
 

@@ -1082,6 +1082,9 @@ export interface AmigosMember {
   user_id: string;
   role: AmigosMemberRole | string;
   status: AmigosMemberStatus | string;
+  admin_role_id?: string | null;
+  musical_role_id?: string | null;
+  section_id?: string | null;
   created_at?: string;
   updated_at?: string;
 }
@@ -1325,10 +1328,29 @@ export interface NewsFeed {
   window_days: number;
 }
 
+export interface AmigosCatalogItem {
+  id?: string | null;
+  scope: "admin" | "musical" | "section";
+  code?: string | null;
+  name: string;
+  parent_id?: string | null;
+  sort_order?: number;
+}
+
+export interface AmigosGroupCatalog {
+  admin: AmigosCatalogItem[];
+  musical: AmigosCatalogItem[];
+  section: AmigosCatalogItem[];
+}
+
 export interface NewsTopic {
   code: string;
   name: string;
   description: string;
 }
+
+
+
+
 
 

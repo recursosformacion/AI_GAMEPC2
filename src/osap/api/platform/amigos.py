@@ -140,6 +140,30 @@ class AmigosMixin(PlatformApiCore):
 
     # --- lectura pública -----------------------------------------------------
 
+    def amigos_group_catalog(self, group_id: str) -> dict[str, list[dict[str, object]]]:
+        return self._amigos_service().get_group_catalog(group_id)
+
+    def amigos_update_group_catalog(
+        self, token: str | None, group_id: str, payload: object
+    ) -> dict[str, list[dict[str, object]]]:
+        actor = self._amigos_user(token)
+        items = [
+            {
+                "id": item.id,
+                "scope": item.scope,
+                "code": item.code,
+                "name": item.name,
+                "parent_id": item.parent_id,
+                "sort_order": item.sort_order,
+            }
+            for item in getattr(payload, "items", [])
+        ]
+        return self._amigos_service().update_group_catalog(
+            actor_user_id=actor,
+            is_global_admin=self._amigos_is_global_admin(token),
+            group_id=group_id,
+            items=items,
+        )
     def amigos_role_templates(self, kind: str) -> dict[str, list[str]]:
         from src.osap.domain.amigos import GROUP_KINDS, GROUP_ROLE_TEMPLATES
 
@@ -389,9 +413,24 @@ class AmigosMixin(PlatformApiCore):
             group_id=group_id,
             user_id=payload.user_id,
             role=payload.role,
+            admin_role_id=payload.admin_role_id,
+            musical_role_id=payload.musical_role_id,
+            section_id=payload.section_id,
         )
         return self._amigos_member_read(row)
 
+    def amigos_request_membership(
+        self, token: str | None, group_id: str, payload: object
+    ) -> AmigosMemberRead:
+        actor = self._amigos_user(token)
+        row = self._amigos_service().request_membership(
+            user_id=actor,
+            group_id=group_id,
+            admin_role_id=getattr(payload, "admin_role_id", None),
+            musical_role_id=getattr(payload, "musical_role_id", None),
+            section_id=getattr(payload, "section_id", None),
+        )
+        return self._amigos_member_read(row)
     def amigos_revoke_member(
         self, token: str | None, group_id: str, user_id: str
     ) -> AmigosMemberRead:
@@ -457,6 +496,18 @@ class AmigosMixin(PlatformApiCore):
         )
         return AmigosMemberListRead(items=[self._amigos_member_read(r) for r in rows], total=len(rows))
 
+    def amigos_list_requests(
+        self, token: str | None, group_id: str
+    ) -> AmigosMemberListRead:
+        actor = self._amigos_user(token)
+        rows = self._amigos_service().list_pending_members(
+            actor_user_id=actor,
+            is_global_admin=self._amigos_is_global_admin(token),
+            group_id=group_id,
+        )
+        return AmigosMemberListRead(
+            items=[self._amigos_member_read(row) for row in rows], total=len(rows)
+        )
     def amigos_group_history(
         self, token: str | None, group_id: str
     ) -> list[dict[str, object]]:
@@ -988,6 +1039,9 @@ class AmigosMixin(PlatformApiCore):
             user_id=str(row["user_id"]),
             role=str(row.get("role") or "collaborator"),
             status=str(row.get("status") or "active"),
+            admin_role_id=str(row["admin_role_id"]) if row.get("admin_role_id") else None,
+            musical_role_id=str(row["musical_role_id"]) if row.get("musical_role_id") else None,
+            section_id=str(row["section_id"]) if row.get("section_id") else None,
             created_at=str(row.get("created_at") or ""),
             updated_at=str(row.get("updated_at") or ""),
         )
@@ -1047,6 +1101,18 @@ class AmigosMixin(PlatformApiCore):
     @staticmethod
     def _article_dict(article: AmigosArticleRead) -> dict[str, object]:
         return article.model_dump()
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
