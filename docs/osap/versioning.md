@@ -93,6 +93,12 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **6.0.1 (C) — osap-api (2026-11-16)**: correcciones de interfaz tras la liberación:
+  cuenta sin las antiguas entidades de auth, grupos de «Los amigos» en la ficha,
+  preferencias de noticias plegadas y botones «todos» destacados, detalle de grupo dentro
+  de la SPA y tipo Coral/Banda visible. Producción actualizada con `web/dist`; sin cambios
+  de contrato, esquema ni IDs.
+
 - **6.0.0 (A) — conjunto OSAP + Chorus 0.9.0 (2026-11-16)**: salto de orientación que
   incorpora noticias al ecosistema y unifica grupos/entidades. `osap-auth` añade
   `news_languages` (migración 0018) y el feed interno de suscriptores; `osap-api` añade
