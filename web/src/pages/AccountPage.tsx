@@ -227,6 +227,28 @@ export function AccountPage() {
         )}
       </section>
 
+      {(profile?.memberships ?? []).length > 0 ? (
+        <section className="space-y-2 rounded border border-osap-border bg-osap-surface p-4">
+          <h2 className="text-sm font-semibold">Entidades a las que perteneces</h2>
+          <ul className="space-y-1 text-sm">
+            {(profile?.memberships ?? []).map((membership) => (
+              <li key={membership.id} className="flex flex-wrap justify-between gap-2">
+                <span>
+                  <strong>{membership.entity_name}</strong>{" "}
+                  <span className="text-osap-muted">({membership.entity_kind})</span>
+                </span>
+                <span className="text-xs text-osap-muted">
+                  {membership.status === "approved" ? "aprobada" : membership.status}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-xs text-osap-muted">
+            La representación de una entidad la asigna la administración; no se solicita desde aquí.
+          </p>
+        </section>
+      ) : null}
+
       <section className="space-y-3 rounded border border-osap-border bg-osap-surface p-4">
         <h2 className="text-sm font-semibold">Solicitar acceso a un grupo</h2>
         <div className="grid gap-3 sm:grid-cols-2">

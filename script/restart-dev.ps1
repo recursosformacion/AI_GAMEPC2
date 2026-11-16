@@ -55,13 +55,14 @@ function Read-DevToken([string]$Name, [string]$Default) {
 }
 $InternalToken = Read-DevToken "internal-token.txt" "osap-dev-internal-token"
 $NewsToken = Read-DevToken "news-token.txt" "osap-dev-news-token"
+$ChorusDbUrl = Read-DevToken "chorus-db-url.txt" ""
 $services = @(
     [pscustomobject]@{ Name = "osap-storage"; Repo = "osap-storage"; Port = 8000; App = "api.main:app"; Factory = $false; Health = "http://127.0.0.1:8000/api/v1/health"; Env = @{ OSAP_CONFIG = "config.yaml" } },
     [pscustomobject]@{ Name = "osap-api"; Repo = "osap-api"; Port = 8001; App = "src.osap.api.platform_app:create_platform_app"; Factory = $true; Health = "http://127.0.0.1:8001/api/v1/system/health"; Env = @{ OSAP_OIDC_STATE_FILE = $OidcStateFile; OSAP_ADS_BASE_URL = "http://127.0.0.1:8305"; OSAP_ADS_SERVICE_TOKEN = "osap-dev-ads-token"; OSAP_ADS_WEB_BASE = "http://127.0.0.1:8305"; OSAP_ADS_TIMEOUT_SECONDS = "2.5"; OSAP_NEWS_API_BASE = "http://127.0.0.1:8400"; OSAP_NEWS_API_TOKEN = $NewsToken; OSAP_INTERNAL_SERVICE_TOKEN = $InternalToken; OSAP_AUTH_INTERNAL_URL = "http://127.0.0.1:8200"; OSAP_SUPPORT_INTERNAL_URL = "http://127.0.0.1:8300" } },
     [pscustomobject]@{ Name = "ai-noticias"; Repo = "ai_noticias"; Port = 8400; App = "app.api:app"; Factory = $false; Health = "http://127.0.0.1:8400/health"; Env = @{ OSAP_NEWS_API_TOKEN = $NewsToken } },
     [pscustomobject]@{ Name = "osap-auth"; Repo = "osap-auth"; Port = 8200; App = "api.main:create_app_from_settings"; Factory = $true; Health = "http://127.0.0.1:8200/health"; Env = @{ OSAP_INTERNAL_SERVICE_TOKEN = $InternalToken } },
     [pscustomobject]@{ Name = "osap-support"; Repo = "osap-support"; Port = 8300; App = "api.main:create_app_from_settings"; Factory = $true; Health = "http://127.0.0.1:8300/health"; Env = @{ OSAP_INTERNAL_SERVICE_TOKEN = $InternalToken } },
-    [pscustomobject]@{ Name = "chorus"; Repo = "Chorus"; Port = 9600; App = "app.main:app"; Factory = $false; Health = "http://127.0.0.1:9600/health"; Env = @{ CHORUS_CONFIG = "osap.toml" } },
+    [pscustomobject]@{ Name = "chorus"; Repo = "Chorus"; Port = 9600; App = "app.main:app"; Factory = $false; Health = "http://127.0.0.1:9600/health"; Env = @{ CHORUS_CONFIG = "osap.toml"; CHORUS_DATABASE_URL = $ChorusDbUrl } },
     [pscustomobject]@{ Name = "ai-publicidad"; Repo = "ai_publicidad"; Port = 8305; App = "api.main:app"; Factory = $false; Health = "http://127.0.0.1:8305/health"; Env = @{ AI_PUBLICIDAD_ENV = "development"; AI_PUBLICIDAD_SERVICE_TOKEN = "osap-dev-ads-token"; AI_PUBLICIDAD_PUBLIC_BASE_URL = "http://127.0.0.1:8305"; AI_PUBLICIDAD_PACKAGE_CONTENT_BASE_URL = "http://127.0.0.1:8305"; AI_PUBLICIDAD_PACKAGE_FRAME_ANCESTORS = "http://osap-app http://127.0.0.1:8001 http://localhost:8001"; AI_PUBLICIDAD_PACKAGE_ROOT = "data/packages"; AI_PUBLICIDAD_IMAGE_ROOT = "data/media"; AI_PUBLICIDAD_AUTH_URL = "http://127.0.0.1:8200"; AI_PUBLICIDAD_OSAP_PUBLIC_URL = "http://osap-app"; AI_PUBLICIDAD_VISITOR_HASH_SECRET = "osap-dev-visitor-hash" } },
     [pscustomobject]@{ Name = "osap-ssr"; Repo = "osap-api\web"; Port = 3000; Node = $true; Health = "http://127.0.0.1:3000/health"; Env = @{ OSAP_SSR_DEV = "1"; OSAP_API_ORIGIN = "http://127.0.0.1:8001"; OSAP_PUBLIC_ORIGIN = "http://osap-app" } }
 )
@@ -259,3 +260,5 @@ if ($failed.Count -gt 0) {
     exit 1
 }
 Write-Host "Entorno listo." -ForegroundColor Green
+
+

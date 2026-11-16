@@ -239,6 +239,16 @@ export function AdminAmigosGroupPage() {
       await load();
     });
 
+  const updateMember = (member: AmigosMember, role: string, adminId: string, musicalId: string, sectionId: string) =>
+    guard(async () => {
+      await apiClient.grantAmigosMember(groupId, member.user_id, role === "admin" ? "admin" : "collaborator", {
+        admin_role_id: adminId || null,
+        musical_role_id: musicalId || null,
+        section_id: sectionId || null,
+      });
+      await load();
+    });
+
   const saveCatalog = () =>
     guard(async () => {
       const items: AmigosCatalogItem[] = [
@@ -853,7 +863,8 @@ export function AdminAmigosGroupPage() {
         )}
         <ul className="mt-3 divide-y divide-osap-border">
           {members.map((m) => (
-            <li key={m.user_id} className="flex items-center justify-between py-2 text-sm">
+            <li key={m.user_id} className="space-y-2 py-2 text-sm">
+              <div className="flex items-center justify-between gap-2">
               <span className="min-w-0 truncate text-xs" title={m.user_id}>
                 {userLabel(m.user_id)}
               </span>
@@ -874,6 +885,23 @@ export function AdminAmigosGroupPage() {
                   </button>
                 ) : null}
               </span>
+              </div>
+              {!viewMode && m.status === "active" ? (
+                <div className="flex flex-wrap gap-1">
+                  <select defaultValue={m.role} onChange={(e) => updateMember(m, e.target.value, m.admin_role_id ?? "", m.musical_role_id ?? "", m.section_id ?? "")} className="rounded border border-osap-border bg-osap-surface px-1 py-1 text-xs">
+                    <option value="collaborator">Colaborador</option><option value="admin">Administrador</option>
+                  </select>
+                  <select defaultValue={m.admin_role_id ?? ""} onChange={(e) => updateMember(m, m.role, e.target.value, m.musical_role_id ?? "", m.section_id ?? "")} className="rounded border border-osap-border bg-osap-surface px-1 py-1 text-xs">
+                    <option value="">Cargo</option>{catalog.admin.map((r) => <option key={r.id ?? r.name} value={r.id ?? ""}>{r.name}</option>)}
+                  </select>
+                  <select defaultValue={m.musical_role_id ?? ""} onChange={(e) => updateMember(m, m.role, m.admin_role_id ?? "", e.target.value, m.section_id ?? "")} className="rounded border border-osap-border bg-osap-surface px-1 py-1 text-xs">
+                    <option value="">Rol musical</option>{catalog.musical.map((r) => <option key={r.id ?? r.name} value={r.id ?? ""}>{r.name}</option>)}
+                  </select>
+                  <select defaultValue={m.section_id ?? ""} onChange={(e) => updateMember(m, m.role, m.admin_role_id ?? "", m.musical_role_id ?? "", e.target.value)} className="rounded border border-osap-border bg-osap-surface px-1 py-1 text-xs">
+                    <option value="">Sección</option>{catalog.section.map((r) => <option key={r.id ?? r.name} value={r.id ?? ""}>{r.name}</option>)}
+                  </select>
+                </div>
+              ) : null}
             </li>
           ))}
         </ul>
@@ -951,6 +979,7 @@ export function AdminAmigosGroupPage() {
     </div>
   );
 }
+
 
 
 

@@ -12,6 +12,7 @@ import type {
   AmigosArticle,
   AmigosCatalogItem,
   AmigosGroupCatalog,
+  Taxonomy,
   AmigosArticleCreateInput,
   AmigosArticleList,
   AmigosArticleUpdateInput,
@@ -419,6 +420,14 @@ export class ApiClient {
     },
   ): Promise<AmigosGroup> {
     return this.patch<AmigosGroup>(`/admin/amigos/groups/${encodeURIComponent(groupId)}`, input);
+  }
+
+  async getAmigosTaxonomy(): Promise<Taxonomy> {
+    return this.get<Taxonomy>("/admin/amigos/taxonomy");
+  }
+
+  async saveAmigosTaxonomy(data: Taxonomy): Promise<Taxonomy> {
+    return this.put<Taxonomy>("/admin/amigos/taxonomy", data);
   }
 
   async getAmigosGroupCatalog(groupId: string): Promise<AmigosGroupCatalog> {
@@ -1072,6 +1081,7 @@ export interface QuotaUsage {
   by_provider: { provider: string; total: number }[];
   top_works: { work_id: string; total: number }[];
 }
+
 
 
 

@@ -21,6 +21,7 @@ const AccountPage = lazy(() => import("../pages/AccountPage").then((m) => ({ def
 const NewsPage = lazy(() => import("../pages/NewsPage").then((m) => ({ default: m.NewsPage })));
 const NotificationsPage = lazy(() => import("../pages/NotificationsPage").then((m) => ({ default: m.NotificationsPage })));
 const AdminAmigosGroupsPage = lazy(() => import("../pages/AdminAmigosGroupsPage").then((m) => ({ default: m.AdminAmigosGroupsPage })));
+const AdminTaxonomyPage = lazy(() => import("../pages/AdminTaxonomyPage").then((m) => ({ default: m.AdminTaxonomyPage })));
 const AdminAmigosGroupNewPage = lazy(() => import("../pages/AdminAmigosGroupNewPage").then((m) => ({ default: m.AdminAmigosGroupNewPage })));
 const AdminAmigosGroupPage = lazy(() => import("../pages/AdminAmigosGroupPage").then((m) => ({ default: m.AdminAmigosGroupPage })));
 const AdminAmigosEventsPage = lazy(() => import("../pages/AdminAmigosEventsPage").then((m) => ({ default: m.AdminAmigosEventsPage })));
@@ -161,6 +162,7 @@ export function AppRoutes() {
           <Route path="/admin/jobs" element={<JobsPage />} />
           <Route path="/admin/work-person-ai" element={<AdminWorkPersonAiPage />} />
           <Route path="/admin/amigos" element={<AdminAmigosGroupsPage />} />
+          <Route path="/admin/amigos/taxonomia" element={<AdminTaxonomyPage />} />
           <Route path="/admin/amigos/corales" element={<AdminAmigosGroupsPage kind="coral" />} />
           <Route path="/admin/amigos/eventos" element={<AdminAmigosEventsPage />} />
           <Route path="/admin/amigos/blog" element={<AdminAmigosBlogPage />} />
@@ -172,4 +174,5 @@ export function AppRoutes() {
     </Suspense>
   );
 }
+
 

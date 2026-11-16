@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Card } from "../components/Card";
 import { useI18n } from "../i18n/I18n";
 import { useAuth } from "../state/auth";
-import { chorusSessionUrl } from "../lib/chorus";
+import { chorusBaseUrl, chorusSessionUrl } from "../lib/chorus";
 
 // «Los amigos»: entrada de la sección. Presenta las subsecciones (hoy «Corales») y el
 // espacio personal del usuario autenticado (mis artículos). No lista artículos aquí: los
@@ -22,6 +22,14 @@ export function AmigosPage() {
         </p>
         <h1 className="mt-2 text-3xl font-semibold text-osap-ink">{t("nav.friends")}</h1>
         <p className="mt-2 max-w-2xl text-sm text-osap-muted">{t("friends.subtitle")}</p>
+        <a
+          href={`${chorusBaseUrl()}/alta.html`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-3 inline-block text-sm font-medium text-osap-accent hover:underline"
+        >
+          Solicitar alta de grupo o entidad →
+        </a>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -82,5 +90,6 @@ export function AmigosPage() {
     </div>
   );
 }
+
 
 

@@ -91,15 +91,11 @@ class AmigosMixin(PlatformApiCore):
 
     def _index_amigos_group(self, group: AmigosGroupRead) -> None:
         base = public_base_url()
-        self._amigos_indexnow(
-            [f"{base}/amigos/corales/{group.id}/{group.slug}", f"{base}/amigos/corales"]
-        )
+        self._amigos_indexnow([f"{base}/amigos/corales/{group.id}/{group.slug}", f"{base}/amigos/corales"])
 
     def _index_amigos_article(self, article: AmigosArticleRead) -> None:
         base = public_base_url()
-        self._amigos_indexnow(
-            [f"{base}/amigos/articulo/{article.id}/{slugify(article.title) or 'articulo'}"]
-        )
+        self._amigos_indexnow([f"{base}/amigos/articulo/{article.id}/{slugify(article.title) or 'articulo'}"])
 
     def _index_article_if_public(self, article: AmigosArticleRead) -> AmigosArticleRead:
         if article.status in ("published", "withdrawn"):
@@ -164,6 +160,19 @@ class AmigosMixin(PlatformApiCore):
             group_id=group_id,
             items=items,
         )
+
+    def amigos_get_taxonomy(self, token: str | None) -> dict[str, list[dict[str, object]]]:
+        self._amigos_user(token)
+        return self._amigos_service().get_taxonomy()
+
+    def amigos_save_taxonomy(self, token: str | None, payload: dict[str, object]) -> dict[str, list[dict[str, object]]]:
+        actor = self._amigos_user(token)
+        return self._amigos_service().save_taxonomy(
+            actor_user_id=actor,
+            is_global_admin=self._amigos_is_global_admin(token),
+            data=payload,
+        )
+
     def amigos_role_templates(self, kind: str) -> dict[str, list[str]]:
         from src.osap.domain.amigos import GROUP_KINDS, GROUP_ROLE_TEMPLATES
 
@@ -171,6 +180,7 @@ class AmigosMixin(PlatformApiCore):
             raise AmigosError(422, "INVALID_KIND", "Tipo de grupo no soportado")
         template = GROUP_ROLE_TEMPLATES[kind]
         return {"admin": list(template["admin"]), "musical": list(template["musical"])}
+
     def amigos_list_groups(
         self, *, token: str | None = None, include_inactive: bool = False, kind: str | None = None
     ) -> list[AmigosGroupRead]:
@@ -209,9 +219,7 @@ class AmigosMixin(PlatformApiCore):
             limit=limit,
             offset=offset,
         )
-        return AmigosArticleListRead(
-            items=self._articles_read(self._rows(data)), total=self._total(data)
-        )
+        return AmigosArticleListRead(items=self._articles_read(self._rows(data)), total=self._total(data))
 
     def amigos_article(self, article_id: str, *, token: str | None = None) -> AmigosArticleRead | None:
         actor = None
@@ -227,13 +235,9 @@ class AmigosMixin(PlatformApiCore):
         )
         return self._index_article_if_public(self._amigos_article_read(row)) if row else None
 
-    def amigos_my_articles(
-        self, token: str | None, limit: int = 100, offset: int = 0
-    ) -> AmigosArticleListRead:
+    def amigos_my_articles(self, token: str | None, limit: int = 100, offset: int = 0) -> AmigosArticleListRead:
         actor = self._amigos_user(token)
-        data = self._amigos_service().list_my_articles(
-            actor_user_id=actor, limit=limit, offset=offset
-        )
+        data = self._amigos_service().list_my_articles(actor_user_id=actor, limit=limit, offset=offset)
         items = self._articles_read(self._rows(data))
         return AmigosArticleListRead(items=items, total=self._total(data))
 
@@ -283,8 +287,11 @@ class AmigosMixin(PlatformApiCore):
         actor = self._amigos_user(token)
         is_admin = self._amigos_is_global_admin(token)
         data = self._amigos_service().list_pending(
-            actor_user_id=actor, is_global_admin=is_admin, group_id=group_id,
-            limit=limit, offset=offset,
+            actor_user_id=actor,
+            is_global_admin=is_admin,
+            group_id=group_id,
+            limit=limit,
+            offset=offset,
         )
         items = self._articles_read(self._rows(data))
         return AmigosArticleListRead(items=items, total=self._total(data))
@@ -332,7 +339,8 @@ class AmigosMixin(PlatformApiCore):
     def amigos_submit_article(self, token: str | None, article_id: str) -> AmigosArticleRead:
         actor = self._amigos_user(token)
         row = self._amigos_service().submit_article(
-            actor_user_id=actor, is_global_admin=self._amigos_is_global_admin(token),
+            actor_user_id=actor,
+            is_global_admin=self._amigos_is_global_admin(token),
             article_id=article_id,
         )
         return self._index_article_if_public(self._amigos_article_read(row))
@@ -340,7 +348,8 @@ class AmigosMixin(PlatformApiCore):
     def amigos_publish_article(self, token: str | None, article_id: str) -> AmigosArticleRead:
         actor = self._amigos_user(token)
         row = self._amigos_service().publish_article(
-            actor_user_id=actor, is_global_admin=self._amigos_is_global_admin(token),
+            actor_user_id=actor,
+            is_global_admin=self._amigos_is_global_admin(token),
             article_id=article_id,
         )
         return self._index_article_if_public(self._amigos_article_read(row))
@@ -348,16 +357,15 @@ class AmigosMixin(PlatformApiCore):
     def amigos_withdraw_article(self, token: str | None, article_id: str) -> AmigosArticleRead:
         actor = self._amigos_user(token)
         row = self._amigos_service().withdraw_article(
-            actor_user_id=actor, is_global_admin=self._amigos_is_global_admin(token),
+            actor_user_id=actor,
+            is_global_admin=self._amigos_is_global_admin(token),
             article_id=article_id,
         )
         return self._index_article_if_public(self._amigos_article_read(row))
 
     # --- administración de grupos y moderación -------------------------------
 
-    def amigos_create_group(
-        self, token: str | None, payload: AmigosGroupCreateRequest
-    ) -> AmigosGroupRead:
+    def amigos_create_group(self, token: str | None, payload: AmigosGroupCreateRequest) -> AmigosGroupRead:
         actor = self._amigos_user(token)
         row = self._amigos_service().create_group(
             actor_user_id=actor,
@@ -397,9 +405,7 @@ class AmigosMixin(PlatformApiCore):
             website=payload.website,
             email=payload.email,
             logo_url=payload.logo_url,
-            links=[link.model_dump() for link in payload.links]
-            if payload.links is not None
-            else None,
+            links=[link.model_dump() for link in payload.links] if payload.links is not None else None,
         )
         return self._index_group_if_active(self._amigos_group_read(row))
 
@@ -419,9 +425,7 @@ class AmigosMixin(PlatformApiCore):
         )
         return self._amigos_member_read(row)
 
-    def amigos_request_membership(
-        self, token: str | None, group_id: str, payload: object
-    ) -> AmigosMemberRead:
+    def amigos_request_membership(self, token: str | None, group_id: str, payload: object) -> AmigosMemberRead:
         actor = self._amigos_user(token)
         row = self._amigos_service().request_membership(
             user_id=actor,
@@ -431,9 +435,8 @@ class AmigosMixin(PlatformApiCore):
             section_id=getattr(payload, "section_id", None),
         )
         return self._amigos_member_read(row)
-    def amigos_revoke_member(
-        self, token: str | None, group_id: str, user_id: str
-    ) -> AmigosMemberRead:
+
+    def amigos_revoke_member(self, token: str | None, group_id: str, user_id: str) -> AmigosMemberRead:
         actor = self._amigos_user(token)
         row = self._amigos_service().revoke_member(
             actor_user_id=actor,
@@ -446,8 +449,14 @@ class AmigosMixin(PlatformApiCore):
     # --- imágenes (osap-storage) --------------------------------------------
 
     def amigos_upload(
-        self, token: str | None, group_id: str | None, name: str, mime_type: str | None,
-        data: bytes, *, scope: str = "group",
+        self,
+        token: str | None,
+        group_id: str | None,
+        name: str,
+        mime_type: str | None,
+        data: bytes,
+        *,
+        scope: str = "group",
     ) -> dict[str, object]:
         actor = self._amigos_user(token)
         service = self._amigos_service()
@@ -460,13 +469,9 @@ class AmigosMixin(PlatformApiCore):
                 raise AmigosError(422, "GROUP_REQUIRED", "Falta el grupo")
             service.authorize_upload(group_id=group_id, actor_user_id=actor, is_global_admin=is_admin)
             store_group = group_id
-        clean_name, mime = service.validate_upload(
-            name=name, mime_type=mime_type, size_bytes=len(data)
-        )
+        clean_name, mime = service.validate_upload(name=name, mime_type=mime_type, size_bytes=len(data))
         try:
-            uploaded = self._container.storage_contributions().upload_file(
-                name=clean_name, mime_type=mime, data=data
-            )
+            uploaded = self._container.storage_contributions().upload_file(name=clean_name, mime_type=mime, data=data)
         except Exception as exc:  # noqa: BLE001 — storage caído
             raise AmigosError(502, "STORAGE_UNAVAILABLE", "Almacenamiento no disponible") from exc
         file_id = int(str(uploaded["id"]))
@@ -496,27 +501,23 @@ class AmigosMixin(PlatformApiCore):
         )
         return AmigosMemberListRead(items=[self._amigos_member_read(r) for r in rows], total=len(rows))
 
-    def amigos_list_requests(
-        self, token: str | None, group_id: str
-    ) -> AmigosMemberListRead:
+    def amigos_list_requests(self, token: str | None, group_id: str) -> AmigosMemberListRead:
         actor = self._amigos_user(token)
         rows = self._amigos_service().list_pending_members(
             actor_user_id=actor,
             is_global_admin=self._amigos_is_global_admin(token),
             group_id=group_id,
         )
-        return AmigosMemberListRead(
-            items=[self._amigos_member_read(row) for row in rows], total=len(rows)
-        )
-    def amigos_group_history(
-        self, token: str | None, group_id: str
-    ) -> list[dict[str, object]]:
+        return AmigosMemberListRead(items=[self._amigos_member_read(row) for row in rows], total=len(rows))
+
+    def amigos_group_history(self, token: str | None, group_id: str) -> list[dict[str, object]]:
         actor = self._amigos_user(token)
         return self._amigos_service().list_group_history(
             actor_user_id=actor,
             is_global_admin=self._amigos_is_global_admin(token),
             group_id=group_id,
         )
+
     # --- agenda: actuaciones y eventos --------------------------------------
 
     def amigos_list_events(
@@ -546,18 +547,14 @@ class AmigosMixin(PlatformApiCore):
         items = [self._amigos_event_read(r) for r in self._rows(data)]
         return AmigosActuacionListRead(items=items, total=self._total(data))
 
-    def amigos_get_event(
-        self, token: str | None, event_id: str, *, public_only: bool
-    ) -> AmigosActuacionRead | None:
+    def amigos_get_event(self, token: str | None, event_id: str, *, public_only: bool) -> AmigosActuacionRead | None:
         if public_only and not self._amigos_is_global_admin(token):
             row = self._amigos_service().get_public_actuacion(event_id)
         else:
             row = self._amigos_service().get_actuacion(event_id)
         return self._amigos_event_read(row) if row is not None else None
 
-    def amigos_create_event(
-        self, token: str | None, payload: AmigosActuacionRequest
-    ) -> AmigosActuacionRead:
+    def amigos_create_event(self, token: str | None, payload: AmigosActuacionRequest) -> AmigosActuacionRead:
         actor = self._amigos_user(token)
         is_admin = self._amigos_is_global_admin(token)
         data = payload.model_dump(exclude_unset=True)
@@ -579,9 +576,7 @@ class AmigosMixin(PlatformApiCore):
         )
         return self._amigos_event_read(row)
 
-    def amigos_record_event_counter(
-        self, event_id: str, kind: str
-    ) -> dict[str, object] | None:
+    def amigos_record_event_counter(self, event_id: str, kind: str) -> dict[str, object] | None:
         count = self._amigos_service().record_event_counter(event_id, kind)
         if count is None:
             return None
@@ -603,9 +598,7 @@ class AmigosMixin(PlatformApiCore):
         )
         return self._amigos_event_read(row)
 
-    def amigos_set_event_status(
-        self, token: str | None, event_id: str, editorial_status: str
-    ) -> AmigosActuacionRead:
+    def amigos_set_event_status(self, token: str | None, event_id: str, editorial_status: str) -> AmigosActuacionRead:
         actor = self._amigos_user(token)
         row = self._amigos_service().set_actuacion_editorial(
             actor_user_id=actor,
@@ -725,15 +718,11 @@ class AmigosMixin(PlatformApiCore):
     def amigos_blog_articles(
         self, *, public_only: bool = True, limit: int = 100, offset: int = 0
     ) -> AmigosArticleListRead:
-        data = self._amigos_service().list_blog_articles(
-            public_only=public_only, limit=limit, offset=offset
-        )
+        data = self._amigos_service().list_blog_articles(public_only=public_only, limit=limit, offset=offset)
         items = [self._amigos_article_read(r) for r in self._rows(data)]
         return AmigosArticleListRead(items=items, total=self._total(data))
 
-    def amigos_blog_article(
-        self, article_id: str, *, token: str | None = None
-    ) -> AmigosArticleRead | None:
+    def amigos_blog_article(self, article_id: str, *, token: str | None = None) -> AmigosArticleRead | None:
         row = self._amigos_service().get_public_general_article(article_id)
         if row is not None:
             return self._index_article_if_public(self._amigos_article_read(row))
@@ -749,9 +738,7 @@ class AmigosMixin(PlatformApiCore):
             return self._index_article_if_public(self._amigos_article_read(row)) if row is not None else None
         return None
 
-    def amigos_create_blog_article(
-        self, token: str | None, payload: AmigosArticleCreateRequest
-    ) -> AmigosArticleRead:
+    def amigos_create_blog_article(self, token: str | None, payload: AmigosArticleCreateRequest) -> AmigosArticleRead:
         actor = self._amigos_user(token)
         row = self._amigos_service().create_general_article(
             actor_user_id=actor,
@@ -769,19 +756,16 @@ class AmigosMixin(PlatformApiCore):
     def amigos_approve_blog_article(self, token: str | None, article_id: str) -> AmigosArticleRead:
         actor = self._amigos_user(token)
         row = self._amigos_service().approve_general_article(
-            actor_user_id=actor, is_global_admin=self._amigos_is_global_admin(token),
+            actor_user_id=actor,
+            is_global_admin=self._amigos_is_global_admin(token),
             article_id=article_id,
         )
         return self._index_article_if_public(self._amigos_article_read(row))
 
-    def amigos_admin_blog_articles(
-        self, token: str | None, limit: int = 200, offset: int = 0
-    ) -> AmigosArticleListRead:
+    def amigos_admin_blog_articles(self, token: str | None, limit: int = 200, offset: int = 0) -> AmigosArticleListRead:
         if not self._amigos_is_global_admin(token):
             raise ForbiddenError("Se requiere administración global")
-        data = self._amigos_service().list_blog_articles(
-            public_only=False, limit=limit, offset=offset
-        )
+        data = self._amigos_service().list_blog_articles(public_only=False, limit=limit, offset=offset)
         items = [self._amigos_article_read(r) for r in self._rows(data)]
         return AmigosArticleListRead(items=items, total=self._total(data))
 
@@ -800,9 +784,7 @@ class AmigosMixin(PlatformApiCore):
         )
         return self._amigos_authorization_read(row)
 
-    def amigos_revoke_authorization(
-        self, token: str | None, user_id: str, scope: str
-    ) -> dict[str, object]:
+    def amigos_revoke_authorization(self, token: str | None, user_id: str, scope: str) -> dict[str, object]:
         actor = self._amigos_user(token)
         self._amigos_service().revoke_authorization(
             actor_user_id=actor,
@@ -812,18 +794,14 @@ class AmigosMixin(PlatformApiCore):
         )
         return {"user_id": user_id, "scope": scope, "revoked": True}
 
-    def amigos_list_authorizations(
-        self, token: str | None, scope: str
-    ) -> AmigosAuthorizationListRead:
+    def amigos_list_authorizations(self, token: str | None, scope: str) -> AmigosAuthorizationListRead:
         actor = self._amigos_user(token)
         rows = self._amigos_service().list_authorizations(
             actor_user_id=actor,
             is_global_admin=self._amigos_is_global_admin(token),
             scope=scope,
         )
-        return AmigosAuthorizationListRead(
-            items=[self._amigos_authorization_read(r) for r in rows], total=len(rows)
-        )
+        return AmigosAuthorizationListRead(items=[self._amigos_authorization_read(r) for r in rows], total=len(rows))
 
     def _amigos_authorization_read(self, row: dict[str, object]) -> AmigosAuthorizationRead:
         return AmigosAuthorizationRead(
@@ -869,18 +847,19 @@ class AmigosMixin(PlatformApiCore):
     def amigos_approve_article(self, token: str | None, article_id: str) -> AmigosArticleRead:
         actor = self._amigos_user(token)
         row = self._amigos_service().approve_article(
-            actor_user_id=actor, is_global_admin=self._amigos_is_global_admin(token),
+            actor_user_id=actor,
+            is_global_admin=self._amigos_is_global_admin(token),
             article_id=article_id,
         )
         return self._index_article_if_public(self._amigos_article_read(row))
 
-    def amigos_return_article(
-        self, token: str | None, article_id: str, note: str
-    ) -> AmigosArticleRead:
+    def amigos_return_article(self, token: str | None, article_id: str, note: str) -> AmigosArticleRead:
         actor = self._amigos_user(token)
         row = self._amigos_service().return_article(
-            actor_user_id=actor, is_global_admin=self._amigos_is_global_admin(token),
-            article_id=article_id, note=note,
+            actor_user_id=actor,
+            is_global_admin=self._amigos_is_global_admin(token),
+            article_id=article_id,
+            note=note,
         )
         return self._index_article_if_public(self._amigos_article_read(row))
 
@@ -888,9 +867,7 @@ class AmigosMixin(PlatformApiCore):
         actor = self._amigos_user(token)
         self._amigos_service()  # valida existencia del servicio
         # Solo admin del grupo o admin global pueden ver el historial.
-        is_admin_ok = self._amigos_is_global_admin(token) or self._amigos_service()._is_group_admin(
-            group_id, actor
-        )
+        is_admin_ok = self._amigos_is_global_admin(token) or self._amigos_service()._is_group_admin(group_id, actor)
         if not is_admin_ok:
             raise AmigosError(403, "FORBIDDEN", "Se requiere ser administrador del grupo")
         return self._amigos_service().list_events(group_id=group_id)
@@ -1057,9 +1034,7 @@ class AmigosMixin(PlatformApiCore):
             out.append(self._amigos_article_read(row, group=cache[group_id]))
         return out
 
-    def _amigos_article_read(
-        self, row: dict[str, object], *, group: object = _GROUP_UNSET
-    ) -> AmigosArticleRead:
+    def _amigos_article_read(self, row: dict[str, object], *, group: object = _GROUP_UNSET) -> AmigosArticleRead:
         # Los artículos del blog general tienen `group_id` NULL: se expone como "" (no "None").
         group_id = str(row["group_id"]) if row.get("group_id") else ""
         if group is _GROUP_UNSET:
@@ -1101,20 +1076,3 @@ class AmigosMixin(PlatformApiCore):
     @staticmethod
     def _article_dict(article: AmigosArticleRead) -> dict[str, object]:
         return article.model_dump()
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

@@ -1337,6 +1337,35 @@ export interface AmigosCatalogItem {
   sort_order?: number;
 }
 
+export interface TaxonomyType {
+  code: string;
+  parent_code?: string | null;
+  name: string;
+  kind: string;
+  sort_order?: number;
+}
+
+export interface TaxonomyRole {
+  id?: string;
+  type_code: string;
+  scope: "admin" | "musical";
+  code: string;
+  name: string;
+}
+
+export interface TaxonomySection {
+  id?: string;
+  type_code: string;
+  code: string;
+  name: string;
+}
+
+export interface Taxonomy {
+  types: TaxonomyType[];
+  roles: TaxonomyRole[];
+  sections: TaxonomySection[];
+}
+
 export interface AmigosGroupCatalog {
   admin: AmigosCatalogItem[];
   musical: AmigosCatalogItem[];
@@ -1348,6 +1377,7 @@ export interface NewsTopic {
   name: string;
   description: string;
 }
+
 
 
 

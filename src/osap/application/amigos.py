@@ -40,6 +40,12 @@ from src.osap.domain.amigos import (
     MEDIA_KINDS,
     MEMBER_ROLES,
 )
+from src.osap.domain.group_taxonomy import (
+    ADMIN_ROLES,
+    GROUP_TYPES,
+    ROLE_TEMPLATES,
+    SECTION_TEMPLATES,
+)
 from src.osap.domain.richtext import sanitize_body
 
 _NON_ALNUM = re.compile(r"[^a-z0-9]+")
@@ -50,9 +56,19 @@ _URL_SCHEME = re.compile(r"^https?://", re.IGNORECASE)
 
 # Campos escalares de la ficha de coral (especialización por tipo).
 _CORAL_FIELDS = (
-    "foundation_date", "dissolution_date", "locality", "region", "country_code",
-    "venue", "formation_type", "member_count", "website", "public_email",
-    "director_person_id", "director_label", "linked_entity",
+    "foundation_date",
+    "dissolution_date",
+    "locality",
+    "region",
+    "country_code",
+    "venue",
+    "formation_type",
+    "member_count",
+    "website",
+    "public_email",
+    "director_person_id",
+    "director_label",
+    "linked_entity",
 )
 
 
@@ -111,9 +127,7 @@ class AmigosService:
 
     # --- grupos (lectura pública) -------------------------------------------
 
-    def list_groups(
-        self, *, active_only: bool = True, kind: str | None = None
-    ) -> list[dict[str, object]]:
+    def list_groups(self, *, active_only: bool = True, kind: str | None = None) -> list[dict[str, object]]:
         if kind is not None and kind not in GROUP_KINDS:
             raise AmigosError(422, "INVALID_KIND", "Tipo de grupo no soportado")
         return list(self._store.list_amigos_groups(active_only=active_only, kind=kind))
@@ -214,13 +228,9 @@ class AmigosService:
         if technical_description is not None:
             changes["technical_description"] = (technical_description or "").strip()[:1000] or None
         if admin_roles is not None:
-            changes["admin_roles_json"] = _json([
-                str(role).strip() for role in admin_roles if str(role).strip()
-            ])
+            changes["admin_roles_json"] = _json([str(role).strip() for role in admin_roles if str(role).strip()])
         if musical_roles is not None:
-            changes["musical_roles_json"] = _json([
-                str(role).strip() for role in musical_roles if str(role).strip()
-            ])
+            changes["musical_roles_json"] = _json([str(role).strip() for role in musical_roles if str(role).strip()])
         if image_url is not None:
             changes["image_url"] = _clean_url(image_url)
         if website is not None:
@@ -281,9 +291,14 @@ class AmigosService:
         if self._store.get_amigos_group(group_id) is None:
             raise AmigosError(404, "GROUP_NOT_FOUND", "Grupo no encontrado")
         row = self._store.set_amigos_member(
-            group_id=group_id, user_id=target, role=role, status="active",
-            granted_by=actor_user_id, admin_role_id=admin_role_id,
-            musical_role_id=musical_role_id, section_id=section_id,
+            group_id=group_id,
+            user_id=target,
+            role=role,
+            status="active",
+            granted_by=actor_user_id,
+            admin_role_id=admin_role_id,
+            musical_role_id=musical_role_id,
+            section_id=section_id,
         )
         self._store.add_amigos_event(
             group_id=group_id,
@@ -334,6 +349,7 @@ class AmigosService:
             detail_json=_json({"user_id": user_id}),
         )
         return row  # type: ignore[no-any-return]
+
     def revoke_member(
         self,
         *,
@@ -356,9 +372,7 @@ class AmigosService:
             status="revoked",
             granted_by=actor_user_id,
         )
-        self._store.close_amigos_group_history(
-            group_id, user_id, date.today().isoformat()
-        )
+        self._store.close_amigos_group_history(group_id, user_id, date.today().isoformat())
         # Revocar NO elimina artículos publicados (trazabilidad).
         self._store.add_amigos_event(
             group_id=group_id,
@@ -369,14 +383,43 @@ class AmigosService:
         )
         return dict(row) if row is not None else {"group_id": group_id, "user_id": user_id, "status": "revoked"}
 
+    def get_taxonomy(self) -> dict[str, list[dict[str, object]]]:
+        data = self._store.get_amigos_taxonomy()
+        if data.get("types"):
+            return data  # type: ignore[no-any-return]
+        types = [
+            {"code": code, "parent_code": parent, "name": name, "kind": kind, "sort_order": index}
+            for index, (code, name, parent, kind) in enumerate(GROUP_TYPES)
+        ]
+        roles: list[dict[str, object]] = []
+        sections: list[dict[str, object]] = []
+        for code, _name, _parent, kind in GROUP_TYPES:
+            for role_code, role_name in ADMIN_ROLES:
+                roles.append({"type_code": code, "scope": "admin", "code": role_code, "name": role_name})
+            for role_code, role_name in ROLE_TEMPLATES.get(kind, ()):
+                roles.append({"type_code": code, "scope": "musical", "code": role_code, "name": role_name})
+            for section_code, section_name in SECTION_TEMPLATES.get(kind, ()):
+                sections.append({"type_code": code, "code": section_code, "name": section_name})
+        data = {"types": types, "roles": roles, "sections": sections}
+        self._store.replace_amigos_taxonomy(data)
+        return data  # type: ignore[no-any-return]
+
+    def save_taxonomy(
+        self, *, actor_user_id: str, is_global_admin: bool, data: dict[str, object]
+    ) -> dict[str, list[dict[str, object]]]:
+        if not is_global_admin:
+            raise AmigosError(403, "FORBIDDEN", "Solo la administración global puede editar la taxonomía")
+        if not isinstance(data.get("types"), list):
+            raise AmigosError(422, "INVALID_TAXONOMY", "Faltan los tipos")
+        self._store.replace_amigos_taxonomy(data)
+        return self.get_taxonomy()
+
     def _seed_group_catalog(self, group_id: str, kind: str) -> None:
         template = GROUP_CATALOG_TEMPLATES.get(kind, GROUP_CATALOG_TEMPLATES["grupo"])
         items: list[dict[str, object]] = []
         for scope in ("admin", "musical", "section"):
             for index, (code, name) in enumerate(template[scope]):
-                items.append(
-                    {"scope": scope, "code": code, "name": name, "sort_order": index}
-                )
+                items.append({"scope": scope, "code": code, "name": name, "sort_order": index})
         self._store.replace_amigos_group_catalog(group_id, items)
 
     def get_group_catalog(self, group_id: str) -> dict[str, list[dict[str, object]]]:
@@ -403,6 +446,7 @@ class AmigosService:
         self._require_group_admin(group_id, actor_user_id, is_global_admin)
         self._store.replace_amigos_group_catalog(group_id, items)
         return self.get_group_catalog(group_id)
+
     def list_group_history(
         self, *, actor_user_id: str, is_global_admin: bool, group_id: str
     ) -> list[dict[str, object]]:
@@ -410,25 +454,16 @@ class AmigosService:
         rows: list[dict[str, object]] = self._store.list_amigos_group_history(group_id)
         return rows
 
-    def list_members(
-        self, *, actor_user_id: str, is_global_admin: bool, group_id: str
-    ) -> list[dict[str, object]]:
+    def list_members(self, *, actor_user_id: str, is_global_admin: bool, group_id: str) -> list[dict[str, object]]:
         self._require_group_admin(group_id, actor_user_id, is_global_admin)
-        return [
-            dict(row)
-            for row in self._store.list_amigos_members(group_id)
-            if str(row.get("status")) == "active"
-        ]
+        return [dict(row) for row in self._store.list_amigos_members(group_id) if str(row.get("status")) == "active"]
 
     def list_pending_members(
         self, *, actor_user_id: str, is_global_admin: bool, group_id: str
     ) -> list[dict[str, object]]:
         self._require_group_admin(group_id, actor_user_id, is_global_admin)
-        return [
-            dict(row)
-            for row in self._store.list_amigos_members(group_id)
-            if str(row.get("status")) == "pending"
-        ]
+        return [dict(row) for row in self._store.list_amigos_members(group_id) if str(row.get("status")) == "pending"]
+
     # --- especialización por tipo: ficha de coral ---------------------------
 
     def get_coral_details(self, group_id: str) -> dict[str, object] | None:
@@ -529,22 +564,17 @@ class AmigosService:
         if not is_global_admin:
             self._require_can_contribute(group_id, actor_user_id, is_global_admin)
 
-    def authorize_scope_upload(
-        self, *, scope: str, actor_user_id: str, is_global_admin: bool
-    ) -> None:
+    def authorize_scope_upload(self, *, scope: str, actor_user_id: str, is_global_admin: bool) -> None:
         """Autoriza subir una imagen para un ámbito editorial sin grupo (blog/events)."""
-        self._require_writer(
-            actor_user_id, is_global_admin, scope, "No estás autorizado para subir imágenes aquí"
-        )
+        self._require_writer(actor_user_id, is_global_admin, scope, "No estás autorizado para subir imágenes aquí")
 
-    def validate_upload(
-        self, *, name: str | None, mime_type: str | None, size_bytes: int
-    ) -> tuple[str, str]:
+    def validate_upload(self, *, name: str | None, mime_type: str | None, size_bytes: int) -> tuple[str, str]:
         clean_name = (name or "").strip() or "imagen"
         mime = (mime_type or "").strip().lower()
         if mime not in IMAGE_MIME_TYPES:
             raise AmigosError(
-                422, "INVALID_IMAGE_TYPE",
+                422,
+                "INVALID_IMAGE_TYPE",
                 "Solo se admiten imágenes (jpg, png, webp, gif, avif)",
             )
         if size_bytes <= 0:
@@ -624,8 +654,17 @@ class AmigosService:
                 raise AmigosError(422, "INVALID_GROUP", "El grupo organizador no existe")
             fields["organizer_group_id"] = gid
         for key in (
-            "summary", "description", "venue_name", "venue_address", "locality", "region",
-            "timezone", "organizer_name", "price", "access_info", "internal_notes",
+            "summary",
+            "description",
+            "venue_name",
+            "venue_address",
+            "locality",
+            "region",
+            "timezone",
+            "organizer_name",
+            "price",
+            "access_info",
+            "internal_notes",
         ):
             if key in data:
                 fields[key] = _clean_text(data.get(key))
@@ -663,7 +702,11 @@ class AmigosService:
         return items
 
     def create_actuacion(
-        self, *, actor_user_id: str, is_global_admin: bool, data: dict[str, Any],
+        self,
+        *,
+        actor_user_id: str,
+        is_global_admin: bool,
+        data: dict[str, Any],
         action: str = "draft",
     ) -> dict[str, object]:
         # Escritura reservada a autores autorizados (scope 'events') o admin global.
@@ -700,16 +743,18 @@ class AmigosService:
         return self.get_actuacion(str(row["id"])) or {}
 
     def update_actuacion(
-        self, *, actor_user_id: str, is_global_admin: bool, actuacion_id: str,
+        self,
+        *,
+        actor_user_id: str,
+        is_global_admin: bool,
+        actuacion_id: str,
         data: dict[str, Any],
     ) -> dict[str, object]:
         row = self._store.get_amigos_actuacion(actuacion_id)
         if row is None:
             raise AmigosError(404, "EVENT_NOT_FOUND", "Evento no encontrado")
         if not is_global_admin:
-            self._require_writer(
-                actor_user_id, is_global_admin, "events", "No estás autorizado para gestionar eventos"
-            )
+            self._require_writer(actor_user_id, is_global_admin, "events", "No estás autorizado para gestionar eventos")
             if str(row.get("author_user_id")) != actor_user_id:
                 raise AmigosError(403, "FORBIDDEN", "Solo puedes editar tus propios anuncios")
         fields = self._actuacion_fields(data)
@@ -720,7 +765,11 @@ class AmigosService:
         return self.get_actuacion(actuacion_id) or {}
 
     def set_actuacion_editorial(
-        self, *, actor_user_id: str, is_global_admin: bool, actuacion_id: str,
+        self,
+        *,
+        actor_user_id: str,
+        is_global_admin: bool,
+        actuacion_id: str,
         editorial_status: str,
     ) -> dict[str, object]:
         if editorial_status not in ARTICLE_STATUSES:
@@ -730,12 +779,12 @@ class AmigosService:
             raise AmigosError(404, "EVENT_NOT_FOUND", "Evento no encontrado")
         if editorial_status == "published":
             if not is_global_admin:
-                raise AmigosError(
-                    403, "FORBIDDEN", "La publicación de eventos es de administración global"
-                )
+                raise AmigosError(403, "FORBIDDEN", "La publicación de eventos es de administración global")
         elif not is_global_admin:
             self._require_writer(
-                actor_user_id, is_global_admin, "events",
+                actor_user_id,
+                is_global_admin,
+                "events",
                 "No estás autorizado para gestionar eventos",
             )
             if str(row.get("author_user_id")) != actor_user_id:
@@ -760,9 +809,16 @@ class AmigosService:
         return self._actuacion_read(row)
 
     def list_actuaciones(
-        self, *, public_only: bool = True, from_date: str | None = None, to_date: str | None = None,
-        kind: str | None = None, locality: str | None = None, group_id: str | None = None,
-        limit: int = 100, offset: int = 0,
+        self,
+        *,
+        public_only: bool = True,
+        from_date: str | None = None,
+        to_date: str | None = None,
+        kind: str | None = None,
+        locality: str | None = None,
+        group_id: str | None = None,
+        limit: int = 100,
+        offset: int = 0,
     ) -> dict[str, object]:
         if kind is not None and kind not in EVENT_KINDS:
             raise AmigosError(422, "INVALID_KIND", "Tipo de evento no válido")
@@ -795,38 +851,40 @@ class AmigosService:
 
     def list_my_actuaciones(self, *, actor_user_id: str, is_global_admin: bool) -> dict[str, object]:
         rows, _total = self._store.list_amigos_actuaciones(
-            editorial_statuses=None, from_date=None, to_date=None, kind=None, locality=None,
-            group_id=None, limit=10000, offset=0,
+            editorial_statuses=None,
+            from_date=None,
+            to_date=None,
+            kind=None,
+            locality=None,
+            group_id=None,
+            limit=10000,
+            offset=0,
         )
-        items = [
-            r for r in rows if is_global_admin or str(r.get("author_user_id")) == actor_user_id
-        ]
+        items = [r for r in rows if is_global_admin or str(r.get("author_user_id")) == actor_user_id]
         items.sort(key=lambda r: str(r.get("created_at") or ""), reverse=True)
         return {"items": [self._actuacion_read(r) for r in items], "total": len(items)}
 
     def list_my_general_articles(self, *, actor_user_id: str, is_global_admin: bool) -> dict[str, object]:
         rows, _total = self._store.list_amigos_articles(
-            group_id=None, statuses=None, scope="general", limit=10000, offset=0,
+            group_id=None,
+            statuses=None,
+            scope="general",
+            limit=10000,
+            offset=0,
         )
-        items = [
-            r for r in rows if is_global_admin or str(r.get("author_user_id")) == actor_user_id
-        ]
+        items = [r for r in rows if is_global_admin or str(r.get("author_user_id")) == actor_user_id]
         items.sort(key=lambda r: str(r.get("created_at") or ""), reverse=True)
         return {"items": [self._article_read(r) for r in items], "total": len(items)}
 
     def my_permissions(self, *, actor_user_id: str, is_global_admin: bool) -> dict[str, object]:
         groups = [
-            m for m in self._store.list_amigos_memberships_by_user(actor_user_id)
-            if str(m.get("status")) == "active"
+            m for m in self._store.list_amigos_memberships_by_user(actor_user_id) if str(m.get("status")) == "active"
         ]
         events_ok, _events_direct = self._authorization(actor_user_id, "events")
         blog_ok, _blog_direct = self._authorization(actor_user_id, "blog")
         return {
             "global_admin": is_global_admin,
-            "groups": [
-                {"group_id": str(m["group_id"]), "role": str(m.get("role") or "collaborator")}
-                for m in groups
-            ],
+            "groups": [{"group_id": str(m["group_id"]), "role": str(m.get("role") or "collaborator")} for m in groups],
             "events": is_global_admin or events_ok,
             "blog": is_global_admin or blog_ok,
         }
@@ -848,7 +906,12 @@ class AmigosService:
     # --- autorizaciones editoriales (blog/agenda) ---------------------------
 
     def grant_authorization(
-        self, *, actor_user_id: str, is_global_admin: bool, user_id: str, scope: str,
+        self,
+        *,
+        actor_user_id: str,
+        is_global_admin: bool,
+        user_id: str,
+        scope: str,
         direct_publish: bool = False,
     ) -> dict[str, object]:
         if not is_global_admin:
@@ -860,23 +923,21 @@ class AmigosService:
             raise AmigosError(422, "USER_REQUIRED", "Falta el usuario")
         return dict(
             self._store.set_amigos_authorization(
-                user_id=target, scope=scope, direct_publish=bool(direct_publish),
+                user_id=target,
+                scope=scope,
+                direct_publish=bool(direct_publish),
                 granted_by=actor_user_id,
             )
         )
 
-    def revoke_authorization(
-        self, *, actor_user_id: str, is_global_admin: bool, user_id: str, scope: str
-    ) -> None:
+    def revoke_authorization(self, *, actor_user_id: str, is_global_admin: bool, user_id: str, scope: str) -> None:
         if not is_global_admin:
             raise AmigosError(403, "FORBIDDEN", "Solo la administración global autoriza")
         if scope not in AUTHORIZATION_SCOPES:
             raise AmigosError(422, "INVALID_SCOPE", "Ámbito no válido")
         self._store.delete_amigos_authorization(scope, user_id)
 
-    def list_authorizations(
-        self, *, actor_user_id: str, is_global_admin: bool, scope: str
-    ) -> list[dict[str, object]]:
+    def list_authorizations(self, *, actor_user_id: str, is_global_admin: bool, scope: str) -> list[dict[str, object]]:
         if not is_global_admin:
             raise AmigosError(403, "FORBIDDEN", "Solo la administración global")
         if scope not in AUTHORIZATION_SCOPES:
@@ -889,9 +950,7 @@ class AmigosService:
             return (False, False)
         return (True, bool(row.get("direct_publish")))
 
-    def _require_writer(
-        self, actor_user_id: str, is_global_admin: bool, scope: str, message: str
-    ) -> bool:
+    def _require_writer(self, actor_user_id: str, is_global_admin: bool, scope: str, message: str) -> bool:
         """Devuelve si el actor puede publicar directamente; 403 si no está autorizado."""
         if is_global_admin:
             return True
@@ -951,14 +1010,15 @@ class AmigosService:
         self._store.replace_amigos_media(str(article["id"]), _clean_media(media or []))
         if status == "published":
             self._store.set_amigos_article_status(
-                article_id=str(article["id"]), status="published", reviewed_by=actor_user_id,
-                review_note=None, published_at=_now(),
+                article_id=str(article["id"]),
+                status="published",
+                reviewed_by=actor_user_id,
+                review_note=None,
+                published_at=_now(),
             )
         return self.get_article_admin(str(article["id"]), actor_user_id, is_global_admin) or {}
 
-    def list_blog_articles(
-        self, *, public_only: bool = True, limit: int = 100, offset: int = 0
-    ) -> dict[str, object]:
+    def list_blog_articles(self, *, public_only: bool = True, limit: int = 100, offset: int = 0) -> dict[str, object]:
         rows, total = self._store.list_amigos_articles(
             group_id=None,
             statuses=["published"] if public_only else None,
@@ -970,11 +1030,7 @@ class AmigosService:
 
     def get_public_general_article(self, article_id: str) -> dict[str, object] | None:
         row = self._store.get_amigos_article(article_id)
-        if (
-            row is None
-            or str(row.get("scope") or "group") != "general"
-            or str(row["status"]) != "published"
-        ):
+        if row is None or str(row.get("scope") or "group") != "general" or str(row["status"]) != "published":
             return None
         return self._article_read(row, include_media=True)
 
@@ -1041,9 +1097,7 @@ class AmigosService:
             )
         )
         self._store.replace_amigos_media(article["id"], _clean_media(media or []))
-        self._record_article_event(
-            article, "article_created", actor_user_id, to_status=status
-        )
+        self._record_article_event(article, "article_created", actor_user_id, to_status=status)
         if status == "published":
             self._store.set_amigos_article_status(
                 article_id=str(article["id"]),
@@ -1075,11 +1129,7 @@ class AmigosService:
             raise AmigosError(403, "FORBIDDEN", "No puedes editar este artículo")
         # El autor solo edita sus propios borradores/pendientes; el admin puede corregir
         # cualquier estado (incluido publicado) sin cambiar la autoría.
-        if (
-            is_author
-            and not (is_group_admin or is_global_admin)
-            and str(article["status"]) not in ("draft", "pending")
-        ):
+        if is_author and not (is_group_admin or is_global_admin) and str(article["status"]) not in ("draft", "pending"):
             raise AmigosError(409, "NOT_EDITABLE", "Solo puedes editar borradores o pendientes")
         changes: dict[str, object] = {}
         if title is not None:
@@ -1110,9 +1160,7 @@ class AmigosService:
         )
         return self.get_article_admin(article_id, actor_user_id, is_global_admin)  # type: ignore[return-value]
 
-    def submit_article(
-        self, *, actor_user_id: str, is_global_admin: bool, article_id: str
-    ) -> dict[str, object]:
+    def submit_article(self, *, actor_user_id: str, is_global_admin: bool, article_id: str) -> dict[str, object]:
         article = self._require_article(article_id)
         self._require_author_or_admin(article, actor_user_id, is_global_admin)
         if str(article["status"]) != "draft":
@@ -1123,9 +1171,7 @@ class AmigosService:
         target = "published" if mode == "direct" else "pending"
         return self._transition(article, target, actor_user_id, is_global_admin, event="article_submitted")
 
-    def publish_article(
-        self, *, actor_user_id: str, is_global_admin: bool, article_id: str
-    ) -> dict[str, object]:
+    def publish_article(self, *, actor_user_id: str, is_global_admin: bool, article_id: str) -> dict[str, object]:
         article = self._require_article(article_id)
         current = str(article["status"])
         if current == "published":
@@ -1138,28 +1184,20 @@ class AmigosService:
             self._require_author_or_admin(article, actor_user_id, is_global_admin)
             direct = is_global_admin or self._authorization(actor_user_id, "blog")[1]
             if direct:
-                return self._transition(
-                    article, "published", actor_user_id, is_global_admin, event="article_published"
-                )
+                return self._transition(article, "published", actor_user_id, is_global_admin, event="article_published")
             if current == "pending":
                 return self.get_article_admin(article_id, actor_user_id, is_global_admin)  # type: ignore[return-value]
-            return self._transition(
-                article, "pending", actor_user_id, is_global_admin, event="article_submitted"
-            )
+            return self._transition(article, "pending", actor_user_id, is_global_admin, event="article_submitted")
         group_id = self._article_group(article) or ""
         role = self._require_can_contribute(group_id, actor_user_id, is_global_admin)
         # Un colaborador (no admin del grupo) solo publica directo si la modalidad es `direct`.
         if role == "collaborator":
             group = self._store.get_amigos_group(group_id)
             if group is None or str(group.get("editorial_mode")) != "direct":
-                raise AmigosError(
-                    409, "APPROVAL_REQUIRED", "Este grupo requiere aprobación previa del administrador"
-                )
+                raise AmigosError(409, "APPROVAL_REQUIRED", "Este grupo requiere aprobación previa del administrador")
         return self._transition(article, "published", actor_user_id, is_global_admin, event="article_published")
 
-    def approve_article(
-        self, *, actor_user_id: str, is_global_admin: bool, article_id: str
-    ) -> dict[str, object]:
+    def approve_article(self, *, actor_user_id: str, is_global_admin: bool, article_id: str) -> dict[str, object]:
         article = self._require_article(article_id)
         self._require_group_admin(self._article_group(article) or "", actor_user_id, is_global_admin)
         if str(article["status"]) != "pending":
@@ -1184,9 +1222,7 @@ class AmigosService:
         assert row is not None
         return self.get_article_admin(article_id, actor_user_id, is_global_admin)  # type: ignore[return-value]
 
-    def withdraw_article(
-        self, *, actor_user_id: str, is_global_admin: bool, article_id: str
-    ) -> dict[str, object]:
+    def withdraw_article(self, *, actor_user_id: str, is_global_admin: bool, article_id: str) -> dict[str, object]:
         article = self._require_article(article_id)
         self._require_author_or_admin(article, actor_user_id, is_global_admin)
         if str(article["status"]) == "withdrawn":
@@ -1215,21 +1251,13 @@ class AmigosService:
         offset: int = 0,
     ) -> dict[str, object]:
         statuses = None
-        if not is_global_admin and (
-            not include_non_public or not self._is_group_admin(group_id, actor_user_id or "")
-        ):
+        if not is_global_admin and (not include_non_public or not self._is_group_admin(group_id, actor_user_id or "")):
             statuses = ["published"]
-        rows, total = self._store.list_amigos_articles(
-            group_id=group_id, statuses=statuses, limit=limit, offset=offset
-        )
+        rows, total = self._store.list_amigos_articles(group_id=group_id, statuses=statuses, limit=limit, offset=offset)
         return {"items": [self._article_read(r, include_media=False) for r in rows], "total": total}
 
-    def list_my_articles(
-        self, *, actor_user_id: str, limit: int = 100, offset: int = 0
-    ) -> dict[str, object]:
-        rows, total = self._store.list_amigos_articles_by_author(
-            actor_user_id, limit=limit, offset=offset
-        )
+    def list_my_articles(self, *, actor_user_id: str, limit: int = 100, offset: int = 0) -> dict[str, object]:
+        rows, total = self._store.list_amigos_articles_by_author(actor_user_id, limit=limit, offset=offset)
         return {"items": [self._article_read(r) for r in rows], "total": total}
 
     def list_pending(
@@ -1247,10 +1275,7 @@ class AmigosService:
         elif is_global_admin:
             allowed = None
         else:
-            allowed = [
-                str(m["group_id"])
-                for m in self._my_admin_groups(actor_user_id)
-            ]
+            allowed = [str(m["group_id"]) for m in self._my_admin_groups(actor_user_id)]
             if not allowed:
                 return {"items": [], "total": 0}
         rows, total = self._store.list_amigos_articles(
@@ -1273,21 +1298,17 @@ class AmigosService:
         if str(row["status"]) == "published" or is_global_admin:
             return self._article_read(row, include_media=True)
         if actor_user_id and (
-            self._is_author(row, actor_user_id)
-            or self._is_group_admin(self._article_group(row) or "", actor_user_id)
+            self._is_author(row, actor_user_id) or self._is_group_admin(self._article_group(row) or "", actor_user_id)
         ):
             return self._article_read(row, include_media=True)
         return None
 
-    def get_article_admin(
-        self, article_id: str, actor_user_id: str, is_global_admin: bool
-    ) -> dict[str, object] | None:
+    def get_article_admin(self, article_id: str, actor_user_id: str, is_global_admin: bool) -> dict[str, object] | None:
         row = self._store.get_amigos_article(article_id)
         if row is None:
             return None
         if not is_global_admin and not (
-            self._is_author(row, actor_user_id)
-            or self._is_group_admin(self._article_group(row) or "", actor_user_id)
+            self._is_author(row, actor_user_id) or self._is_group_admin(self._article_group(row) or "", actor_user_id)
         ):
             return None
         return self._article_read(row, include_media=True)
@@ -1315,9 +1336,7 @@ class AmigosService:
         if not self._is_group_admin(group_id, actor_user_id):
             raise AmigosError(403, "FORBIDDEN", "Se requiere ser administrador del grupo")
 
-    def _require_can_contribute(
-        self, group_id: str, actor_user_id: str, is_global_admin: bool
-    ) -> str:
+    def _require_can_contribute(self, group_id: str, actor_user_id: str, is_global_admin: bool) -> str:
         """Devuelve el rol efectivo (`admin`/`collaborator`); 403 si no puede contribuir."""
         if is_global_admin:
             return "admin"
@@ -1326,9 +1345,7 @@ class AmigosService:
             raise AmigosError(403, "FORBIDDEN", "No estás autorizado en este grupo")
         return str(role.get("role") or "collaborator")
 
-    def _require_author_or_admin(
-        self, article: dict[str, object], actor_user_id: str, is_global_admin: bool
-    ) -> None:
+    def _require_author_or_admin(self, article: dict[str, object], actor_user_id: str, is_global_admin: bool) -> None:
         if is_global_admin or self._is_author(article, actor_user_id):
             return
         if self._is_group_admin(self._article_group(article) or "", actor_user_id):
@@ -1407,9 +1424,7 @@ class AmigosService:
 
     # --- serialización -------------------------------------------------------
 
-    def _article_read(
-        self, row: dict[str, object], *, include_media: bool = False
-    ) -> dict[str, object]:
+    def _article_read(self, row: dict[str, object], *, include_media: bool = False) -> dict[str, object]:
         data = dict(row)
         if include_media:
             data["media"] = list(self._store.list_amigos_media(str(row["id"])))
@@ -1442,9 +1457,7 @@ def _validate_event_date(value: str) -> str:
         # que la columna DATE de MySQL rechazaría con un error no controlado.
         parsed = date.fromisoformat(text)
     except ValueError:
-        raise AmigosError(
-            422, "INVALID_EVENT_DATE", "La fecha del evento debe ser AAAA-MM-DD"
-        ) from None
+        raise AmigosError(422, "INVALID_EVENT_DATE", "La fecha del evento debe ser AAAA-MM-DD") from None
     if parsed.isoformat() != text:
         raise AmigosError(422, "INVALID_EVENT_DATE", "La fecha del evento debe ser AAAA-MM-DD")
     return text
@@ -1557,10 +1570,8 @@ def _clean_links(items: list[dict[str, Any]] | None) -> list[dict[str, object]]:
         url = _clean_url(str(item.get("url") or ""))
         if url is None:
             raise AmigosError(422, "LINK_URL_REQUIRED", "Falta la URL del enlace")
-        label = (str(item.get("label") or "").strip() or None)
-        cleaned.append(
-            {"kind": kind, "label": label[:64] if label else None, "url": url, "position": index}
-        )
+        label = str(item.get("label") or "").strip() or None
+        cleaned.append({"kind": kind, "label": label[:64] if label else None, "url": url, "position": index})
     return cleaned
 
 
@@ -1597,17 +1608,3 @@ def _clean_media(items: list[dict[str, Any]]) -> list[dict[str, object]]:
             }
         )
     return cleaned
-
-
-
-
-
-
-
-
-
-
-
-
-
-

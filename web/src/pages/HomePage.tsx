@@ -7,6 +7,7 @@ import { searchAndGo } from "../state/navigation";
 import { loadRecentSearches, type RecentSearch } from "../state/recentSearches";
 import { usePopularWorks } from "../state/popularWorks";
 import { useRecentWorks } from "../state/recentWorks";
+import { chorusBaseUrl } from "../lib/chorus";
 import { useSources } from "../state/repositorySources";
 
 // La URL canónica conserva el id público `index-<n>`.
@@ -100,6 +101,16 @@ export function HomePage() {
         </div>
 
         <p className="mx-auto mt-7 max-w-xl font-medium text-osap-ink">{t("home.cta")}</p>
+        <p className="mt-2">
+          <a
+            href={`${chorusBaseUrl()}/alta.html`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-medium text-osap-accent hover:underline"
+          >
+            ¿Tienes un grupo o entidad? Solicita el alta en Chorus →
+          </a>
+        </p>
 
         <form onSubmit={submit} className="mx-auto mt-3 max-w-xl">
           <div className="flex gap-2">
@@ -243,3 +254,4 @@ export function HomePage() {
     </div>
   );
 }
+

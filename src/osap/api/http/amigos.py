@@ -36,9 +36,7 @@ if TYPE_CHECKING:
     from collections.abc import Callable
 
 
-def _call(
-    ctx: HttpContext, response: Response, fn: Callable[[], object]
-) -> SuccessEnvelope[object] | ErrorEnvelope:
+def _call(ctx: HttpContext, response: Response, fn: Callable[[], object]) -> SuccessEnvelope[object] | ErrorEnvelope:
     try:
         return ctx.ok(fn())
     except UnauthenticatedError:
@@ -62,10 +60,9 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         summary="Cargos propuestos para un tipo de grupo",
         response_model=SuccessEnvelope[object] | ErrorEnvelope,
     )
-    def role_templates(
-        kind: str, response: Response
-    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+    def role_templates(kind: str, response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(ctx, response, lambda: ctx.api.amigos_role_templates(kind))
+
     @router.get(
         "/api/v1/amigos/groups",
         tags=["Friends"],
@@ -80,10 +77,9 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(
-            ctx, response,
-            lambda: ctx.api.amigos_list_groups(
-                token=authorization, include_inactive=include_inactive, kind=kind
-            ),
+            ctx,
+            response,
+            lambda: ctx.api.amigos_list_groups(token=authorization, include_inactive=include_inactive, kind=kind),
         )
 
     @router.get(
@@ -92,9 +88,7 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         summary="Cargos, roles musicales y secciones del grupo",
         response_model=SuccessEnvelope[object] | ErrorEnvelope,
     )
-    def group_catalog(
-        group_id: str, response: Response
-    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+    def group_catalog(group_id: str, response: Response) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(ctx, response, lambda: ctx.api.amigos_group_catalog(group_id))
 
     @router.put(
@@ -112,10 +106,9 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         return _call(
             ctx,
             response,
-            lambda: ctx.api.amigos_update_group_catalog(
-                authorization, group_id, payload
-            ),
+            lambda: ctx.api.amigos_update_group_catalog(authorization, group_id, payload),
         )
+
     @router.get(
         "/api/v1/amigos/groups/{group_id}/articles",
         tags=["Friends"],
@@ -133,7 +126,8 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         if not ctx.api.amigos_group_exists(group_id):
             return ctx.fail(404, response, "GROUP_NOT_FOUND", "Grupo no encontrado")
         return _call(
-            ctx, response,
+            ctx,
+            response,
             lambda: ctx.api.amigos_group_articles(group_id, limit=limit, offset=offset),
         )
 
@@ -174,10 +168,18 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         offset: int = Query(0, ge=0),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(
-            ctx, response,
+            ctx,
+            response,
             lambda: ctx.api.amigos_list_events(
-                None, public_only=True, from_date=from_date, to_date=to_date, kind=kind,
-                locality=locality, group_id=group_id, limit=limit, offset=offset,
+                None,
+                public_only=True,
+                from_date=from_date,
+                to_date=to_date,
+                kind=kind,
+                locality=locality,
+                group_id=group_id,
+                limit=limit,
+                offset=offset,
             ),
         )
 
@@ -212,7 +214,8 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         offset: int = Query(0, ge=0),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(
-            ctx, response,
+            ctx,
+            response,
             lambda: ctx.api.amigos_blog_articles(public_only=True, limit=limit, offset=offset),
         )
 
@@ -307,7 +310,8 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(
-            ctx, response,
+            ctx,
+            response,
             lambda: ctx.api.amigos_my_articles(authorization, limit=limit, offset=offset),
         )
 
@@ -379,10 +383,9 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         if not data:
             return ctx.fail(422, response, "EMPTY_UPLOAD", "El fichero está vacío")
         return _call(
-            ctx, response,
-            lambda: ctx.api.amigos_upload(
-                authorization, group_id, name, mime_type, data, scope=scope
-            ),
+            ctx,
+            response,
+            lambda: ctx.api.amigos_upload(authorization, group_id, name, mime_type, data, scope=scope),
         )
 
     @router.post(
@@ -399,7 +402,8 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(
-            ctx, response,
+            ctx,
+            response,
             lambda: ctx.api.amigos_create_article(authorization, group_id, payload),
         )
 
@@ -511,7 +515,8 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(
-            ctx, response,
+            ctx,
+            response,
             lambda: ctx.api.amigos_update_coral_details(authorization, group_id, payload),
         )
 
@@ -564,7 +569,8 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(
-            ctx, response,
+            ctx,
+            response,
             lambda: ctx.api.amigos_set_event_status(authorization, event_id, payload.editorial_status),
         )
 
@@ -580,9 +586,7 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         response: Response,
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
-        return _call(
-            ctx, response, lambda: ctx.api.amigos_create_blog_article(authorization, payload)
-        )
+        return _call(ctx, response, lambda: ctx.api.amigos_create_blog_article(authorization, payload))
 
     @router.post(
         "/api/v1/admin/amigos/blog/{article_id}/approve",
@@ -594,9 +598,7 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
     def approve_blog_article(
         article_id: str, response: Response, authorization: str | None = Header(default=None)
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
-        return _call(
-            ctx, response, lambda: ctx.api.amigos_approve_blog_article(authorization, article_id)
-        )
+        return _call(ctx, response, lambda: ctx.api.amigos_approve_blog_article(authorization, article_id))
 
     @router.get(
         "/api/v1/admin/amigos/authorizations",
@@ -610,9 +612,7 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         scope: str = Query(...),
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
-        return _call(
-            ctx, response, lambda: ctx.api.amigos_list_authorizations(authorization, scope)
-        )
+        return _call(ctx, response, lambda: ctx.api.amigos_list_authorizations(authorization, scope))
 
     @router.post(
         "/api/v1/admin/amigos/authorizations",
@@ -626,9 +626,7 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         response: Response,
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
-        return _call(
-            ctx, response, lambda: ctx.api.amigos_grant_authorization(authorization, payload)
-        )
+        return _call(ctx, response, lambda: ctx.api.amigos_grant_authorization(authorization, payload))
 
     @router.delete(
         "/api/v1/admin/amigos/authorizations/{user_id}",
@@ -644,7 +642,8 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(
-            ctx, response,
+            ctx,
+            response,
             lambda: ctx.api.amigos_revoke_authorization(authorization, user_id, scope),
         )
 
@@ -665,10 +664,16 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(
-            ctx, response,
+            ctx,
+            response,
             lambda: ctx.api.amigos_list_events(
-                authorization, public_only=False, kind=kind, locality=locality,
-                group_id=group_id, limit=limit, offset=offset,
+                authorization,
+                public_only=False,
+                kind=kind,
+                locality=locality,
+                group_id=group_id,
+                limit=limit,
+                offset=offset,
             ),
         )
 
@@ -686,7 +691,8 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(
-            ctx, response,
+            ctx,
+            response,
             lambda: ctx.api.amigos_admin_blog_articles(authorization, limit, offset),
         )
 
@@ -702,9 +708,7 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
     def user_groups(
         user_id: str, response: Response, authorization: str | None = Header(default=None)
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
-        return _call(
-            ctx, response, lambda: ctx.api.amigos_user_groups(authorization, user_id)
-        )
+        return _call(ctx, response, lambda: ctx.api.amigos_user_groups(authorization, user_id))
 
     @router.get(
         "/api/v1/admin/amigos/groups/{group_id}/history",
@@ -744,10 +748,9 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         return _call(
             ctx,
             response,
-            lambda: ctx.api.amigos_request_membership(
-                authorization, group_id, payload
-            ),
+            lambda: ctx.api.amigos_request_membership(authorization, group_id, payload),
         )
+
     @router.get(
         "/api/v1/admin/amigos/groups/{group_id}/requests",
         tags=["Friends"],
@@ -758,6 +761,7 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         group_id: str, response: Response, authorization: str | None = Header(default=None)
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(ctx, response, lambda: ctx.api.amigos_list_requests(authorization, group_id))
+
     @router.post(
         "/api/v1/admin/amigos/groups/{group_id}/members",
         tags=["Friends"],
@@ -772,7 +776,8 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(
-            ctx, response,
+            ctx,
+            response,
             lambda: ctx.api.amigos_grant_member(authorization, group_id, payload),
         )
 
@@ -790,7 +795,8 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(
-            ctx, response,
+            ctx,
+            response,
             lambda: ctx.api.amigos_revoke_member(authorization, group_id, user_id),
         )
 
@@ -811,7 +817,8 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(
-            ctx, response,
+            ctx,
+            response,
             lambda: ctx.api.amigos_group_articles(
                 group_id, token=authorization, include_non_public=True, limit=limit, offset=offset
             ),
@@ -832,7 +839,8 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(
-            ctx, response,
+            ctx,
+            response,
             lambda: ctx.api.amigos_pending(authorization, group_id, limit=limit, offset=offset),
         )
 
@@ -862,7 +870,8 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(
-            ctx, response,
+            ctx,
+            response,
             lambda: ctx.api.amigos_return_article(authorization, article_id, note),
         )
 
@@ -878,9 +887,28 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         return _call(ctx, response, lambda: ctx.api.amigos_audit(authorization, group_id))
 
+    @router.get(
+        "/api/v1/admin/amigos/taxonomy",
+        tags=["Friends"],
+        summary="Taxonomía global de agrupaciones, cargos y secciones",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+    )
+    def taxonomy(
+        response: Response, authorization: str | None = Header(default=None)
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(ctx, response, lambda: ctx.api.amigos_get_taxonomy(authorization))
+
+    @router.put(
+        "/api/v1/admin/amigos/taxonomy",
+        tags=["Friends"],
+        summary="Guardar taxonomía global",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+    )
+    def save_taxonomy(
+        response: Response,
+        payload: dict[str, object],
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(ctx, response, lambda: ctx.api.amigos_save_taxonomy(authorization, payload))
+
     return router
-
-
-
-
-

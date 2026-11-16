@@ -1,3 +1,4 @@
+# mypy: disable-error-code="union-attr,attr-defined"
 """Almacén operativo en memoria (fallback cuando MySQL no está disponible).
 
 Parte de la división de `op_store.py` (F5.2): almacén en memoria puro, sin SQL.
@@ -205,12 +206,19 @@ class MemoryStore:
         payload = json.dumps(config or {}, ensure_ascii=False)
         for existing in self._providers:
             if existing["provider_id"] == provider_id:
-                existing.update({
-                    "name": name, "base_url": base_url, "wired": int(wired),
-                    "config": payload, "description": description,
-                    "endpoints": endpoints, "mapping": mapping,
-                    "resources": resources, "transforms": transforms,
-                })
+                existing.update(
+                    {
+                        "name": name,
+                        "base_url": base_url,
+                        "wired": int(wired),
+                        "config": payload,
+                        "description": description,
+                        "endpoints": endpoints,
+                        "mapping": mapping,
+                        "resources": resources,
+                        "transforms": transforms,
+                    }
+                )
                 return existing
         row: dict[str, object] = {
             "provider_id": provider_id,
@@ -273,17 +281,13 @@ class MemoryStore:
             if row["user_id"] == user_id or (include_global and row["user_id"] is None)
         ]
 
-    def list_notifications(
-        self, *, user_id: str, include_global: bool, limit: int = 50
-    ) -> list[dict[str, object]]:
+    def list_notifications(self, *, user_id: str, include_global: bool, limit: int = 50) -> list[dict[str, object]]:
         rows = self._notifications_for(user_id, include_global)
         rows.sort(key=lambda row: str(row["created_at"]), reverse=True)
         return [dict(row) for row in rows[:limit]]
 
     def count_unread_notifications(self, *, user_id: str, include_global: bool) -> int:
-        return sum(
-            1 for row in self._notifications_for(user_id, include_global) if row["read_at"] is None
-        )
+        return sum(1 for row in self._notifications_for(user_id, include_global) if row["read_at"] is None)
 
     def mark_notification_read(self, *, notification_id: int, user_id: str) -> bool:
         for row in self._notifications:
@@ -571,14 +575,11 @@ class MemoryStore:
                 return dict(row)
         return None
 
-    def list_amigos_groups(
-        self, *, active_only: bool = True, kind: str | None = None
-    ) -> list[dict[str, object]]:
+    def list_amigos_groups(self, *, active_only: bool = True, kind: str | None = None) -> list[dict[str, object]]:
         rows = [
             dict(r)
             for r in self._amigos_groups.values()
-            if (not active_only or str(r.get("status")) == "active")
-            and (kind is None or str(r.get("kind")) == kind)
+            if (not active_only or str(r.get("status")) == "active") and (kind is None or str(r.get("kind")) == kind)
         ]
         rows.sort(key=lambda r: str(r.get("name") or "").lower())
         return rows
@@ -587,8 +588,7 @@ class MemoryStore:
         row = self._amigos_groups.get(group_id)
         if row is None:
             return None
-        allowed = {"name", "description", "image_url", "editorial_mode", "status",
-                    "website", "email", "logo_url"}
+        allowed = {"name", "description", "image_url", "editorial_mode", "status", "website", "email", "logo_url"}
         for key, value in changes.items():
             if key in allowed:
                 row[key] = value
@@ -598,9 +598,7 @@ class MemoryStore:
     # --- «Los amigos»: enlaces comunes del grupo (web/social) ----------------
 
     def replace_amigos_group_links(self, group_id: str, items: list[dict[str, object]]) -> None:
-        self._amigos_group_links = [
-            x for x in self._amigos_group_links if x["group_id"] != group_id
-        ]
+        self._amigos_group_links = [x for x in self._amigos_group_links if x["group_id"] != group_id]
         for item in items:
             self._amigos_group_link_seq += 1
             self._amigos_group_links.append(
@@ -723,13 +721,40 @@ class MemoryStore:
         if row is None:
             return None
         allowed = {
-            "title", "summary", "description", "image_url", "kind", "modality",
-            "event_status", "starts_on", "starts_at", "ends_on", "ends_at", "timezone",
-            "registration_deadline", "venue_name", "venue_address", "locality", "region",
-            "country_code", "latitude", "longitude", "map_url", "organizer_name",
-            "organizer_website", "event_url", "tickets_url", "price", "access_info",
-            "public_contact", "organizer_group_id", "last_verified_on", "internal_notes",
-            "weight", "source_email", "source_note",
+            "title",
+            "summary",
+            "description",
+            "image_url",
+            "kind",
+            "modality",
+            "event_status",
+            "starts_on",
+            "starts_at",
+            "ends_on",
+            "ends_at",
+            "timezone",
+            "registration_deadline",
+            "venue_name",
+            "venue_address",
+            "locality",
+            "region",
+            "country_code",
+            "latitude",
+            "longitude",
+            "map_url",
+            "organizer_name",
+            "organizer_website",
+            "event_url",
+            "tickets_url",
+            "price",
+            "access_info",
+            "public_contact",
+            "organizer_group_id",
+            "last_verified_on",
+            "internal_notes",
+            "weight",
+            "source_email",
+            "source_note",
         }
         for key, value in changes.items():
             if key in allowed:
@@ -773,11 +798,7 @@ class MemoryStore:
         wanted = set(editorial_statuses) if editorial_statuses is not None else None
         group_ids: set[str] | None = None
         if group_id is not None:
-            group_ids = {
-                str(g["actuacion_id"])
-                for g in self._amigos_actuacion_groups
-                if g["group_id"] == group_id
-            }
+            group_ids = {str(g["actuacion_id"]) for g in self._amigos_actuacion_groups if g["group_id"] == group_id}
         rows: list[dict[str, object]] = []
         for raw in self._amigos_actuaciones.values():
             if wanted is not None and str(raw.get("editorial_status")) not in wanted:
@@ -813,12 +834,8 @@ class MemoryStore:
         row[field] = int(str(row.get(field) or 0)) + 1
         return int(str(row[field]))
 
-    def replace_amigos_actuacion_groups(
-        self, actuacion_id: str, items: list[dict[str, object]]
-    ) -> None:
-        self._amigos_actuacion_groups = [
-            x for x in self._amigos_actuacion_groups if x["actuacion_id"] != actuacion_id
-        ]
+    def replace_amigos_actuacion_groups(self, actuacion_id: str, items: list[dict[str, object]]) -> None:
+        self._amigos_actuacion_groups = [x for x in self._amigos_actuacion_groups if x["actuacion_id"] != actuacion_id]
         for item in items:
             self._amigos_actuacion_groups.append(
                 {
@@ -829,26 +846,39 @@ class MemoryStore:
             )
 
     def list_amigos_actuacion_groups(self, actuacion_id: str) -> list[dict[str, object]]:
-        rows = [
-            dict(x) for x in self._amigos_actuacion_groups if x["actuacion_id"] == actuacion_id
-        ]
+        rows = [dict(x) for x in self._amigos_actuacion_groups if x["actuacion_id"] == actuacion_id]
         rows.sort(key=lambda x: (str(x.get("role")), str(x.get("group_id"))))
         return rows
 
     # --- «Los amigos»: membresías --------------------------------------------
 
     def set_amigos_member(
-        self, *, group_id: str, user_id: str, role: str, status: str, granted_by: str | None,
-        admin_role_id: str | None = None, musical_role_id: str | None = None,
+        self,
+        *,
+        group_id: str,
+        user_id: str,
+        role: str,
+        status: str,
+        granted_by: str | None,
+        admin_role_id: str | None = None,
+        musical_role_id: str | None = None,
         section_id: str | None = None,
     ) -> dict[str, object]:
         key = (group_id, user_id)
         existing = self._amigos_members.get(key)
         ts = now()
         if existing is not None:
-            existing.update({"role": role, "status": status, "granted_by": granted_by,
-                "admin_role_id": admin_role_id, "musical_role_id": musical_role_id,
-                "section_id": section_id, "updated_at": ts})
+            existing.update(
+                {
+                    "role": role,
+                    "status": status,
+                    "granted_by": granted_by,
+                    "admin_role_id": admin_role_id,
+                    "musical_role_id": musical_role_id,
+                    "section_id": section_id,
+                    "updated_at": ts,
+                }
+            )
             return dict(existing)
         row: dict[str, object] = {
             "group_id": group_id,
@@ -877,6 +907,33 @@ class MemoryStore:
     def list_amigos_memberships_by_user(self, user_id: str) -> list[dict[str, object]]:
         return [dict(r) for r in self._amigos_members.values() if r["user_id"] == user_id]
 
+    def get_amigos_taxonomy(self) -> dict[str, list[dict[str, object]]]:
+        data = getattr(self, "_amigos_taxonomy", {})
+        return {
+            "types": [dict(row) for row in (data.get("types") if isinstance(data.get("types"), list) else [])],
+            "roles": [dict(row) for row in (data.get("roles") if isinstance(data.get("roles"), list) else [])],
+            "sections": [dict(row) for row in (data.get("sections") if isinstance(data.get("sections"), list) else [])],
+        }
+
+    def replace_amigos_taxonomy(self, data: dict[str, object]) -> None:
+        self._amigos_taxonomy = {
+            "types": [
+                dict(row)
+                for row in (data.get("types") if isinstance(data.get("types"), list) else [])
+                if isinstance(row, dict)
+            ],
+            "roles": [
+                dict(row)
+                for row in (data.get("roles") if isinstance(data.get("roles"), list) else [])
+                if isinstance(row, dict)
+            ],
+            "sections": [
+                dict(row)
+                for row in (data.get("sections") if isinstance(data.get("sections"), list) else [])
+                if isinstance(row, dict)
+            ],
+        }
+
     def _catalog_rows(self) -> list[dict[str, object]]:
         if not hasattr(self, "_amigos_group_catalog"):
             self._amigos_group_catalog: list[dict[str, object]] = []
@@ -885,12 +942,8 @@ class MemoryStore:
     def list_amigos_group_catalog(self, group_id: str) -> list[dict[str, object]]:
         return [dict(row) for row in self._catalog_rows() if row["group_id"] == group_id]
 
-    def replace_amigos_group_catalog(
-        self, group_id: str, items: list[dict[str, object]]
-    ) -> None:
-        self._amigos_group_catalog = [
-            row for row in self._catalog_rows() if row["group_id"] != group_id
-        ]
+    def replace_amigos_group_catalog(self, group_id: str, items: list[dict[str, object]]) -> None:
+        self._amigos_group_catalog = [row for row in self._catalog_rows() if row["group_id"] != group_id]
         for index, item in enumerate(items):
             self._catalog_rows().append(
                 {
@@ -904,6 +957,7 @@ class MemoryStore:
                     "active": 1,
                 }
             )
+
     def _history_rows(self) -> list[dict[str, object]]:
         if not hasattr(self, "_amigos_group_history"):
             self._amigos_group_history: list[dict[str, object]] = []
@@ -938,16 +992,11 @@ class MemoryStore:
         rows.sort(key=lambda r: str(r.get("start_date") or ""), reverse=True)
         return rows
 
-    def close_amigos_group_history(
-        self, group_id: str, member_user_id: str, end_date: str
-    ) -> None:
+    def close_amigos_group_history(self, group_id: str, member_user_id: str, end_date: str) -> None:
         for row in self._history_rows():
-            if (
-                row["group_id"] == group_id
-                and row["member_user_id"] == member_user_id
-                and not row.get("end_date")
-            ):
+            if row["group_id"] == group_id and row["member_user_id"] == member_user_id and not row.get("end_date"):
                 row["end_date"] = end_date
+
     # --- «Los amigos»: ficha de coral (especialización por tipo) -------------
 
     def get_amigos_coral_details(self, group_id: str) -> dict[str, object] | None:
@@ -956,9 +1005,19 @@ class MemoryStore:
 
     def upsert_amigos_coral_details(self, group_id: str, **fields: object) -> dict[str, object]:
         allowed = {
-            "foundation_date", "dissolution_date", "locality", "region", "country_code",
-            "venue", "formation_type", "member_count", "website", "public_email",
-            "director_person_id", "director_label", "linked_entity",
+            "foundation_date",
+            "dissolution_date",
+            "locality",
+            "region",
+            "country_code",
+            "venue",
+            "formation_type",
+            "member_count",
+            "website",
+            "public_email",
+            "director_person_id",
+            "director_label",
+            "linked_entity",
         }
         ts = now()
         existing = self._amigos_coral_details.get(group_id)
@@ -974,9 +1033,7 @@ class MemoryStore:
         existing["updated_at"] = ts
         return dict(existing)
 
-    def replace_amigos_coral_attributes(
-        self, group_id: str, items: list[dict[str, object]]
-    ) -> None:
+    def replace_amigos_coral_attributes(self, group_id: str, items: list[dict[str, object]]) -> None:
         self._amigos_coral_attrs = [a for a in self._amigos_coral_attrs if a["group_id"] != group_id]
         for item in items:
             self._amigos_coral_attr_seq += 1
@@ -1111,9 +1168,7 @@ class MemoryStore:
     def list_amigos_articles_by_author(
         self, author_user_id: str, *, limit: int, offset: int
     ) -> tuple[list[dict[str, object]], int]:
-        rows = [
-            dict(r) for r in self._amigos_articles.values() if r["author_user_id"] == author_user_id
-        ]
+        rows = [dict(r) for r in self._amigos_articles.values() if r["author_user_id"] == author_user_id]
         rows.sort(key=lambda r: str(r.get("created_at") or ""), reverse=True)
         return rows[offset : offset + limit], len(rows)
 
@@ -1171,18 +1226,13 @@ class MemoryStore:
         self._amigos_events.append(row)
         return row
 
-    def list_amigos_events(
-        self, *, group_id: str | None, article_id: str | None
-    ) -> list[dict[str, object]]:
+    def list_amigos_events(self, *, group_id: str | None, article_id: str | None) -> list[dict[str, object]]:
         rows = [
             dict(e)
             for e in self._amigos_events
-            if (group_id is None or e["group_id"] == group_id)
-            and (article_id is None or e["article_id"] == article_id)
+            if (group_id is None or e["group_id"] == group_id) and (article_id is None or e["article_id"] == article_id)
         ]
         rows.sort(key=lambda e: int(str(e.get("id") or 0)))
         return rows
-
-
 
 

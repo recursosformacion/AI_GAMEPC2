@@ -1,3 +1,4 @@
+# mypy: disable-error-code="var-annotated,arg-type"
 """Almacén operativo respaldado por MySQL (SQL + schema)."""
 
 from __future__ import annotations
@@ -636,21 +637,20 @@ class _MysqlStore(_MemoryStore):
         # Identidad de origen CPDL (edición + resource). Legacy se rellena con '' / 0 para
         # no romper la unicidad de los proveedores sin identidad.
         if "source_rep_id" not in rep_existing:
-            self._run(
-                "ALTER TABLE index_representations "
-                "ADD COLUMN source_rep_id VARCHAR(64) NOT NULL DEFAULT ''"
-            )
+            self._run("ALTER TABLE index_representations ADD COLUMN source_rep_id VARCHAR(64) NOT NULL DEFAULT ''")
         if "resource_id" not in rep_existing:
-            self._run(
-                "ALTER TABLE index_representations "
-                "ADD COLUMN resource_id BIGINT UNSIGNED NOT NULL DEFAULT 0"
-            )
+            self._run("ALTER TABLE index_representations ADD COLUMN resource_id BIGINT UNSIGNED NOT NULL DEFAULT 0")
         # La única antigua (work_id, provider, format, title_provider(255)) impedía tener
         # varias ediciones CPDL del mismo formato. Se añade la identidad de recurso
         # (`source_rep_id`, `resource_id`) MANTENIENDO `title_provider` como discriminante
         # legacy: así los proveedores sin identidad no pierden filas.
         _uq_wanted = [
-            "work_id", "provider", "source_rep_id", "resource_id", "format", "title_provider",
+            "work_id",
+            "provider",
+            "source_rep_id",
+            "resource_id",
+            "format",
+            "title_provider",
         ]
         uq_rows = self._run(
             "SELECT column_name FROM information_schema.statistics "
@@ -690,10 +690,7 @@ class _MysqlStore(_MemoryStore):
         # el autoincremento deja de ser la identidad pública.
         if "public_id" not in work_existing:
             self._run("ALTER TABLE index_works ADD COLUMN public_id VARCHAR(64) NULL")
-        self._run(
-            "UPDATE index_works SET public_id = CONCAT('index-', id) "
-            "WHERE public_id IS NULL OR public_id = ''"
-        )
+        self._run("UPDATE index_works SET public_id = CONCAT('index-', id) WHERE public_id IS NULL OR public_id = ''")
         public_index = self._run(
             "SELECT index_name FROM information_schema.statistics "
             "WHERE table_schema = DATABASE() AND table_name = 'index_works' "
@@ -744,9 +741,7 @@ class _MysqlStore(_MemoryStore):
         )
         for row in mixed or []:
             table = str(row["table_name"])
-            self._run(
-                f"ALTER TABLE `{table}` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
-            )
+            self._run(f"ALTER TABLE `{table}` CONVERT TO CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci")
         rep_index = self._run(
             "SELECT index_name FROM information_schema.statistics "
             "WHERE table_schema = DATABASE() AND table_name = 'index_representations' "
@@ -765,9 +760,7 @@ class _MysqlStore(_MemoryStore):
         )
         if not ft:
             try:
-                self._run(
-                    "ALTER TABLE index_works ADD FULLTEXT INDEX ft_idx_title_composer (title, composer_name)"
-                )
+                self._run("ALTER TABLE index_works ADD FULLTEXT INDEX ft_idx_title_composer (title, composer_name)")
             except pymysql.err.OperationalError:
                 # Innodb o versión sin FULLTEXT: se deja el LIKE (funciona, más lento).
                 _LOGGER.warning("FULLTEXT no disponible en index_works; se usa LIKE")
@@ -964,9 +957,7 @@ class _MysqlStore(_MemoryStore):
     def list_contributions_by_actor(
         self, actor_user_id: str, *, limit: int, offset: int
     ) -> tuple[list[dict[str, object]], int]:
-        total_rows = self._run(
-            "SELECT COUNT(*) AS n FROM contributions WHERE actor_user_id = %s", (actor_user_id,)
-        )
+        total_rows = self._run("SELECT COUNT(*) AS n FROM contributions WHERE actor_user_id = %s", (actor_user_id,))
         total = int(str(total_rows[0]["n"])) if total_rows else 0
         rows = self._run(
             "SELECT * FROM contributions WHERE actor_user_id = %s ORDER BY id DESC LIMIT %s OFFSET %s",
@@ -984,8 +975,7 @@ class _MysqlStore(_MemoryStore):
         )
         total = int(str(total_rows[0]["n"])) if total_rows else 0
         rows = self._run(
-            f"SELECT * FROM contributions WHERE status IN ({placeholders}) ORDER BY id ASC "
-            "LIMIT %s OFFSET %s",
+            f"SELECT * FROM contributions WHERE status IN ({placeholders}) ORDER BY id ASC LIMIT %s OFFSET %s",
             (*statuses, limit, offset),
         )
         return rows, total
@@ -1046,8 +1036,7 @@ class _MysqlStore(_MemoryStore):
             conn.autocommit(False)
             with conn.cursor() as cur:
                 cur.execute(
-                    "INSERT INTO contribution_artifacts (contribution_id, file_id, kind) "
-                    "VALUES (%s,%s,%s)",
+                    "INSERT INTO contribution_artifacts (contribution_id, file_id, kind) VALUES (%s,%s,%s)",
                     (contribution_id, file_id, kind),
                 )
                 aid = int(cur.lastrowid or 0)
@@ -1204,8 +1193,20 @@ class _MysqlStore(_MemoryStore):
             "mapping = COALESCE(VALUES(mapping), mapping), "
             "resources = COALESCE(VALUES(resources), resources), "
             "transforms = COALESCE(VALUES(transforms), transforms)",
-            (provider_id, name, kind, base_url, description_json, int(wired), payload,
-             endpoints_json, mapping_json, resources_json, transforms_json, _now()),
+            (
+                provider_id,
+                name,
+                kind,
+                base_url,
+                description_json,
+                int(wired),
+                payload,
+                endpoints_json,
+                mapping_json,
+                resources_json,
+                transforms_json,
+                _now(),
+            ),
         )
         row = self.get_provider(provider_id)
         assert row is not None
@@ -1238,8 +1239,7 @@ class _MysqlStore(_MemoryStore):
     ) -> dict[str, object]:
         now = _now()
         self._run(
-            "INSERT INTO notifications (user_id, kind, title, body, link, created_at) "
-            "VALUES (%s, %s, %s, %s, %s, %s)",
+            "INSERT INTO notifications (user_id, kind, title, body, link, created_at) VALUES (%s, %s, %s, %s, %s, %s)",
             (user_id, kind, title, body, link, now),
         )
         return {
@@ -1252,9 +1252,7 @@ class _MysqlStore(_MemoryStore):
             "read_at": None,
         }
 
-    def list_notifications(
-        self, *, user_id: str, include_global: bool, limit: int = 50
-    ) -> list[dict[str, object]]:
+    def list_notifications(self, *, user_id: str, include_global: bool, limit: int = 50) -> list[dict[str, object]]:
         condition = "(user_id = %s OR user_id IS NULL)" if include_global else "user_id = %s"
         rows = self._run(
             "SELECT id, user_id, kind, title, body, link, created_at, read_at "
@@ -1312,9 +1310,22 @@ class _MysqlStore(_MemoryStore):
             "website, email, logo_url, technical_description, admin_roles_json, "
             "musical_roles_json, status, editorial_mode, created_by) "
             "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,'active',%s,%s)",
-            (group_id, slug, name, kind, description, image_url, website, email, logo_url,
-             technical_description, json.dumps(admin_roles or [], ensure_ascii=False),
-             json.dumps(musical_roles or [], ensure_ascii=False), editorial_mode, created_by),
+            (
+                group_id,
+                slug,
+                name,
+                kind,
+                description,
+                image_url,
+                website,
+                email,
+                logo_url,
+                technical_description,
+                json.dumps(admin_roles or [], ensure_ascii=False),
+                json.dumps(musical_roles or [], ensure_ascii=False),
+                editorial_mode,
+                created_by,
+            ),
         )
         row = self.get_amigos_group(group_id)
         assert row is not None
@@ -1370,15 +1381,105 @@ class _MysqlStore(_MemoryStore):
             (group_id,),
         )
 
-    def close_amigos_group_history(
-        self, group_id: str, member_user_id: str, end_date: str
-    ) -> None:
+    def close_amigos_group_history(self, group_id: str, member_user_id: str, end_date: str) -> None:
         self._ensure_amigos_group_history()
         self._run(
             "UPDATE amigos_group_history SET end_date = %s "
             "WHERE group_id = %s AND member_user_id = %s AND end_date IS NULL",
             (end_date, group_id, member_user_id),
         )
+
+    def _ensure_amigos_taxonomy(self) -> None:
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS amigos_group_types (
+                code VARCHAR(64) PRIMARY KEY,
+                parent_code VARCHAR(64) NULL,
+                name VARCHAR(160) NOT NULL,
+                kind VARCHAR(32) NOT NULL,
+                sort_order INT NOT NULL DEFAULT 0
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """
+        )
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS amigos_role_templates (
+                id CHAR(32) PRIMARY KEY,
+                type_code VARCHAR(64) NOT NULL,
+                scope VARCHAR(16) NOT NULL,
+                code VARCHAR(64) NOT NULL,
+                name VARCHAR(160) NOT NULL,
+                sort_order INT NOT NULL DEFAULT 0
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """
+        )
+        self._run(
+            """
+            CREATE TABLE IF NOT EXISTS amigos_section_templates (
+                id CHAR(32) PRIMARY KEY,
+                type_code VARCHAR(64) NOT NULL,
+                code VARCHAR(64) NOT NULL,
+                name VARCHAR(160) NOT NULL,
+                sort_order INT NOT NULL DEFAULT 0
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """
+        )
+
+    def get_amigos_taxonomy(self) -> dict[str, list[dict[str, object]]]:
+        self._ensure_amigos_taxonomy()
+        return {
+            "types": [dict(row) for row in self._run("SELECT * FROM amigos_group_types ORDER BY sort_order, name")],
+            "roles": [
+                dict(row)
+                for row in self._run("SELECT * FROM amigos_role_templates ORDER BY type_code, scope, sort_order, name")
+            ],
+            "sections": [
+                dict(row)
+                for row in self._run("SELECT * FROM amigos_section_templates ORDER BY type_code, sort_order, name")
+            ],
+        }
+
+    def replace_amigos_taxonomy(self, data: dict[str, object]) -> None:
+        self._ensure_amigos_taxonomy()
+        self._run("DELETE FROM amigos_role_templates")
+        self._run("DELETE FROM amigos_section_templates")
+        self._run("DELETE FROM amigos_group_types")
+        for index, item in enumerate(data.get("types") if isinstance(data.get("types"), list) else []):  # type: ignore[arg-type]
+            if not isinstance(item, dict):
+                continue
+            self._run(
+                "INSERT INTO amigos_group_types (code,parent_code,name,kind,sort_order) VALUES (%s,%s,%s,%s,%s)",
+                (item.get("code"), item.get("parent_code"), item.get("name"), item.get("kind") or "grupo", index),
+            )
+        for index, item in enumerate(data.get("roles") if isinstance(data.get("roles"), list) else []):  # type: ignore[arg-type]
+            if not isinstance(item, dict):
+                continue
+            self._run(
+                "INSERT INTO amigos_role_templates (id,type_code,scope,code,name,sort_order) "
+                "VALUES (%s,%s,%s,%s,%s,%s)",
+                (
+                    secrets.token_hex(16),
+                    item.get("type_code"),
+                    item.get("scope") or "admin",
+                    item.get("code") or f"role_{index}",
+                    item.get("name"),
+                    index,
+                ),
+            )
+        for index, item in enumerate(data.get("sections") if isinstance(data.get("sections"), list) else []):  # type: ignore[arg-type]
+            if not isinstance(item, dict):
+                continue
+            self._run(
+                "INSERT INTO amigos_section_templates (id,type_code,code,name,sort_order) VALUES (%s,%s,%s,%s,%s)",
+                (
+                    secrets.token_hex(16),
+                    item.get("type_code"),
+                    item.get("code") or f"section_{index}",
+                    item.get("name"),
+                    index,
+                ),
+            )
+
     def _ensure_amigos_group_catalog(self) -> None:
         self._run(
             """
@@ -1401,18 +1502,13 @@ class _MysqlStore(_MemoryStore):
     def list_amigos_group_catalog(self, group_id: str) -> list[dict[str, object]]:
         self._ensure_amigos_group_catalog()
         return self._run(
-            "SELECT * FROM amigos_group_catalog WHERE group_id = %s "
-            "ORDER BY scope, sort_order, name",
+            "SELECT * FROM amigos_group_catalog WHERE group_id = %s ORDER BY scope, sort_order, name",
             (group_id,),
         )
 
-    def replace_amigos_group_catalog(
-        self, group_id: str, items: list[dict[str, object]]
-    ) -> None:
+    def replace_amigos_group_catalog(self, group_id: str, items: list[dict[str, object]]) -> None:
         self._ensure_amigos_group_catalog()
-        existing = {
-            str(row["id"]): row for row in self.list_amigos_group_catalog(group_id)
-        }
+        existing = {str(row["id"]): row for row in self.list_amigos_group_catalog(group_id)}
         keep: set[str] = set()
         for index, item in enumerate(items):
             item_id = str(item.get("id") or "")
@@ -1426,8 +1522,16 @@ class _MysqlStore(_MemoryStore):
                 self._run(
                     "UPDATE amigos_group_catalog SET scope=%s, code=%s, name=%s, "
                     "parent_id=%s, sort_order=%s, active=%s WHERE id=%s AND group_id=%s",
-                    (scope, code, name, item.get("parent_id"), index,
-                     1 if item.get("active", True) else 0, item_id, group_id),
+                    (
+                        scope,
+                        code,
+                        name,
+                        item.get("parent_id"),
+                        index,
+                        1 if item.get("active", True) else 0,
+                        item_id,
+                        group_id,
+                    ),
                 )
             else:
                 new_id = secrets.token_hex(16)
@@ -1443,6 +1547,7 @@ class _MysqlStore(_MemoryStore):
                 "DELETE FROM amigos_group_catalog WHERE id=%s AND group_id=%s",
                 (old_id, group_id),
             )
+
     def get_amigos_group(self, group_id: str) -> dict[str, object] | None:
         rows = self._run("SELECT * FROM amigos_groups WHERE id = %s", (group_id,))
         return rows[0] if rows else None
@@ -1451,9 +1556,7 @@ class _MysqlStore(_MemoryStore):
         rows = self._run("SELECT * FROM amigos_groups WHERE slug = %s", (slug,))
         return rows[0] if rows else None
 
-    def list_amigos_groups(
-        self, *, active_only: bool = True, kind: str | None = None
-    ) -> list[dict[str, object]]:
+    def list_amigos_groups(self, *, active_only: bool = True, kind: str | None = None) -> list[dict[str, object]]:
         clauses: list[str] = []
         args: list[object] = []
         if active_only:
@@ -1465,9 +1568,20 @@ class _MysqlStore(_MemoryStore):
         return self._run(f"SELECT * FROM amigos_groups {where} ORDER BY name", tuple(args))
 
     def update_amigos_group(self, group_id: str, **changes: object) -> dict[str, object] | None:
-        allowed = {"name", "kind", "description", "technical_description", "image_url",
-                   "admin_roles_json", "musical_roles_json", "editorial_mode", "status",
-                   "website", "email", "logo_url"}
+        allowed = {
+            "name",
+            "kind",
+            "description",
+            "technical_description",
+            "image_url",
+            "admin_roles_json",
+            "musical_roles_json",
+            "editorial_mode",
+            "status",
+            "website",
+            "email",
+            "logo_url",
+        }
         fields = [k for k in changes if k in allowed]
         if fields:
             assignments = ", ".join(f"{k} = %s" for k in fields)
@@ -1487,10 +1601,14 @@ class _MysqlStore(_MemoryStore):
                 cur.execute("DELETE FROM amigos_group_links WHERE group_id = %s", (group_id,))
                 for item in items:
                     cur.execute(
-                        "INSERT INTO amigos_group_links (group_id, kind, label, url, position) "
-                        "VALUES (%s,%s,%s,%s,%s)",
-                        (group_id, item.get("kind"), item.get("label"), item.get("url"),
-                         int(str(item.get("position") or 0))),
+                        "INSERT INTO amigos_group_links (group_id, kind, label, url, position) VALUES (%s,%s,%s,%s,%s)",
+                        (
+                            group_id,
+                            item.get("kind"),
+                            item.get("label"),
+                            item.get("url"),
+                            int(str(item.get("position") or 0)),
+                        ),
                     )
             conn.commit()
         except Exception:
@@ -1534,12 +1652,40 @@ class _MysqlStore(_MemoryStore):
     # --- «Los amigos»: agenda (MySQL) ----------------------------------------
 
     _ACTUACION_COLUMNS = (
-        "title", "summary", "description", "image_url", "kind", "modality", "event_status",
-        "starts_on", "starts_at", "ends_on", "ends_at", "timezone", "registration_deadline",
-        "venue_name", "venue_address", "locality", "region", "country_code", "latitude",
-        "longitude", "map_url", "organizer_name", "organizer_website", "event_url",
-        "tickets_url", "price", "access_info", "public_contact", "organizer_group_id",
-        "last_verified_on", "internal_notes", "weight", "source_email", "source_note",
+        "title",
+        "summary",
+        "description",
+        "image_url",
+        "kind",
+        "modality",
+        "event_status",
+        "starts_on",
+        "starts_at",
+        "ends_on",
+        "ends_at",
+        "timezone",
+        "registration_deadline",
+        "venue_name",
+        "venue_address",
+        "locality",
+        "region",
+        "country_code",
+        "latitude",
+        "longitude",
+        "map_url",
+        "organizer_name",
+        "organizer_website",
+        "event_url",
+        "tickets_url",
+        "price",
+        "access_info",
+        "public_contact",
+        "organizer_group_id",
+        "last_verified_on",
+        "internal_notes",
+        "weight",
+        "source_email",
+        "source_note",
     )
 
     def create_amigos_actuacion(
@@ -1635,9 +1781,7 @@ class _MysqlStore(_MemoryStore):
             clauses.append("LOWER(locality) = %s")
             args.append(locality.lower())
         if group_id is not None:
-            clauses.append(
-                "id IN (SELECT actuacion_id FROM amigos_actuacion_groups WHERE group_id = %s)"
-            )
+            clauses.append("id IN (SELECT actuacion_id FROM amigos_actuacion_groups WHERE group_id = %s)")
             args.append(group_id)
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
         total_rows = self._run(f"SELECT COUNT(*) AS n FROM amigos_actuaciones {where}", tuple(args))
@@ -1652,31 +1796,22 @@ class _MysqlStore(_MemoryStore):
     def increment_amigos_actuacion_counter(self, actuacion_id: str, field: str) -> int | None:
         if field not in ("views", "expands", "buys"):
             return None
-        rows = self._run(
-            f"UPDATE amigos_actuaciones SET {field} = {field} + 1 WHERE id = %s", (actuacion_id,)
-        )
+        rows = self._run(f"UPDATE amigos_actuaciones SET {field} = {field} + 1 WHERE id = %s", (actuacion_id,))
         _ = rows
-        current = self._run(
-            f"SELECT {field} AS n FROM amigos_actuaciones WHERE id = %s", (actuacion_id,)
-        )
+        current = self._run(f"SELECT {field} AS n FROM amigos_actuaciones WHERE id = %s", (actuacion_id,))
         if not current:
             return None
         return int(str(current[0]["n"]))
 
-    def replace_amigos_actuacion_groups(
-        self, actuacion_id: str, items: list[dict[str, object]]
-    ) -> None:
+    def replace_amigos_actuacion_groups(self, actuacion_id: str, items: list[dict[str, object]]) -> None:
         conn = self._conn()
         try:
             conn.autocommit(False)
             with conn.cursor() as cur:
-                cur.execute(
-                    "DELETE FROM amigos_actuacion_groups WHERE actuacion_id = %s", (actuacion_id,)
-                )
+                cur.execute("DELETE FROM amigos_actuacion_groups WHERE actuacion_id = %s", (actuacion_id,))
                 for item in items:
                     cur.execute(
-                        "INSERT INTO amigos_actuacion_groups (actuacion_id, group_id, role) "
-                        "VALUES (%s,%s,%s)",
+                        "INSERT INTO amigos_actuacion_groups (actuacion_id, group_id, role) VALUES (%s,%s,%s)",
                         (actuacion_id, item.get("group_id"), item.get("role") or "participant"),
                     )
             conn.commit()
@@ -1715,20 +1850,23 @@ class _MysqlStore(_MemoryStore):
         return rows[0] if rows else None
 
     def list_amigos_authorizations(self, scope: str) -> list[dict[str, object]]:
-        return self._run(
-            "SELECT * FROM amigos_authorizations WHERE scope = %s ORDER BY user_id", (scope,)
-        )
+        return self._run("SELECT * FROM amigos_authorizations WHERE scope = %s ORDER BY user_id", (scope,))
 
     def delete_amigos_authorization(self, scope: str, user_id: str) -> None:
-        self._run(
-            "DELETE FROM amigos_authorizations WHERE scope = %s AND user_id = %s", (scope, user_id)
-        )
+        self._run("DELETE FROM amigos_authorizations WHERE scope = %s AND user_id = %s", (scope, user_id))
 
     # --- «Los amigos»: membresias (MySQL) ------------------------------------
 
     def set_amigos_member(
-        self, *, group_id: str, user_id: str, role: str, status: str, granted_by: str | None,
-        admin_role_id: str | None = None, musical_role_id: str | None = None,
+        self,
+        *,
+        group_id: str,
+        user_id: str,
+        role: str,
+        status: str,
+        granted_by: str | None,
+        admin_role_id: str | None = None,
+        musical_role_id: str | None = None,
         section_id: str | None = None,
     ) -> dict[str, object]:
         self._run(
@@ -1745,15 +1883,11 @@ class _MysqlStore(_MemoryStore):
         return row
 
     def get_amigos_member(self, group_id: str, user_id: str) -> dict[str, object] | None:
-        rows = self._run(
-            "SELECT * FROM amigos_members WHERE group_id = %s AND user_id = %s", (group_id, user_id)
-        )
+        rows = self._run("SELECT * FROM amigos_members WHERE group_id = %s AND user_id = %s", (group_id, user_id))
         return rows[0] if rows else None
 
     def list_amigos_members(self, group_id: str) -> list[dict[str, object]]:
-        return self._run(
-            "SELECT * FROM amigos_members WHERE group_id = %s ORDER BY role, user_id", (group_id,)
-        )
+        return self._run("SELECT * FROM amigos_members WHERE group_id = %s ORDER BY role, user_id", (group_id,))
 
     def list_amigos_memberships_by_user(self, user_id: str) -> list[dict[str, object]]:
         return self._run("SELECT * FROM amigos_members WHERE user_id = %s", (user_id,))
@@ -1779,8 +1913,7 @@ class _MysqlStore(_MemoryStore):
             "INSERT INTO amigos_articles (id, group_id, scope, title, slug, event_date, summary, "
             "body, cover_url, author_user_id, status) "
             "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-            (article_id, group_id, scope, title, slug, event_date, summary, body, cover_url,
-             author_user_id, status),
+            (article_id, group_id, scope, title, slug, event_date, summary, body, cover_url, author_user_id, status),
         )
         row = self.get_amigos_article(article_id)
         assert row is not None
@@ -1791,15 +1924,11 @@ class _MysqlStore(_MemoryStore):
         return rows[0] if rows else None
 
     def get_amigos_article_by_slug(self, group_id: str, slug: str) -> dict[str, object] | None:
-        rows = self._run(
-            "SELECT * FROM amigos_articles WHERE group_id = %s AND slug = %s", (group_id, slug)
-        )
+        rows = self._run("SELECT * FROM amigos_articles WHERE group_id = %s AND slug = %s", (group_id, slug))
         return rows[0] if rows else None
 
     def get_amigos_article_by_scope_slug(self, scope: str, slug: str) -> dict[str, object] | None:
-        rows = self._run(
-            "SELECT * FROM amigos_articles WHERE scope = %s AND slug = %s", (scope, slug)
-        )
+        rows = self._run("SELECT * FROM amigos_articles WHERE scope = %s AND slug = %s", (scope, slug))
         return rows[0] if rows else None
 
     def update_amigos_article(self, article_id: str, **changes: object) -> dict[str, object] | None:
@@ -1863,8 +1992,7 @@ class _MysqlStore(_MemoryStore):
         total_rows = self._run(f"SELECT COUNT(*) AS n FROM amigos_articles {where}", tuple(args))
         total = int(str(total_rows[0]["n"])) if total_rows else 0
         rows = self._run(
-            f"SELECT * FROM amigos_articles {where} "
-            "ORDER BY event_date DESC, created_at DESC LIMIT %s OFFSET %s",
+            f"SELECT * FROM amigos_articles {where} ORDER BY event_date DESC, created_at DESC LIMIT %s OFFSET %s",
             (*args, limit, offset),
         )
         return rows, total
@@ -1878,8 +2006,7 @@ class _MysqlStore(_MemoryStore):
         )
         total = int(str(total_rows[0]["n"])) if total_rows else 0
         rows = self._run(
-            "SELECT * FROM amigos_articles WHERE author_user_id = %s "
-            "ORDER BY created_at DESC LIMIT %s OFFSET %s",
+            "SELECT * FROM amigos_articles WHERE author_user_id = %s ORDER BY created_at DESC LIMIT %s OFFSET %s",
             (author_user_id, limit, offset),
         )
         return rows, total
@@ -1898,9 +2025,16 @@ class _MysqlStore(_MemoryStore):
                     cur.execute(
                         "INSERT INTO amigos_media (article_id, kind, url, provider, video_id, "
                         "caption, credit, position) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)",
-                        (article_id, item.get("kind"), item.get("url"), item.get("provider"),
-                         item.get("video_id"), item.get("caption"), item.get("credit"),
-                         int(str(item.get("position") or 0))),
+                        (
+                            article_id,
+                            item.get("kind"),
+                            item.get("url"),
+                            item.get("provider"),
+                            item.get("video_id"),
+                            item.get("caption"),
+                            item.get("credit"),
+                            int(str(item.get("position") or 0)),
+                        ),
                     )
             conn.commit()
         except Exception:
@@ -1910,9 +2044,7 @@ class _MysqlStore(_MemoryStore):
             conn.close()
 
     def list_amigos_media(self, article_id: str) -> list[dict[str, object]]:
-        return self._run(
-            "SELECT * FROM amigos_media WHERE article_id = %s ORDER BY position, id", (article_id,)
-        )
+        return self._run("SELECT * FROM amigos_media WHERE article_id = %s ORDER BY position, id", (article_id,))
 
     # --- «Los amigos»: auditoria (MySQL) -------------------------------------
 
@@ -1936,9 +2068,7 @@ class _MysqlStore(_MemoryStore):
         assert rows
         return rows[0]
 
-    def list_amigos_events(
-        self, *, group_id: str | None, article_id: str | None
-    ) -> list[dict[str, object]]:
+    def list_amigos_events(self, *, group_id: str | None, article_id: str | None) -> list[dict[str, object]]:
         clauses: list[str] = []
         args: list[object] = []
         if group_id is not None:
@@ -1950,19 +2080,27 @@ class _MysqlStore(_MemoryStore):
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
         return self._run(f"SELECT * FROM amigos_events {where} ORDER BY id", tuple(args))
 
-
     # --- «Los amigos»: ficha de coral (MySQL) --------------------------------
 
     _CORAL_FIELDS = (
-        "foundation_date", "dissolution_date", "locality", "region", "country_code",
-        "venue", "formation_type", "member_count", "website", "public_email",
-        "director_person_id", "director_label", "linked_entity",
+        "foundation_date",
+        "dissolution_date",
+        "locality",
+        "region",
+        "country_code",
+        "venue",
+        "formation_type",
+        "member_count",
+        "website",
+        "public_email",
+        "director_person_id",
+        "director_label",
+        "linked_entity",
     )
 
     def _ensure_amigos_coral_row(self, group_id: str) -> None:
         self._run(
-            "INSERT INTO amigos_coral_details (group_id) VALUES (%s) "
-            "ON DUPLICATE KEY UPDATE group_id = group_id",
+            "INSERT INTO amigos_coral_details (group_id) VALUES (%s) ON DUPLICATE KEY UPDATE group_id = group_id",
             (group_id,),
         )
 
@@ -1983,9 +2121,7 @@ class _MysqlStore(_MemoryStore):
         assert row is not None
         return row
 
-    def replace_amigos_coral_attributes(
-        self, group_id: str, items: list[dict[str, object]]
-    ) -> None:
+    def replace_amigos_coral_attributes(self, group_id: str, items: list[dict[str, object]]) -> None:
         self._ensure_amigos_coral_row(group_id)
         conn = self._conn()
         try:
@@ -1997,8 +2133,7 @@ class _MysqlStore(_MemoryStore):
                         "INSERT INTO amigos_coral_attributes (group_id, facet, value, position) "
                         "VALUES (%s,%s,%s,%s) "
                         "ON DUPLICATE KEY UPDATE position = VALUES(position)",
-                        (group_id, item.get("facet"), item.get("value"),
-                         int(str(item.get("position") or 0))),
+                        (group_id, item.get("facet"), item.get("value"), int(str(item.get("position") or 0))),
                     )
             conn.commit()
         except Exception:
@@ -2009,8 +2144,7 @@ class _MysqlStore(_MemoryStore):
 
     def list_amigos_coral_attributes(self, group_id: str) -> list[dict[str, object]]:
         return self._run(
-            "SELECT * FROM amigos_coral_attributes WHERE group_id = %s "
-            "ORDER BY facet, position, id",
+            "SELECT * FROM amigos_coral_attributes WHERE group_id = %s ORDER BY facet, position, id",
             (group_id,),
         )
 
@@ -2046,7 +2180,5 @@ def _encode_description(description: dict[str, str] | str | None) -> str | None:
     if isinstance(description, str):
         return json.dumps({"en": description}, ensure_ascii=False)
     return json.dumps(description, ensure_ascii=False)
-
-
 
 

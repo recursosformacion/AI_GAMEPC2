@@ -93,6 +93,16 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 
 ## Historial
 
+- **6.1.0 (B) — OSAP + Chorus 0.10.0 (2026-11-16)**: Chorus pasa a MySQL/MariaDB
+  (`app/db.py`, esquema `migrations/mysql/001_schema.sql`, migración de datos);
+  edición de grupo y miembros con propagación a OSAP como fuente única; bandeja y
+  respuesta de mensajes, contacto con administración y filtros por nombre/cargo/rol/
+  sección; taxonomías globales de tipos, cargos, roles y secciones con CRUD en Admin;
+  formulario de usuario con entidades de solo lectura y solicitud de grupo con
+  grupo/cargo/rol/sección; enlaces de alta restaurados. Sin cambio de IDs, slugs ni URLs.
+  Migraciones: Chorus 010; OSAP crea tablas de taxonomía al arrancar. Evidencia:
+  Chorus 42, OSAP amigos 69, `tsc` y build. Punto de control previo: `v6.0.1`.
+
 - **6.0.1 (C) — osap-api (2026-11-16)**: correcciones de interfaz tras la liberación:
   cuenta sin las antiguas entidades de auth, grupos de «Los amigos» en la ficha,
   preferencias de noticias plegadas y botones «todos» destacados, detalle de grupo dentro
