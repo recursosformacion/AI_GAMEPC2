@@ -117,7 +117,12 @@ def _sitemap_index(ctx: HttpContext) -> str:
     base = public_base_url()
     works_size = _page_size()
     persons_size = _persons_page_size()
-    works_pages = math.ceil(ctx.api.sitemap_works_total() / works_size)
+    works_total = ctx.api.sitemap_works_total()
+    works_pages = math.ceil(works_total / works_size) if works_total else 0
+    while works_pages > 1 and not ctx.api.sitemap_works_page(
+        1, (works_pages - 1) * works_size
+    ):
+        works_pages -= 1
     persons_pages = math.ceil(ctx.api.sitemap_persons_total() / persons_size)
     refs = [f"{base}/sitemaps/works-{page}.xml" for page in range(1, works_pages + 1)]
     refs += [f"{base}/sitemaps/persons-{page}.xml" for page in range(1, persons_pages + 1)]
@@ -199,10 +204,15 @@ def _amigos_urlset(ctx: HttpContext, page: int) -> str:
 def build_sitemap_router(ctx: HttpContext) -> APIRouter:
     router: APIRouter = APIRouter()
 
+    @router.get("/sitemap_index.xml", include_in_schema=False)
     @router.get("/sitemap.xml", include_in_schema=False)
     def sitemap_index() -> Response:
         body = _cached("index", _INDEX_CACHE_TTL, lambda: _sitemap_index(ctx))
-        return _xml(body, _INDEX_CACHE_TTL)
+        return Response(
+            content=body,
+            media_type="application/xml",
+            headers={"Cache-Control": "public, max-age=60"},
+        )
 
     @router.get("/sitemaps/{name}", include_in_schema=False)
     def sitemap_file(name: str) -> Response:
@@ -231,3 +241,6 @@ def build_sitemap_router(ctx: HttpContext) -> APIRouter:
         return _xml(body, _FILE_CACHE_TTL)
 
     return router
+
+
+
