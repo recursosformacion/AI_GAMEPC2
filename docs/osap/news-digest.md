@@ -31,7 +31,7 @@ devuelve corpus.
 ```powershell
 $env:OSAP_INTERNAL_SERVICE_TOKEN = "osap-dev-internal-token"
 $env:OSAP_AUTH_INTERNAL_URL = "http://127.0.0.1:8200"
-$env:OSAP_NEWS_API_BASE = "http://127.0.0.1:8400"
+$env:OSAP_NEWS_API_BASE = "http://127.0.0.1:8401"
 $env:OSAP_NEWS_API_TOKEN = "osap-dev-news-token"
 $env:OSAP_SUPPORT_INTERNAL_URL = "http://127.0.0.1:8300"
 
@@ -57,3 +57,4 @@ sin duplicar el correo.
 - Usuarios con `news_opt_in`, email verificado, al menos un tema y un idioma.
 - `osap-auth` migración `0018_news_languages` y `osap-support` migración `0003`.
 - Cron (Linux) o Programador de tareas (Windows) apuntando a `python -m src.osap.news_digest --send`.
+

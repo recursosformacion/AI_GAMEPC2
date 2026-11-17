@@ -21,7 +21,7 @@ $Root = Split-Path $PSScriptRoot -Parent
 $tokenDir = Join-Path $env:LOCALAPPDATA "osap-dev"
 $env:OSAP_INTERNAL_SERVICE_TOKEN = if (Test-Path (Join-Path $tokenDir "internal-token.txt")) { (Get-Content (Join-Path $tokenDir "internal-token.txt") -Raw).Trim() } else { "osap-dev-internal-token" }
 $env:OSAP_AUTH_INTERNAL_URL = "http://127.0.0.1:8200"
-$env:OSAP_NEWS_API_BASE = "http://127.0.0.1:8400"
+$env:OSAP_NEWS_API_BASE = "http://127.0.0.1:8401"
 $env:OSAP_NEWS_API_TOKEN = if (Test-Path (Join-Path $tokenDir "news-token.txt")) { (Get-Content (Join-Path $tokenDir "news-token.txt") -Raw).Trim() } else { "osap-dev-news-token" }
 $env:OSAP_SUPPORT_INTERNAL_URL = "http://127.0.0.1:8300"
 
@@ -36,4 +36,5 @@ try {
 } finally {
     Pop-Location
 }
+
 
