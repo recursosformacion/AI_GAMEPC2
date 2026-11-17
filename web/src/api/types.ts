@@ -1023,6 +1023,8 @@ export interface AmigosGroup {
   kind: AmigosGroupKind | string;
   description?: string | null;
   technical_description?: string | null;
+  join_code?: string | null;
+  join_code_expires_at?: string | null;
   admin_roles?: string[];
   musical_roles?: string[];
   image_url?: string | null;
@@ -1172,6 +1174,8 @@ export interface AmigosEvent {
   summary?: string | null;
   description?: string | null;
   technical_description?: string | null;
+  join_code?: string | null;
+  join_code_expires_at?: string | null;
   admin_roles?: string[];
   musical_roles?: string[];
   image_url?: string | null;
@@ -1377,6 +1381,7 @@ export interface NewsTopic {
   name: string;
   description: string;
 }
+
 
 
 

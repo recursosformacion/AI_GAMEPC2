@@ -82,6 +82,16 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
             lambda: ctx.api.amigos_list_groups(token=authorization, include_inactive=include_inactive, kind=kind),
         )
 
+    @router.post(
+        "/api/v1/admin/amigos/groups/{group_id}/join-code",
+        tags=["Friends"],
+        summary="Rotar el código de invitación (7 días)",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+    )
+    def rotate_join_code(
+        group_id: str, response: Response, authorization: str | None = Header(default=None)
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        return _call(ctx, response, lambda: ctx.api.amigos_rotate_join_code(authorization, group_id))
     @router.get(
         "/api/v1/amigos/groups/{group_id}/catalog",
         tags=["Friends"],
@@ -912,3 +922,4 @@ def build_amigos_router(ctx: HttpContext) -> APIRouter:
         return _call(ctx, response, lambda: ctx.api.amigos_save_taxonomy(authorization, payload))
 
     return router
+

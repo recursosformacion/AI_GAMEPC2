@@ -553,6 +553,8 @@ class _MysqlStore(_MemoryStore):
         self._ensure_column("amigos_groups", "technical_description", "TEXT NULL")
         self._ensure_column("amigos_groups", "admin_roles_json", "TEXT NULL")
         self._ensure_column("amigos_groups", "musical_roles_json", "TEXT NULL")
+        self._ensure_column("amigos_groups", "join_code", "VARCHAR(16) NULL")
+        self._ensure_column("amigos_groups", "join_code_expires_at", "VARCHAR(64) NULL")
         self._ensure_column("amigos_members", "admin_role_id", "CHAR(32) NULL")
         self._ensure_column("amigos_members", "musical_role_id", "CHAR(32) NULL")
         self._ensure_column("amigos_members", "section_id", "CHAR(32) NULL")
@@ -1567,6 +1569,14 @@ class _MysqlStore(_MemoryStore):
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
         return self._run(f"SELECT * FROM amigos_groups {where} ORDER BY name", tuple(args))
 
+    def set_amigos_join_code(
+        self, group_id: str, code: str, expires_at: str
+    ) -> dict[str, object] | None:
+        self._run(
+            "UPDATE amigos_groups SET join_code=%s, join_code_expires_at=%s WHERE id=%s",
+            (code, expires_at, group_id),
+        )
+        return self.get_amigos_group(group_id)
     def update_amigos_group(self, group_id: str, **changes: object) -> dict[str, object] | None:
         allowed = {
             "name",
@@ -2180,5 +2190,6 @@ def _encode_description(description: dict[str, str] | str | None) -> str | None:
     if isinstance(description, str):
         return json.dumps({"en": description}, ensure_ascii=False)
     return json.dumps(description, ensure_ascii=False)
+
 
 

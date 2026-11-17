@@ -57,6 +57,8 @@ class AmigosGroupCreateRequest(_Frozen):
     slug: str | None = None
     description: str | None = None
     technical_description: str | None = None
+    join_code: str | None = None
+    join_code_expires_at: str | None = None
     admin_roles: list[str] = Field(default_factory=list)
     musical_roles: list[str] = Field(default_factory=list)
     image_url: str | None = None
@@ -71,6 +73,8 @@ class AmigosGroupUpdateRequest(_Frozen):
     name: str | None = None
     description: str | None = None
     technical_description: str | None = None
+    join_code: str | None = None
+    join_code_expires_at: str | None = None
     admin_roles: list[str] | None = None
     musical_roles: list[str] | None = None
     image_url: str | None = None
@@ -114,6 +118,8 @@ class AmigosGroupRead(_Frozen):
     kind: str
     description: str | None = None
     technical_description: str | None = None
+    join_code: str | None = None
+    join_code_expires_at: str | None = None
     admin_roles: list[str] = Field(default_factory=list)
     musical_roles: list[str] = Field(default_factory=list)
     image_url: str | None = None
@@ -351,6 +357,7 @@ class AmigosGroupCatalogRead(_Frozen):
 
 class AmigosGroupCatalogUpdate(_Frozen):
     items: list[AmigosCatalogItem] = Field(default_factory=list)
+
 
 
 

@@ -584,6 +584,15 @@ class MemoryStore:
         rows.sort(key=lambda r: str(r.get("name") or "").lower())
         return rows
 
+    def set_amigos_join_code(
+        self, group_id: str, code: str, expires_at: str
+    ) -> dict[str, object] | None:
+        group = self.get_amigos_group(group_id)
+        if group is None:
+            return None
+        group["join_code"] = code
+        group["join_code_expires_at"] = expires_at
+        return group
     def update_amigos_group(self, group_id: str, **changes: object) -> dict[str, object] | None:
         row = self._amigos_groups.get(group_id)
         if row is None:
@@ -1234,5 +1243,6 @@ class MemoryStore:
         ]
         rows.sort(key=lambda e: int(str(e.get("id") or 0)))
         return rows
+
 
 

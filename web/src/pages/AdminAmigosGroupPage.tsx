@@ -748,6 +748,14 @@ export function AdminAmigosGroupPage() {
         )}
       </Card>
 
+      <Card title="Código de invitación">
+        <p className="text-sm text-osap-ink">Código: <strong>{group.join_code || "—"}</strong></p>
+        <p className="mt-1 text-sm text-osap-muted">Válido hasta: {group.join_code_expires_at ? formatEuroDate(group.join_code_expires_at) : "sin fecha"}</p>
+        {!viewMode ? (
+          <button type="button" className="mt-2 rounded bg-osap-accent px-3 py-1 text-sm text-white" onClick={() => void guard(async () => { const updated = await apiClient.rotateAmigosJoinCode(groupId); setGroup(updated); })}>Generar código nuevo (7 días)</button>
+        ) : null}
+      </Card>
+
       <Card title="Historial de altas y bajas">
         {history.length === 0 ? (
           <p className="text-sm text-osap-muted">
@@ -979,6 +987,8 @@ export function AdminAmigosGroupPage() {
     </div>
   );
 }
+
+
 
 
 

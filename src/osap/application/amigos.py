@@ -18,7 +18,7 @@ from __future__ import annotations
 import re
 import secrets
 import unicodedata
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from src.osap.domain.amigos import (
@@ -130,7 +130,23 @@ class AmigosService:
     def list_groups(self, *, active_only: bool = True, kind: str | None = None) -> list[dict[str, object]]:
         if kind is not None and kind not in GROUP_KINDS:
             raise AmigosError(422, "INVALID_KIND", "Tipo de grupo no soportado")
-        return list(self._store.list_amigos_groups(active_only=active_only, kind=kind))
+        rows = [dict(row) for row in self._store.list_amigos_groups(active_only=active_only, kind=kind)]
+        for row in rows:
+            expires_raw = str(row.get("join_code_expires_at") or "")
+            expired = True
+            if expires_raw:
+                try:
+                    expired = datetime.fromisoformat(expires_raw) < datetime.now(UTC)
+                except ValueError:
+                    expired = True
+            if not row.get("join_code") or expired:
+                updated = self._store.set_amigos_join_code(
+                    str(row["id"]), _new_join_code(),
+                    (datetime.now(UTC) + timedelta(days=7)).isoformat(),
+                )
+                if updated:
+                    row.update(updated)
+        return rows
 
     def get_group(self, group_id: str) -> dict[str, object] | None:
         row = self._store.get_amigos_group(group_id)
@@ -190,6 +206,9 @@ class AmigosService:
         )
         self._store.replace_amigos_group_links(str(row["id"]), _clean_links(links))
         self._seed_group_catalog(str(row["id"]), kind)
+        self._store.set_amigos_join_code(
+            str(row["id"]), _new_join_code(), (datetime.now(UTC) + timedelta(days=7)).isoformat()
+        )
         return row
 
     def update_group(
@@ -332,7 +351,15 @@ class AmigosService:
         current = self._store.get_amigos_member(group_id, user_id)
         if current is not None and str(current.get("status")) == "active":
             raise AmigosError(409, "ALREADY_MEMBER", "Ya perteneces a este grupo")
-        auto_approved = bool(code) and str(code).strip() == str(group.get("join_code") or "").strip()
+        code_ok = False
+        if code and str(code).strip() == str(group.get("join_code") or "").strip():
+            expires_raw = str(group.get("join_code_expires_at") or "")
+            try:
+                expires = datetime.fromisoformat(expires_raw)
+                code_ok = expires >= datetime.now(UTC)
+            except ValueError:
+                code_ok = False
+        auto_approved = code_ok
         row = self._store.set_amigos_member(
             group_id=group_id,
             user_id=user_id,
@@ -352,6 +379,15 @@ class AmigosService:
         )
         return row  # type: ignore[no-any-return]
 
+    def rotate_join_code(
+        self, *, actor_user_id: str, is_global_admin: bool, group_id: str
+    ) -> dict[str, object]:
+        self._require_group_admin(group_id, actor_user_id, is_global_admin)
+        expires = (datetime.now(UTC) + timedelta(days=7)).isoformat()
+        row = self._store.set_amigos_join_code(group_id, _new_join_code(), expires)
+        if row is None:
+            raise AmigosError(404, "GROUP_NOT_FOUND", "Grupo no encontrado")
+        return row
     def revoke_member(
         self,
         *,
@@ -1552,6 +1588,11 @@ def _clean_multivalue(values: list[str]) -> list[str]:
     return out
 
 
+def _new_join_code() -> str:
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    return "".join(secrets.choice(alphabet) for _ in range(8))
+
+
 def _clean_url(value: str | None) -> str | None:
     """Acepta solo http(s) o vacío; nunca `javascript:`/`data:`."""
     text = (value or "").strip()
@@ -1610,4 +1651,6 @@ def _clean_media(items: list[dict[str, Any]]) -> list[dict[str, object]]:
             }
         )
     return cleaned
+
+
 
