@@ -367,9 +367,8 @@ async function buildPage(url, lang, dark) {
   if (state.degraded) return null;
   const explicitLang = parsed.searchParams.get("lang");
   const canonicalPath = String(state.meta?.canonicalPath ?? parsed.pathname);
-  const canonical = explicitLang && LANGS.has(explicitLang)
-    ? `${PUBLIC_ORIGIN}${canonicalPath}?lang=${explicitLang}`
-    : `${PUBLIC_ORIGIN}${canonicalPath}`;
+  // El canonical siempre va sin ?lang; las variantes se declaran con hreflang.
+  const canonical = `${PUBLIC_ORIGIN}${canonicalPath}`;
   globalThis.__OSAP_STATE__ = state;
   const html = await render(parsed.pathname + parsed.search, {
     lang,
@@ -439,9 +438,13 @@ const server = createServer(async (req, res) => {
   const numericWork = /^\/obras\/(\d+)(\/.*)?$/.exec(pathname);
   if (numericWork) {
     const search = new URL(url, "http://localhost").search;
-    res.writeHead(301, {
-      Location: `/obras/index-${numericWork[1]}${numericWork[2] ?? ""}${search}`,
-    });
+    const resolved = await apiGet(`/api/v1/seo/resolve/${encodeURIComponent(numericWork[1])}`);
+    const targetId = resolved.ok ? resolved.data?.work_id : null;
+    const targetSlug = resolved.ok ? resolved.data?.slug : null;
+    const location = targetId && targetSlug
+      ? `/obras/${targetId}/${targetSlug}${search}`
+      : `/obras/index-${numericWork[1]}${numericWork[2] ?? ""}${search}`;
+    res.writeHead(301, { Location: location });
     res.end();
     return;
   }
@@ -505,5 +508,7 @@ const server = createServer(async (req, res) => {
 server.listen(PORT, "127.0.0.1", () => {
   console.log(`SSR escuchando en http://127.0.0.1:${PORT} (api ${API}, dev=${DEV})`);
 });
+
+
 
 

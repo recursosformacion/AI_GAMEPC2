@@ -92,6 +92,7 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 | Programas afectados | todos | ≥1 | exactamente 1 |
 
 ## Historial
+- **6.2.2 (B) — OSAP + Chorus 0.11.2 (2026-11-17)**: agenda personal para cualquier usuario, destinos grupo/sección/personas, tarjeta RSVP compacta; mensajería ampliable con bandeja y filtros; código de invitación de 7 días visible solo al gestor; corrección de redirecciones legacy/canonical y sitemap; normalización de complejidad del enriquecimiento. Sin cambios de IDs, slugs ni URLs.
 - **6.2.1 (C) — osap-api (2026-11-17)**: corrige el sitemap: el índice se limita a páginas con URLs reales (evita 43 sub-sitemaps 404), añade `/sitemap_index.xml` y reduce la caché del índice. Sin cambios de IDs, slugs ni URLs.
 - **6.2.0 (B) — OSAP + Chorus 0.11.0 (2026-11-17)**: agenda con destino personal, grupo, sección y personas; códigos de invitación de 7 días con rotación y solicitud con auto-aprobación; nickname con índice único y validación; mensajería con ventana ampliable y filtros de destinatarios; taxonomías globales. Sin cambio de IDs, slugs ni URLs.
 - **6.1.1 (C) — osap-api + Chorus 0.10.1 (2026-11-17)**: corrige el detalle público de grupo (consulta pública sin include_inactive), restaura el formulario de alta desde grupos e inicio, añade código de invitación a la solicitud de acceso (auto-aprobación si coincide), mueve Mensajes del cuadro Comunicados a la ventana de mensajes y corrige el puerto interno de ai-noticias (8401) para liberar osap-videos (8400). Sin cambios de IDs, slugs ni URLs.
@@ -670,6 +671,7 @@ oindex` en rutas internas. Infra: nginx/`.htaccess` proxya las rutas SEO. Compat
   elimina la reutilización dev/prod. Los datos de dev se migraron y se **revirtieron** para
   dejarlo consistente con su `osap-auth` en marcha (el proceso de dev no era reiniciable
   desde esta sesión); consistencia verificada (13/13) y health 200.
+
 
 
 

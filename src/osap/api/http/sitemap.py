@@ -119,9 +119,10 @@ def _sitemap_index(ctx: HttpContext) -> str:
     persons_size = _persons_page_size()
     works_total = ctx.api.sitemap_works_total()
     works_pages = math.ceil(works_total / works_size) if works_total else 0
-    while works_pages > 1 and not ctx.api.sitemap_works_page(
-        1, (works_pages - 1) * works_size
-    ):
+    while works_pages > 1:
+        tail = ctx.api.sitemap_works_page(1, (works_pages - 1) * works_size)
+        if any(str(row.get("work_id") or "") and str(row.get("title") or "") for row in tail):
+            break
         works_pages -= 1
     persons_pages = math.ceil(ctx.api.sitemap_persons_total() / persons_size)
     refs = [f"{base}/sitemaps/works-{page}.xml" for page in range(1, works_pages + 1)]
@@ -241,6 +242,7 @@ def build_sitemap_router(ctx: HttpContext) -> APIRouter:
         return _xml(body, _FILE_CACHE_TTL)
 
     return router
+
 
 
 

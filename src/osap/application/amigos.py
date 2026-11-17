@@ -379,6 +379,29 @@ class AmigosService:
         )
         return row  # type: ignore[no-any-return]
 
+    def get_join_code(
+        self, *, actor_user_id: str, is_global_admin: bool, group_id: str
+    ) -> dict[str, object]:
+        self._require_group_admin(group_id, actor_user_id, is_global_admin)
+        group = self._store.get_amigos_group(group_id)
+        if group is None:
+            raise AmigosError(404, "GROUP_NOT_FOUND", "Grupo no encontrado")
+        expires_raw = str(group.get("join_code_expires_at") or "")
+        expired = True
+        if expires_raw:
+            try:
+                expired = datetime.fromisoformat(expires_raw) < datetime.now(UTC)
+            except ValueError:
+                expired = True
+        if not group.get("join_code") or expired:
+            updated = self._store.set_amigos_join_code(
+                group_id, _new_join_code(), (datetime.now(UTC) + timedelta(days=7)).isoformat()
+            )
+            group = updated or group
+        return {
+            "join_code": group.get("join_code"),
+            "join_code_expires_at": group.get("join_code_expires_at"),
+        }
     def rotate_join_code(
         self, *, actor_user_id: str, is_global_admin: bool, group_id: str
     ) -> dict[str, object]:
@@ -1651,6 +1674,7 @@ def _clean_media(items: list[dict[str, Any]]) -> list[dict[str, object]]:
             }
         )
     return cleaned
+
 
 
 

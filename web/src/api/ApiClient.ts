@@ -458,6 +458,12 @@ export class ApiClient {
     );
   }
 
+  async getAmigosJoinCode(groupId: string): Promise<{ join_code: string | null; join_code_expires_at: string | null }> {
+    return this.get<{ join_code: string | null; join_code_expires_at: string | null }>(
+      `/admin/amigos/groups/${encodeURIComponent(groupId)}/join-code`,
+    );
+  }
+
   async rotateAmigosJoinCode(groupId: string): Promise<AmigosGroup> {
     return this.post<AmigosGroup>(
       `/admin/amigos/groups/${encodeURIComponent(groupId)}/join-code`,
@@ -1088,6 +1094,7 @@ export interface QuotaUsage {
   by_provider: { provider: string; total: number }[];
   top_works: { work_id: string; total: number }[];
 }
+
 
 
 

@@ -90,6 +90,8 @@ export function AdminAmigosGroupPage() {
   const [members, setMembers] = useState<AmigosMember[]>([]);
   const [catalog, setCatalog] = useState<AmigosGroupCatalog>({ admin: [], musical: [], section: [] });
   const [requests, setRequests] = useState<AmigosMember[]>([]);
+  const [joinCode, setJoinCode] = useState<string | null>(null);
+  const [joinExpires, setJoinExpires] = useState<string | null>(null);
   const [catalogMessage, setCatalogMessage] = useState<string | null>(null);
   const [history, setHistory] = useState<Array<{
     id: string; event_type: string; member_user_id?: string | null; role?: string | null;
@@ -189,6 +191,13 @@ export function AdminAmigosGroupPage() {
       setHistory(historyList);
       setCatalog(catalogData);
       setRequests(requestList.items);
+      void apiClient
+        .getAmigosJoinCode(groupId)
+        .then((code) => {
+          setJoinCode(code.join_code);
+          setJoinExpires(code.join_code_expires_at);
+        })
+        .catch(() => undefined);
       setArticles(articleList.items);
       try {
         setUsers(await apiClient.get<DirectoryUser[]>("/admin/users"));
@@ -749,10 +758,12 @@ export function AdminAmigosGroupPage() {
       </Card>
 
       <Card title="Código de invitación">
-        <p className="text-sm text-osap-ink">Código: <strong>{group.join_code || "—"}</strong></p>
-        <p className="mt-1 text-sm text-osap-muted">Válido hasta: {group.join_code_expires_at ? formatEuroDate(group.join_code_expires_at) : "sin fecha"}</p>
+        <p className="text-sm text-osap-ink">Código de invitación: <strong>{joinCode || "—"}</strong> · caduca: {joinExpires ? formatEuroDate(joinExpires) : "sin fecha"}</p>
         {!viewMode ? (
-          <button type="button" className="mt-2 rounded bg-osap-accent px-3 py-1 text-sm text-white" onClick={() => void guard(async () => { const updated = await apiClient.rotateAmigosJoinCode(groupId); setGroup(updated); })}>Generar código nuevo (7 días)</button>
+          <button type="button" className="mt-2 rounded bg-osap-accent px-3 py-1 text-sm text-white" onClick={() => void guard(async () => { await apiClient.rotateAmigosJoinCode(groupId);
+ const code = await apiClient.getAmigosJoinCode(groupId);
+ setJoinCode(code.join_code);
+ setJoinExpires(code.join_code_expires_at); })}>Generar código nuevo (7 días)</button>
         ) : null}
       </Card>
 
@@ -987,6 +998,8 @@ export function AdminAmigosGroupPage() {
     </div>
   );
 }
+
+
 
 
 

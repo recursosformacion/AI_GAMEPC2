@@ -511,6 +511,15 @@ class AmigosMixin(PlatformApiCore):
         )
         return AmigosMemberListRead(items=[self._amigos_member_read(row) for row in rows], total=len(rows))
 
+    def amigos_get_join_code(
+        self, token: str | None, group_id: str
+    ) -> dict[str, object]:
+        actor = self._amigos_user(token)
+        return self._amigos_service().get_join_code(
+            actor_user_id=actor,
+            is_global_admin=self._amigos_is_global_admin(token),
+            group_id=group_id,
+        )
     def amigos_rotate_join_code(
         self, token: str | None, group_id: str
     ) -> dict[str, object]:
@@ -978,8 +987,6 @@ class AmigosMixin(PlatformApiCore):
             kind=str(row["kind"]),
             description=self._str_or_none(row.get("description")),
             technical_description=self._str_or_none(row.get("technical_description")),
-            join_code=self._str_or_none(row.get("join_code")),
-            join_code_expires_at=self._str_or_none(row.get("join_code_expires_at")),
             admin_roles=self._json_list(row.get("admin_roles_json") or row.get("admin_roles")),
             musical_roles=self._json_list(row.get("musical_roles_json") or row.get("musical_roles")),
             image_url=self._str_or_none(row.get("image_url")),
@@ -1089,5 +1096,6 @@ class AmigosMixin(PlatformApiCore):
     @staticmethod
     def _article_dict(article: AmigosArticleRead) -> dict[str, object]:
         return article.model_dump()
+
 
 
