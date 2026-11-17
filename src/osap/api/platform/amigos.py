@@ -430,6 +430,7 @@ class AmigosMixin(PlatformApiCore):
         row = self._amigos_service().request_membership(
             user_id=actor,
             group_id=group_id,
+            code=getattr(payload, "code", None),
             admin_role_id=getattr(payload, "admin_role_id", None),
             musical_role_id=getattr(payload, "musical_role_id", None),
             section_id=getattr(payload, "section_id", None),
@@ -1076,3 +1077,4 @@ class AmigosMixin(PlatformApiCore):
     @staticmethod
     def _article_dict(article: AmigosArticleRead) -> dict[str, object]:
         return article.model_dump()
+

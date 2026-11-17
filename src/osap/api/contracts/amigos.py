@@ -91,6 +91,7 @@ class AmigosMemberGrantRequest(_Frozen):
 
 
 class AmigosMembershipRequest(_Frozen):
+    code: str | None = None
     admin_role_id: str | None = None
     musical_role_id: str | None = None
     section_id: str | None = None
@@ -350,6 +351,7 @@ class AmigosGroupCatalogRead(_Frozen):
 
 class AmigosGroupCatalogUpdate(_Frozen):
     items: list[AmigosCatalogItem] = Field(default_factory=list)
+
 
 
 

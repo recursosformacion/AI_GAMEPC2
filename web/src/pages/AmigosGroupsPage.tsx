@@ -3,6 +3,7 @@ import { apiClient } from "../api/ApiClient";
 import type { AmigosGroup } from "../api/types";
 import { AmigosNote } from "../components/AmigosNote";
 import { Spinner } from "../components/Spinner";
+import { chorusBaseUrl } from "../lib/chorus";
 import { useI18n } from "../i18n/I18n";
 
 // «Corales»: índice de agrupaciones. Cada tarjeta enlaza a la página pública estable del
@@ -41,6 +42,14 @@ export function AmigosGroupsPage() {
         <h1 className="mt-2 text-3xl font-semibold text-osap-ink">{t("friends.coralesTitle")}</h1>
         <p className="mt-2 max-w-2xl text-sm text-osap-muted">{t("friends.coralesSubtitle")}</p>
         <AmigosNote titleKey="friends.coralesNoteTitle" bodyKey="friends.coralesNoteBody" />
+        <a
+          href={`${chorusBaseUrl()}/alta.html`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 inline-block text-sm font-medium text-osap-accent hover:underline"
+        >
+          Abrir formulario de alta de grupo/entidad →
+        </a>
       </header>
 
       {loading ? (
@@ -97,4 +106,5 @@ export function AmigosGroupsPage() {
     </div>
   );
 }
+
 

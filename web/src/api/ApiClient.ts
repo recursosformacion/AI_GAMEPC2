@@ -484,7 +484,7 @@ export class ApiClient {
 
   async requestAmigosMembership(
     groupId: string,
-    input: { admin_role_id?: string | null; musical_role_id?: string | null; section_id?: string | null },
+    input: { code?: string | null; admin_role_id?: string | null; musical_role_id?: string | null; section_id?: string | null },
   ): Promise<AmigosMember> {
     return this.post<AmigosMember>(
       `/amigos/groups/${encodeURIComponent(groupId)}/request`,
@@ -1081,6 +1081,7 @@ export interface QuotaUsage {
   by_provider: { provider: string; total: number }[];
   top_works: { work_id: string; total: number }[];
 }
+
 
 
 

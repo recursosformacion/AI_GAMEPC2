@@ -324,6 +324,7 @@ class AmigosService:
         admin_role_id: str | None = None,
         musical_role_id: str | None = None,
         section_id: str | None = None,
+        code: str | None = None,
     ) -> dict[str, object]:
         group = self._store.get_amigos_group(group_id)
         if group is None or str(group.get("status")) != "active":
@@ -331,11 +332,12 @@ class AmigosService:
         current = self._store.get_amigos_member(group_id, user_id)
         if current is not None and str(current.get("status")) == "active":
             raise AmigosError(409, "ALREADY_MEMBER", "Ya perteneces a este grupo")
+        auto_approved = bool(code) and str(code).strip() == str(group.get("join_code") or "").strip()
         row = self._store.set_amigos_member(
             group_id=group_id,
             user_id=user_id,
             role="collaborator",
-            status="pending",
+            status="active" if auto_approved else "pending",
             granted_by=user_id,
             admin_role_id=admin_role_id,
             musical_role_id=musical_role_id,
@@ -344,7 +346,7 @@ class AmigosService:
         self._store.add_amigos_event(
             group_id=group_id,
             article_id=None,
-            event_type="membership_requested",
+            event_type="membership_joined" if auto_approved else "membership_requested",
             actor=user_id,
             detail_json=_json({"user_id": user_id}),
         )
@@ -1608,3 +1610,4 @@ def _clean_media(items: list[dict[str, Any]]) -> list[dict[str, object]]:
             }
         )
     return cleaned
+

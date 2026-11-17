@@ -92,6 +92,7 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 | Programas afectados | todos | ≥1 | exactamente 1 |
 
 ## Historial
+- **6.1.1 (C) — osap-api + Chorus 0.10.1 (2026-11-17)**: corrige el detalle público de grupo (consulta pública sin include_inactive), restaura el formulario de alta desde grupos e inicio, añade código de invitación a la solicitud de acceso (auto-aprobación si coincide), mueve Mensajes del cuadro Comunicados a la ventana de mensajes y corrige el puerto interno de ai-noticias (8401) para liberar osap-videos (8400). Sin cambios de IDs, slugs ni URLs.
 
 - **6.1.0 (B) — OSAP + Chorus 0.10.0 (2026-11-16)**: Chorus pasa a MySQL/MariaDB
   (`app/db.py`, esquema `migrations/mysql/001_schema.sql`, migración de datos);
@@ -667,4 +668,5 @@ oindex` en rutas internas. Infra: nginx/`.htaccess` proxya las rutas SEO. Compat
   elimina la reutilización dev/prod. Los datos de dev se migraron y se **revirtieron** para
   dejarlo consistente con su `osap-auth` en marcha (el proceso de dev no era reiniciable
   desde esta sesión); consistencia verificada (13/13) y health 200.
+
 

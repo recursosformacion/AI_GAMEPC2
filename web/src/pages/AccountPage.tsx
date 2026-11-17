@@ -16,6 +16,7 @@ export function AccountPage() {
   const [requestAdmin, setRequestAdmin] = useState("");
   const [requestMusical, setRequestMusical] = useState("");
   const [requestSection, setRequestSection] = useState("");
+  const [requestCode, setRequestCode] = useState("");
   const [name, setName] = useState(user?.name ?? "");
   const [nickname, setNickname] = useState(user?.nickname ?? "");
   const [phone, setPhone] = useState(user?.phone ?? "");
@@ -81,12 +82,17 @@ export function AccountPage() {
     setBusy(true);
     setError(null);
     try {
-      await apiClient.requestAmigosMembership(requestGroupId, {
+      const result = await apiClient.requestAmigosMembership(requestGroupId, {
+        code: requestCode.trim() || null,
         admin_role_id: requestAdmin || null,
         musical_role_id: requestMusical || null,
         section_id: requestSection || null,
       });
-      setMessage("Solicitud enviada; la administración del grupo debe aprobarla.");
+      setMessage(
+        result.status === "active"
+          ? "Acceso concedido con el código de invitación."
+          : "Solicitud enviada; la administración del grupo debe aprobarla.",
+      );
       setRequestGroupId("");
     } catch {
       setError("No se pudo enviar la solicitud.");
@@ -299,6 +305,10 @@ export function AccountPage() {
             </select>
           </label>
           <label className="text-sm text-osap-muted">
+            Código de invitación (opcional)
+            <input value={requestCode} onChange={(e) => setRequestCode(e.target.value)} className="mt-1 w-full rounded border border-osap-border bg-osap-bg px-2 py-2 text-sm" placeholder="Ej. 7KQ4M2" />
+          </label>
+          <label className="text-sm text-osap-muted">
             Sección / cuerda
             <select
               value={requestSection}
@@ -335,6 +345,7 @@ export function AccountPage() {
     </div>
   );
 }
+
 
 
 

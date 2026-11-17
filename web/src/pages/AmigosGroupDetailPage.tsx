@@ -19,7 +19,7 @@ export function AmigosGroupDetailPage() {
     if (!groupId) return;
     setLoading(true);
     Promise.all([
-      apiClient.getAmigosGroups(true),
+      apiClient.getAmigosGroups(),
       apiClient.getAmigosGroupArticles(groupId).catch(() => ({ items: [], total: 0 })),
     ])
       .then(([groups, list]) => {
@@ -136,3 +136,4 @@ export function AmigosGroupDetailPage() {
     </div>
   );
 }
+
