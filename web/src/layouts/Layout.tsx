@@ -189,13 +189,6 @@ const CONTENT_ENTRIES: readonly NavEntry[] = [
 const SPACE_NAV: readonly NavItem[] = [
   { to: "/activity", key: "nav.activity", icon: "activity" },
   { to: "/noticias", key: "nav.news", icon: "article" },
-];
-
-// «Los amigos»: grupo de menú propio (como «Tu espacio»), con la jerarquía
-// Los amigos → Grupos (coral es un tipo de grupo). El blog general vive en su aplicación independiente.
-const FRIENDS_NAV: readonly NavItem[] = [
-  { to: "/amigos", key: "nav.friends", icon: "friends" },
-  { to: "/amigos/grupos", key: "nav.corales", icon: "people" },
   { to: "/amigos/eventos", key: "nav.events", icon: "clock" },
   {
     to: blogHomeUrl(),
@@ -204,8 +197,14 @@ const FRIENDS_NAV: readonly NavItem[] = [
     external: true,
     sessionHandoff: true,
   },
-  { to: "/amigos/mis-articulos", key: "nav.myArticles", icon: "article" },
-  { to: chorusHomeUrl(), key: "nav.chorus", icon: "article", external: true, newTab: true, chorusHandoff: true },
+  {
+    to: chorusHomeUrl(),
+    key: "nav.chorus",
+    icon: "article",
+    external: true,
+    newTab: true,
+    chorusHandoff: true,
+  },
 ];
 
 // Fondo del sidebar: exactamente dos entradas, como el diseño.
@@ -385,7 +384,6 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
         >
           <SidebarSection title={t("nav.sectionContent")} entries={CONTENT_ENTRIES} onNavigate={onClose} />
           <SidebarSection title={t("nav.sectionYourSpace")} entries={SPACE_NAV} onNavigate={onClose} />
-          <SidebarSection title={t("nav.sectionFriends")} entries={FRIENDS_NAV} onNavigate={onClose} />
         </nav>
         <div className="border-t border-osap-border-strong px-3 py-3">
           <ul className="space-y-0.5">

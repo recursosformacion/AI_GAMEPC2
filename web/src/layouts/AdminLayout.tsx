@@ -59,14 +59,8 @@ const SECTIONS: AdminSection[] = [
     ],
   },
   {
-    caption: "Los amigos",
-    items: [
-      { to: "/admin/amigos", label: "Grupo/Entidad" },
-      { to: "/admin/amigos/taxonomia", label: "Taxonomías" },
-      { to: "/admin/amigos/eventos", key: "nav.events" },
-      { to: "/admin/amigos/blog", key: "nav.articles" },
-      { to: "/admin/amigos/autorizaciones", key: "friends.authorizations" },
-    ],
+    caption: "Eventos",
+    items: [{ to: "/admin/amigos/eventos", key: "nav.events" }],
   },
   {
     caption: "Mantenimiento storage",
