@@ -145,14 +145,14 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
     set_render_flags(read_only=read_only)
 
     @router.get("/api/v1/seo/resolve/{work_id}", include_in_schema=False)
-    def resolve_legacy_work(work_id: str) -> dict[str, str | None]:
+    def resolve_legacy_work(work_id: str) -> dict[str, object]:
         canonical = normalize_work_id(work_id)
         target = ctx.api.seo_legacy_target(canonical) if canonical else None
         if target:
             data = ctx.api.seo_work(target)
             if isinstance(data, dict):
-                return {"work_id": target, "slug": _work_slug(data)}
-        return {"work_id": None, "slug": None}
+                return {"success": True, "data": {"work_id": target, "slug": _work_slug(data)}}
+        return {"success": True, "data": {"work_id": None, "slug": None}}
     @router.get("/obras/{work_id}", include_in_schema=False)
     def work_canonical(work_id: str) -> Response:
         canonical = normalize_work_id(work_id)
@@ -359,5 +359,9 @@ def build_seo_router(ctx: HttpContext) -> APIRouter:
         return _html(render_amigos_article(view))
 
     return router
+
+
+
+
 
 

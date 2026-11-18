@@ -438,7 +438,7 @@ const server = createServer(async (req, res) => {
   const numericWork = /^\/obras\/(\d+)(\/.*)?$/.exec(pathname);
   if (numericWork) {
     const search = new URL(url, "http://localhost").search;
-    const resolved = await apiGet(`/api/v1/seo/resolve/${encodeURIComponent(numericWork[1])}`);
+    const resolved = await apiGet(`/seo/resolve/${encodeURIComponent(numericWork[1])}`);
     const targetId = resolved.ok ? resolved.data?.work_id : null;
     const targetSlug = resolved.ok ? resolved.data?.slug : null;
     const location = targetId && targetSlug
@@ -508,6 +508,7 @@ const server = createServer(async (req, res) => {
 server.listen(PORT, "127.0.0.1", () => {
   console.log(`SSR escuchando en http://127.0.0.1:${PORT} (api ${API}, dev=${DEV})`);
 });
+
 
 
 
