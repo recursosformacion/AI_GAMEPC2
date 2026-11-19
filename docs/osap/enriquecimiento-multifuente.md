@@ -1,6 +1,6 @@
 # Enriquecimiento multifuente de personas y obras (OSAP)
 
-Estado: **propuesta de diseño** (no implementado todavía). Fecha: 2026-11-19.
+Estado: **fase 1 implementada** (conector Wikidata + staging + CLI + IIIF como fuente); fases 2–5 propuestas. Fecha: 2026-11-19.
 
 ## 1. Objetivo
 
