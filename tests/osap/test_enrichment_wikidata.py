@@ -124,6 +124,32 @@ def test_search_uses_wbsearchentities() -> None:
     assert kwargs["params"]["format"] == "json"
 
 
+def test_fetch_persons_batch_parses_values() -> None:
+    payload = {
+        "results": {
+            "bindings": [
+                {
+                    "item": {"value": "http://www.wikidata.org/entity/Q254"},
+                    "itemLabel": {"value": "Wolfgang Amadeus Mozart"},
+                    "dob": {"value": "1756-01-27T00:00:00Z"},
+                    "dod": {"value": "1791-12-05T00:00:00Z"},
+                    "gnd": {"value": "118584596"},
+                    "viaf": {"value": "32197206"},
+                }
+            ]
+        }
+    }
+    session = _Session(payload)
+    source = WikidataSource(session=session)
+    out = source.fetch_persons_batch(["Q254"])
+    assert out["Q254"]["name"] == "Wolfgang Amadeus Mozart"
+    assert out["Q254"]["birth_year"] == 1756
+    assert out["Q254"]["death_year"] == 1791
+    assert out["Q254"]["gnd"] == "118584596"
+    _, kwargs = session.calls[0]
+    assert "VALUES" in kwargs["params"]["query"]
+
+
 def test_iiif_manifest_detection() -> None:
     assert iiif.looks_like_iiif_manifest(
         {"@context": "http://iiif.io/api/presentation/2/context.json", "@type": "sc:Manifest"}

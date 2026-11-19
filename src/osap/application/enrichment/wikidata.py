@@ -185,29 +185,102 @@ def _candidate(entity_type: str, key: str, field: str, value: str, qid: str) -> 
     )
 
 
-def person_candidates(qid: str, data: dict[str, Any]) -> list[EnrichmentCandidate]:
+def person_candidates(
+    qid: str, data: dict[str, Any], entity_key: str | None = None
+) -> list[EnrichmentCandidate]:
+    key = entity_key or qid
     out: list[EnrichmentCandidate] = []
-    for key, field in _PERSON_FIELDS.items():
-        value = data.get(key)
+    for field_name, field in _PERSON_FIELDS.items():
+        value = data.get(field_name)
         if value is None or value == "":
             continue
-        out.append(_candidate("person", qid, field, str(value), qid))
-    for key, field in _PERSON_LISTS.items():
-        for item in data.get(key) or []:
-            out.append(_candidate("person", qid, field, str(item), qid))
+        out.append(_candidate("person", key, field, str(value), qid))
+    for field_name, field in _PERSON_LISTS.items():
+        for item in data.get(field_name) or []:
+            out.append(_candidate("person", key, field, str(item), qid))
     return out
 
 
-def work_candidates(qid: str, data: dict[str, Any]) -> list[EnrichmentCandidate]:
+def work_candidates(
+    qid: str, data: dict[str, Any], entity_key: str | None = None
+) -> list[EnrichmentCandidate]:
+    key = entity_key or qid
     out: list[EnrichmentCandidate] = []
-    for key, field in _WORK_FIELDS.items():
-        value = data.get(key)
+    for field_name, field in _WORK_FIELDS.items():
+        value = data.get(field_name)
         if value is None or value == "":
             continue
-        out.append(_candidate("work", qid, field, str(value), qid))
-    for key, field in _WORK_LISTS.items():
-        for item in data.get(key) or []:
-            out.append(_candidate("work", qid, field, str(item), qid))
+        out.append(_candidate("work", key, field, str(value), qid))
+    for field_name, field in _WORK_LISTS.items():
+        for item in data.get(field_name) or []:
+            out.append(_candidate("work", key, field, str(item), qid))
+    return out
+
+
+def _binding_value(binding: dict[str, Any], key: str) -> str:
+    entry = binding.get(key)
+    if isinstance(entry, dict):
+        value = entry.get("value")
+        if isinstance(value, str):
+            return value
+    return ""
+
+
+def _year_from_datetime(text: str) -> int | None:
+    match = re.match(r"^(-?\d{1,4})-", text or "")
+    return int(match.group(1)) if match else None
+
+
+def _parse_person_batch(data: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    results = data.get("results")
+    bindings = results.get("bindings") if isinstance(results, dict) else None
+    out: dict[str, dict[str, Any]] = {}
+    if not isinstance(bindings, list):
+        return out
+    for binding in bindings:
+        if not isinstance(binding, dict):
+            continue
+        uri = _binding_value(binding, "item")
+        qid = uri.rsplit("/", 1)[-1] if "/" in uri else uri
+        if not qid.startswith("Q"):
+            continue
+        record = out.setdefault(
+            qid,
+            {
+                "qid": qid,
+                "name": "",
+                "birth_year": None,
+                "death_year": None,
+                "gnd": "",
+                "isni": "",
+                "viaf": "",
+                "lccn": "",
+                "bnf": "",
+                "bne": "",
+                "musicbrainz_artist": "",
+                "image": "",
+                "nationality_qid": [],
+                "occupation_qid": [],
+            },
+        )
+        if not record["name"]:
+            record["name"] = _binding_value(binding, "itemLabel")
+        if record["birth_year"] is None:
+            record["birth_year"] = _year_from_datetime(_binding_value(binding, "dob"))
+        if record["death_year"] is None:
+            record["death_year"] = _year_from_datetime(_binding_value(binding, "dod"))
+        for var, target in (
+            ("gnd", "gnd"),
+            ("isni", "isni"),
+            ("viaf", "viaf"),
+            ("lccn", "lccn"),
+            ("bnf", "bnf"),
+            ("bne", "bne"),
+            ("mb", "musicbrainz_artist"),
+            ("image", "image"),
+        ):
+            if not record[target]:
+                record[target] = _binding_value(binding, var)
     return out
 
 
@@ -245,6 +318,33 @@ class WikidataSource:
 
     def entity(self, qid: str) -> dict[str, Any]:
         return self._get(ENTITY_URL.format(qid=qid), None, "application/json")
+
+    def fetch_persons_batch(self, qids: list[str]) -> dict[str, dict[str, Any]]:
+        """Enriquece varias personas (QIDs) en una sola consulta SPARQL ``VALUES``."""
+        cleaned = [q for q in qids if looks_like_qid(q)]
+        if not cleaned:
+            return {}
+        values = " ".join(f"wd:{q}" for q in cleaned)
+        query = (
+            "SELECT ?item ?itemLabel ?dob ?dod ?gnd ?isni ?viaf ?lccn ?bnf ?bne ?mb ?image WHERE { "
+            f"VALUES ?item {{ {values} }} "
+            "OPTIONAL { ?item wdt:P569 ?dob } "
+            "OPTIONAL { ?item wdt:P570 ?dod } "
+            "OPTIONAL { ?item wdt:P227 ?gnd } "
+            "OPTIONAL { ?item wdt:P213 ?isni } "
+            "OPTIONAL { ?item wdt:P214 ?viaf } "
+            "OPTIONAL { ?item wdt:P244 ?lccn } "
+            "OPTIONAL { ?item wdt:P268 ?bnf } "
+            "OPTIONAL { ?item wdt:P950 ?bne } "
+            "OPTIONAL { ?item wdt:P434 ?mb } "
+            "OPTIONAL { ?item wdt:P18 ?image } "
+            'SERVICE wikibase:label { bd:serviceParam wikibase:language "es,en". } '
+            "}"
+        )
+        data = self._get(
+            SPARQL_URL, {"query": query, "format": "json"}, "application/sparql-results+json"
+        )
+        return _parse_person_batch(data)
 
 
 def _parse_entities(data: dict[str, Any]) -> list[dict[str, str]]:
