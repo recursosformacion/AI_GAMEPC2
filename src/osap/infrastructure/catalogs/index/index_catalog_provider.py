@@ -10,7 +10,9 @@ indexados (p. ej. RISM).
 
 from __future__ import annotations
 
+import datetime
 import logging
+import os
 import re
 import unicodedata
 from typing import TYPE_CHECKING, Any
@@ -795,6 +797,130 @@ class IndexCatalogProvider(ICatalogProvider):
                 rows = cur.fetchall()
         except pymysql.err.OperationalError as exc:
             logger.warning("index provider: MySQL no disponible al listar el sitemap (%s)", exc)
+            return []
+        finally:
+            if conn is not None:
+                conn.close()
+        return [
+            {
+                "work_id": str(row.get("public_id") or f"index-{int(str(row.get('id') or 0))}"),
+                "title": str(row.get("title") or ""),
+                "composer": str(row.get("composer_name") or "") or None,
+                "updated_at": str(row.get("updated_at") or "") or None,
+            }
+            for row in rows
+        ]
+
+    # --- sitemap curado (solo obras con metadatos de calidad) -----------------
+
+    # Puntuación de "enriquecido": nº de campos ricos presentes. `genre_id=0` significa
+    # "sin género" (lo escriben algunos proveedores), así que NO cuenta como presente.
+    _SITEMAP_SCORE_EXPR = (
+        "((composer_name IS NOT NULL AND composer_name <> '')"
+        " + (catalogue IS NOT NULL AND catalogue <> '')"
+        " + (year IS NOT NULL)"
+        " + (instrumentation IS NOT NULL AND instrumentation <> '')"
+        " + (genre_id IS NOT NULL AND genre_id <> 0))"
+    )
+
+    def _sitemap_curated(self) -> bool:
+        """Modo del sitemap de obras: `curated` (defecto) o `all` (comportamiento antiguo)."""
+        return os.environ.get("OSAP_SITEMAP_WORKS_MODE", "curated").strip().lower() != "all"
+
+    def _sitemap_min_fields(self) -> int:
+        raw = os.environ.get("OSAP_SITEMAP_WORKS_MIN_FIELDS", "3")
+        try:
+            return max(1, min(5, int(raw)))
+        except ValueError:
+            return 3
+
+    def _sitemap_effective_total(self, pool_total: int) -> int:
+        """Aplica cupo absoluto y crecimiento semanal opcional al total curado."""
+        total = int(pool_total)
+        cap_raw = os.environ.get("OSAP_SITEMAP_WORKS_LIMIT", "0").strip()
+        if cap_raw.isdigit() and int(cap_raw) > 0:
+            total = min(total, int(cap_raw))
+        per_week_raw = os.environ.get("OSAP_SITEMAP_WORKS_PER_WEEK", "0").strip()
+        if per_week_raw.isdigit() and int(per_week_raw) > 0:
+            start_raw = os.environ.get("OSAP_SITEMAP_WORKS_START", "2026-11-17").strip()
+            try:
+                start = datetime.date.fromisoformat(start_raw)
+            except ValueError:
+                start = datetime.date(2026, 11, 17)
+            weeks = max(0, (datetime.date.today() - start).days // 7)
+            total = min(total, int(per_week_raw) * (weeks + 1))
+        return max(0, total)
+
+    def count_sitemap_works(self) -> int:
+        """Total de obras para el sitemap (curado por defecto).
+
+        Si `OSAP_SITEMAP_WORKS_MODE=all`, delega en `count_works` (todas). En modo curado
+        cuenta solo las obras con `OSAP_SITEMAP_WORKS_MIN_FIELDS` campos ricos o más y
+        aplica `OSAP_SITEMAP_WORKS_LIMIT` / `OSAP_SITEMAP_WORKS_PER_WEEK`.
+        """
+        if not self._sitemap_curated():
+            return self.count_works()
+        conn = None
+        try:
+            conn = pymysql.connect(
+                host=self._host,
+                user=self._user,
+                password=self._password,
+                database=self._database,
+                port=self._port,
+                charset="utf8mb4",
+                cursorclass=DictCursor,
+                autocommit=True,
+            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    f"SELECT COUNT(*) AS total FROM index_works WHERE {self._SITEMAP_SCORE_EXPR} >= %s",
+                    (self._sitemap_min_fields(),),
+                )
+                row = cur.fetchone()
+        except pymysql.err.OperationalError as exc:
+            logger.warning("index provider: MySQL no disponible al contar el sitemap curado (%s)", exc)
+            return 0
+        finally:
+            if conn is not None:
+                conn.close()
+        pool = int(str(row["total"])) if row else 0
+        return self._sitemap_effective_total(pool)
+
+    def list_sitemap_works(self, limit: int, offset: int) -> list[dict[str, object]]:
+        """Página del sitemap curado de obras (orden: más enriquecidas primero)."""
+        if not self._sitemap_curated():
+            return self.list_work_sitemap_entries(limit, offset)
+        total = self.count_sitemap_works()
+        if offset >= total:
+            return []
+        real_limit = min(int(limit), total - int(offset))
+        if real_limit <= 0:
+            return []
+        conn = None
+        try:
+            conn = pymysql.connect(
+                host=self._host,
+                user=self._user,
+                password=self._password,
+                database=self._database,
+                port=self._port,
+                charset="utf8mb4",
+                cursorclass=DictCursor,
+                autocommit=True,
+            )
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, public_id, title, composer_name, updated_at, "
+                    f"{self._SITEMAP_SCORE_EXPR} AS _score FROM index_works "
+                    f"WHERE {self._SITEMAP_SCORE_EXPR} >= %s "
+                    "ORDER BY _score DESC, updated_at DESC, id "
+                    "LIMIT %s OFFSET %s",
+                    (self._sitemap_min_fields(), real_limit, int(offset)),
+                )
+                rows = cur.fetchall()
+        except pymysql.err.OperationalError as exc:
+            logger.warning("index provider: MySQL no disponible al listar el sitemap curado (%s)", exc)
             return []
         finally:
             if conn is not None:

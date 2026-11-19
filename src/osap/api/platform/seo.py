@@ -171,7 +171,11 @@ class SeoMixin(PlatformApiCore):
         provider = self._index_provider()
         if provider is None:
             return 0
-        counter = getattr(provider, "count_works", None)
+        # Preferir el conteo curado (solo obras con metadatos de calidad); si el proveedor
+        # no lo ofrece, caer al total histórico (`count_works`).
+        counter = getattr(provider, "count_sitemap_works", None) or getattr(
+            provider, "count_works", None
+        )
         if not callable(counter):
             return 0
         return int(counter())
@@ -180,7 +184,9 @@ class SeoMixin(PlatformApiCore):
         provider = self._index_provider()
         if provider is None:
             return []
-        lister = getattr(provider, "list_work_sitemap_entries", None)
+        lister = getattr(provider, "list_sitemap_works", None) or getattr(
+            provider, "list_work_sitemap_entries", None
+        )
         if not callable(lister):
             return []
         data = lister(limit, offset)
