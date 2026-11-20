@@ -14,6 +14,7 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import os
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -77,13 +78,15 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--limit", type=int, default=200)
     ap.add_argument("--apply", action="store_true")
-    ap.add_argument("--db-host", default="127.0.0.1")
-    ap.add_argument("--db-port", type=int, default=3306)
-    ap.add_argument("--db-user", required=True)
-    ap.add_argument("--db-password", default="")
+    ap.add_argument("--db-host", default=os.environ.get("OSAP_DB_HOST", "127.0.0.1"))
+    ap.add_argument("--db-port", type=int, default=int(os.environ.get("OSAP_DB_PORT", "3306")))
+    ap.add_argument("--db-user", default=os.environ.get("OSAP_DB_USER", ""))
+    ap.add_argument("--db-password", default=os.environ.get("OSAP_DB_PASSWORD", ""))
     ap.add_argument("--storage-name", default="osap_storage")
     ap.add_argument("--stage-name", default="osap_api")
     args = ap.parse_args()
+    if not args.db_user:
+        ap.error("falta usuario de BD (OSAP_DB_USER o --db-user)")
 
     stage = _connect(args.db_host, args.db_port, args.db_user, args.db_password, args.stage_name)
     storage = _connect(args.db_host, args.db_port, args.db_user, args.db_password, args.storage_name)

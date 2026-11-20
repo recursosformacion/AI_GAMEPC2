@@ -14,7 +14,9 @@ Uso:
 from __future__ import annotations
 
 import argparse
+import os
 import sys
+import time
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -44,7 +46,7 @@ JOIN persons_identity pi
 WHERE p.persons_merged_into IS NULL
 GROUP BY p.persons_id, p.persons_name, p.persons_birth_year, p.persons_death_year,
          p.persons_nationality, p.persons_image_url
-ORDER BY p.persons_name
+ORDER BY p.persons_name, p.persons_id
 LIMIT %s OFFSET %s
 """
 
@@ -77,15 +79,18 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--limit", type=int, default=40)
     ap.add_argument("--offset", type=int, default=0)
-    ap.add_argument("--chunk", type=int, default=40)
+    ap.add_argument("--chunk", type=int, default=25)
+    ap.add_argument("--sleep", type=float, default=2.0)
     ap.add_argument("--stage", action="store_true")
-    ap.add_argument("--db-host", default="127.0.0.1")
-    ap.add_argument("--db-port", type=int, default=3306)
-    ap.add_argument("--db-user", required=True)
-    ap.add_argument("--db-password", default="")
+    ap.add_argument("--db-host", default=os.environ.get("OSAP_DB_HOST", "127.0.0.1"))
+    ap.add_argument("--db-port", type=int, default=int(os.environ.get("OSAP_DB_PORT", "3306")))
+    ap.add_argument("--db-user", default=os.environ.get("OSAP_DB_USER", ""))
+    ap.add_argument("--db-password", default=os.environ.get("OSAP_DB_PASSWORD", ""))
     ap.add_argument("--storage-name", default="osap_storage")
     ap.add_argument("--stage-name", default="osap_api")
     args = ap.parse_args()
+    if not args.db_user:
+        ap.error("falta usuario de BD (OSAP_DB_USER o --db-user)")
 
     storage = _connect(args.db_host, args.db_port, args.db_user, args.db_password, args.storage_name)
     try:
@@ -105,7 +110,21 @@ def main() -> int:
     qids = sorted({_qid(r["qid"]) for r in rows if _qid(r["qid"])})
     for start in range(0, len(qids), max(1, args.chunk)):
         batch = qids[start : start + args.chunk]
-        results = source.fetch_persons_batch(batch)
+        attempt = 0
+        while True:
+            try:
+                results = source.fetch_persons_batch(batch)
+                break
+            except Exception as exc:  # noqa: BLE001
+                status = getattr(getattr(exc, "response", None), "status_code", None)
+                attempt += 1
+                if status == 429 and attempt <= 6:
+                    wait = 60 * attempt
+                    print(f"429 en chunk {start}; espera {wait}s (intento {attempt})", file=sys.stderr)
+                    time.sleep(wait)
+                    continue
+                raise
+        time.sleep(max(0.0, args.sleep))
         for row in rows:
             qid = _qid(row["qid"])
             data = results.get(qid)
