@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useSearchParams } from "react-router-dom";
 import { authClient } from "../api/AuthClient";
@@ -290,10 +290,40 @@ function SidebarSection({
   const refreshToken = useAuth((s) => s.refreshToken);
   const hrefFor = (entry: NavItem) =>
     entry.sessionHandoff
-      ? blogSessionUrl(token, refreshToken, "/admin")
+      ? blogHomeUrl()
       : entry.chorusHandoff
         ? chorusSessionUrl(token, refreshToken)
         : entry.to;
+
+  const handleBlogHandoff = (
+    event: MouseEvent<HTMLAnchorElement>,
+    entry: NavItem,
+  ) => {
+    if (!entry.sessionHandoff || !token) return;
+    event.preventDefault();
+
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = blogSessionUrl();
+    form.hidden = true;
+
+    const fields: Record<string, string> = {
+      access_token: token,
+      next: "/admin",
+    };
+    if (refreshToken) fields.refresh_token = refreshToken;
+
+    for (const [name, value] of Object.entries(fields)) {
+      const input = document.createElement("input");
+      input.type = "hidden";
+      input.name = name;
+      input.value = value;
+      form.appendChild(input);
+    }
+
+    document.body.appendChild(form);
+    form.submit();
+  };
   return (
     <div className="mt-5">
       <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-osap-muted">{title}</p>
@@ -309,7 +339,10 @@ function SidebarSection({
                   target={entry.newTab ? "_blank" : undefined}
                   rel={entry.newTab ? "noopener noreferrer" : undefined}
                   referrerPolicy={entry.chorusHandoff ? "no-referrer" : undefined}
-                  onClick={onNavigate}
+                  onClick={(event) => {
+                    handleBlogHandoff(event, entry);
+                    onNavigate();
+                  }}
                   className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-bold ${
                     location.pathname === entry.to
                       ? "bg-osap-accent-soft text-osap-accent"
