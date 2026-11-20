@@ -16,6 +16,12 @@ import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
 import { useSeo } from "../seo/useSeo";
 import { blogHomeUrl, blogLogoutUrl, blogSessionUrl } from "../lib/blog";
+
+import { chorusHomeUrl, chorusSessionUrl } from "../lib/chorus";
+import { useAuth } from "../state/auth";
+import { useNotifications } from "../state/notifications";
+import { useSystem } from "../state/system";
+
 function submitBlogSessionHandoff(
   accessToken: string,
   refreshToken: string | null | undefined,
@@ -40,11 +46,6 @@ function submitBlogSessionHandoff(
   document.body.appendChild(form);
   form.submit();
 }
-
-import { chorusHomeUrl, chorusSessionUrl } from "../lib/chorus";
-import { useAuth } from "../state/auth";
-import { useNotifications } from "../state/notifications";
-import { useSystem } from "../state/system";
 
 type IconName =
   | "home"
