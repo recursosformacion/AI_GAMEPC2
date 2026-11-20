@@ -16,6 +16,31 @@ import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
 import { useSeo } from "../seo/useSeo";
 import { blogHomeUrl, blogLogoutUrl, blogSessionUrl } from "../lib/blog";
+function submitBlogSessionHandoff(
+  accessToken: string,
+  refreshToken: string | null | undefined,
+  next = "/admin",
+) {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = blogSessionUrl();
+  form.hidden = true;
+
+  const fields: Record<string, string> = { access_token: accessToken, next };
+  if (refreshToken) fields.refresh_token = refreshToken;
+
+  for (const [name, value] of Object.entries(fields)) {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = name;
+    input.value = value;
+    form.appendChild(input);
+  }
+
+  document.body.appendChild(form);
+  form.submit();
+}
+
 import { chorusHomeUrl, chorusSessionUrl } from "../lib/chorus";
 import { useAuth } from "../state/auth";
 import { useNotifications } from "../state/notifications";
@@ -302,27 +327,7 @@ function SidebarSection({
     if (!entry.sessionHandoff || !token) return;
     event.preventDefault();
 
-    const form = document.createElement("form");
-    form.method = "POST";
-    form.action = blogSessionUrl();
-    form.hidden = true;
-
-    const fields: Record<string, string> = {
-      access_token: token,
-      next: "/admin",
-    };
-    if (refreshToken) fields.refresh_token = refreshToken;
-
-    for (const [name, value] of Object.entries(fields)) {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = name;
-      input.value = value;
-      form.appendChild(input);
-    }
-
-    document.body.appendChild(form);
-    form.submit();
+    submitBlogSessionHandoff(token, refreshToken, "/admin");
   };
   return (
     <div className="mt-5">
@@ -460,9 +465,7 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
       token = useAuth.getState().accessToken;
     }
     if (!token) return false;
-    window.location.assign(
-      blogSessionUrl(token, useAuth.getState().refreshToken, "/admin"),
-    );
+    submitBlogSessionHandoff(token, useAuth.getState().refreshToken, "/admin");
     return true;
   }, []);
   const { start: startOidc, error: oidcError } = useOidcLogin(handoffToBlog);
