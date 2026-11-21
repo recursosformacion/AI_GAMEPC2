@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { videosHomeUrl, videosUrl } from "./videos";
+import { describe, expect, it, vi } from "vitest";
+import { videosBaseUrl, videosHomeUrl, videosUrl } from "./videos";
 
 describe("videos links", () => {
   it("incluye obra, representación, título, compositor y token", () => {
@@ -15,6 +15,13 @@ describe("videos links", () => {
     expect(url).toContain("title=Singing+nightingale");
     expect(url).toContain("composer=JYKN");
     expect(url).toContain("token=abc.def");
+  });
+
+  it("never reuses the production URL in a development build", () => {
+    vi.stubEnv("VITE_VIDEOS_URL", "https://videos.openmusicrepository.com");
+    vi.stubEnv("VITE_VIDEOS_DEV_URL", "");
+    expect(videosBaseUrl()).toBe("http://localhost:8400");
+    vi.unstubAllEnvs();
   });
 
   it("no genera enlace sin obra", () => {
