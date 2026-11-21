@@ -822,8 +822,8 @@ export class ApiClient {
     return this.post<{ url: string; token: string; next: string }>(`/admin/storage-web${qs}`, {});
   }
 
-  async getAdsWebUrl(): Promise<{ url: string }> {
-    return this.get<{ url: string }>("/admin/ads-web");
+  async createAdsWebHandoff(): Promise<{ url: string; token: string; next: string }> {
+    return this.post<{ url: string; token: string; next: string }>("/admin/ads-web", {});
   }
 
   async createSupportWebHandoff(section?: string): Promise<{ url: string; token: string; next: string }> {
