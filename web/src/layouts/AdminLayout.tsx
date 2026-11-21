@@ -164,11 +164,32 @@ export function AdminLayout(): ReactNode {
   };
 
   const openSupport = (section: string) => {
+    const target = `osap-support-${Date.now()}`;
+    const popup = window.open("about:blank", target);
+    if (!popup) {
+      window.alert("El navegador ha bloqueado la ventana de osap-support.");
+      return;
+    }
+    popup.opener = null;
     void (async () => {
       try {
-        const r = await apiClient.getSupportWebUrl(section);
-        window.open(r.url, "_blank");
+        const handoff = await apiClient.createSupportWebHandoff(section);
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = handoff.url;
+        form.target = target;
+        for (const [name, value] of Object.entries({ token: handoff.token, next: handoff.next })) {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = name;
+          input.value = value;
+          form.appendChild(input);
+        }
+        document.body.appendChild(form);
+        form.submit();
+        form.remove();
       } catch (error) {
+        popup.close();
         const detail = error instanceof Error ? error.message : String(error);
         window.alert(`osap-support admin no disponible · not available: ${detail}`);
       }
