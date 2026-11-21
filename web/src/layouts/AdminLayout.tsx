@@ -118,11 +118,33 @@ export function AdminLayout(): ReactNode {
   const navigate = useNavigate();
 
   const openStorage = (section: string) => {
+    // Abrir la ventana dentro del gesto del usuario; el handoff se completa después por POST.
+    const target = `osap-storage-${Date.now()}`;
+    const popup = window.open("about:blank", target);
+    if (!popup) {
+      window.alert("El navegador ha bloqueado la ventana de osap-storage.");
+      return;
+    }
+    popup.opener = null;
     void (async () => {
       try {
-        const r = await apiClient.getStorageWebUrl(section);
-        window.open(r.url, "_blank");
+        const handoff = await apiClient.createStorageWebHandoff(section);
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = handoff.url;
+        form.target = target;
+        for (const [name, value] of Object.entries({ token: handoff.token, next: handoff.next })) {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = name;
+          input.value = value;
+          form.appendChild(input);
+        }
+        document.body.appendChild(form);
+        form.submit();
+        form.remove();
       } catch (error) {
+        popup.close();
         const detail = error instanceof Error ? error.message : String(error);
         window.alert(`osap-storage admin no disponible · not available: ${detail}`);
       }
