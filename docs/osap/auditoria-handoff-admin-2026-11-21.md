@@ -101,3 +101,10 @@ No se enviarán tokens en query strings ni se incrustarán credenciales en HTML.
 ### Storage: autenticación de las APIs
 - El middleware protege las APIs y determina el scope requerido por ruta y método. La integración de cookie debe mantener esa validación centralizada y no limitarse a autorizar el shell HTML.
 - Deben verificarse explícitamente los prefijos reales de todas las rutas admin antes de modificar `_required_scope`, para evitar que una ruta administrativa quede clasificada accidentalmente como `storage:read` o `storage:write`.
+
+
+### Cobertura de pruebas actual (Storage)
+- `tests/api/test_service_auth.py` cubre scopes read/write/admin, expiración, audience, token_use y el requisito de autenticación en descargas.
+- No cubre todavía el handoff del navegador, cookies, atributos HttpOnly/Secure/SameSite, caducidad de cookie ligada a `exp`, validación de Origin/CSRF, rechazo de tokens en query ni deep links del panel.
+- Los nuevos tests deben ampliar ese módulo y probar tanto las rutas shell `/admin...` como las APIs protegidas, incluidos GET, POST, PUT y DELETE.
+- En Support no he localizado aún una suite específica de integración del shell de reconocimientos con su autenticación de servicio; debe añadirse antes de cambiar la dependencia Bearer.
