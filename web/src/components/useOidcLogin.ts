@@ -59,7 +59,6 @@ export function useOidcLogin(onDone?: () => void) {
     window.addEventListener("message", onMessage);
     return () => {
       window.removeEventListener("message", onMessage);
-      popupRef.current = null;
     };
   }, [onDone, t]);
 
