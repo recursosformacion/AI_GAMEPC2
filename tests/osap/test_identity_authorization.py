@@ -8,12 +8,12 @@ from concurrent.futures import ThreadPoolExecutor
 
 from fastapi.testclient import TestClient
 
-from src.osap.api.platform_app import create_platform_app
 from src.osap.api.platform.votes_users import VotesUsersMixin
-from src.osap.domain.votes import ForbiddenError, UnauthenticatedError
+from src.osap.api.platform_app import create_platform_app
 from src.osap.application.votes_service import VotesService
 from src.osap.bootstrap.container import Container
 from src.osap.domain.principal import ServicePrincipal, UserPrincipal
+from src.osap.domain.votes import ForbiddenError, UnauthenticatedError
 from src.osap.infrastructure.auth.service_token_provider import StaticServiceTokenProvider
 from src.osap.infrastructure.auth.token_authenticator import (
     JwtAuthenticator,
@@ -213,12 +213,14 @@ def test_concurrency_duplicate_is_409() -> None:
 # --- rol administrativo vigente en osap-auth -------------------------------
 
 class _AdminAuthProxy:
-    def __init__(self, result=None, error=None):
+    def __init__(
+        self, result: tuple[int, object] | None = None, error: Exception | None = None
+    ) -> None:
         self.result = result
         self.error = error
         self.calls = 0
 
-    def me(self, token):
+    def me(self, token: str) -> tuple[int, object]:
         self.calls += 1
         if self.error is not None:
             raise self.error
@@ -226,7 +228,9 @@ class _AdminAuthProxy:
 
 
 class _AdminApi(VotesUsersMixin):
-    def __init__(self, authenticator, auth_proxy):
+    def __init__(
+        self, authenticator: StaticTokenAuthenticator, auth_proxy: _AdminAuthProxy
+    ) -> None:
         self._container = type(
             "ContainerStub",
             (),
@@ -234,7 +238,7 @@ class _AdminApi(VotesUsersMixin):
         )()
 
 
-def test_admin_role_in_jwt_is_not_enough_after_revocation():
+def test_admin_role_in_jwt_is_not_enough_after_revocation() -> None:
     proxy = _AdminAuthProxy((200, {"roles": ["user"]}))
     api = _AdminApi(StaticTokenAuthenticator("tok", "u1", roles=("user", "admin")), proxy)
 
@@ -247,7 +251,7 @@ def test_admin_role_in_jwt_is_not_enough_after_revocation():
     assert proxy.calls == 1
 
 
-def test_admin_role_granted_in_auth_is_accepted_even_if_jwt_is_stale():
+def test_admin_role_granted_in_auth_is_accepted_even_if_jwt_is_stale() -> None:
     proxy = _AdminAuthProxy((200, {"roles": ["user", "admin"]}))
     api = _AdminApi(StaticTokenAuthenticator("tok", "u1", roles=("user",)), proxy)
 
@@ -255,7 +259,7 @@ def test_admin_role_granted_in_auth_is_accepted_even_if_jwt_is_stale():
     assert proxy.calls == 1
 
 
-def test_admin_check_fails_closed_when_auth_is_unavailable():
+def test_admin_check_fails_closed_when_auth_is_unavailable() -> None:
     proxy = _AdminAuthProxy(error=RuntimeError("Auth unavailable"))
     api = _AdminApi(StaticTokenAuthenticator("tok", "u1", roles=("user", "admin")), proxy)
 
@@ -268,7 +272,7 @@ def test_admin_check_fails_closed_when_auth_is_unavailable():
     assert proxy.calls == 1
 
 
-def test_admin_check_requires_authenticated_identity():
+def test_admin_check_requires_authenticated_identity() -> None:
     proxy = _AdminAuthProxy((200, {"roles": ["admin"]}))
     api = _AdminApi(StaticTokenAuthenticator("tok", "u1"), proxy)
 
