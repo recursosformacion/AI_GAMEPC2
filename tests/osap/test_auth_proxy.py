@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import io
 import json
+import urllib.error
 import urllib.request
 
 from fastapi.testclient import TestClient
@@ -75,11 +77,16 @@ def test_register_email_exists_returns_generic_200() -> None:
 
 
 def test_register_422_relayed() -> None:
-    class _Err(_FakeResponse):
-        status = 422
+    error_body = {"detail": [{"loc": ["body", "password"], "msg": "Password too short"}]}
 
     def fake(request: urllib.request.Request, timeout: int = 15) -> _FakeResponse:  # noqa: ARG001
-        raise urllib.error.HTTPError(request.full_url, 422, "Validation Error", {}, None)
+        raise urllib.error.HTTPError(
+            request.full_url,
+            422,
+            "Validation Error",
+            {},
+            io.BytesIO(json.dumps(error_body).encode()),
+        )
 
     original = urllib.request.urlopen
     urllib.request.urlopen = fake  # type: ignore[assignment]
@@ -89,6 +96,7 @@ def test_register_422_relayed() -> None:
     finally:
         urllib.request.urlopen = original  # type: ignore[assignment]
     assert resp.status_code == 422
+    assert resp.json()["error"]["details"] == error_body
 
 
 def test_verify_email_proxies_and_relays() -> None:
