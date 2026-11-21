@@ -119,19 +119,9 @@ class AmigosMixin(PlatformApiCore):
         return None
 
     def _amigos_is_global_admin(self, token: str | None) -> bool:
-        principal = self._container.authenticator().resolve(token)
-        if principal is None:
-            return False
-        # Los roles del JWT son una instantánea emitida al iniciar sesión y pueden
-        # quedar obsoletos tras una revocación. La autoridad para permisos globales
-        # es el estado actual de osap-auth; si no responde, se deniega (fail-closed).
-        try:
-            code, doc = self._container.auth_proxy().me(token or "")
-        except Exception as exc:  # noqa: BLE001 — si auth no responde, no se concede admin
-            _LOGGER.warning("amigos: comprobación admin sin osap-auth (%s)", exc)
-            return False
-        roles = doc.get("roles") if isinstance(doc, dict) else None
-        return code == 200 and isinstance(roles, list) and "admin" in roles
+        # Mismo criterio transversal que el resto de operaciones administrativas:
+        # el rol vigente se consulta siempre en osap-auth.
+        return self._is_current_global_admin(token)
 
     # --- lectura pública -----------------------------------------------------
 
