@@ -154,9 +154,7 @@ class AuthProxyClient:
         self, access_token: str, entity_id: str, user_id: str
     ) -> tuple[int, object]:
         return self._call_bearer(
-            "DELETE",
-            f"/auth/admin/entities/{entity_id}/managers/{user_id}",
-            access_token,
+            "DELETE", f"/auth/admin/entities/{entity_id}/managers/{user_id}", access_token
         )
 
     # -- helpers -------------------------------------------------------------
@@ -217,9 +215,12 @@ class AuthProxyClient:
                 doc: dict[str, object] = json.loads(raw) if raw else {}
                 return response.status, doc
         except urllib.error.HTTPError as exc:
+            # HTTPError es un stream: leerlo una sola vez para no descartar el cuerpo
+            # que osap-auth devuelve (por ejemplo, el detalle de validación 422).
+            raw = exc.read()
             try:
-                doc = json.loads(exc.read() or b"{}") if exc.read() else {}
-            except Exception:
+                doc: dict[str, object] = json.loads(raw) if raw else {}
+            except (json.JSONDecodeError, UnicodeDecodeError):
                 doc = {}
             return exc.code, doc
         except Exception as exc:
