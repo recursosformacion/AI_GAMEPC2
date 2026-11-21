@@ -134,11 +134,11 @@ describe("AdminWorkPersonAiPage", () => {
   it("el botón Obras → Personas abre Storage mediante un formulario POST", async () => {
     const popup = { opener: window, close: vi.fn() } as unknown as WindowProxy;
     const open = vi.spyOn(window, "open").mockReturnValue(popup);
-    let submittedForm: HTMLFormElement | null = null;
+    const submittedForm: { current: HTMLFormElement | null } = { current: null };
     const submit = vi.spyOn(HTMLFormElement.prototype, "submit").mockImplementation(function (
       this: HTMLFormElement,
     ) {
-      submittedForm = this;
+      submittedForm.current = this;
     });
 
     renderPage();
@@ -148,9 +148,9 @@ describe("AdminWorkPersonAiPage", () => {
     await waitFor(() => expect(mocks.storage).toHaveBeenCalledWith("work-persons"));
     await waitFor(() => expect(submit).toHaveBeenCalled());
     expect(open).toHaveBeenCalledWith("about:blank", expect.stringContaining("osap-storage-work-persons-"));
-    expect(submittedForm?.method).toBe("post");
-    expect(submittedForm?.action).toBe("https://storage.example/admin/session");
-    expect(submittedForm?.querySelector<HTMLInputElement>('input[name="token"]')?.value).toBe(
+    expect(submittedForm.current?.method).toBe("post");
+    expect(submittedForm.current?.action).toBe("https://storage.example/admin/session");
+    expect(submittedForm.current?.querySelector<HTMLInputElement>('input[name="token"]')?.value).toBe(
       "storage-admin-token",
     );
     expect(submittedForm?.querySelector<HTMLInputElement>('input[name="next"]')?.value).toBe(
