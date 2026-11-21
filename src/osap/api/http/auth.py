@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from fastapi import APIRouter, Request, Response
+from fastapi import APIRouter, Header, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 
 from src.osap.api.contracts import (
@@ -13,7 +13,7 @@ from src.osap.api.contracts import (
     SuccessEnvelope,
     VerifyEmailRequest,
 )
-from src.osap.domain.votes import ForbiddenError
+from src.osap.domain.votes import ForbiddenError, UnauthenticatedError
 from src.osap.infrastructure.auth.auth_proxy_client import AuthProxyError
 
 if TYPE_CHECKING:
@@ -68,6 +68,32 @@ def build_auth_router(ctx: HttpContext) -> APIRouter:
                 ip_address=_shared._client_ip(request),
             )
         return ctx.ok(doc)
+
+    @router.get(
+        "/api/v1/auth/me",
+        tags=["Auth"],
+        summary="Current user profile",
+        description="Obtiene de osap-auth el perfil y los roles actuales del usuario autenticado.",
+        response_model=SuccessEnvelope[object] | ErrorEnvelope,
+        responses={
+            200: _shared._resp("User profile", _shared._example({})),
+            401: _shared._UNAUTHORIZED_401,
+            403: _shared._FORBIDDEN_403,
+            502: _shared._resp("Identity service unavailable", _shared._error("BAD_GATEWAY", "Identity service unreachable")),
+        },
+    )
+    def current_user_profile(
+        response: Response,
+        authorization: str | None = Header(default=None),
+    ) -> SuccessEnvelope[object] | ErrorEnvelope:
+        try:
+            return ctx.ok(ctx.api.user_profile(authorization))
+        except UnauthenticatedError:
+            return ctx.fail(401, response, "UNAUTHORIZED", "Login required")
+        except ForbiddenError:
+            return ctx.fail(403, response, "FORBIDDEN", "Access denied")
+        except AuthProxyError:
+            return ctx.fail(502, response, "BAD_GATEWAY", "Identity service unreachable")
 
     @router.post(
         "/api/v1/auth/dev-session",
