@@ -116,7 +116,7 @@ function clearRefresh(): void {
 }
 
 // El JWT no lleva nombre/email (privacidad); el perfil se pide a /auth/me y se fusiona.
-async function loadProfile(accessToken: string): Promise<Partial<FrontendUser>> {
+async function loadProfile(): Promise<Partial<FrontendUser>> {
   try {
     // El perfil se consulta a través de osap-api (mismo origen de la SPA).
     // Así funciona también en desarrollo sin depender de un proxy /auth del servidor web.
@@ -146,7 +146,7 @@ export const useAuth = create<AuthState>((set, get) => ({
       const session = await authClient.login(email, password);
       localStorage.setItem(REFRESH_KEY, session.refresh_token);
       localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
-      const profile = await loadProfile(session.access_token);
+      const profile = await loadProfile();
       set({
         accessToken: session.access_token,
         refreshToken: session.refresh_token,
@@ -203,7 +203,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   refreshProfile: async () => {
     const token = get().accessToken;
     if (!token) return;
-    const profile = await loadProfile(token);
+    const profile = await loadProfile();
     const current = get().user;
     if (current && Object.keys(profile).length > 0) {
       set({ user: { ...current, ...profile } });
