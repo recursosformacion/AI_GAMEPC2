@@ -34,6 +34,15 @@ def _build(auth) -> TestClient:
     container.set_vote_store(store)
     container.set_work_store(works)
     container.set_authenticator(auth)
+
+    class AuthProxyStub:
+        def me(self, token: str) -> tuple[int, dict[str, object]]:
+            principal = auth.resolve(token)
+            if principal is None:
+                return 401, {}
+            return 200, {"roles": list(getattr(principal, "roles", ()))}
+
+    container.set_auth_proxy(AuthProxyStub())  # type: ignore[arg-type]
     container.set_votes(service)
     return TestClient(create_platform_app(container=container))
 
