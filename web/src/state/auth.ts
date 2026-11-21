@@ -219,13 +219,14 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   refreshSession: async () => {
+    // No permitir que una renovación automática prolongue una sesión inactiva.
+    if (expireSessionIfIdle()) return false;
     // Single-flight: si ya hay un refresh en curso, se reutiliza (evita que la
     // rotación del refresh token genere 401 en llamadas concurrentes y cierre sesión).
     if (refreshInFlight) {
       return refreshInFlight;
     }
     refreshInFlight = (async () => {
-      if (expireSessionIfIdle()) return false;
       const refreshToken = get().refreshToken;
       if (!refreshToken) {
         get().logout();
@@ -234,6 +235,8 @@ export const useAuth = create<AuthState>((set, get) => ({
       set({ status: "refreshing" });
       try {
         const session = await authClient.refresh(refreshToken);
+        // Si la sesión venció mientras la petición estaba en curso, no la resucitamos.
+        if (expireSessionIfIdle()) return false;
         // Rotación: se guarda SIEMPRE el nuevo refresh (el anterior queda consumido).
         localStorage.setItem(REFRESH_KEY, session.refresh_token);
         set({
