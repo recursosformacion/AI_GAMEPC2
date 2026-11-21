@@ -190,14 +190,19 @@ export const useAuth = create<AuthState>((set, get) => ({
   completeOidc: (accessToken, refreshToken) => {
     localStorage.setItem(REFRESH_KEY, refreshToken);
     localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
+    const decoded = decodeUser(accessToken);
     set({
       accessToken,
       refreshToken,
-      user: decodeUser(accessToken),
+      user: decoded,
       status: "authenticated",
     });
     armRefresh();
-    void get().refreshProfile();
+    // La sesión sintética dev-admin no existe en osap-auth: no pedir /auth/me
+    // ni intentar refrescarla contra el proveedor real de identidad.
+    if (decoded.user_id !== "dev-admin") {
+      void get().refreshProfile();
+    }
   },
 
   refreshProfile: async () => {
