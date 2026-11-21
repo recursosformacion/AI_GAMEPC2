@@ -60,6 +60,29 @@ def test_register_proxies_to_osap_auth_and_relays() -> None:
     assert body["password"] == "password123"
 
 
+def test_current_user_profile_proxies_authoritative_roles() -> None:
+    captured: list[urllib.request.Request] = []
+
+    def fake(request: urllib.request.Request, timeout: int = 15) -> _FakeResponse:  # noqa: ARG001
+        captured.append(request)
+        return _FakeResponse(
+            json.dumps({"user_id": "u-admin", "roles": ["user", "admin"], "email_verified": True}).encode()
+        )
+
+    original = urllib.request.urlopen
+    urllib.request.urlopen = fake  # type: ignore[assignment]
+    try:
+        client = _build(fake)
+        resp = client.get("/api/v1/auth/me", headers={"Authorization": "Bearer access-token"})
+    finally:
+        urllib.request.urlopen = original  # type: ignore[assignment]
+
+    assert resp.status_code == 200
+    assert resp.json()["data"]["roles"] == ["user", "admin"]
+    assert captured[0].full_url.endswith("/auth/me")
+    assert captured[0].get_header("Authorization") == "Bearer access-token"
+
+
 def test_register_email_exists_returns_generic_200() -> None:
     # Anti-enumeración: email existente → misma respuesta genérica (user_id null), no 409.
     def fake(request: urllib.request.Request, timeout: int = 15) -> _FakeResponse:  # noqa: ARG001
