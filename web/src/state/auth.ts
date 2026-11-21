@@ -13,6 +13,30 @@ import { apiClient } from "../api/ApiClient";
 import type { FrontendUser } from "../api/types";
 
 const REFRESH_KEY = "osap.refresh_token";
+const LAST_ACTIVITY_KEY = "osap.last_activity";
+export const SESSION_IDLE_TIMEOUT_MS = 3 * 60 * 60 * 1000;
+
+export function getSessionIdleRemainingMs(): number | null {
+  if (!localStorage.getItem(REFRESH_KEY)) return null;
+  const lastActivity = Number(localStorage.getItem(LAST_ACTIVITY_KEY));
+  if (!Number.isFinite(lastActivity) || lastActivity <= 0) return 0;
+  return SESSION_IDLE_TIMEOUT_MS - (Date.now() - lastActivity);
+}
+
+export function recordSessionActivity(): void {
+  if (useAuth.getState().isAuthenticated()) {
+    localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
+  }
+}
+
+export function expireSessionIfIdle(): boolean {
+  const remaining = getSessionIdleRemainingMs();
+  if (remaining !== null && remaining <= 0) {
+    useAuth.getState().logout();
+    return true;
+  }
+  return false;
+}
 
 type AuthStatus = "anonymous" | "authenticated" | "refreshing";
 
