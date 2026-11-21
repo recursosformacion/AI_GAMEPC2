@@ -91,7 +91,8 @@ class SystemMixin(PlatformApiCore):
         if not base:
             raise RuntimeError("publicidad no configurada")
         panel = "/p" if base.endswith("/publicidad") else "/admin"
-        return {"url": f"{base}/auth/session", "token": token or "", "next": panel}
+        next_url = f"{base}{panel}"
+        return {"url": f"{base}/auth/session", "token": token or "", "next": next_url}
     def admin_overview(self, token: str | None) -> dict[str, object]:
         stats = self.composer_review_stats(token)
         suggestions = self._store.suggestion_counts()
