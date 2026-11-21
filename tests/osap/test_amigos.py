@@ -10,7 +10,7 @@ sirven en HTML real.
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from fastapi import FastAPI
@@ -1224,12 +1224,12 @@ class TestGlobalAdminRoleFreshness:
 
         class _Api(AmigosMixin):
             def __init__(self) -> None:
-                self._container = SimpleNamespace(
+                self._container = cast(Any, SimpleNamespace(
                     authenticator=lambda: SimpleNamespace(
                         resolve=lambda _token: UserPrincipal(user_id="u1", roles=("user", "admin"))
                     ),
                     auth_proxy=lambda: _AuthProxy(),
-                )
+                ))
 
         # El JWT aún conserva admin, pero osap-auth ya ha revocado ese rol.
         assert _Api()._amigos_is_global_admin("access-token") is False
@@ -1247,12 +1247,12 @@ class TestGlobalAdminRoleFreshness:
 
         class _Api(AmigosMixin):
             def __init__(self) -> None:
-                self._container = SimpleNamespace(
+                self._container = cast(Any, SimpleNamespace(
                     authenticator=lambda: SimpleNamespace(
                         resolve=lambda _token: UserPrincipal(user_id="u1", roles=("user",))
                     ),
                     auth_proxy=lambda: _AuthProxy(),
-                )
+                ))
 
         # osap-auth ya ha concedido admin aunque el access token aún no lo refleje.
         assert _Api()._amigos_is_global_admin("access-token") is True
