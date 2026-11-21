@@ -826,9 +826,9 @@ export class ApiClient {
     return this.get<{ url: string }>("/admin/ads-web");
   }
 
-  async getSupportWebUrl(section?: string): Promise<{ url: string }> {
+  async createSupportWebHandoff(section?: string): Promise<{ url: string; token: string; next: string }> {
     const qs = section ? `?section=${encodeURIComponent(section)}` : "";
-    return this.get<{ url: string }>(`/admin/support-web${qs}`);
+    return this.post<{ url: string; token: string; next: string }>(`/admin/support-web${qs}`, {});
   }
 
   // --- cuotas de descarga OMR (admin) ---------------------------------------
