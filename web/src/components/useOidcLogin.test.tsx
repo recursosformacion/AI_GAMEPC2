@@ -20,6 +20,19 @@ vi.mock("../state/auth", () => ({
 
 import { useOidcLogin } from "./useOidcLogin";
 
+// jsdom no siempre conserva el WindowProxy simulado al construir MessageEvent.
+// Definimos source explícitamente para que las pruebas verifiquen la identidad real
+// de la ventana emisora, y no pasen por rechazar accidentalmente source=null.
+function createOidcMessageEvent(
+  source: WindowProxy,
+  origin: string,
+  data: Record<string, string>,
+) {
+  const event = new MessageEvent("message", { origin, data });
+  Object.defineProperty(event, "source", { configurable: true, value: source });
+  return event;
+}
+
 describe("useOidcLogin", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -48,14 +61,10 @@ describe("useOidcLogin", () => {
 
     act(() => {
       window.dispatchEvent(
-        new MessageEvent("message", {
-          origin: "https://attacker.example",
-          source: popup,
-          data: {
-            type: "osap-oidc",
-            access_token: "attacker-access",
-            refresh_token: "attacker-refresh",
-          },
+        createOidcMessageEvent(popup, "https://attacker.example", {
+          type: "osap-oidc",
+          access_token: "attacker-access",
+          refresh_token: "attacker-refresh",
         }),
       );
     });
@@ -68,14 +77,10 @@ describe("useOidcLogin", () => {
 
     act(() => {
       window.dispatchEvent(
-        new MessageEvent("message", {
-          origin: window.location.origin,
-          source: window as unknown as WindowProxy,
-          data: {
-            type: "osap-oidc",
-            access_token: "attacker-access",
-            refresh_token: "attacker-refresh",
-          },
+        createOidcMessageEvent(window as unknown as WindowProxy, window.location.origin, {
+          type: "osap-oidc",
+          access_token: "attacker-access",
+          refresh_token: "attacker-refresh",
         }),
       );
     });
@@ -89,14 +94,10 @@ describe("useOidcLogin", () => {
 
     act(() => {
       window.dispatchEvent(
-        new MessageEvent("message", {
-          origin: window.location.origin,
-          source: popup,
-          data: {
-            type: "osap-oidc",
-            access_token: "valid-access",
-            refresh_token: "valid-refresh",
-          },
+        createOidcMessageEvent(popup, window.location.origin, {
+          type: "osap-oidc",
+          access_token: "valid-access",
+          refresh_token: "valid-refresh",
         }),
       );
     });
