@@ -801,6 +801,7 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(401, response, "UNAUTHORIZED", "Login required")
         except ForbiddenError:
             return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
+        response.headers["Cache-Control"] = "no-store"
         return ctx.ok(handoff)
     @router.post(
         "/api/v1/admin/ads-web",
