@@ -63,6 +63,7 @@ function mockFetch(routes: Routes): void {
 }
 
 const REFRESH_KEY = "osap.refresh_token";
+const LAST_ACTIVITY_KEY = "osap.last_activity";
 
 function resetState(): void {
   localStorage.clear();
