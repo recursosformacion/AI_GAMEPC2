@@ -80,8 +80,8 @@ html {
      Sube el porcentaje -> partitura más tenue; bájalo -> más visible. */
   background-image:
     linear-gradient(
-      color-mix(in srgb, var(--color-osap-bg-transparent) 75%, transparent),
-      color-mix(in srgb, var(--color-osap-bg) 75%, transparent)
+      color-mix(in srgb, var(--color-osap-bg-transparent) 85%, transparent),
+      color-mix(in srgb, var(--color-osap-bg) 85%, transparent)
     ),
     var(--osap-score-tile);
   background-repeat: repeat;
@@ -97,7 +97,7 @@ footer {
 
 /* Superficies translúcidas para que se vea la partitura del fondo. */
 [class~="bg-osap-surface"] {
-  background-color: color-mix(in srgb, var(--color-osap-surface) 80%, transparent);
+  background-color: color-mix(in srgb, var(--color-osap-surface) 90%, transparent);
   -webkit-backdrop-filter: blur(2px);
   backdrop-filter: blur(2px);
 }
