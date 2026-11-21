@@ -146,11 +146,17 @@ export const useAuth = create<AuthState>((set, get) => ({
       const session = await authClient.login(email, password);
       localStorage.setItem(REFRESH_KEY, session.refresh_token);
       localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
-      const profile = await loadProfile();
+      const decoded = decodeUser(session.access_token);
+      // Publicar primero el token para que ApiClient pueda autenticar /api/v1/auth/me.
       set({
         accessToken: session.access_token,
         refreshToken: session.refresh_token,
-        user: { ...decodeUser(session.access_token), ...profile },
+        user: decoded,
+        status: "refreshing",
+      });
+      const profile = await loadProfile();
+      set({
+        user: { ...decoded, ...profile },
         status: "authenticated",
       });
       armRefresh();
