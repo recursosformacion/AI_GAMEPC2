@@ -111,6 +111,7 @@ describe("T2 — refresh obsoleto reutilizado -> 401 -> logout -> limpieza", () 
       refresh: () => authResponse({ detail: "refresh reutilizado; sesiones revocadas" }, 401),
     });
     localStorage.setItem(REFRESH_KEY, "refresh-antiguo");
+    localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
     useAuth.setState({ refreshToken: "refresh-antiguo" });
 
     const ok = await useAuth.getState().refreshSession();
@@ -119,6 +120,7 @@ describe("T2 — refresh obsoleto reutilizado -> 401 -> logout -> limpieza", () 
     expect(useAuth.getState().accessToken).toBeNull();
     expect(useAuth.getState().refreshToken).toBeNull();
     expect(localStorage.getItem(REFRESH_KEY)).toBeNull();
+    expect(localStorage.getItem(LAST_ACTIVITY_KEY)).toBeNull();
   });
 });
 
@@ -131,6 +133,7 @@ describe("login", () => {
     expect(useAuth.getState().status).toBe("authenticated");
     expect(useAuth.getState().accessToken).toBeTruthy();
     expect(localStorage.getItem(REFRESH_KEY)).toBe("refresh-1");
+    expect(localStorage.getItem(LAST_ACTIVITY_KEY)).not.toBeNull();
     expect(useAuth.getState().user?.user_id).toBe("u1");
     expect(useAuth.getState().user?.email_verified).toBe(true);
   });
@@ -155,6 +158,32 @@ describe("logout", () => {
     useAuth.getState().logout();
     expect(useAuth.getState().status).toBe("anonymous");
     expect(useAuth.getState().accessToken).toBeNull();
+    expect(localStorage.getItem(REFRESH_KEY)).toBeNull();
+    expect(localStorage.getItem(LAST_ACTIVITY_KEY)).toBeNull();
+  });
+});
+
+describe("sesión por inactividad", () => {
+  it("does not rehydrate a refresh token unused for more than three hours", async () => {
+    localStorage.setItem(REFRESH_KEY, "refresh-antiguo");
+    localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now() - 3 * 60 * 60 * 1000 - 1));
+    useAuth.setState({ refreshToken: "refresh-antiguo" });
+    const refresh = vi.fn(() => authResponse(authSession("refresh-new")));
+    mockFetch({ refresh });
+
+    await useAuth.getState().rehydrate();
+
+    expect(refresh).not.toHaveBeenCalled();
+    expect(useAuth.getState().status).toBe("anonymous");
+    expect(localStorage.getItem(REFRESH_KEY)).toBeNull();
+    expect(localStorage.getItem(LAST_ACTIVITY_KEY)).toBeNull();
+  });
+
+  it("rejects legacy sessions without a last-use timestamp", async () => {
+    localStorage.setItem(REFRESH_KEY, "legacy-refresh");
+    useAuth.setState({ refreshToken: "legacy-refresh" });
+    await useAuth.getState().rehydrate();
+    expect(useAuth.getState().status).toBe("anonymous");
     expect(localStorage.getItem(REFRESH_KEY)).toBeNull();
   });
 });
