@@ -68,6 +68,12 @@ class VotesUsersMixin(PlatformApiCore):
     def verify_email(self, token: str) -> tuple[int, dict[str, object]]:
         return self._container.auth_proxy().verify_email(token)
 
+    def user_profile(self, token: str | None) -> object:
+        """Perfil autoritativo y roles vigentes desde osap-auth."""
+        if not token:
+            raise UnauthenticatedError("Login required")
+        return self._auth_result(*self._container.auth_proxy().me(token))
+
     # --- compositores (consulta pública + fusión admin) ----------------------
 
     @staticmethod
