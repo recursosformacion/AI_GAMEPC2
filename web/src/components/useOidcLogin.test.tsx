@@ -32,7 +32,7 @@ describe("useOidcLogin", () => {
   async function startWithPopup(onDone?: () => void) {
     const popup = {
       location: { assign: vi.fn() },
-    } as unknown as Window;
+    } as unknown as WindowProxy;
     vi.spyOn(window, "open").mockReturnValue(popup);
 
     const hook = renderHook(() => useOidcLogin(onDone));
@@ -70,7 +70,7 @@ describe("useOidcLogin", () => {
       window.dispatchEvent(
         new MessageEvent("message", {
           origin: window.location.origin,
-          source: window,
+          source: window as unknown as WindowProxy,
           data: {
             type: "osap-oidc",
             access_token: "attacker-access",
