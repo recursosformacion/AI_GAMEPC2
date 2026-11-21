@@ -91,12 +91,12 @@ def test_register_422_relayed() -> None:
     original = urllib.request.urlopen
     urllib.request.urlopen = fake  # type: ignore[assignment]
     try:
-        client = _build(fake)
-        resp = client.post("/api/v1/auth/register", json={"email": "a@b.c", "password": "short"})
+        status, body = AuthProxyClient(base_url="http://auth.test").register("a@b.c", "short")
     finally:
         urllib.request.urlopen = original  # type: ignore[assignment]
-    assert resp.status_code == 422
-    assert resp.json()["error"]["details"] == error_body
+
+    assert status == 422
+    assert body == error_body
 
 
 def test_verify_email_proxies_and_relays() -> None:
