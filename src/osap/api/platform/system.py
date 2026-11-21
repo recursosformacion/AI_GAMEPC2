@@ -38,40 +38,34 @@ VERSION = "3.1"
 
 
 class SystemMixin(PlatformApiCore):
-    def storage_web(self, token: str | None, section: str | None = None) -> str:
+    def storage_web(self, token: str | None, section: str | None = None) -> dict[str, str]:
         self._require_admin(token)
         base = (self._container.storage_web_base() or self.composers().storage_base_url()).rstrip("/")
         if self._container.dev_auth_bypass():
             service_token = secrets.token_urlsafe(16)
         else:
             service_token = self.composers().storage_admin_token()
-        url = f"{base}/admin?token={urllib.parse.quote(service_token)}"
-        # Mantenimientos standalone (osap-storage): Maestros = CRUD compositores;
-        # Obras = CRUD works (listado + Ver/Editar); el resto multimantenimiento.
+        next_path = "/admin"
+        # Conservar los deep links funcionales; las credenciales viajan solo en el POST.
         if section == "composers":
-            url = f"{base}/admin/maestros?token={urllib.parse.quote(service_token)}"
+            next_path = "/admin/maestros"
         elif section == "works":
-            url = f"{base}/admin/obras?token={urllib.parse.quote(service_token)}"
+            next_path = "/admin/obras"
         elif section == "representations":
-            url = f"{base}/admin/representations?token={urllib.parse.quote(service_token)}"
+            next_path = "/admin/representations"
         elif section == "work-persons":
-            url = f"{base}/admin/work-persons?token={urllib.parse.quote(service_token)}"
+            next_path = "/admin/work-persons"
         elif section == "tables":
-            url = f"{url}&tab=tables"
+            next_path = "/admin?tab=tables"
         elif section == "mantenimiento":
-            # Página curada de opciones de mantenimiento (distinta del multimantenimiento SPA).
-            url = f"{base}/admin/mantenimiento?token={urllib.parse.quote(service_token)}"
+            next_path = "/admin/mantenimiento"
         elif section == "multimantenimiento":
-            # SPA genérica (acceso a cualquier tabla). Con barra final para no caer en la
-            # página curada, que ocupa /admin exacto.
-            url = f"{base}/admin/?token={urllib.parse.quote(service_token)}"
+            next_path = "/admin/"
         elif section and section.startswith("table:"):
-            # Deep link del SPA de mantenimiento a la tabla concreta (/admin/t/<tabla>).
             name = section[len("table:") :]
             if re.fullmatch(r"[a-z][a-z0-9_]*", name):
-                url = f"{base}/admin/t/{name}?token={urllib.parse.quote(service_token)}"
-        return url
-
+                next_path = f"/admin/t/{name}"
+        return {"url": f"{base}/admin/session", "token": service_token, "next": next_path}
     def support_web(self, token: str | None, section: str | None = None) -> str:
         """URL de la capa web de mantenimiento de osap-support (hoy: reconocimientos)."""
         self._require_admin(token)
