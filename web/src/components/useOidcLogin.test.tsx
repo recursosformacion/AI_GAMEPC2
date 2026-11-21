@@ -29,13 +29,13 @@ describe("useOidcLogin", () => {
     });
   });
 
-  async function startWithPopup() {
+  async function startWithPopup(onDone?: () => void) {
     const popup = {
       location: { assign: vi.fn() },
     } as unknown as Window;
     vi.spyOn(window, "open").mockReturnValue(popup);
 
-    const hook = renderHook(() => useOidcLogin());
+    const hook = renderHook(() => useOidcLogin(onDone));
     await act(async () => {
       expect(await hook.result.current.start()).toBe(true);
     });
@@ -84,23 +84,14 @@ describe("useOidcLogin", () => {
   });
 
   it("acepta el resultado únicamente del popup y del mismo origen", async () => {
-    const { popup } = await startWithPopup();
     const onDone = vi.fn();
-    const hook = renderHook(() => useOidcLogin(onDone));
-    hook.unmount();
-
-    // El listener se instala en el hook que abrió el popup.
-    const activeHook = renderHook(() => useOidcLogin(onDone));
-    await act(async () => {
-      await activeHook.result.current.start();
-    });
-    const activePopup = vi.mocked(window.open).mock.results.at(-1)?.value as Window;
+    const { popup } = await startWithPopup(onDone);
 
     act(() => {
       window.dispatchEvent(
         new MessageEvent("message", {
           origin: window.location.origin,
-          source: activePopup,
+          source: popup,
           data: {
             type: "osap-oidc",
             access_token: "valid-access",
@@ -112,6 +103,5 @@ describe("useOidcLogin", () => {
 
     expect(mocks.completeOidc).toHaveBeenCalledWith("valid-access", "valid-refresh");
     expect(onDone).toHaveBeenCalledOnce();
-    void popup;
   });
 });
