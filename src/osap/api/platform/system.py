@@ -82,7 +82,7 @@ class SystemMixin(PlatformApiCore):
         return {
             "url": f"{base}/api/v1/admin/web/session",
             "token": service_token,
-            "next": next_path,
+            "next": "./recognitions",
         }
     def ads_web(self, token: str | None) -> str:
         """URL del panel con handoff de la sesión OSAP del administrador."""
