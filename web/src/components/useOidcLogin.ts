@@ -24,7 +24,7 @@ export function useOidcLogin(onDone?: () => void) {
   const { t } = useI18n();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const popupRef = useRef<Window | null>(null);
+  const popupRef = useRef<WindowProxy | null>(null);
 
   useEffect(() => {
     const onMessage = (e: MessageEvent<OidcMessage>) => {
