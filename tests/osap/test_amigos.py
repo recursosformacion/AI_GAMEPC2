@@ -1256,3 +1256,46 @@ class TestGlobalAdminRoleFreshness:
 
         # osap-auth ya ha concedido admin aunque el access token aún no lo refleje.
         assert _Api()._amigos_is_global_admin("access-token") is True
+
+
+    def test_auth_unavailable_never_grants_global_admin(self) -> None:
+        from types import SimpleNamespace
+
+        from src.osap.api.platform.amigos import AmigosMixin
+        from src.osap.domain.principal import UserPrincipal
+
+        class _AuthProxy:
+            def me(self, token: str) -> tuple[int, dict[str, object]]:
+                raise RuntimeError("osap-auth unavailable")
+
+        class _Api(AmigosMixin):
+            def __init__(self) -> None:
+                self._container = cast(Any, SimpleNamespace(
+                    authenticator=lambda: SimpleNamespace(
+                        resolve=lambda _token: UserPrincipal(user_id="u1", roles=("user", "admin"))
+                    ),
+                    auth_proxy=lambda: _AuthProxy(),
+                ))
+
+        assert _Api()._amigos_is_global_admin("access-token") is False
+
+    def test_non_200_auth_response_never_grants_global_admin(self) -> None:
+        from types import SimpleNamespace
+
+        from src.osap.api.platform.amigos import AmigosMixin
+        from src.osap.domain.principal import UserPrincipal
+
+        class _AuthProxy:
+            def me(self, token: str) -> tuple[int, dict[str, object]]:
+                return 503, {"roles": ["user", "admin"]}
+
+        class _Api(AmigosMixin):
+            def __init__(self) -> None:
+                self._container = cast(Any, SimpleNamespace(
+                    authenticator=lambda: SimpleNamespace(
+                        resolve=lambda _token: UserPrincipal(user_id="u1", roles=("user", "admin"))
+                    ),
+                    auth_proxy=lambda: _AuthProxy(),
+                ))
+
+        assert _Api()._amigos_is_global_admin("access-token") is False
