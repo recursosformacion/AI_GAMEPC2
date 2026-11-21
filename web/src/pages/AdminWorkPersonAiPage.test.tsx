@@ -153,7 +153,7 @@ describe("AdminWorkPersonAiPage", () => {
     expect(submittedForm.current?.querySelector<HTMLInputElement>('input[name="token"]')?.value).toBe(
       "storage-admin-token",
     );
-    expect(submittedForm?.querySelector<HTMLInputElement>('input[name="next"]')?.value).toBe(
+    expect(submittedForm.current?.querySelector<HTMLInputElement>('input[name="next"]')?.value).toBe(
       "/admin/work-persons",
     );
     open.mockRestore();
