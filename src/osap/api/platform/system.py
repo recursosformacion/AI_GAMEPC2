@@ -66,8 +66,8 @@ class SystemMixin(PlatformApiCore):
             if re.fullmatch(r"[a-z][a-z0-9_]*", name):
                 next_path = f"/admin/t/{name}"
         return {"url": f"{base}/admin/session", "token": service_token, "next": next_path}
-    def support_web(self, token: str | None, section: str | None = None) -> str:
-        """URL de la capa web de mantenimiento de osap-support (hoy: reconocimientos)."""
+    def support_web(self, token: str | None, section: str | None = None) -> dict[str, str]:
+        """Datos para iniciar una sesión POST en la capa web de osap-support."""
         self._require_admin(token)
         client = self._container.support_admin_recognitions()
         service_token = client.admin_token()
@@ -75,14 +75,15 @@ class SystemMixin(PlatformApiCore):
             None: "/api/v1/admin/web/recognitions",
             "recognitions": "/api/v1/admin/web/recognitions",
         }
-        path = routes.get(section or "recognitions")
-        if path is None:
+        next_path = routes.get(section or "recognitions")
+        if next_path is None:
             raise ValueError(f"sección no soportada: {section}")
-        # `client.base_url` es interno (127.0.0.1:8300); el enlace lo abre el NAVEGADOR, así que
-        # debe usar la base pública (p. ej. https://support.openmusicrepository.com/support-api).
         base = (self._container.support_web_base() or client.base_url).rstrip("/")
-        return f"{base}{path}?token={urllib.parse.quote(service_token)}"
-
+        return {
+            "url": f"{base}/api/v1/admin/web/session",
+            "token": service_token,
+            "next": next_path,
+        }
     def ads_web(self, token: str | None) -> str:
         """URL del panel con handoff de la sesión OSAP del administrador."""
         self._require_admin(token)
