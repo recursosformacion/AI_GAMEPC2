@@ -67,6 +67,7 @@ artículo, pero no publicarlo si no tiene responsabilidad de publicación.
 - Menú público «Los amigos».
 - Menú de administración «Los amigos».
 - Enlaces a Grupos y Mis artículos.
+- Mantenimiento de grupos, miembros, cargos, roles musicales y secciones: se realiza en Chorus; la ficha global de usuario OSAP no mantiene ni duplica esos datos.
 - **Eventos se mantiene** en el menú público y en administración (`/amigos/eventos` y `/admin/amigos/eventos`): no forma parte de la retirada.
 - El enlace a Chorus queda en «Tu espacio».
 
@@ -80,7 +81,7 @@ con autorización.
 2. Comprobar permisos de manager, collaborator, autor y miembro.
 3. Decidir redirecciones 301 de las URLs públicas de grupos y artículos de OSAP.
 4. Retirar endpoints y tablas de grupos de OSAP y actualizar pruebas.
-5. Crear el mantenimiento de tablas de Chorus para administradores.
+5. Completar en Chorus el mantenimiento administrativo de grupos y miembros, incluida la incorporación de un usuario existente de `osap-auth` como miembro ordinario. La concesión de `manager` queda reservada a un manager autorizado del grupo. OSAP no debe mantener catálogos ni asignar permisos de manager.
 6. Revisar documentación y versiones de los cuatro programas.
 
 
