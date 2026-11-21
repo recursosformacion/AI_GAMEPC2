@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { MouseEvent, ReactNode } from "react";
 import { useCallback, useEffect, useState } from "react";
 import { Link, NavLink, Outlet, useLocation, useSearchParams } from "react-router-dom";
 import { authClient } from "../api/AuthClient";
@@ -16,10 +16,36 @@ import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
 import { useSeo } from "../seo/useSeo";
 import { blogHomeUrl, blogLogoutUrl, blogSessionUrl } from "../lib/blog";
+
 import { chorusHomeUrl, chorusSessionUrl } from "../lib/chorus";
 import { useAuth } from "../state/auth";
 import { useNotifications } from "../state/notifications";
 import { useSystem } from "../state/system";
+
+function submitBlogSessionHandoff(
+  accessToken: string,
+  refreshToken: string | null | undefined,
+  next = "/admin",
+) {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = blogSessionUrl();
+  form.hidden = true;
+
+  const fields: Record<string, string> = { access_token: accessToken, next };
+  if (refreshToken) fields.refresh_token = refreshToken;
+
+  for (const [name, value] of Object.entries(fields)) {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = name;
+    input.value = value;
+    form.appendChild(input);
+  }
+
+  document.body.appendChild(form);
+  form.submit();
+}
 
 type IconName =
   | "home"
@@ -290,10 +316,20 @@ function SidebarSection({
   const refreshToken = useAuth((s) => s.refreshToken);
   const hrefFor = (entry: NavItem) =>
     entry.sessionHandoff
-      ? blogSessionUrl(token, refreshToken, "/admin")
+      ? blogHomeUrl()
       : entry.chorusHandoff
         ? chorusSessionUrl(token, refreshToken)
         : entry.to;
+
+  const handleBlogHandoff = (
+    event: MouseEvent<HTMLAnchorElement>,
+    entry: NavItem,
+  ) => {
+    if (!entry.sessionHandoff || !token) return;
+    event.preventDefault();
+
+    submitBlogSessionHandoff(token, refreshToken, "/admin");
+  };
   return (
     <div className="mt-5">
       <p className="px-3 text-[11px] font-semibold uppercase tracking-[0.14em] text-osap-muted">{title}</p>
@@ -309,7 +345,10 @@ function SidebarSection({
                   target={entry.newTab ? "_blank" : undefined}
                   rel={entry.newTab ? "noopener noreferrer" : undefined}
                   referrerPolicy={entry.chorusHandoff ? "no-referrer" : undefined}
-                  onClick={onNavigate}
+                  onClick={(event) => {
+                    handleBlogHandoff(event, entry);
+                    onNavigate();
+                  }}
                   className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-bold ${
                     location.pathname === entry.to
                       ? "bg-osap-accent-soft text-osap-accent"
@@ -427,9 +466,7 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
       token = useAuth.getState().accessToken;
     }
     if (!token) return false;
-    window.location.assign(
-      blogSessionUrl(token, useAuth.getState().refreshToken, "/admin"),
-    );
+    submitBlogSessionHandoff(token, useAuth.getState().refreshToken, "/admin");
     return true;
   }, []);
   const { start: startOidc, error: oidcError } = useOidcLogin(handoffToBlog);

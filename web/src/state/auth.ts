@@ -13,6 +13,30 @@ import { apiClient } from "../api/ApiClient";
 import type { FrontendUser } from "../api/types";
 
 const REFRESH_KEY = "osap.refresh_token";
+const LAST_ACTIVITY_KEY = "osap.last_activity";
+export const SESSION_IDLE_TIMEOUT_MS = 3 * 60 * 60 * 1000;
+
+export function getSessionIdleRemainingMs(): number | null {
+  if (!localStorage.getItem(REFRESH_KEY)) return null;
+  const lastActivity = Number(localStorage.getItem(LAST_ACTIVITY_KEY));
+  if (!Number.isFinite(lastActivity) || lastActivity <= 0) return 0;
+  return SESSION_IDLE_TIMEOUT_MS - (Date.now() - lastActivity);
+}
+
+export function recordSessionActivity(): void {
+  if (useAuth.getState().isAuthenticated()) {
+    localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
+  }
+}
+
+export function expireSessionIfIdle(): boolean {
+  const remaining = getSessionIdleRemainingMs();
+  if (remaining !== null && remaining <= 0) {
+    useAuth.getState().logout();
+    return true;
+  }
+  return false;
+}
 
 type AuthStatus = "anonymous" | "authenticated" | "refreshing";
 
@@ -119,6 +143,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     try {
       const session = await authClient.login(email, password);
       localStorage.setItem(REFRESH_KEY, session.refresh_token);
+      localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
       const profile = await loadProfile(session.access_token);
       set({
         accessToken: session.access_token,
@@ -136,6 +161,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   logout: () => {
     clearRefresh();
     localStorage.removeItem(REFRESH_KEY);
+    localStorage.removeItem(LAST_ACTIVITY_KEY);
     set({ accessToken: null, refreshToken: null, user: null, status: "anonymous" });
   },
 
@@ -144,6 +170,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     try {
       const session = await apiClient.devSession();
       localStorage.setItem(REFRESH_KEY, session.refresh_token);
+      localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
       set({
         accessToken: session.access_token,
         refreshToken: session.refresh_token,
@@ -160,6 +187,7 @@ export const useAuth = create<AuthState>((set, get) => ({
   // Sesión obtenida tras el callback OIDC (osap-api devolvió access+refresh a la SPA).
   completeOidc: (accessToken, refreshToken) => {
     localStorage.setItem(REFRESH_KEY, refreshToken);
+    localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
     set({
       accessToken,
       refreshToken,
@@ -191,6 +219,8 @@ export const useAuth = create<AuthState>((set, get) => ({
   },
 
   refreshSession: async () => {
+    // No permitir que una renovación automática prolongue una sesión inactiva.
+    if (expireSessionIfIdle()) return false;
     // Single-flight: si ya hay un refresh en curso, se reutiliza (evita que la
     // rotación del refresh token genere 401 en llamadas concurrentes y cierre sesión).
     if (refreshInFlight) {
@@ -205,6 +235,8 @@ export const useAuth = create<AuthState>((set, get) => ({
       set({ status: "refreshing" });
       try {
         const session = await authClient.refresh(refreshToken);
+        // Si la sesión venció mientras la petición estaba en curso, no la resucitamos.
+        if (expireSessionIfIdle()) return false;
         // Rotación: se guarda SIEMPRE el nuevo refresh (el anterior queda consumido).
         localStorage.setItem(REFRESH_KEY, session.refresh_token);
         set({
@@ -232,6 +264,11 @@ export const useAuth = create<AuthState>((set, get) => ({
     const refreshToken = localStorage.getItem(REFRESH_KEY);
     if (!refreshToken) {
       set({ status: "anonymous" });
+      return;
+    }
+    const remaining = getSessionIdleRemainingMs();
+    if (remaining === 0) {
+      get().logout();
       return;
     }
     set({ refreshToken });
