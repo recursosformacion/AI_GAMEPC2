@@ -10,7 +10,7 @@ sirven en HTML real.
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from fastapi import FastAPI
@@ -1208,3 +1208,94 @@ def test_historial_registra_alta_y_baja() -> None:
     rows = service.list_group_history(actor_user_id=_ADMIN, is_global_admin=True, group_id=gid)
     assert rows[0]["end_date"]
 
+
+
+class TestGlobalAdminRoleFreshness:
+    def test_revoked_admin_role_in_jwt_is_not_trusted(self) -> None:
+        from types import SimpleNamespace
+
+        from src.osap.api.platform.amigos import AmigosMixin
+        from src.osap.domain.principal import UserPrincipal
+
+        class _AuthProxy:
+            def me(self, token: str) -> tuple[int, dict[str, object]]:
+                assert token == "access-token"
+                return 200, {"roles": ["user"]}
+
+        class _Api(AmigosMixin):
+            def __init__(self) -> None:
+                self._container = cast(Any, SimpleNamespace(
+                    authenticator=lambda: SimpleNamespace(
+                        resolve=lambda _token: UserPrincipal(user_id="u1", roles=("user", "admin"))
+                    ),
+                    auth_proxy=lambda: _AuthProxy(),
+                ))
+
+        # El JWT aún conserva admin, pero osap-auth ya ha revocado ese rol.
+        assert _Api()._amigos_is_global_admin("access-token") is False
+
+    def test_current_admin_role_is_recognized_even_if_jwt_is_stale(self) -> None:
+        from types import SimpleNamespace
+
+        from src.osap.api.platform.amigos import AmigosMixin
+        from src.osap.domain.principal import UserPrincipal
+
+        class _AuthProxy:
+            def me(self, token: str) -> tuple[int, dict[str, object]]:
+                assert token == "access-token"
+                return 200, {"roles": ["user", "admin"]}
+
+        class _Api(AmigosMixin):
+            def __init__(self) -> None:
+                self._container = cast(Any, SimpleNamespace(
+                    authenticator=lambda: SimpleNamespace(
+                        resolve=lambda _token: UserPrincipal(user_id="u1", roles=("user",))
+                    ),
+                    auth_proxy=lambda: _AuthProxy(),
+                ))
+
+        # osap-auth ya ha concedido admin aunque el access token aún no lo refleje.
+        assert _Api()._amigos_is_global_admin("access-token") is True
+
+
+    def test_auth_unavailable_never_grants_global_admin(self) -> None:
+        from types import SimpleNamespace
+
+        from src.osap.api.platform.amigos import AmigosMixin
+        from src.osap.domain.principal import UserPrincipal
+
+        class _AuthProxy:
+            def me(self, token: str) -> tuple[int, dict[str, object]]:
+                raise RuntimeError("osap-auth unavailable")
+
+        class _Api(AmigosMixin):
+            def __init__(self) -> None:
+                self._container = cast(Any, SimpleNamespace(
+                    authenticator=lambda: SimpleNamespace(
+                        resolve=lambda _token: UserPrincipal(user_id="u1", roles=("user", "admin"))
+                    ),
+                    auth_proxy=lambda: _AuthProxy(),
+                ))
+
+        assert _Api()._amigos_is_global_admin("access-token") is False
+
+    def test_non_200_auth_response_never_grants_global_admin(self) -> None:
+        from types import SimpleNamespace
+
+        from src.osap.api.platform.amigos import AmigosMixin
+        from src.osap.domain.principal import UserPrincipal
+
+        class _AuthProxy:
+            def me(self, token: str) -> tuple[int, dict[str, object]]:
+                return 503, {"roles": ["user", "admin"]}
+
+        class _Api(AmigosMixin):
+            def __init__(self) -> None:
+                self._container = cast(Any, SimpleNamespace(
+                    authenticator=lambda: SimpleNamespace(
+                        resolve=lambda _token: UserPrincipal(user_id="u1", roles=("user", "admin"))
+                    ),
+                    auth_proxy=lambda: _AuthProxy(),
+                ))
+
+        assert _Api()._amigos_is_global_admin("access-token") is False

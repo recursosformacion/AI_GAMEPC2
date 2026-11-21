@@ -122,10 +122,9 @@ class AmigosMixin(PlatformApiCore):
         principal = self._container.authenticator().resolve(token)
         if principal is None:
             return False
-        has_role = getattr(principal, "has_role", None)
-        if callable(has_role) and has_role("admin"):
-            return True
-        # El claim `roles` es una foto del token; osap-auth (BD) es la autoridad.
+        # Los roles del JWT son una instantánea emitida al iniciar sesión y pueden
+        # quedar obsoletos tras una revocación. La autoridad para permisos globales
+        # es el estado actual de osap-auth; si no responde, se deniega (fail-closed).
         try:
             code, doc = self._container.auth_proxy().me(token or "")
         except Exception as exc:  # noqa: BLE001 — si auth no responde, no se concede admin
