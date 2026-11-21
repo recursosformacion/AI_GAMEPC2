@@ -823,18 +823,13 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(503, response, "ADS_UNAVAILABLE", str(exc))
         return ctx.ok({"url": url})
 
-    @router.get(
+    @router.post(
         "/api/v1/admin/support-web",
         tags=["System"],
-        summary="Support web admin URL (reconocimientos)",
-        description="Devuelve la URL de la capa web de mantenimiento de osap-support "
-        "(reconocimientos), autenticada con token de servicio (support:admin). Exige role=admin.",
+        summary="Create Support admin POST handoff",
+        description="Devuelve destino y datos de formulario para abrir osap-support mediante POST, sin token en URL.",
         response_model=SuccessEnvelope[dict[str, str]] | ErrorEnvelope,
-        responses={
-            200: _shared._resp("URL", _shared._example({})),
-            401: _shared._UNAUTHORIZED_401,
-            403: _shared._FORBIDDEN_403,
-        },
+        responses={200: _shared._resp("Support handoff", _shared._example({})), 401: _shared._UNAUTHORIZED_401, 403: _shared._FORBIDDEN_403},
     )
     def support_web(
         response: Response,
@@ -842,7 +837,7 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            url = ctx.api.support_web(authorization, section)
+            handoff = ctx.api.support_web(authorization, section)
         except UnauthenticatedError:
             return ctx.fail(401, response, "UNAUTHORIZED", "Login required")
         except ForbiddenError:
@@ -851,8 +846,8 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", str(exc))
         except Exception as exc:  # noqa: BLE001 — token de servicio o sección no soportada
             return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", str(exc))
-        return ctx.ok({"url": url})
-
+        response.headers["Cache-Control"] = "no-store"
+        return ctx.ok(handoff)
     @router.post(
         "/api/v1/admin/composers/merge",
         status_code=200,
