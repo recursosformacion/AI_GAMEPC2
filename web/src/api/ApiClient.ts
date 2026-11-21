@@ -817,9 +817,9 @@ export class ApiClient {
     return this.get<AdminOverview>("/admin/overview");
   }
 
-  async getStorageWebUrl(section?: string): Promise<{ url: string }> {
+  async createStorageWebHandoff(section?: string): Promise<{ url: string; token: string; next: string }> {
     const qs = section ? `?section=${encodeURIComponent(section)}` : "";
-    return this.get<{ url: string }>(`/admin/storage-web${qs}`);
+    return this.post<{ url: string; token: string; next: string }>(`/admin/storage-web${qs}`, {});
   }
 
   async getAdsWebUrl(): Promise<{ url: string }> {
