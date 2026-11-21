@@ -802,11 +802,11 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         except ForbiddenError:
             return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
         return ctx.ok(handoff)
-    @router.get(
+    @router.post(
         "/api/v1/admin/ads-web",
         tags=["Ads"],
-        summary="URL de mantenimiento de publicidad",
-        description="Devuelve el panel de ai_publicidad con handoff de la sesión OSAP. Exige role=admin.",
+        summary="Create Advertising admin POST handoff",
+        description="Devuelve destino y datos de formulario para abrir ai_publicidad mediante POST, sin token en URL.",
         response_model=SuccessEnvelope[dict[str, str]] | ErrorEnvelope,
     )
     def ads_web(
@@ -814,15 +814,15 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            url = ctx.api.ads_web(authorization)
+            handoff = ctx.api.ads_web(authorization)
         except UnauthenticatedError:
             return ctx.fail(401, response, "UNAUTHORIZED", "Login required")
         except ForbiddenError:
             return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
         except Exception as exc:  # noqa: BLE001 — publicidad no disponible
             return ctx.fail(503, response, "ADS_UNAVAILABLE", str(exc))
-        return ctx.ok({"url": url})
-
+        response.headers["Cache-Control"] = "no-store"
+        return ctx.ok(handoff)
     @router.post(
         "/api/v1/admin/support-web",
         tags=["System"],
