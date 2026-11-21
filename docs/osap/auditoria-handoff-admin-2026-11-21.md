@@ -83,3 +83,21 @@ No se enviarán tokens en query strings ni se incrustarán credenciales en HTML.
 - Los deep links actuales de Storage siguen abriendo la sección/tabla solicitada.
 - Los tokens inválidos, caducados, sin scope o con Auth no disponible fallan cerrados.
 - No se rompe el acceso público ni los tokens M2M de los servicios.
+
+
+## 6. Hallazgos adicionales de la revisión de implementación
+
+### Storage: propagación de credenciales dentro del propio panel
+- Además del query inicial, `admin_maintenance.py`, `admin_composers_crud.py` y `admin_works_crud.py` leen el token de `location.search` y lo conservan al navegar entre páginas y modos de edición.
+- `admin_maintenance.py` mantiene también una caja manual para pegar el service token.
+- Por ello, no basta con cambiar la lectura inicial de `frontend/src/auth.ts`: hay que eliminar la propagación de `?token=` de los enlaces y de los cambios de modo de las tres páginas curadas, y eliminar el almacenamiento de credenciales en `sessionStorage`.
+- Los enlaces de deep-link (por ejemplo, persona/obra, modo view/edit y tabla) deben conservar solo sus parámetros funcionales (`person_id`, `id`, `mode`, `tab`), nunca credenciales.
+
+### Support: autenticación de las operaciones
+- El shell HTML valida el service token antes de servir la página, pero después lo sustituye en `__TOKEN__` dentro del JavaScript.
+- Las tres operaciones de reconocimientos usan una dependencia que exige exclusivamente `Authorization: Bearer`; el cambio a cookie exige adaptar esa dependencia para aceptar la cookie host-only y seguir validando el scope `support:admin` en cada operación.
+- La ruta de handoff debe validar el origen del POST; no debe confundirse el token de servicio del panel con tokens de usuario, que también son aceptados por parte de la API de reconocimientos para otros consumidores.
+
+### Storage: autenticación de las APIs
+- El middleware protege las APIs y determina el scope requerido por ruta y método. La integración de cookie debe mantener esa validación centralizada y no limitarse a autorizar el shell HTML.
+- Deben verificarse explícitamente los prefijos reales de todas las rutas admin antes de modificar `_required_scope`, para evitar que una ruta administrativa quede clasificada accidentalmente como `storage:read` o `storage:write`.
