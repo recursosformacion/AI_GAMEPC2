@@ -8,7 +8,7 @@
 // presentación; nunca como decisión de seguridad. No se inventa `tier`.
 
 import { create } from "zustand";
-import { authClient } from "../api/AuthClient";
+import { authClient, type UserProfile } from "../api/AuthClient";
 import { apiClient } from "../api/ApiClient";
 import type { FrontendUser } from "../api/types";
 
@@ -118,7 +118,9 @@ function clearRefresh(): void {
 // El JWT no lleva nombre/email (privacidad); el perfil se pide a /auth/me y se fusiona.
 async function loadProfile(accessToken: string): Promise<Partial<FrontendUser>> {
   try {
-    const profile = await authClient.me(accessToken);
+    // El perfil se consulta a través de osap-api (mismo origen de la SPA).
+    // Así funciona también en desarrollo sin depender de un proxy /auth del servidor web.
+    const profile = await apiClient.get<UserProfile>("/auth/me");
     return {
       name: profile.name ?? undefined,
       email: profile.email ?? undefined,
