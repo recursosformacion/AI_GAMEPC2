@@ -496,7 +496,7 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
     container.set_chorus_config(config.chorus_api_base or "http://127.0.0.1:9600")
     container.set_news_client(
         NewsClient(
-            base_url=config.news_api_base or "http://127.0.0.1:8400",
+            base_url=config.news_api_base or "http://127.0.0.1:8401",
             token=config.news_api_token,
             timeout=config.news_timeout_seconds,
         )
