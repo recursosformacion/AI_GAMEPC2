@@ -347,10 +347,14 @@ def validate_configuration(
     toml_data: dict[str, Any],
     config_path: Path | None = None,
 ) -> None:
-    """Valida la configuración según el entorno (production/development)."""
-    env = os.environ.get("OSAP_ENV", "development").strip().lower()
+    """Valida la configuración según el entorno efectivo (production/development)."""
+    configured_env = os.environ.get("OSAP_ENV")
+    if configured_env is None:
+        env = "production" if config.deployment == "prod" else "development"
+    else:
+        env = configured_env.strip().lower()
     if env not in ("production", "development"):
-        env = "development"
+        env = "production" if config.deployment == "prod" else "development"
 
     rules = _SERVICE_REQUIRED_SECTIONS.get(service_name, {})
     if not rules:
