@@ -80,7 +80,7 @@ def run(
     )
     report.subscribers = len(subscribers)
     news = NewsClient(
-        base_url=_env("OSAP_NEWS_API_BASE", "http://127.0.0.1:8400"),
+        base_url=_env("OSAP_NEWS_API_BASE", "http://127.0.0.1:8401"),
         token=_env("OSAP_NEWS_API_TOKEN"),
     )
 
