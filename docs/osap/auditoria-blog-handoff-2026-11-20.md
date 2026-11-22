@@ -406,3 +406,27 @@ Pruebas mínimas antes de desplegar:
 | `var/audit_dist.py`                                      | Comprueba si el bundle servido por Apache lleva tokens en la URL     |
 | `var/audit_async_handlers.py` / `var/audit_async_ast.py` | Localizan handlers sync con cuerpo corrutina / métodos homónimos     |
 | `var/*.log`                                              | Salidas de `pytest`, `vitest`, `tsc`, `mypy`, `rust` y `vite build`  |
+
+
+## Primera revisión de Chorus — 22/11/2026
+
+Esta revisión es estática y no modifica el repositorio de Chorus, que continúa en trabajo activo en `main`.
+
+### Bloqueantes detectados
+
+1. **Handoff con credenciales en query string (H-10 sigue abierto).** OSAP `web/src/lib/chorus.ts` construye `/?token=<access>&refresh_token=<refresh>`; lo usan `Layout.tsx` y `AmigosPage.tsx`. Chorus lo lee en `web/app.js` y limpia la URL después de cargar, pero el navegador y el servidor ya han recibido la URL completa. El refresh token puede permanecer hasta 30 días. El `referrerPolicy=no-referrer` reduce una vía de fuga, pero no evita historial ni access logs.
+   
+   Chorus ya dispone de `POST /api/v1/auth/handoff`: recibe los tokens en JSON, valida el access token con `osap-auth /auth/me` y establece cookies HttpOnly. OSAP todavía no utiliza ese endpoint. La corrección debe sustituir los enlaces con query por un POST con `credentials: include`, navegación posterior a la portada y CORS limitado al origen OSAP; Chorus debe validar también el origen en el endpoint.
+
+2. **Claves foráneas incorrectas en la migración MySQL 006.** `migrations/mysql/006_group_articles_tables.sql` declara `author_user_id`, `publisher_user_id` y `reviewed_by` como referencias a `groups(id)`. Son identificadores de usuarios procedentes de osap-auth, no identificadores de grupos. En una instalación MySQL nueva estas restricciones pueden impedir crear o revisar artículos. La migración histórica 003 no tenía esas FKs; el arranque legacy puede saltarse 006, dejando un esquema distinto del de una instalación nueva.
+
+3. **Verificación insuficiente del esquema de artículos.** `_safe_execute_migration` no compara las FKs esperadas de 006 y `_verify_final_schema` solo comprueba un mínimo numérico de FKs, no sus nombres ni tablas referenciadas. Por ello no detecta las referencias erróneas ni garantiza que una instalación legacy y una nueva tengan el mismo esquema. Hace falta una migración correctiva posterior a 006 y una verificación exacta de constraints.
+
+### Riesgos y contradicciones adicionales
+
+- Chorus aplica las migraciones MySQL 001 y 004–007 automáticamente durante el lifespan de la aplicación. No he ejecutado ninguna. La primera puesta en marcha en producción podría aplicar 006 automáticamente; no debe hacerse antes de corregirla y revisar el estado de la base de datos.
+- `app/db.py` y `Settings.validate_database()` exigen `CHORUS_DATABASE_URL` MySQL/MariaDB; sin embargo, `docs/api-runtime.md` describe SQLite como runtime local. La rama SQLite de `initialise_database` no es alcanzable mediante el conector actual. README, runtime y configuración necesitan una única descripción coherente.
+- El almacenamiento de ficheros de Chorus sigue siendo un directorio privado local (`CHORUS_STORAGE_ROOT`, por defecto `var/private`). No he encontrado en esta revisión una garantía de backup/restore de ese contenido. El propio README indica que el almacenamiento local es banco de pruebas, no persistencia de producción.
+- El último commit de Chorus informa de 238/238 pruebas ejecutadas en MariaDB 10.4.32. No he podido confirmar un resultado de CI independiente ni que esas pruebas cubran una instalación MySQL nueva desde cero con 006.
+
+**Conclusión provisional:** Chorus no debe incluirse todavía en el despliegue público de esta noche. Antes hay que corregir el handoff de tokens, arreglar las FKs de 006 con una migración posterior y acordar la persistencia/backup de ficheros. No he tocado el código de Chorus para no interferir con el trabajo activo de Ernie.
