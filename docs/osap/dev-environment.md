@@ -37,7 +37,7 @@ http://osap-app                     Apache (XAMPP) — VirtualHost *:80
 | `osap-storage` | Open Music Repository / storage (uvicorn 8000) |
 | `osap-blog` | Blog independiente (uvicorn 8500, VirtualHost Apache) |
 | `ai-publicidad` | Publicidad local (uvicorn 8305; panel `/admin` con token local) |
-| `ai-noticias` | Corpus de noticias de solo lectura (uvicorn 8400; API interna con `X-OSAP-News-Token`) |
+| `ai-noticias` | Corpus de noticias de solo lectura (uvicorn 8401; API interna con `X-OSAP-News-Token`) |
 | `chorus` | Área de trabajo y mensajería de grupos (uvicorn 9600; migraciones SQLite al arrancar) |
 
 Todos apuntan a `127.0.0.1`.
