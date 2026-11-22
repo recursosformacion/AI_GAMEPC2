@@ -348,13 +348,10 @@ def validate_configuration(
     config_path: Path | None = None,
 ) -> None:
     """Valida la configuración según el entorno efectivo (production/development)."""
-    configured_env = os.environ.get("OSAP_ENV")
-    if configured_env is None:
-        env = "production" if config.deployment == "prod" else "development"
-    else:
-        env = configured_env.strip().lower()
-    if env not in ("production", "development"):
-        env = "production" if config.deployment == "prod" else "development"
+    deployment = str(config.deployment).strip().lower()
+    # load_configuration ya resuelve OSAP_DEPLOYMENT > OSAP_ENV > default.
+    # Validar contra ese valor efectivo evita contradicciones entre ambos env vars.
+    env = "development" if deployment in ("development", "dev") else "production"
 
     rules = _SERVICE_REQUIRED_SECTIONS.get(service_name, {})
     if not rules:
