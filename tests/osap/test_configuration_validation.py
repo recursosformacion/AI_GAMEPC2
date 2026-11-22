@@ -188,7 +188,7 @@ class TestValidateConfigurationIntegration:
         monkeypatch.setenv("OSAP_ENV", "development")
         data = _toml("[db]\nhost = '127.0.0.1'\n")
         config = _config()
-        with pytest.warns(ConfigurationWarning, match="Sección recomendada 'oidc'"):
+        with pytest.warns(ConfigurationWarning, match="Campo 'oidc.issuer'"):
             validate_configuration(config, "osap-api", data, Path("osap.toml"))
 
     def test_unknown_service_warns(self, monkeypatch: pytest.MonkeyPatch) -> None:
