@@ -30,14 +30,20 @@ def test_split_with_comments() -> None:
     assert split_statements(sql) == ["-- comentario con ; dentro\nSET FOREIGN_KEY_CHECKS=0"]
 
 
-
 def test_api_baseline_is_schema_only_and_additive() -> None:
     baseline = (ROOT / "migrations" / "001_baseline_schema.sql").read_text(encoding="utf-8")
 
-    assert len(re.findall(r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS", baseline, re.I)) == 49
+    assert (
+        len(re.findall(r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS", baseline, re.I))
+        == 49
+    )
     parsed = split_statements(baseline)
     assert sum(
-        bool(re.match(r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS", statement, re.I))
+        bool(
+            re.match(
+                r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS", statement, re.I
+            )
+        )
         for statement in parsed
     ) == 49
     destructive = re.compile(
