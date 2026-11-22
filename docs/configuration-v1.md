@@ -120,3 +120,8 @@ Para llamadas a osap-support, el service client de osap-api debe poder solicitar
 `aud=osap-support` en osap-auth y disponer de `api:read`; el cliente administrativo
 debe disponer de `support:admin`. Support valida los access tokens de usuario con
 `aud=osap-api` y los service tokens con `aud=osap-support`.
+
+
+El entorno efectivo se resuelve una sola vez al cargar `Configuration`: `OSAP_DEPLOYMENT`
+tiene prioridad sobre `OSAP_ENV`; si ambos faltan, el default es `prod`. La validación
+estricta usa ese valor ya resuelto, no vuelve a interpretar las variables por separado.
