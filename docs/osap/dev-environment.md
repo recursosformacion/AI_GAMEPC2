@@ -42,7 +42,7 @@ http://osap-app                     Apache (XAMPP) — VirtualHost *:80
 
 Todos apuntan a `127.0.0.1`.
 
-`restart-dev.ps1` arranca `ai-noticias` en 8400, `chorus` en 9600 y pasa a osap-api
+`restart-dev.ps1` arranca `ai-noticias` en 8401, `chorus` en 9600 y pasa a osap-api
 `OSAP_NEWS_API_BASE`/`OSAP_NEWS_API_TOKEN`. También reparte
 `OSAP_INTERNAL_SERVICE_TOKEN` entre auth/support/api para el boletín. La lectura de
 noticias usa la sesión OSAP (`/noticias`); el correo no es una vía de acceso. Detalle en
