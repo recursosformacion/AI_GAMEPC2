@@ -4,6 +4,7 @@ import warnings
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from uuid import UUID
 
 
 class ConfigurationError(Exception):
@@ -406,6 +407,17 @@ def _validate_strict(
             errors.append(
                 f"Campo 'db.{key}' no definido. Defina {env_var} o actualice {config_ref}."
             )
+
+    # osap-auth identifica los service clients por UUID (no por el nombre OIDC).
+    for field in ("service_client_id", "admin_client_id"):
+        client_id = getattr(config, field, None)
+        if client_id:
+            try:
+                UUID(str(client_id))
+            except (ValueError, TypeError, AttributeError):
+                errors.append(
+                    f"service.{field} debe ser el UUID de un service client registrado en osap-auth."
+                )
 
     if config.dev_auth_bypass:
         errors.append(
