@@ -35,6 +35,17 @@ variable de entorno (OSAP_*)  >  BD (app_config)  >  defaults en código
 - La BD operativa (tabla `app_config`, clave-valor) guarda el resto de campos.
 - Cualquier campo se puede sobreescribir con variable de entorno.
 
+En producción, la validación estricta de `osap-api` exige que estén disponibles (desde
+`app_config`, variables de entorno o secciones TOML de override):
+
+- OIDC: issuer, client ID/secret, redirect URI, JWKS URL, audience e issuer de los access tokens.
+- Servicios de almacenamiento: client ID/secret de servicio y client ID/secret administrativo.
+- Noticias: URL interna y `OSAP_NEWS_API_TOKEN`.
+- Publicidad: URL interna, `OSAP_ADS_SERVICE_TOKEN` y base pública del servicio.
+
+La comprobación valida los valores efectivos, no obliga a duplicarlos en `osap.toml`.
+Si falta cualquiera de ellos en producción, el arranque se detiene antes de atender tráfico.
+
 ## 3. Entorno y rutas: `deployment` + `dev_mode`
 
 | `deployment` | `dev_mode` | Rutas | Escritura |
@@ -99,5 +110,5 @@ en el entorno de osap-api (nunca en git).
 
 Notas:
 - `client_id` = `osap-api`, `grant_types` = `authorization_code,refresh_token`, scopes `openid,profile`, PKCE obligatorio.
-- El `[oidc]` de `osap.toml`/`osap.production.toml` (repo) lleva `client_secret = ""` a propósito; el secreto real NO se commitea.
+- El secreto real se guarda fuera del repositorio (gestor de secretos, entorno o `app_config`); nunca se commitea.
 - Si se regenera el cliente en osap-auth, actualizar el secret en `.env` (dev) y en el `osap.toml` del servidor / env (prod).
