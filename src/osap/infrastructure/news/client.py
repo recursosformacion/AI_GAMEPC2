@@ -21,7 +21,7 @@ class NewsClient:
     def __init__(
         self,
         *,
-        base_url: str = "http://127.0.0.1:8400",
+        base_url: str = "http://127.0.0.1:8401",
         token: str | None = None,
         timeout: float = 8.0,
     ) -> None:
