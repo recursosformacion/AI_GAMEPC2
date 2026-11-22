@@ -89,7 +89,7 @@ class TestValidateStrict:
             osap_api_db_password="2027osapdb",
             osap_api_db_name="osap-api",
         )
-        with pytest.raises(ConfigurationError, match="Sección obligatoria 'oidc'"):
+        with pytest.raises(ConfigurationError, match="Campo obligatorio 'oidc.issuer'"):
             _validate_strict("osap-api", {"db": ["host"], "oidc": ["issuer"]}, data, config, Path("osap.toml"))
 
     def test_raises_when_field_empty(self) -> None:
@@ -141,7 +141,7 @@ class TestValidateLenient:
             osap_api_db_password="2027osapdb",
             osap_api_db_name="osap-api",
         )
-        with pytest.warns(ConfigurationWarning, match="Sección recomendada 'oidc'"):
+        with pytest.warns(ConfigurationWarning, match="Campo 'oidc.issuer'"):
             _validate_lenient("osap-api", {"db": ["host"], "oidc": ["issuer"]}, data, config, Path("osap.toml"))
 
     def test_does_not_raise_on_empty_field(self) -> None:
