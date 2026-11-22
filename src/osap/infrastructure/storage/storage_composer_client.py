@@ -378,11 +378,6 @@ class StorageComposerClient:
             return [d for d in doc if isinstance(d, dict)]
         return []
 
-    def storage_web_admin_url(self) -> str:
-        """URL de la capa web de administración de storage (CRUD), autenticada con token de servicio."""
-        token = self.storage_admin_token()
-        return f"{self._base_url.rstrip('/')}/admin?token={urllib.parse.quote(token)}"
-
     def storage_base_url(self) -> str:
         return self._base_url
 
