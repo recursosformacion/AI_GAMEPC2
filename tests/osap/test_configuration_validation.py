@@ -247,3 +247,13 @@ def test_production_validation_accepts_centralized_effective_configuration() -> 
         config,
         Path("osap.toml"),
     )
+
+
+
+def test_prod_deployment_uses_strict_validation_without_osap_env(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("OSAP_ENV", raising=False)
+    config = _config(deployment="prod")
+    with pytest.raises(ConfigurationError):
+        validate_configuration(config, "osap-api", {}, Path("osap.toml"))
