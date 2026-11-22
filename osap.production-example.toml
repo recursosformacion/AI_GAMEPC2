@@ -28,7 +28,7 @@ client_secret = ""
 
 [news]
 # Servicio interno ai_noticias. No exponerlo fuera de la red del servidor.
-base_url = "http://127.0.0.1:8400"
+base_url = "http://127.0.0.1:8401"
 # Token de servicio; en producción va por entorno (OSAP_NEWS_API_TOKEN).
 service_token = ""
 timeout_seconds = 8
