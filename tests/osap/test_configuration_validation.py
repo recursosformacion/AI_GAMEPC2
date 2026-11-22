@@ -34,6 +34,21 @@ client_secret = "dev-secret"
 jwks_url = "http://osap-auth/auth/.well-known/jwks.json"
 audience = "osap-api"
 token_issuer = "http://osap-auth"
+
+[service]
+client_id = "osap-api"
+client_secret = "service-secret"
+admin_client_id = "osap-composer-admin-service"
+admin_client_secret = "admin-secret"
+
+[news]
+base_url = "http://127.0.0.1:8401"
+service_token = "news-token"
+
+[ads]
+base_url = "http://127.0.0.1:8305"
+service_token = "ads-token"
+web_base = "http://127.0.0.1:8305"
 """
 
 
@@ -150,7 +165,17 @@ class TestValidateLenient:
 class TestValidateConfigurationIntegration:
     def test_production_mode_requires_sections(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("OSAP_ENV", "production")
-        data = _toml("[db]\nhost = 'db.prod'\nname = 'prod_db'\nuser = 'admin'\npassword = 'secret'\n[oidc]\nissuer = 'http://x'\nclient_id = 'id'\nredirect_uri = 'http://x'\nclient_secret = 'secret'\njwks_url = 'http://x/jwks'\naudience = 'osap-api'\ntoken_issuer = 'http://x'\n")  # noqa: E501
+        data = _toml(
+            "[db]\nhost = 'db.prod'\nname = 'prod_db'\nuser = 'admin'\npassword = 'secret'\n"
+            "[oidc]\nissuer = 'http://x'\nclient_id = 'id'\nredirect_uri = 'http://x'\n"
+            "client_secret = 'secret'\njwks_url = 'http://x/jwks'\naudience = 'osap-api'\n"
+            "token_issuer = 'http://x'\n"
+            "[service]\nclient_id = 'api'\nclient_secret = 'secret'\n"
+            "admin_client_id = 'admin'\nadmin_client_secret = 'secret'\n"
+            "[news]\nbase_url = 'http://127.0.0.1:8401'\nservice_token = 'news'\n"
+            "[ads]\nbase_url = 'http://127.0.0.1:8305'\nservice_token = 'ads'\n"
+            "web_base = 'http://127.0.0.1:8305'\n"
+        )
         config = _config(
             osap_api_db_host="db.prod",
             osap_api_db_user="admin",
@@ -182,3 +207,43 @@ class TestValidateConfigurationIntegration:
 def test_db_overrides_are_skipped_without_explicit_connection() -> None:
     """No debe intentarse una conexión con credenciales fallback incrustadas."""
     assert _load_db_overrides(_config()) == {}
+
+
+
+def test_production_validation_accepts_centralized_effective_configuration() -> None:
+    """Las credenciales pueden venir de app_config/env; no se duplican en TOML."""
+    config = _config(
+        osap_api_db_host="db.prod",
+        osap_api_db_user="db-user",
+        osap_api_db_password="db-secret",
+        osap_api_db_name="osap_api",
+        oidc_issuer="https://auth.example",
+        oidc_client_id="osap-api",
+        oidc_redirect_uri="https://api.example/callback",
+        oidc_client_secret="oidc-secret",
+        oidc_jwks_url="https://auth.example/jwks",
+        oidc_audience="osap-api",
+        oidc_token_issuer="https://auth.example",
+        service_client_id="osap-api",
+        service_client_secret="service-secret",
+        admin_client_id="osap-composer-admin-service",
+        admin_client_secret="admin-secret",
+        news_api_base="http://127.0.0.1:8401",
+        news_api_token="news-token",
+        ads_base_url="http://127.0.0.1:8305",
+        ads_service_token="ads-token",
+        ads_web_base="http://127.0.0.1:8305",
+    )
+    _validate_strict(
+        "osap-api",
+        {
+            "db": ["host", "name", "user", "password"],
+            "oidc": ["issuer", "client_id", "redirect_uri", "client_secret", "jwks_url", "audience", "token_issuer"],
+            "service": ["client_id", "client_secret", "admin_client_id", "admin_client_secret"],
+            "news": ["base_url", "service_token"],
+            "ads": ["base_url", "service_token", "web_base"],
+        },
+        {},
+        config,
+        Path("osap.toml"),
+    )
