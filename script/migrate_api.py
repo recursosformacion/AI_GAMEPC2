@@ -7,6 +7,11 @@ volcados incluyen `COMMENT '...;...'`).
 
 Uso:
     python script/migrate_api.py --db-user osap2027 --db-password *** --db-name osap_api
+
+La baseline 001 es solo de esquema (49 CREATE TABLE IF NOT EXISTS): no importa datos
+ni altera columnas de tablas existentes. En una BD ya poblada no corrige drift; antes
+de registrarla como aplicada hay que comparar el esquema real con el de desarrollo.
+No ejecutar sobre una BD existente suponiendo que IF NOT EXISTS la actualiza.
 """
 
 from __future__ import annotations
