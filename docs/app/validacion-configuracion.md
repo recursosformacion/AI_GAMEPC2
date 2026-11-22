@@ -8,10 +8,10 @@
 
 ## 1. Cómo funciona
 
-El sistema se activa automáticamente al llamar a `load_configuration(service_name="...")`. La detección del entorno se realiza mediante la variable de entorno `OSAP_ENV`:
+El sistema se activa automáticamente al llamar a `load_configuration(service_name="...")`. La detección del entorno se realiza con `OSAP_DEPLOYMENT` (prioritaria) o `OSAP_ENV`; si faltan ambas, el valor por defecto es `prod` (fail-closed):
 
-- **Producción (`OSAP_ENV=production`):** validación estricta. Si falta cualquier sección o campo obligatorio, el servicio no arranca y lanza `ConfigurationError` con un mensaje descriptivo.
-- **Desarrollo (`OSAP_ENV=development`, valor por defecto):** validación permisiva. Si faltan secciones o campos, se emiten `ConfigurationWarning` pero el servicio continúa.
+- **Producción (`OSAP_ENV=production` (o `OSAP_DEPLOYMENT=prod`)):** validación estricta. Si falta cualquier sección o campo obligatorio, el servicio no arranca y lanza `ConfigurationError` con un mensaje descriptivo.
+- **Desarrollo (`OSAP_ENV=development` (o `OSAP_DEPLOYMENT=development`), valor por defecto):** validación permisiva. Si faltan secciones o campos, se emiten `ConfigurationWarning` pero el servicio continúa.
 
 ---
 
