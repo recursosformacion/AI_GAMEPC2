@@ -170,8 +170,8 @@ class TestValidateConfigurationIntegration:
             "[oidc]\nissuer = 'http://x'\nclient_id = 'id'\nredirect_uri = 'http://x'\n"
             "client_secret = 'secret'\njwks_url = 'http://x/jwks'\naudience = 'osap-api'\n"
             "token_issuer = 'http://x'\n"
-            "[service]\nclient_id = 'api'\nclient_secret = 'secret'\n"
-            "admin_client_id = 'admin'\nadmin_client_secret = 'secret'\n"
+            "[service]\nclient_id = '11111111-1111-4111-8111-111111111111'\nclient_secret = 'secret'\n"
+            "admin_client_id = '22222222-2222-4222-8222-222222222222'\nadmin_client_secret = 'secret'\n"
             "[news]\nbase_url = 'http://127.0.0.1:8401'\nservice_token = 'news'\n"
             "[ads]\nbase_url = 'http://127.0.0.1:8305'\nservice_token = 'ads'\n"
             "web_base = 'http://127.0.0.1:8305'\n"
@@ -224,9 +224,9 @@ def test_production_validation_accepts_centralized_effective_configuration() -> 
         oidc_jwks_url="https://auth.example/jwks",
         oidc_audience="osap-api",
         oidc_token_issuer="https://auth.example",
-        service_client_id="osap-api",
+        service_client_id="11111111-1111-4111-8111-111111111111",
         service_client_secret="service-secret",
-        admin_client_id="osap-composer-admin-service",
+        admin_client_id="22222222-2222-4222-8222-222222222222",
         admin_client_secret="admin-secret",
         news_api_base="http://127.0.0.1:8401",
         news_api_token="news-token",
