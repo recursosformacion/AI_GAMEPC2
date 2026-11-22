@@ -1,6 +1,6 @@
 import type { MouseEvent } from "react";
 import { useAuth } from "../state/auth";
-import { videosUrl } from "../lib/videos";
+import { videosBaseUrl, videosUrl } from "../lib/videos";
 
 export function VideosIcon({ size = 16 }: { size?: number }) {
   return (
@@ -17,7 +17,7 @@ interface VideosLinkProps {
   resourceId?: string | null;
   variant?: "button" | "icon" | "compact";
   label?: string;
-  onClick?: (event: MouseEvent<HTMLAnchorElement>) => void;
+  onClick?: (event: MouseEvent<HTMLElement>) => void;
 }
 
 export function VideosLink({
@@ -30,38 +30,49 @@ export function VideosLink({
   onClick,
 }: VideosLinkProps) {
   const token = useAuth((s) => s.accessToken);
-  const href = videosUrl({ workId, title, composer, resourceId, token });
-  if (!href) return null;
+  const base = videosBaseUrl();
+  const href = videosUrl({ workId, title, composer, resourceId });
+  if (!base || !href) return null;
 
-  if (variant === "icon") {
-    return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={label}
-        title={label}
-        onClick={onClick}
-        className="inline-flex h-9 w-9 items-center justify-center rounded border border-osap-border-strong text-osap-accent hover:bg-osap-accent-soft"
-      >
-        <VideosIcon />
-      </a>
-    );
-  }
+  const className =
+    variant === "icon"
+      ? "inline-flex h-9 w-9 items-center justify-center rounded border border-osap-border-strong text-osap-accent hover:bg-osap-accent-soft"
+      : variant === "compact"
+        ? "inline-flex shrink-0 items-center gap-1 rounded border border-osap-border px-2 py-1 text-xs font-medium text-osap-accent hover:bg-osap-accent-soft"
+        : "inline-flex items-center gap-2 rounded border border-osap-border-strong px-3 py-1.5 text-sm font-semibold text-osap-accent hover:bg-osap-accent-soft";
 
-  if (variant === "compact") {
-    return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={label}
-        onClick={onClick}
-        className="inline-flex shrink-0 items-center gap-1 rounded border border-osap-border px-2 py-1 text-xs font-medium text-osap-accent hover:bg-osap-accent-soft"
-      >
-        <VideosIcon size={13} />
+  const content =
+    variant === "icon" ? <VideosIcon /> : (
+      <>
+        <VideosIcon size={variant === "compact" ? 13 : 16} />
         {label}
-      </a>
+      </>
+    );
+
+  const accessibleLabel = variant === "icon" ? label : undefined;
+
+  // A cross-origin navigation must never carry a bearer token in its URL.
+  // Exchange it in a POST body for a short-lived HttpOnly session cookie instead.
+  if (token) {
+    return (
+      <form
+        action={`${base}/auth/handoff`}
+        method="post"
+        target="_blank"
+        className="inline-flex"
+      >
+        <input type="hidden" name="access_token" value={token} />
+        <input type="hidden" name="next" value={href.slice(base.length) || "/"} />
+        <button
+          type="submit"
+          aria-label={accessibleLabel}
+          title={variant === "icon" ? label : undefined}
+          onClick={onClick}
+          className={className}
+        >
+          {content}
+        </button>
+      </form>
     );
   }
 
@@ -70,11 +81,12 @@ export function VideosLink({
       href={href}
       target="_blank"
       rel="noopener noreferrer"
+      aria-label={accessibleLabel}
+      title={variant === "icon" ? label : undefined}
       onClick={onClick}
-      className="inline-flex items-center gap-2 rounded border border-osap-border-strong px-3 py-1.5 text-sm font-semibold text-osap-accent hover:bg-osap-accent-soft"
+      className={className}
     >
-      <VideosIcon />
-      {label}
+      {content}
     </a>
   );
 }
