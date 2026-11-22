@@ -1,4 +1,4 @@
-"""Mapeo de secciones de la web de administración de osap-storage (`storage_web`)."""
+"""Mapeo de destinos y datos de handoff POST para osap-storage."""
 
 from __future__ import annotations
 
@@ -29,27 +29,27 @@ class _Api(SystemMixin):
         return _Composers()
 
 
-def _url(section: str | None) -> str:
+def _handoff(section: str | None) -> dict[str, str]:
     return _Api().storage_web("admin-token", section)
 
 
 def test_secciones_curadas() -> None:
-    assert _url("composers") == "https://storage.example/admin/maestros?token=TOK"
-    assert _url("works") == "https://storage.example/admin/obras?token=TOK"
-    assert _url("representations") == "https://storage.example/admin/representations?token=TOK"
-    assert _url("work-persons") == "https://storage.example/admin/work-persons?token=TOK"
-    assert _url("mantenimiento") == "https://storage.example/admin/mantenimiento?token=TOK"
-    assert _url("multimantenimiento") == "https://storage.example/admin/?token=TOK"
-    assert _url("tables") == "https://storage.example/admin?token=TOK&tab=tables"
-    assert _url(None) == "https://storage.example/admin?token=TOK"
+    assert _handoff("composers") == {"url": "https://storage.example/admin/session", "token": "TOK", "next": "/admin/maestros"}
+    assert _handoff("works")["next"] == "/admin/obras"
+    assert _handoff("representations")["next"] == "/admin/representations"
+    assert _handoff("work-persons")["next"] == "/admin/work-persons"
+    assert _handoff("mantenimiento")["next"] == "/admin/mantenimiento"
+    assert _handoff("multimantenimiento")["next"] == "/admin/"
+    assert _handoff("tables")["next"] == "/admin?tab=tables"
+    assert _handoff(None)["next"] == "/admin"
+    assert all("?token=" not in value for value in _handoff(None).values())
 
 
 def test_deep_link_por_tabla() -> None:
-    assert _url("table:instruments") == "https://storage.example/admin/t/instruments?token=TOK"
-    assert _url("table:genre_mappings") == "https://storage.example/admin/t/genre_mappings?token=TOK"
+    assert _handoff("table:instruments")["next"] == "/admin/t/instruments"
+    assert _handoff("table:genre_mappings")["next"] == "/admin/t/genre_mappings"
 
 
 def test_tabla_invalida_cae_al_generico() -> None:
-    # Nombres fuera del patrón permitido no se interpolan (anti-inyección).
-    assert _url("table:../etc/passwd") == "https://storage.example/admin?token=TOK"
-    assert _url("table:Instruments") == "https://storage.example/admin?token=TOK"
+    assert _handoff("table:../etc/passwd")["next"] == "/admin"
+    assert _handoff("table:Instruments")["next"] == "/admin"

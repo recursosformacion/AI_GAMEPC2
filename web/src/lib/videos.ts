@@ -1,7 +1,10 @@
 export function videosBaseUrl(): string | null {
-  const configured = import.meta.env.VITE_VIDEOS_URL?.trim();
+  // La URL de producción nunca se reutiliza en desarrollo, aunque esté definida
+  // accidentalmente en un .env compartido o en el entorno del proceso.
+  const configured = import.meta.env.PROD
+    ? import.meta.env.VITE_VIDEOS_URL?.trim()
+    : import.meta.env.VITE_VIDEOS_DEV_URL?.trim();
   if (configured) return configured.replace(/\/$/, "");
-  // Un build de producción sin variable no debe apuntar al host de desarrollo.
   return import.meta.env.PROD
     ? "https://videos.openmusicrepository.com"
     : "http://localhost:8400";

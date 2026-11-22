@@ -149,13 +149,36 @@ export function AdminWorkPersonAiPage() {
     }
   };
 
-  const openWorkPersons = async () => {
-    try {
-      const r = await apiClient.getStorageWebUrl("work-persons");
-      window.open(r.url, "_blank");
-    } catch {
-      setError("El mantenimiento de storage no está disponible.");
+  const openWorkPersons = () => {
+    const target = `osap-storage-work-persons-${Date.now()}`;
+    const popup = window.open("about:blank", target);
+    if (!popup) {
+      setError("El navegador ha bloqueado la ventana de Storage.");
+      return;
     }
+    popup.opener = null;
+    void (async () => {
+      try {
+        const handoff = await apiClient.createStorageWebHandoff("work-persons");
+        const form = document.createElement("form");
+        form.method = "POST";
+        form.action = handoff.url;
+        form.target = target;
+        for (const [name, value] of Object.entries({ token: handoff.token, next: handoff.next })) {
+          const input = document.createElement("input");
+          input.type = "hidden";
+          input.name = name;
+          input.value = value;
+          form.appendChild(input);
+        }
+        document.body.appendChild(form);
+        form.submit();
+        form.remove();
+      } catch {
+        popup.close();
+        setError("El mantenimiento de Storage no está disponible.");
+      }
+    })();
   };
 
   return (

@@ -45,6 +45,7 @@ interface Routes {
   login?: () => Response;
   refresh?: () => Response;
   api?: (call: number) => Response;
+  profile?: () => Response;
 }
 
 function mockFetch(routes: Routes): void {
@@ -56,6 +57,11 @@ function mockFetch(routes: Routes): void {
     }
     if (url.includes("/auth/refresh")) {
       return routes.refresh ? routes.refresh() : authResponse({ detail: "invalid" }, 401);
+    }
+    if (url.includes("/api/v1/auth/me")) {
+      return routes.profile
+        ? routes.profile()
+        : apiOk({ user_id: "u1", roles: ["user"], email_verified: true });
     }
     apiCall += 1;
     return routes.api ? routes.api(apiCall) : authResponse({ detail: "not found" }, 404);
@@ -142,6 +148,27 @@ describe("login", () => {
     mockFetch({ login: () => authResponse({ detail: "credenciales inválidas" }, 401) });
     await expect(useAuth.getState().login("a@b.c", "mala")).rejects.toMatchObject({ code: "UNAUTHORIZED" });
     expect(useAuth.getState().status).toBe("anonymous");
+  });
+
+  it("loads current admin roles through the OSAP API profile endpoint", async () => {
+    mockFetch({
+      login: () => authResponse(authSession("refresh-1")),
+      profile: () => apiOk({ user_id: "u1", roles: ["user", "admin"], email_verified: true }),
+    });
+    await useAuth.getState().login("a@b.c", "pwd");
+    expect(useAuth.getState().isAdmin()).toBe(true);
+    expect(useAuth.getState().user?.roles).toEqual(["user", "admin"]);
+  });
+
+  it("keeps the synthetic dev admin session without calling real Auth", () => {
+    const fetchMock = vi.fn();
+    globalThis.fetch = fetchMock as unknown as typeof fetch;
+    useAuth.getState().completeOidc(
+      makeToken({ token_use: "user", sub: "dev-admin", roles: ["user", "admin"], email_verified: true }),
+      "dev-refresh-token",
+    );
+    expect(useAuth.getState().isAdmin()).toBe(true);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("throws on invalid payload (422)", async () => {

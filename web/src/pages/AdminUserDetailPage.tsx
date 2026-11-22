@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
-import type { AmigosGroup, AmigosGroupCatalog } from "../api/types";
 import { Button } from "../components/Button";
 import { useI18n } from "../i18n/I18n";
 import type { AdminUser } from "./AdminUsersPage";
@@ -68,16 +67,6 @@ export function AdminUserDetailPage() {
   const [savingConsent, setSavingConsent] = useState(false);
   const [recognitions, setRecognitions] = useState<AdminRecognition[]>([]);
   const [savingRec, setSavingRec] = useState(false);
-  const [savingEntity, setSavingEntity] = useState(false);
-  const [entityError, setEntityError] = useState<string | null>(null);
-  const [amigosGroups, setAmigosGroups] = useState<AmigosGroup[]>([]);
-  const [friendsGroups, setFriendsGroups] = useState<Array<{ group_id: string; name: string; kind: string; role: string; status: string }>>([]);
-  const [friendsGroupId, setFriendsGroupId] = useState("");
-  const [friendsRole, setFriendsRole] = useState<"collaborator" | "admin">("collaborator");
-  const [friendCatalog, setFriendCatalog] = useState<AmigosGroupCatalog>({ admin: [], musical: [], section: [] });
-  const [friendAdminRole, setFriendAdminRole] = useState("");
-  const [friendMusicalRole, setFriendMusicalRole] = useState("");
-  const [friendSection, setFriendSection] = useState("");
   const user_id = userId;
 
   const loadRecognitions = (id: string) => {
@@ -106,20 +95,6 @@ export function AdminUserDetailPage() {
         loadRecognitions(user_id);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "admin.error"));
-    void apiClient
-      .getAmigosGroups(true)
-      .then(setAmigosGroups)
-      .catch((e) => {
-        setAmigosGroups([]);
-        setEntityError(e instanceof Error ? e.message : "admin.error");
-      });
-    void apiClient
-      .getAmigosUserGroups(user_id)
-      .then(setFriendsGroups)
-      .catch((e) => {
-        setFriendsGroups([]);
-        setEntityError(e instanceof Error ? e.message : "admin.error");
-      });
   }, [user_id]);
 
   const save = () => {
@@ -150,33 +125,6 @@ export function AdminUserDetailPage() {
         setError(e instanceof Error ? e.message : "admin.error");
         setSaving(false);
       });
-  };
-
-  useEffect(() => {
-    if (!friendsGroupId) return;
-    void apiClient
-      .getAmigosGroupCatalog(friendsGroupId)
-      .then(setFriendCatalog)
-      .catch(() => setFriendCatalog({ admin: [], musical: [], section: [] }));
-  }, [friendsGroupId]);
-
-  const addFriendGroup = () => {
-    if (!user_id || !friendsGroupId) return;
-    setSavingEntity(true);
-    setEntityError(null);
-    void apiClient
-      .grantAmigosMember(friendsGroupId, user_id, friendsRole, {
-        admin_role_id: friendAdminRole || null,
-        musical_role_id: friendMusicalRole || null,
-        section_id: friendSection || null,
-      })
-      .then(() => apiClient.getAmigosUserGroups(user_id))
-      .then((rows) => {
-        setFriendsGroups(rows);
-        setFriendsGroupId("");
-      })
-      .catch((e) => setEntityError(e instanceof Error ? e.message : "admin.error"))
-      .finally(() => setSavingEntity(false));
   };
 
   const setConsent = (value: boolean) => {
@@ -426,78 +374,6 @@ export function AdminUserDetailPage() {
           </div>
         </div>
       )}
-
-      <fieldset className="space-y-3 rounded border border-osap-border bg-osap-surface p-4">
-        <legend className="px-1 text-sm font-medium">Grupos de Amigos</legend>
-        {friendsGroups.filter((item) => item.status === "active").length > 0 ? (
-          <ul className="space-y-1 text-sm">
-            {friendsGroups.filter((item) => item.status === "active").map((item) => (
-              <li key={item.group_id}>
-                <a
-                  href={`/admin/amigos/${encodeURIComponent(item.group_id)}?mode=edit`}
-                  className="text-osap-accent hover:underline"
-                >
-                  {item.name}
-                </a>{" "}
-                <span className="text-osap-muted">
-                  ({item.kind}) · {item.role === "admin" ? "administrador" : "colaborador"} ·{" "}
-                  {item.status}
-                </span>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="text-sm text-osap-muted">Sin grupos de Amigos.</p>
-        )}
-        <div className="flex flex-wrap items-end gap-2 border-t border-osap-border pt-3">
-          <label className="text-sm">
-            Añadir a grupo
-            <select
-              className="mt-1 block w-64 max-w-full rounded border border-osap-border bg-osap-surface px-2 py-1"
-              value={friendsGroupId}
-              onChange={(e) => setFriendsGroupId(e.target.value)}
-            >
-              <option value="">— Elegir grupo —</option>
-              {amigosGroups
-                .filter((group) => !friendsGroups.some((item) => item.group_id === group.id && item.status === "active"))
-                .map((group) => (
-                  <option key={group.id} value={group.id}>
-                    {group.name} ({group.kind})
-                  </option>
-                ))}
-            </select>
-          </label>
-          <label className="text-sm">
-            Rol
-            <select
-              className="mt-1 block rounded border border-osap-border bg-osap-surface px-2 py-1"
-              value={friendsRole}
-              onChange={(e) =>
-                setFriendsRole(e.target.value === "admin" ? "admin" : "collaborator")
-              }
-            >
-              <option value="collaborator">Colaborador</option>
-              <option value="admin">Administrador</option>
-            </select>
-          </label>
-          <select value={friendAdminRole} onChange={(e) => setFriendAdminRole(e.target.value)} className="mt-1 block rounded border border-osap-border bg-osap-surface px-2 py-1 text-sm">
-            <option value="">Cargo administrativo</option>
-            {friendCatalog.admin.map((item) => <option key={item.id ?? item.name} value={item.id ?? ""}>{item.name}</option>)}
-          </select>
-          <select value={friendMusicalRole} onChange={(e) => setFriendMusicalRole(e.target.value)} className="mt-1 block rounded border border-osap-border bg-osap-surface px-2 py-1 text-sm">
-            <option value="">Rol musical</option>
-            {friendCatalog.musical.map((item) => <option key={item.id ?? item.name} value={item.id ?? ""}>{item.name}</option>)}
-          </select>
-          <select value={friendSection} onChange={(e) => setFriendSection(e.target.value)} className="mt-1 block rounded border border-osap-border bg-osap-surface px-2 py-1 text-sm">
-            <option value="">Sección</option>
-            {friendCatalog.section.map((item) => <option key={item.id ?? item.name} value={item.id ?? ""}>{item.name}</option>)}
-          </select>
-          <Button disabled={!friendsGroupId || savingEntity} onClick={addFriendGroup}>
-            Añadir
-          </Button>
-        </div>
-        {entityError && <p className="text-sm text-red-500">{entityError}</p>}
-      </fieldset>
 
       <fieldset className="space-y-3 rounded border border-osap-border bg-osap-surface p-4">
         <legend className="px-1 text-sm font-medium">{t("adminUsers.recognitions")}</legend>

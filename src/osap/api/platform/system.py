@@ -38,42 +38,36 @@ VERSION = "3.1"
 
 
 class SystemMixin(PlatformApiCore):
-    def storage_web(self, token: str | None, section: str | None = None) -> str:
+    def storage_web(self, token: str | None, section: str | None = None) -> dict[str, str]:
         self._require_admin(token)
         base = (self._container.storage_web_base() or self.composers().storage_base_url()).rstrip("/")
         if self._container.dev_auth_bypass():
             service_token = secrets.token_urlsafe(16)
         else:
             service_token = self.composers().storage_admin_token()
-        url = f"{base}/admin?token={urllib.parse.quote(service_token)}"
-        # Mantenimientos standalone (osap-storage): Maestros = CRUD compositores;
-        # Obras = CRUD works (listado + Ver/Editar); el resto multimantenimiento.
+        next_path = "/admin"
+        # Conservar los deep links funcionales; las credenciales viajan solo en el POST.
         if section == "composers":
-            url = f"{base}/admin/maestros?token={urllib.parse.quote(service_token)}"
+            next_path = "/admin/maestros"
         elif section == "works":
-            url = f"{base}/admin/obras?token={urllib.parse.quote(service_token)}"
+            next_path = "/admin/obras"
         elif section == "representations":
-            url = f"{base}/admin/representations?token={urllib.parse.quote(service_token)}"
+            next_path = "/admin/representations"
         elif section == "work-persons":
-            url = f"{base}/admin/work-persons?token={urllib.parse.quote(service_token)}"
+            next_path = "/admin/work-persons"
         elif section == "tables":
-            url = f"{url}&tab=tables"
+            next_path = "/admin?tab=tables"
         elif section == "mantenimiento":
-            # Página curada de opciones de mantenimiento (distinta del multimantenimiento SPA).
-            url = f"{base}/admin/mantenimiento?token={urllib.parse.quote(service_token)}"
+            next_path = "/admin/mantenimiento"
         elif section == "multimantenimiento":
-            # SPA genérica (acceso a cualquier tabla). Con barra final para no caer en la
-            # página curada, que ocupa /admin exacto.
-            url = f"{base}/admin/?token={urllib.parse.quote(service_token)}"
+            next_path = "/admin/"
         elif section and section.startswith("table:"):
-            # Deep link del SPA de mantenimiento a la tabla concreta (/admin/t/<tabla>).
             name = section[len("table:") :]
             if re.fullmatch(r"[a-z][a-z0-9_]*", name):
-                url = f"{base}/admin/t/{name}?token={urllib.parse.quote(service_token)}"
-        return url
-
-    def support_web(self, token: str | None, section: str | None = None) -> str:
-        """URL de la capa web de mantenimiento de osap-support (hoy: reconocimientos)."""
+                next_path = f"/admin/t/{name}"
+        return {"url": f"{base}/admin/session", "token": service_token, "next": next_path}
+    def support_web(self, token: str | None, section: str | None = None) -> dict[str, str]:
+        """Datos para iniciar una sesión POST en la capa web de osap-support."""
         self._require_admin(token)
         client = self._container.support_admin_recognitions()
         service_token = client.admin_token()
@@ -81,28 +75,24 @@ class SystemMixin(PlatformApiCore):
             None: "/api/v1/admin/web/recognitions",
             "recognitions": "/api/v1/admin/web/recognitions",
         }
-        path = routes.get(section or "recognitions")
-        if path is None:
+        next_path = routes.get(section or "recognitions")
+        if next_path is None:
             raise ValueError(f"sección no soportada: {section}")
-        # `client.base_url` es interno (127.0.0.1:8300); el enlace lo abre el NAVEGADOR, así que
-        # debe usar la base pública (p. ej. https://support.openmusicrepository.com/support-api).
         base = (self._container.support_web_base() or client.base_url).rstrip("/")
-        return f"{base}{path}?token={urllib.parse.quote(service_token)}"
-
-    def ads_web(self, token: str | None) -> str:
-        """URL del panel con handoff de la sesión OSAP del administrador."""
+        return {
+            "url": f"{base}/api/v1/admin/web/session",
+            "token": service_token,
+            "next": "./recognitions",
+        }
+    def ads_web(self, token: str | None) -> dict[str, str]:
+        """Datos para iniciar una sesión admin en ai_publicidad mediante POST."""
         self._require_admin(token)
         base = (self._container.ads_web_base() or self._container.ads_base_url() or "").rstrip("/")
         if not base:
             raise RuntimeError("publicidad no configurada")
         panel = "/p" if base.endswith("/publicidad") else "/admin"
         next_url = f"{base}{panel}"
-        return (
-            f"{base}/auth/session"
-            f"?token={urllib.parse.quote(token or '')}"
-            f"&next={urllib.parse.quote(next_url, safe='')}"
-        )
-
+        return {"url": f"{base}/auth/session", "token": token or "", "next": next_url}
     def admin_overview(self, token: str | None) -> dict[str, object]:
         stats = self.composer_review_stats(token)
         suggestions = self._store.suggestion_counts()

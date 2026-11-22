@@ -782,20 +782,13 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(502, response, "AUTH_UNAVAILABLE", str(exc))
         return ctx.ok(data)
 
-    @router.get(
+    @router.post(
         "/api/v1/admin/storage-web",
         tags=["System"],
-        summary="Storage web admin URL (CRUD)",
-        description="Devuelve la URL de la capa web de administración de osap-storage, "
-        "autenticada con token de servicio (storage:admin). `section` (opcional) abre el "
-        "admin de storage en la pestaña correspondiente: composers | works | tables. "
-        "Exige role=admin.",
+        summary="Create Storage admin POST handoff",
+        description="Devuelve el destino y los datos de formulario para abrir osap-storage mediante POST. Nunca incluye el token en una URL.",
         response_model=SuccessEnvelope[dict[str, str]] | ErrorEnvelope,
-        responses={
-            200: _shared._resp("URL", _shared._example({})),
-            401: _shared._UNAUTHORIZED_401,
-            403: _shared._FORBIDDEN_403,
-        },
+        responses={200: _shared._resp("Storage handoff", _shared._example({})), 401: _shared._UNAUTHORIZED_401, 403: _shared._FORBIDDEN_403},
     )
     def storage_web(
         response: Response,
@@ -803,18 +796,18 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            url = ctx.api.storage_web(authorization, section)
+            handoff = ctx.api.storage_web(authorization, section)
         except UnauthenticatedError:
             return ctx.fail(401, response, "UNAUTHORIZED", "Login required")
         except ForbiddenError:
             return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
-        return ctx.ok({"url": url})
-
-    @router.get(
+        response.headers["Cache-Control"] = "no-store"
+        return ctx.ok(handoff)
+    @router.post(
         "/api/v1/admin/ads-web",
         tags=["Ads"],
-        summary="URL de mantenimiento de publicidad",
-        description="Devuelve el panel de ai_publicidad con handoff de la sesión OSAP. Exige role=admin.",
+        summary="Create Advertising admin POST handoff",
+        description="Devuelve destino y datos de formulario para abrir ai_publicidad mediante POST, sin token en URL.",
         response_model=SuccessEnvelope[dict[str, str]] | ErrorEnvelope,
     )
     def ads_web(
@@ -822,27 +815,22 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            url = ctx.api.ads_web(authorization)
+            handoff = ctx.api.ads_web(authorization)
         except UnauthenticatedError:
             return ctx.fail(401, response, "UNAUTHORIZED", "Login required")
         except ForbiddenError:
             return ctx.fail(403, response, "FORBIDDEN", "Admin role required")
         except Exception as exc:  # noqa: BLE001 — publicidad no disponible
             return ctx.fail(503, response, "ADS_UNAVAILABLE", str(exc))
-        return ctx.ok({"url": url})
-
-    @router.get(
+        response.headers["Cache-Control"] = "no-store"
+        return ctx.ok(handoff)
+    @router.post(
         "/api/v1/admin/support-web",
         tags=["System"],
-        summary="Support web admin URL (reconocimientos)",
-        description="Devuelve la URL de la capa web de mantenimiento de osap-support "
-        "(reconocimientos), autenticada con token de servicio (support:admin). Exige role=admin.",
+        summary="Create Support admin POST handoff",
+        description="Devuelve destino y datos de formulario para abrir osap-support mediante POST, sin token en URL.",
         response_model=SuccessEnvelope[dict[str, str]] | ErrorEnvelope,
-        responses={
-            200: _shared._resp("URL", _shared._example({})),
-            401: _shared._UNAUTHORIZED_401,
-            403: _shared._FORBIDDEN_403,
-        },
+        responses={200: _shared._resp("Support handoff", _shared._example({})), 401: _shared._UNAUTHORIZED_401, 403: _shared._FORBIDDEN_403},
     )
     def support_web(
         response: Response,
@@ -850,7 +838,7 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         authorization: str | None = Header(default=None),
     ) -> SuccessEnvelope[object] | ErrorEnvelope:
         try:
-            url = ctx.api.support_web(authorization, section)
+            handoff = ctx.api.support_web(authorization, section)
         except UnauthenticatedError:
             return ctx.fail(401, response, "UNAUTHORIZED", "Login required")
         except ForbiddenError:
@@ -859,8 +847,8 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
             return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", str(exc))
         except Exception as exc:  # noqa: BLE001 — token de servicio o sección no soportada
             return ctx.fail(503, response, "ADMIN_SERVICE_UNAVAILABLE", str(exc))
-        return ctx.ok({"url": url})
-
+        response.headers["Cache-Control"] = "no-store"
+        return ctx.ok(handoff)
     @router.post(
         "/api/v1/admin/composers/merge",
         status_code=200,

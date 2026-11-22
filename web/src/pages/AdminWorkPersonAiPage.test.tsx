@@ -23,7 +23,7 @@ vi.mock("../api/ApiClient", () => ({
     listWorkAttributionProposals: mocks.list,
     getWorkAttributionProposal: mocks.detail,
     reviewWorkAttributionProposal: mocks.review,
-    getStorageWebUrl: mocks.storage,
+    createStorageWebHandoff: mocks.storage,
   },
 }));
 
@@ -54,7 +54,11 @@ beforeEach(() => {
   mocks.list.mockResolvedValue({ items: [PROPOSAL], total: 1 });
   mocks.detail.mockResolvedValue(PROPOSAL);
   mocks.review.mockResolvedValue({ id: 1, status: "accepted" });
-  mocks.storage.mockResolvedValue({ url: "https://storage.example/admin?token=x" });
+  mocks.storage.mockResolvedValue({
+    url: "https://storage.example/admin/session",
+    token: "storage-admin-token",
+    next: "/admin/work-persons",
+  });
 });
 
 describe("AdminWorkPersonAiPage", () => {
@@ -127,13 +131,32 @@ describe("AdminWorkPersonAiPage", () => {
     expect(await screen.findByText(/no está resuelta/)).toBeTruthy();
   });
 
-  it("el botón Obras → Personas abre la sección de storage", async () => {
-    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+  it("el botón Obras → Personas abre Storage mediante un formulario POST", async () => {
+    const popup = { opener: window, close: vi.fn() } as unknown as WindowProxy;
+    const open = vi.spyOn(window, "open").mockReturnValue(popup);
+    const submittedForm: { current: HTMLFormElement | null } = { current: null };
+    const submit = vi.spyOn(HTMLFormElement.prototype, "submit").mockImplementation(function (
+      this: HTMLFormElement,
+    ) {
+      submittedForm.current = this;
+    });
+
     renderPage();
     await screen.findAllByText(/Obra #310455/);
     fireEvent.click(screen.getByRole("button", { name: "Obras → Personas" }));
+
     await waitFor(() => expect(mocks.storage).toHaveBeenCalledWith("work-persons"));
-    expect(open).toHaveBeenCalled();
+    await waitFor(() => expect(submit).toHaveBeenCalled());
+    expect(open).toHaveBeenCalledWith("about:blank", expect.stringContaining("osap-storage-work-persons-"));
+    expect(submittedForm.current?.method).toBe("post");
+    expect(submittedForm.current?.action).toBe("https://storage.example/admin/session");
+    expect(submittedForm.current?.querySelector<HTMLInputElement>('input[name="token"]')?.value).toBe(
+      "storage-admin-token",
+    );
+    expect(submittedForm.current?.querySelector<HTMLInputElement>('input[name="next"]')?.value).toBe(
+      "/admin/work-persons",
+    );
     open.mockRestore();
+    submit.mockRestore();
   });
 });

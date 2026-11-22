@@ -8,7 +8,7 @@
 // presentación; nunca como decisión de seguridad. No se inventa `tier`.
 
 import { create } from "zustand";
-import { authClient } from "../api/AuthClient";
+import { authClient, type UserProfile } from "../api/AuthClient";
 import { apiClient } from "../api/ApiClient";
 import type { FrontendUser } from "../api/types";
 
@@ -116,9 +116,11 @@ function clearRefresh(): void {
 }
 
 // El JWT no lleva nombre/email (privacidad); el perfil se pide a /auth/me y se fusiona.
-async function loadProfile(accessToken: string): Promise<Partial<FrontendUser>> {
+async function loadProfile(): Promise<Partial<FrontendUser>> {
   try {
-    const profile = await authClient.me(accessToken);
+    // El perfil se consulta a través de osap-api (mismo origen de la SPA).
+    // Así funciona también en desarrollo sin depender de un proxy /auth del servidor web.
+    const profile = await apiClient.get<UserProfile>("/auth/me");
     return {
       name: profile.name ?? undefined,
       email: profile.email ?? undefined,
@@ -144,11 +146,17 @@ export const useAuth = create<AuthState>((set, get) => ({
       const session = await authClient.login(email, password);
       localStorage.setItem(REFRESH_KEY, session.refresh_token);
       localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
-      const profile = await loadProfile(session.access_token);
+      const decoded = decodeUser(session.access_token);
+      // Publicar primero el token para que ApiClient pueda autenticar /api/v1/auth/me.
       set({
         accessToken: session.access_token,
         refreshToken: session.refresh_token,
-        user: { ...decodeUser(session.access_token), ...profile },
+        user: decoded,
+        status: "refreshing",
+      });
+      const profile = await loadProfile();
+      set({
+        user: { ...decoded, ...profile },
         status: "authenticated",
       });
       armRefresh();
@@ -188,20 +196,25 @@ export const useAuth = create<AuthState>((set, get) => ({
   completeOidc: (accessToken, refreshToken) => {
     localStorage.setItem(REFRESH_KEY, refreshToken);
     localStorage.setItem(LAST_ACTIVITY_KEY, String(Date.now()));
+    const decoded = decodeUser(accessToken);
     set({
       accessToken,
       refreshToken,
-      user: decodeUser(accessToken),
+      user: decoded,
       status: "authenticated",
     });
     armRefresh();
-    void get().refreshProfile();
+    // La sesión sintética dev-admin no existe en osap-auth: no pedir /auth/me
+    // ni intentar refrescarla contra el proveedor real de identidad.
+    if (decoded.user_id !== "dev-admin") {
+      void get().refreshProfile();
+    }
   },
 
   refreshProfile: async () => {
     const token = get().accessToken;
     if (!token) return;
-    const profile = await loadProfile(token);
+    const profile = await loadProfile();
     const current = get().user;
     if (current && Object.keys(profile).length > 0) {
       set({ user: { ...current, ...profile } });
