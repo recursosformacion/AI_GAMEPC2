@@ -132,3 +132,11 @@ La implementación ha avanzado después de esta auditoría inicial. Esta actuali
 ### Validación
 
 La fusión de una PR o la existencia de pruebas en el repositorio no acredita por sí sola que CI haya pasado. En la consulta de esta revisión no se obtuvo un estado de ejecución de Actions verificable para los commits de Blog; las pruebas nuevas de Ads tampoco se han ejecutado localmente.
+
+
+### osap-storage y osap-support
+
+- **Storage:** OSAP solicita el handoff por `POST /api/v1/admin/storage-web`; el navegador envía `token` y `next` por formulario POST a `/admin/session`. Storage valida `Origin`, el tipo y tamaño del formulario y el scope `storage:admin`; establece la cookie `osap_storage_admin` HttpOnly/Secure/SameSite=Lax y redirige a una ruta local permitida. Se ha retirado de osap-api el helper antiguo no utilizado que construía `/admin?token=...`. La pantalla antigua `api/web/admin_tables.py` conserva referencias a query token, pero no está conectada por las rutas actuales.
+- **Support:** OSAP solicita el handoff por `POST /api/v1/admin/support-web`; el navegador envía el service token por formulario POST a `/api/v1/admin/web/session`. Support valida `Origin`, el formulario, el scope `support:admin` y la expiración del JWT; establece la cookie `osap_support_admin` HttpOnly/Secure/SameSite=Lax. La página rechaza expresamente tokens en query string.
+
+Por tanto, las menciones anteriores a tokens de Storage/Support en URL describen el diseño antiguo y no el flujo actual. Los tres handoffs administrativos activos (Storage, Support y Ads) usan POST; Blog usa POST con token de usuario.
