@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "CPDL Exporter (OSAP)",
+  "version": "0.1.0",
+  "description": "Exporta el volcado de ChoralWiki (CPDL) a cpdl-parts.json para OSAP.",
+  "permissions": ["scripting", "tabs"],
+  "host_permissions": ["https://www.cpdl.org/*"],
+  "action": {
+    "default_title": "Exportar CPDL",
+    "default_popup": "popup.html"
+  }
+}

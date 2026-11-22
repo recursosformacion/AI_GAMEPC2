@@ -89,6 +89,27 @@ def _public_id_for_record(record: dict) -> str:
     digest = hashlib.sha1(f"{provider}:{source}".encode()).hexdigest()
     return f"index-{digest[:20]}"
 
+
+def _dedupe_by_public_id(inserts: list[tuple]) -> tuple[list[tuple], int]:
+    """Descarta filas con `public_id` repetido (misma fuente) antes del INSERT.
+
+    El índice deduplica obras por (title_key, person_id), pero dos registros pueden
+    compartir la misma identidad de fuente (`public_id`) con distinto título/persona;
+    insertar ambos rompe la clave única `uq_idx_public_id`. Se conserva el primero
+    (misma representación de origen) y se descartan los siguientes.
+    """
+    seen: set[str] = set()
+    out: list[tuple] = []
+    skipped = 0
+    for row in inserts:
+        key = str(row[0])
+        if key in seen:
+            skipped += 1
+            continue
+        seen.add(key)
+        out.append(row)
+    return out, skipped
+
 # MusicBrainz work types de "música artística" (las demás son pop/soundtrack/literaria).
 _MB_ART_TYPES = {
     "1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12",
@@ -1106,12 +1127,23 @@ def _ingest_page(
                 updates,
             )
         if inserts:
-            cur.executemany(
+            inserts, dup_skipped = _dedupe_by_public_id(inserts)
+            skipped += dup_skipped
+            insert_sql = (
                 "INSERT INTO index_works (public_id, title, title_key, composer_name, person_id, "
                 "catalogue, catalogue_key, year, instrumentation, genre_id, source_count, updated_at) "
-                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,1,NOW())",
-                inserts,
+                "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,1,NOW())"
             )
+            try:
+                cur.executemany(insert_sql, inserts)
+            except pymysql.err.IntegrityError:
+                # Colisión residual (p. ej. public_id ya existente en la BD): insertar de
+                # una en una y omitir solo la fila conflictiva, sin tumbar el rebuild.
+                for one in inserts:
+                    try:
+                        cur.execute(insert_sql, one)
+                    except pymysql.err.IntegrityError:
+                        skipped += 1
             # Ids de lo insertado: 1 consulta por lote usando los title_key de la página.
             insert_tks = sorted({record["tk"] for index, (record, _row, _strong) in enumerate(pending)
                                  if ids_by_record.get(index, 0) < 0})
@@ -1295,12 +1327,19 @@ def _ingest(
                 )
                 work_id = cur.lastrowid
             except pymysql.err.IntegrityError:
-                # Carrera/legado con clave truncada: se reutiliza la fila existente.
+                # Colisión por (title_key, person_id) o por public_id (misma fuente con
+                # distinto título/persona): se reutiliza la fila ya existente.
                 cur.execute(
                     "SELECT id, title FROM index_works WHERE title_key=%s AND person_id <=> %s",
                     (tk, person_id),
                 )
                 existing = cur.fetchone()
+                if existing is None:
+                    cur.execute(
+                        "SELECT id, title FROM index_works WHERE public_id=%s",
+                        (_public_id_for_record(work),),
+                    )
+                    existing = cur.fetchone()
                 if existing is None:
                     raise
                 work_id = int(existing["id"])

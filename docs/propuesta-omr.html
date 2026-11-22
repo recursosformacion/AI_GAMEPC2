@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenMusicRepository — Propuesta Visual</title>
+  <style>
+    :root {
+      --bg-page: #FAF8F3;
+      --bg-sidebar: #F3EFE6;
+      --bg-card: #FFFFFF;
+      --border-soft: #E5DFD3;
+      --text-main: #23201C;
+      --text-muted: #666057;
+      --accent: #5C4D9A;
+      --accent-hover: #493C80;
+      --accent-soft: #EFEBF9;
+      --shadow-sm: 0 2px 8px rgba(35, 32, 28, 0.04);
+      --shadow-md: 0 8px 24px rgba(35, 32, 28, 0.07);
+      --radius: 12px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      color: var(--text-main);
+      background-color: var(--bg-page);
+      /* Patrón SVG de pentagrama sutil al 3% de opacidad */
+      background-image: url("data:image/svg+xml,%3Csvg width='240' height='120' viewBox='0 0 240 120' xmlns='http://www.w3.org/2000/svg'%3E%3Cg stroke='%2323201C' stroke-opacity='0.03' stroke-width='1' fill='none'%3E%3Cline x1='0' y1='25' x2='240' y2='25'/%3E%3Cline x1='0' y1='33' x2='240' y2='33'/%3E%3Cline x1='0' y1='41' x2='240' y2='41'/%3E%3Cline x1='0' y1='49' x2='240' y2='49'/%3E%3Cline x1='0' y1='57' x2='240' y2='57'/%3E%3Ccircle cx='65' cy='45' r='3.5' fill='%2323201C' fill-opacity='0.03'/%3E%3Cline x1='68.5' y1='45' x2='68.5' y2='22'/%3E%3Ccircle cx='165' cy='37' r='3.5' fill='%2323201C' fill-opacity='0.03'/%3E%3Cline x1='168.5' y1='37' x2='168.5' y2='14'/%3E%3C/g%3E%3C/svg%3E");
+      display: flex;
+      min-height: 100vh;
+    }
+
+    /* ================= SIDEBAR ================= */
+    .sidebar {
+      width: 250px;
+      background: var(--bg-sidebar);
+      border-right: 1px solid var(--border-soft);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 20px 14px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow-y: auto;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 10px 20px;
+      border-bottom: 1px solid var(--border-soft);
+      margin-bottom: 16px;
+      text-decoration: none;
+      color: var(--text-main);
+    }
+
+    .brand-icon {
+      width: 34px;
+      height: 34px;
+      border-radius: 9px;
+      background: var(--accent);
+      color: #fff;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 18px;
+      flex-shrink: 0;
+    }
+
+    .brand-text strong {
+      display: block;
+      font-size: 14px;
+      letter-spacing: -0.01em;
+    }
+
+    .brand-text span {
+      display: block;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .nav-group {
+      margin-bottom: 18px;
+    }
+
+    .nav-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-muted);
+      padding: 0 12px 6px;
+    }
+
+    .nav-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .nav-list a {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      text-decoration: none;
+      color: var(--text-main);
+      font-size: 13.5px;
+      transition: background 0.15s ease, color 0.15s ease;
+    }
+
+    .nav-list a:hover {
+      background: rgba(92, 77, 154, 0.08);
+      color: var(--accent);
+    }
+
+    .nav-list a.active {
+      background: var(--bg-card);
+      color: var(--accent);
+      font-weight: 600;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .nav-badge {
+      margin-left: auto;
+      font-size: 10px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      padding: 2px 6px;
+      border-radius: 99px;
+      font-weight: 600;
+    }
+
+    .sidebar-footer {
+      border-top: 1px solid var(--border-soft);
+      padding-top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .sidebar-footer a {
+      font-size: 12.5px;
+      color: var(--text-muted);
+      text-decoration: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+    }
+
+    .sidebar-footer a:hover {
+      color: var(--text-main);
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    /* ================= MAIN AREA ================= */
+    .main-wrapper {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .topbar {
+      height: 60px;
+      padding: 0 32px;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+
+    .btn-outline {
+      padding: 7px 14px;
+      border: 1px solid var(--border-soft);
+      background: var(--bg-card);
+      color: var(--text-main);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: border-color 0.15s;
+    }
+
+    .btn-outline:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .btn-primary-sm {
+      padding: 7px 14px;
+      background: var(--accent);
+      color: #fff;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      text-decoration: none;
+    }
+
+    .btn-primary-sm:hover {
+      background: var(--accent-hover);
+    }
+
+    .container {
+      max-width: 960px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 16px 32px 56px;
+    }
+
+    /* ================= HERO ================= */
+    .hero {
+      text-align: center;
+      padding: 20px 0 32px;
+    }
+
+    .hero h1 {
+      font-size: 32px;
+      line-height: 1.2;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      max-width: 680px;
+      margin: 0 auto 12px;
+    }
+
+    .hero p {
+      font-size: 15.5px;
+      line-height: 1.55;
+      color: var(--text-muted);
+      max-width: 640px;
+      margin: 0 auto 28px;
+    }
+
+    /* Buscador protagonista unificado */
+    .search-box {
+      max-width: 720px;
+      margin: 0 auto 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: 14px;
+      padding: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      box-shadow: var(--shadow-md);
+    }
+
+    .search-box select {
+      border: none;
+      background: var(--bg-sidebar);
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 500;
+      padding: 11px 12px;
+      border-radius: 9px;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .search-box input {
+      flex: 1;
+      border: none;
+      outline: none;
+      font-size: 15px;
+      padding: 10px 12px;
+      background: transparent;
+      color: var(--text-main);
+    }
+
+    .search-box button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      padding: 11px 22px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .search-box button:hover {
+      background: var(--accent-hover);
+    }
+
+    .search-meta {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 18px;
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 10px;
+    }
+
+    .search-meta a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .search-meta a:hover {
+      text-decoration: underline;
+    }
+
+    /* ================= FORMAT CARDS ================= */
+    .formats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin: 28px 0 36px;
+    }
+
+    .format-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius);
+      padding: 20px 16px;
+      text-align: center;
+      text-decoration: none;
+      color: var(--text-main);
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+
+    .format-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+      border-color: var(--accent);
+    }
+
+    .format-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      display: grid;
+      place-items: center;
+      margin: 0 auto 12px;
+      font-weight: 700;
+      font-size: 15px;
+    }
+
+    .format-card h3 {
+      font-size: 15px;
+      margin-bottom: 6px;
+    }
+
+    .format-card p {
+      font-size: 12.5px;
+      line-height: 1.45;
+      color: var(--text-muted);
+    }
+
+    /* ================= HOW IT WORKS ================= */
+    .steps-panel {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      margin-bottom: 28px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .steps-header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .steps-header h2 {
+      font-size: 18px;
+      margin-bottom: 4px;
+    }
+
+    .steps-header p {
+      font-size: 13.5px;
+      color: var(--text-muted);
+    }
+
+    .steps-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 20px;
+      text-align: center;
+    }
+
+    .step-item span {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--accent);
+      background: var(--accent-soft);
+      padding: 3px 9px;
+      border-radius: 99px;
+      margin-bottom: 8px;
+    }
+
+    .step-item p {
+      font-size: 13.5px;
+      color: var(--text-muted);
+    }
+
+    /* ================= BOTTOM LISTS ================= */
+    .lists-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.4fr;
+      gap: 20px;
+    }
+
+    .list-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-soft);
+      border-radius: var(--radius);
+      padding: 20px 22px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .list-card h3 {
+      font-size: 15px;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-soft);
+    }
+
+    .list-card ul {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .list-card li a {
+      text-decoration: none;
+      color: var(--accent);
+      font-size: 13.5px;
+      display: block;
+      line-height: 1.4;
+    }
+
+    .list-card li a:hover {
+      text-decoration: underline;
+    }
+
+    .list-card li small {
+      color: var(--text-muted);
+      font-size: 12.5px;
+    }
+
+    @media (max-width: 900px) {
+      .sidebar { display: none; }
+      .formats-grid { grid-template-columns: repeat(2, 1fr); }
+      .steps-grid, .lists-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- BARRA LATERAL REORGANIZADA -->
+  <aside class="sidebar">
+    <div>
+      <a href="#" class="brand">
+        <div class="brand-icon">♪</div>
+        <div class="brand-text">
+          <strong>OpenMusicRepository</strong>
+          <span>Inteligencia Musical</span>
+        </div>
+      </a>
+
+      <div class="nav-group">
+        <div class="nav-label">Explorar</div>
+        <ul class="nav-list">
+          <li><a href="#" class="active">Inicio</a></li>
+          <li><a href="#">Explorar catálogo</a></li>
+          <li><a href="#">Compositores</a></li>
+          <li><a href="#">Clasificación</a></li>
+        </ul>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-label">Mi espacio</div>
+        <ul class="nav-list">
+          <li><a href="#">Chorus <span class="nav-badge">Gratis</span></a></li>
+          <li><a href="#">Mis grupos</a></li>
+          <li><a href="#">Próximas actuaciones</a></li>
+          <li><a href="#">Mi actividad</a></li>
+        </ul>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-label">Comunidad</div>
+        <ul class="nav-list">
+          <li><a href="#">Artículos y noticias</a></li>
+          <li><a href="#">Colaboradores</a></li>
+          <li><a href="#">Contactos y amigos</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="sidebar-footer">
+      <a href="#">Cómo funciona OSAP</a>
+      <a href="#">Acerca de</a>
+      <a href="#">Contacto</a>
+    </div>
+  </aside>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <div class="main-wrapper">
+    <header class="topbar">
+      <a href="#" class="btn-outline">Alta gratuita en Chorus</a>
+      <a href="#" class="btn-primary-sm">Acceder</a>
+    </header>
+
+    <main class="container">
+      <section class="hero">
+        <h1>Encuentra partituras y recursos musicales. Gratuitos y de pago, unificados.</h1>
+        <p>
+          Un proyecto abierto para que la música siga siendo accesible. Explora obras, compositores y partituras de múltiples fuentes internacionales y accede directamente a los originales.
+        </p>
+
+        <form class="search-box" onsubmit="return false;">
+          <select aria-label="Formato">
+            <option value="all">Todos los formatos</option>
+            <option value="musicxml">MusicXML</option>
+            <option value="pdf">PDF</option>
+            <option value="midi">MIDI</option>
+          </select>
+          <input type="text" placeholder="Busca una obra, compositor o instrumentación..." />
+          <button type="submit">Buscar</button>
+        </form>
+
+        <div class="search-meta">
+          <a href="#">Búsqueda avanzada</a>
+          <span>•</span>
+          <span>¿Tienes un coro, banda u orquesta? <a href="#">Solicita el alta gratuita en Chorus →</a></span>
+        </div>
+      </section>
+
+      <!-- TARJETAS DE FORMATO -->
+      <section class="formats-grid">
+        <a href="#" class="format-card">
+          <div class="format-icon">XML</div>
+          <h3>MusicXML</h3>
+          <p>Partituras editables listas para abrir en MuseScore o Sibelius.</p>
+        </a>
+        <a href="#" class="format-card">
+          <div class="format-icon">PDF</div>
+          <h3>PDF</h3>
+          <p>Ediciones listas para visualizar en atril digital o imprimir.</p>
+        </a>
+        <a href="#" class="format-card">
+          <div class="format-icon">MIDI</div>
+          <h3>MIDI</h3>
+          <p>Archivos para escuchar voces o importar en secuenciadores.</p>
+        </a>
+        <a href="#" class="format-card">
+          <div class="format-icon">★</div>
+          <h3>Libres y comerciales</h3>
+          <p>Catálogos abiertos y ediciones comerciales desde un mismo lugar.</p>
+        </a>
+      </section>
+
+      <!-- CÓMO FUNCIONA -->
+      <section class="steps-panel">
+        <div class="steps-header">
+          <h2>¿Cómo funciona OSAP?</h2>
+          <p>No duplicamos repositorios: indexamos obras y te conectamos directamente con las fuentes originales.</p>
+        </div>
+        <div class="steps-grid">
+          <div class="step-item">
+            <span>1. Descubre</span>
+            <p>Busca obras por título, compositor, época o formato.</p>
+          </div>
+          <div class="step-item">
+            <span>2. Entiende</span>
+            <p>Consulta versiones disponibles, plantilla y metadatos limpios.</p>
+          </div>
+          <div class="step-item">
+            <span>3. Accede</span>
+            <p>Ve directo al archivo en el repositorio o editorial original.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- LISTADOS INFERIORES -->
+      <section class="lists-grid">
+        <div class="list-card">
+          <h3>Búsquedas recientes</h3>
+          <ul>
+            <li><a href="#">Ave Verum Corpus — Mozart</a></li>
+            <li><a href="#">Johann Sebastian Bach</a></li>
+            <li><a href="#">Anónimo veneciano</a></li>
+            <li><a href="#">Balada de trompeta</a></li>
+            <li><a href="#">Locus Iste — Bruckner</a></li>
+          </ul>
+        </div>
+
+        <div class="list-card">
+          <h3>Obras más consultadas</h3>
+          <ul>
+            <li>
+              <a href="#">Trio for Oboe, Violin, and Piano <small>— Georges Edouard Migot</small></a>
+            </li>
+            <li>
+              <a href="#">Surge propera a 4 <small>— Giovanni Pierluigi da Palestrina</small></a>
+            </li>
+            <li>
+              <a href="#">Echo Requiem, Op. 1 <small>— SLAVE</small></a>
+            </li>
+            <li>
+              <a href="#">Now and Old, Op. 38 <small>— Wallingford Constantine Riegger</small></a>
+            </li>
+            <li>
+              <a href="#">Beata Viscera Mariae II (D-Ju MS 33)</a>
+            </li>
+          </ul>
+        </div>
+      </section>
+    </main>
+  </div>
+
+</body>
+</html>
