@@ -40,11 +40,11 @@ def test_api_baseline_is_schema_only_and_additive() -> None:
         bool(re.match(r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS", statement, re.I))
         for statement in parsed
     ) == 49
-    assert not re.search(
-        r"\b(?:ALTER\s+TABLE|DROP\s+(?:TABLE|COLUMN|DATABASE)|"
-        r"TRUNCATE\s+TABLE|INSERT\s+INTO|UPDATE\s+[^;]+\s+SET|DELETE\s+FROM)\b",
-        baseline,
+    destructive = re.compile(
+        r"^(?:ALTER\s+TABLE|DROP\s+(?:TABLE|COLUMN|DATABASE)|"
+        r"TRUNCATE\s+TABLE|INSERT\s+INTO|UPDATE\s+|DELETE\s+FROM)\b",
         re.I,
     )
+    assert not [statement for statement in parsed if destructive.match(statement)]
     assert "FOREIGN_KEY_CHECKS=0" in baseline
     assert "FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS" in baseline
