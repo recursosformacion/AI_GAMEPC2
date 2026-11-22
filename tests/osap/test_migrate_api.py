@@ -34,10 +34,10 @@ def test_split_with_comments() -> None:
 def test_api_baseline_is_schema_only_and_additive() -> None:
     baseline = (ROOT / "migrations" / "001_baseline_schema.sql").read_text(encoding="utf-8")
 
-    assert len(re.findall(r"CREATE\\s+TABLE\\s+IF\\s+NOT\\s+EXISTS", baseline, re.I)) == 49
+    assert len(re.findall(r"CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS", baseline, re.I)) == 49
     assert not re.search(
-        r"\\b(?:ALTER\\s+TABLE|DROP\\s+(?:TABLE|COLUMN|DATABASE)|"
-        r"TRUNCATE\\s+TABLE|INSERT\\s+INTO|UPDATE\\s+[^;]+\\s+SET|DELETE\\s+FROM)\\b",
+        r"\b(?:ALTER\s+TABLE|DROP\s+(?:TABLE|COLUMN|DATABASE)|"
+        r"TRUNCATE\s+TABLE|INSERT\s+INTO|UPDATE\s+[^;]+\s+SET|DELETE\s+FROM)\b",
         baseline,
         re.I,
     )
