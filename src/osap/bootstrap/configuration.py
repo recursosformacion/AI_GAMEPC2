@@ -181,6 +181,9 @@ _SERVICE_REQUIRED_SECTIONS: dict[str, dict[str, list[str]]] = {
     "osap-api": {
         "db": ["host", "name", "user", "password"],
         "oidc": ["issuer", "client_id", "redirect_uri", "client_secret", "jwks_url", "audience", "token_issuer"],
+        "service": ["client_id", "client_secret", "admin_client_id", "admin_client_secret"],
+        "news": ["base_url", "service_token"],
+        "ads": ["base_url", "service_token", "web_base"],
     },
     "osap-storage": {
         "db": ["host", "name", "user", "password"],
@@ -191,6 +194,28 @@ _SERVICE_REQUIRED_SECTIONS: dict[str, dict[str, list[str]]] = {
         "jwt": ["private_key_path", "public_key_path", "kid"],
     },
 }
+
+_CONFIG_ATTR_BY_SECTION_FIELD: dict[tuple[str, str], str] = {
+    ("db", "host"): "osap_api_db_host",
+    ("db", "name"): "osap_api_db_name",
+    ("db", "user"): "osap_api_db_user",
+    ("db", "password"): "osap_api_db_password",
+    ("service", "client_id"): "service_client_id",
+    ("service", "client_secret"): "service_client_secret",
+    ("service", "admin_client_id"): "admin_client_id",
+    ("service", "admin_client_secret"): "admin_client_secret",
+    ("news", "base_url"): "news_api_base",
+    ("news", "service_token"): "news_api_token",
+    ("ads", "base_url"): "ads_base_url",
+    ("ads", "service_token"): "ads_service_token",
+    ("ads", "web_base"): "ads_web_base",
+}
+
+
+def _effective_config_value(config: Configuration, section: str, field: str) -> Any:
+    attr = _CONFIG_ATTR_BY_SECTION_FIELD.get((section, field), f"{section}_{field}")
+    return getattr(config, attr, None)
+
 
 # -- helpers -------------------------------------------------------------
 
@@ -353,20 +378,19 @@ def _validate_strict(
     config_ref = str(config_path) if config_path else "osap.toml"
 
     for section, fields in rules.items():
-        if section not in toml_data or not isinstance(toml_data.get(section), dict):
-            errors.append(f"Sección obligatoria '{section}' faltante en {config_ref}")
-            continue
-
-        section_data = toml_data[section]
+        raw_section = toml_data.get(section)
+        section_data = raw_section if isinstance(raw_section, dict) else {}
         for field in fields:
             raw_value = section_data.get(field)
-            if raw_value is None or (isinstance(raw_value, str) and not raw_value.strip()):
-                # El valor puede venir por variable de entorno (cargada en `config`),
-                # p. ej. OSAP_OIDC_CLIENT_SECRET / OSAP_SERVICE_CLIENT_SECRET.
-                config_attr = f"{section}_{field}"
-                env_value = getattr(config, config_attr, None)
-                if not env_value:
-                    errors.append(f"Campo obligatorio '{section}.{field}' vacío o faltante en {config_ref}")
+            configured_value = _effective_config_value(config, section, field)
+            if (
+                raw_value is None
+                or (isinstance(raw_value, str) and not raw_value.strip())
+            ) and not configured_value:
+                errors.append(
+                    f"Campo obligatorio '{section}.{field}' vacío o faltante "
+                    f"en {config_ref} (ni en TOML, entorno o app_config)"
+                )
 
     # Validar que los campos de BD estén definidos en producción
     db_fields = {
@@ -406,15 +430,19 @@ def _validate_lenient(
     config_ref = str(config_path) if config_path else "osap.toml"
 
     for section, fields in rules.items():
-        if section not in toml_data or not isinstance(toml_data.get(section), dict):
-            warnings_list.append(f"Sección recomendada '{section}' faltante en {config_ref}")
-            continue
-
-        section_data = toml_data[section]
+        raw_section = toml_data.get(section)
+        section_data = raw_section if isinstance(raw_section, dict) else {}
         for field in fields:
             raw_value = section_data.get(field)
-            if raw_value is None or (isinstance(raw_value, str) and not raw_value.strip()):
-                warnings_list.append(f"Campo '{section}.{field}' vacío o faltante en {config_ref}")
+            configured_value = _effective_config_value(config, section, field)
+            if (
+                raw_value is None
+                or (isinstance(raw_value, str) and not raw_value.strip())
+            ) and not configured_value:
+                warnings_list.append(
+                    f"Campo '{section}.{field}' vacío o faltante en {config_ref} "
+                    "(ni en TOML, entorno o app_config)"
+                )
 
     db_fields = {
         "host": "OSAP_API_DB_HOST",
