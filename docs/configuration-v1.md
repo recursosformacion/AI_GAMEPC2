@@ -125,3 +125,11 @@ debe disponer de `support:admin`. Support valida los access tokens de usuario co
 El entorno efectivo se resuelve una sola vez al cargar `Configuration`: `OSAP_DEPLOYMENT`
 tiene prioridad sobre `OSAP_ENV`; si ambos faltan, el default es `prod`. La validación
 estricta usa ese valor ya resuelto, no vuelve a interpretar las variables por separado.
+
+
+Los secretos compartidos entre servicios deben coincidir en ambos extremos:
+
+- `OSAP_ADS_SERVICE_TOKEN` en osap-api = `AI_PUBLICIDAD_SERVICE_TOKEN` en ai_publicidad.
+- `OSAP_NEWS_API_TOKEN` en osap-api = `OSAP_NEWS_API_TOKEN` en ai_noticias.
+
+No reutilizar estos tokens para sesiones de usuario ni exponerlos al navegador.
