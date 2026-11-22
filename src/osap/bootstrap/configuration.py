@@ -330,7 +330,7 @@ def load_configuration(path: str | Path | None = None, service_name: str | None 
     # Entorno de despliegue: si OSAP_ENV=development y no se forzó OSAP_DEPLOYMENT,
     # se considera desarrollo (rutas locales); en caso contrario prod (rutas públicas).
     if os.environ.get("OSAP_DEPLOYMENT") is None:
-        env = os.environ.get("OSAP_ENV", "development").strip().lower()
+        env = os.environ.get("OSAP_ENV", "production").strip().lower()
         config = Configuration(
             **{**config.__dict__, "deployment": "development" if env == "development" else "prod"}
         )
