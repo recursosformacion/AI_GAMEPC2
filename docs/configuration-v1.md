@@ -40,6 +40,8 @@ En producción, la validación estricta de `osap-api` exige que estén disponibl
 
 - OIDC: issuer, client ID/secret, redirect URI, JWKS URL, audience e issuer de los access tokens.
 - Servicios de almacenamiento: client ID/secret de servicio y client ID/secret administrativo.
+  Los client IDs son UUID de service clients registrados en osap-auth, no el client ID OIDC
+  `osap-api`; los clientes deben tener sus scopes y audiencias permitidos.
 - Noticias: URL interna y `OSAP_NEWS_API_TOKEN`.
 - Publicidad: URL interna, `OSAP_ADS_SERVICE_TOKEN` y base pública del servicio.
 
@@ -112,3 +114,9 @@ Notas:
 - `client_id` = `osap-api`, `grant_types` = `authorization_code,refresh_token`, scopes `openid,profile`, PKCE obligatorio.
 - El secreto real se guarda fuera del repositorio (gestor de secretos, entorno o `app_config`); nunca se commitea.
 - Si se regenera el cliente en osap-auth, actualizar el secret en `.env` (dev) y en el `osap.toml` del servidor / env (prod).
+
+
+Para llamadas a osap-support, el service client de osap-api debe poder solicitar
+`aud=osap-support` en osap-auth y disponer de `api:read`; el cliente administrativo
+debe disponer de `support:admin`. Support valida los access tokens de usuario con
+`aud=osap-api` y los service tokens con `aud=osap-support`.
