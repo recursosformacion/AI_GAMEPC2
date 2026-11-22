@@ -18,6 +18,7 @@ from fastapi.testclient import TestClient
 
 from src.osap.api.http.context import HttpContext
 from src.osap.api.http.seo import build_seo_router
+from src.osap.api.platform.votes_users import VotesUsersMixin
 from src.osap.application.amigos import AmigosError, AmigosService
 from src.osap.infrastructure.state.op_store import _MemoryStore
 
@@ -67,7 +68,7 @@ class TestGroupsAndMembership:
             actor_user_id=_ADMIN, is_global_admin=True, group_id=gid, user_id="u1", role="admin"
         )
 
-        class _Api(AmigosMixin):
+        class _Api(AmigosMixin, VotesUsersMixin):
             def __init__(self) -> None:
                 self._store = store
 
@@ -799,7 +800,7 @@ class TestAuthorizationsAndBlog:
             event_date="2026-03-01", body="y", action="publish",
         )
 
-        class _Api(AmigosMixin):
+        class _Api(AmigosMixin, VotesUsersMixin):
             def __init__(self, op_store: object) -> None:
                 self._store = op_store  # type: ignore[assignment]
 
@@ -1222,9 +1223,9 @@ class TestGlobalAdminRoleFreshness:
                 assert token == "access-token"
                 return 200, {"roles": ["user"]}
 
-        class _Api(AmigosMixin):
+        class _Api(AmigosMixin, VotesUsersMixin):
             def __init__(self) -> None:
-                self._container = cast(Any, SimpleNamespace(
+                self._container = cast("Any", SimpleNamespace(
                     authenticator=lambda: SimpleNamespace(
                         resolve=lambda _token: UserPrincipal(user_id="u1", roles=("user", "admin"))
                     ),
@@ -1245,9 +1246,9 @@ class TestGlobalAdminRoleFreshness:
                 assert token == "access-token"
                 return 200, {"roles": ["user", "admin"]}
 
-        class _Api(AmigosMixin):
+        class _Api(AmigosMixin, VotesUsersMixin):
             def __init__(self) -> None:
-                self._container = cast(Any, SimpleNamespace(
+                self._container = cast("Any", SimpleNamespace(
                     authenticator=lambda: SimpleNamespace(
                         resolve=lambda _token: UserPrincipal(user_id="u1", roles=("user",))
                     ),
@@ -1268,9 +1269,9 @@ class TestGlobalAdminRoleFreshness:
             def me(self, token: str) -> tuple[int, dict[str, object]]:
                 raise RuntimeError("osap-auth unavailable")
 
-        class _Api(AmigosMixin):
+        class _Api(AmigosMixin, VotesUsersMixin):
             def __init__(self) -> None:
-                self._container = cast(Any, SimpleNamespace(
+                self._container = cast("Any", SimpleNamespace(
                     authenticator=lambda: SimpleNamespace(
                         resolve=lambda _token: UserPrincipal(user_id="u1", roles=("user", "admin"))
                     ),
@@ -1289,9 +1290,9 @@ class TestGlobalAdminRoleFreshness:
             def me(self, token: str) -> tuple[int, dict[str, object]]:
                 return 503, {"roles": ["user", "admin"]}
 
-        class _Api(AmigosMixin):
+        class _Api(AmigosMixin, VotesUsersMixin):
             def __init__(self) -> None:
-                self._container = cast(Any, SimpleNamespace(
+                self._container = cast("Any", SimpleNamespace(
                     authenticator=lambda: SimpleNamespace(
                         resolve=lambda _token: UserPrincipal(user_id="u1", roles=("user", "admin"))
                     ),

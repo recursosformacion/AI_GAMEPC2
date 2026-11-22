@@ -98,7 +98,7 @@ class TestValidateStrict:
             osap_api_db_host="127.0.0.1",
             osap_api_db_user="osap2027",
             osap_api_db_password="2027osapdb",
-            osap_api_db_name="osap-api",
+            osap_api_db_name="",
         )
         with pytest.raises(ConfigurationError, match="Campo obligatorio 'db.name'"):
             _validate_strict("osap-api", {"db": ["host", "name"], "oidc": ["client_secret"]}, data, config, Path("osap.toml"))  # noqa: E501
@@ -150,7 +150,7 @@ class TestValidateLenient:
             osap_api_db_host="127.0.0.1",
             osap_api_db_user="osap2027",
             osap_api_db_password="2027osapdb",
-            osap_api_db_name="osap-api",
+            osap_api_db_name="",
         )
         with pytest.warns(ConfigurationWarning, match="Campo 'db.name'"):
             _validate_lenient("osap-api", {"db": ["host", "name"]}, data, config, Path("osap.toml"))

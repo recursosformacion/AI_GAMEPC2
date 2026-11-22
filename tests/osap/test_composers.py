@@ -93,11 +93,21 @@ class _FakeComposerClient(StorageComposerClient):
         }
 
 
+class _FakeAuthProxy:
+    def me(self, token: str) -> tuple[int, dict[str, object]]:
+        # Igual que AuthProxyClient._call_bearer: normaliza el prefijo "Bearer ".
+        value = token[7:].strip() if token.lower().startswith("bearer ") else token
+        if value == TOKEN_ADMIN:
+            return 200, {"roles": ["user", "admin"]}
+        return 200, {"roles": ["user"]}
+
+
 def _build(auth) -> TestClient:
     client = _FakeComposerClient()
     service = ComposersService(client, auth)
     container = Container()
     container.set_authenticator(auth)
+    container.set_auth_proxy(_FakeAuthProxy())  # type: ignore[arg-type]
     container.set_composers(service)
     return TestClient(create_platform_app(container=container))
 
