@@ -32,3 +32,19 @@ base_url = "http://127.0.0.1:8401"
 # Token de servicio; en producción va por entorno (OSAP_NEWS_API_TOKEN).
 service_token = ""
 timeout_seconds = 8
+
+
+# Credenciales de client_credentials registradas en osap-auth.
+# Los client_id deben ser UUID, no el nombre del cliente OIDC "osap-api".
+# Pueden venir de este TOML, del entorno o de app_config.
+[service]
+client_id = ""
+client_secret = ""
+admin_client_id = ""
+admin_client_secret = ""
+
+# Integración servidor-a-servidor con ai_publicidad.
+[ads]
+base_url = "http://127.0.0.1:8305"
+service_token = ""
+web_base = ""
