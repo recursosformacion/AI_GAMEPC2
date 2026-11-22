@@ -70,20 +70,50 @@ def merge(conn: pymysql.Connection, build_db: str, live_db: str) -> tuple[int, i
             HAVING COUNT(DISTINCT lr.work_id) = 1
             """
         )
+        # Fallback de identidad por (title_key, person_id): `index_works` tiene la
+        # clave única uq_idx_title_composer, así que una obra del build con la misma
+        # (title_key, person_id) que una live DEBE fusionarse en esa live, no insertarse.
         cur.execute(
-            "SELECT live_id, COUNT(*) AS n FROM _osap_index_map "
-            "GROUP BY live_id HAVING n > 1 LIMIT 1"
+            f"""
+            INSERT IGNORE INTO _osap_index_map (build_id, live_id)
+            SELECT b.id, l.id
+            FROM `{build_db}`.index_works b
+            JOIN `{live_db}`.index_works l
+              ON l.title_key = b.title_key AND l.person_id <=> b.person_id
+            LEFT JOIN _osap_index_map m ON m.build_id = b.id
+            WHERE m.build_id IS NULL
+            """
         )
-        duplicate = cur.fetchone()
-        if duplicate:
-            raise RuntimeError(
-                f"shadow merge ambiguo: varias filas del build apuntan al live_id {duplicate['live_id']}"
-            )
+        # Varias filas del build pueden mapear al MISMO live work (una obra live que
+        # aglutinaba varias representaciones). Para representaciones/voicings se unen;
+        # para METADATOS elegimos una fila primaria determinista por live_id:
+        # primero la que conserva el title_key live, luego más fuentes, luego menor id.
+        cur.execute(
+            "CREATE TEMPORARY TABLE _osap_index_primary "
+            "(live_id BIGINT UNSIGNED PRIMARY KEY, build_id BIGINT UNSIGNED NOT NULL)"
+        )
+        cur.execute(
+            f"""
+            INSERT INTO _osap_index_primary (live_id, build_id)
+            SELECT live_id, build_id FROM (
+              SELECT m.live_id AS live_id, m.build_id AS build_id,
+                     ROW_NUMBER() OVER (
+                       PARTITION BY m.live_id
+                       ORDER BY (b.title_key = l.title_key) DESC,
+                                b.source_count DESC, b.id
+                     ) AS rn
+              FROM _osap_index_map m
+              JOIN `{build_db}`.index_works b ON b.id = m.build_id
+              JOIN `{live_db}`.index_works l ON l.id = m.live_id
+            ) t
+            WHERE rn = 1
+            """
+        )
         cur.execute(
             f"""
             UPDATE `{live_db}`.index_works l
-            JOIN _osap_index_map m ON m.live_id = l.id
-            JOIN `{build_db}`.index_works b ON b.id = m.build_id
+            JOIN _osap_index_primary p ON p.live_id = l.id
+            JOIN `{build_db}`.index_works b ON b.id = p.build_id
             SET l.title = b.title,
                 l.title_key = b.title_key,
                 l.composer_name = b.composer_name,
@@ -114,22 +144,26 @@ def merge(conn: pymysql.Connection, build_db: str, live_db: str) -> tuple[int, i
             WHERE m.build_id IS NULL
             """
         )
+        insert_sql = (
+            f"INSERT INTO `{live_db}`.index_works "
+            "(public_id, title, title_key, composer_name, person_id, catalogue, "
+            "catalogue_key, year, instrumentation, source_count, updated_at, genre_id) "
+            "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
+        )
         for row in cur.fetchall():
-            cur.execute(
-                f"""
-                INSERT INTO `{live_db}`.index_works
-                    (public_id, title, title_key, composer_name, person_id, catalogue,
-                     catalogue_key, year, instrumentation, source_count, updated_at, genre_id)
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                """,
-                (
-                    row.get("public_id") or f"index-{row['id']}",
-                    row["title"], row["title_key"], row["composer_name"], row["person_id"],
-                    row["catalogue"], row["catalogue_key"], row["year"],
-                    row["instrumentation"], row["source_count"], row["updated_at"],
-                    row["genre_id"],
-                ),
-            )
+            pid = row.get("public_id") or f"index-{row['id']}"
+            values = [
+                pid, row["title"], row["title_key"], row["composer_name"], row["person_id"],
+                row["catalogue"], row["catalogue_key"], row["year"],
+                row["instrumentation"], row["source_count"], row["updated_at"],
+                row["genre_id"],
+            ]
+            try:
+                cur.execute(insert_sql, tuple(values))
+            except pymysql.err.IntegrityError:
+                # Colisión de public_id (u otra clave): reintenta con un public_id único.
+                values[0] = f"{pid}-{row['id']}"
+                cur.execute(insert_sql, tuple(values))
             cur.execute(
                 "INSERT INTO _osap_index_map (build_id, live_id) VALUES (%s,%s)",
                 (row["id"], cur.lastrowid),
@@ -151,7 +185,7 @@ def merge(conn: pymysql.Connection, build_db: str, live_db: str) -> tuple[int, i
         )
         cur.execute(
             f"""
-            INSERT INTO `{live_db}`.index_representations
+            INSERT IGNORE INTO `{live_db}`.index_representations
                 (work_id, provider, format, download_url, title_provider,
                  available, quality, content_hash, xml_title, xml_composer,
                  source_rep_id, resource_id)
@@ -171,7 +205,7 @@ def merge(conn: pymysql.Connection, build_db: str, live_db: str) -> tuple[int, i
         )
         cur.execute(
             f"""
-            INSERT INTO `{live_db}`.index_work_voicings (work_id, kind, term)
+            INSERT IGNORE INTO `{live_db}`.index_work_voicings (work_id, kind, term)
             SELECT m.live_id, b.kind, b.term
             FROM `{build_db}`.index_work_voicings b
             JOIN _osap_index_map m ON m.build_id = b.work_id
@@ -187,6 +221,7 @@ def merge(conn: pymysql.Connection, build_db: str, live_db: str) -> tuple[int, i
         unmapped = int(cur.fetchone()["total"])
         if unmapped:
             raise RuntimeError(f"shadow merge incompleto: {unmapped} obras sin mapear")
+        cur.execute("DROP TEMPORARY TABLE _osap_index_primary")
         cur.execute("DROP TEMPORARY TABLE _osap_index_map")
         conn.commit()
     return updated, inserted
