@@ -2,19 +2,18 @@ import { describe, expect, it, vi } from "vitest";
 import { videosBaseUrl, videosHomeUrl, videosUrl } from "./videos";
 
 describe("videos links", () => {
-  it("incluye obra, representación, título, compositor y token", () => {
+  it("incluye obra, representación, título y compositor sin credenciales en la URL", () => {
     const url = videosUrl({
       workId: "index-486795",
       title: "Singing nightingale",
       composer: "JYKN",
       resourceId: "idx-486795-omr-174632-musicxml",
-      token: "abc.def",
     });
     expect(url).toContain("/works/index-486795?");
     expect(url).toContain("resource=idx-486795-omr-174632-musicxml");
     expect(url).toContain("title=Singing+nightingale");
     expect(url).toContain("composer=JYKN");
-    expect(url).toContain("token=abc.def");
+    expect(url).not.toContain("token=");
   });
 
   it("never reuses the production URL in a development build", () => {
