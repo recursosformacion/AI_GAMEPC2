@@ -13,6 +13,7 @@ from src.osap.bootstrap.configuration import (
     Configuration,
     ConfigurationError,
     ConfigurationWarning,
+    _load_db_overrides,
     _validate_lenient,
     _validate_strict,
     validate_configuration,
@@ -175,3 +176,9 @@ class TestValidateConfigurationIntegration:
         )
         with pytest.warns(ConfigurationWarning, match="No hay reglas de validación"):
             validate_configuration(config, "unknown-service", {}, Path("osap.toml"))
+
+
+
+def test_db_overrides_are_skipped_without_explicit_connection() -> None:
+    """No debe intentarse una conexión con credenciales fallback incrustadas."""
+    assert _load_db_overrides(_config()) == {}
