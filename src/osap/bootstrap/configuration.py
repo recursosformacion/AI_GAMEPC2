@@ -225,21 +225,20 @@ def _load_db_overrides(cfg: Configuration) -> dict[str, Any]:
     """Lee los overrides de app_config solo si existe una conexión explícita."""
     # Never probe a local database with embedded fallback credentials. Besides being
     # unsafe, doing so can accidentally bind the service to an unrelated local schema.
-    if not all((
-        cfg.osap_api_db_host,
-        cfg.osap_api_db_user,
-        cfg.osap_api_db_password,
-        cfg.osap_api_db_name,
-    )):
+    host = cfg.osap_api_db_host
+    user = cfg.osap_api_db_user
+    password = cfg.osap_api_db_password
+    database = cfg.osap_api_db_name
+    if not host or not user or not password or not database:
         return {}
     try:
         from src.osap.infrastructure.state.op_store import build_op_store
 
         store = build_op_store(
-            host=cfg.osap_api_db_host,
-            user=cfg.osap_api_db_user,
-            password=cfg.osap_api_db_password,
-            database=cfg.osap_api_db_name,
+            host=host,
+            user=user,
+            password=password,
+            database=database,
             port=cfg.osap_api_db_port,
             read_only=True,
         )
