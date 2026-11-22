@@ -108,3 +108,27 @@ No se enviarán tokens en query strings ni se incrustarán credenciales en HTML.
 - No cubre todavía el handoff del navegador, cookies, atributos HttpOnly/Secure/SameSite, caducidad de cookie ligada a `exp`, validación de Origin/CSRF, rechazo de tokens en query ni deep links del panel.
 - Los nuevos tests deben ampliar ese módulo y probar tanto las rutas shell `/admin...` como las APIs protegidas, incluidos GET, POST, PUT y DELETE.
 - En Support no he localizado aún una suite específica de integración del shell de reconocimientos con su autenticación de servicio; debe añadirse antes de cambiar la dependencia Bearer.
+
+
+## Actualización de revisión — 22/11/2026
+
+La implementación ha avanzado después de esta auditoría inicial. Esta actualización prevalece sobre las observaciones históricas de estado pendientes que aparecen arriba:
+
+### Blog
+
+- La PR #1 `fix(blog): secure editor sessions and token handoff` está integrada en `main` (merge commit `3c09cef88e7b699d661913e9ff6d03fcd339819d`).
+- La rama `fix/editor-session-security` está cerrada/eliminada; en la consulta actual solo queda `main`.
+- El handoff es `POST /auth/session`, con tokens en el cuerpo, comprobación estricta de `Origin` y sin endpoint GET para recibir credenciales.
+- Blog revalida el access token y los roles contra `osap-auth /auth/me` en cada petición protegida; la lista de roles vacía deniega edición.
+- La caché de rotación está limitada a 1024 entradas y 60 segundos. El servicio debe mantenerse en una instancia y un worker.
+
+### ai_publicidad
+
+- El flujo actual también es POST: `POST /api/v1/admin/ads-web` en OSAP entrega los datos de handoff con `Cache-Control: no-store`; el frontend los envía mediante formulario POST a `POST /auth/session`.
+- El receptor comprueba el origen contra `admin_handoff_origins`, exige formulario URL-encoded, limita el cuerpo, valida el token consultando `osap-auth /auth/me` y solo admite administradores.
+- La cookie de panel es HttpOnly, Secure en HTTPS, SameSite=Lax y caduca a los 5 minutos. Los roles de esa sesión son una instantánea firmada y no se revalidan en cada petición; una revocación puede tardar hasta 5 minutos en reflejarse.
+- En esta revisión se ha endurecido `safe_next` para rechazar barras invertidas, controles, rutas de red y destinos externos no autorizados. Pruebas añadidas en `tests/test_admin_handoff.py`.
+
+### Validación
+
+La fusión de una PR o la existencia de pruebas en el repositorio no acredita por sí sola que CI haya pasado. En la consulta de esta revisión no se obtuvo un estado de ejecución de Actions verificable para los commits de Blog; las pruebas nuevas de Ads tampoco se han ejecutado localmente.
