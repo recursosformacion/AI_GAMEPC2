@@ -24,7 +24,7 @@ if (-not $env:VITE_BLOG_URL) { $env:VITE_BLOG_URL = "https://blog.openmusicrepos
 function Fail($m) { Write-Error $m; exit 1 }
 
 $repos = @(
-    @{ Name = "osap-api";     Include = @("src", "providers", "resources", "lexicon", "script", "pyproject.toml"); Service = "osap-api.service" },
+    @{ Name = "osap-api";     Include = @("src", "providers", "resources", "lexicon", "script", "migrations", "pyproject.toml"); Service = "osap-api.service" },
     @{ Name = "osap-auth";    Include = @("api", "application", "domain", "infrastructure", "scripts", "pyproject.toml", "alembic.ini"); Service = "osap-auth.service" },
     @{ Name = "osap-storage"; Include = @("api", "application", "domain", "infrastructure", "scripts", "pyproject.toml"); Service = "osap-storage.service" },
     @{ Name = "osap-support"; Include = @("api", "application", "domain", "infrastructure", "scripts", "pyproject.toml", "alembic.ini"); Service = "osap-support.service" }
