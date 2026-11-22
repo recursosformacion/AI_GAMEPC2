@@ -15,13 +15,11 @@ export function videosUrl({
   title,
   composer,
   resourceId,
-  token,
 }: {
   workId?: string | null;
   title?: string | null;
   composer?: string | null;
   resourceId?: string | null;
-  token?: string | null;
 }): string | null {
   const base = videosBaseUrl();
   if (!base || !workId) return null;
@@ -29,8 +27,8 @@ export function videosUrl({
   if (resourceId) params.set("resource", resourceId);
   if (title) params.set("title", title);
   if (composer) params.set("composer", composer);
-  if (token) params.set("token", token);
-  return `${base}/works/${encodeURIComponent(workId)}?${params.toString()}`;
+  const query = params.toString();
+  return `${base}/works/${encodeURIComponent(workId)}${query ? `?${query}` : ""}`;
 }
 
 export function videosHomeUrl(): string | null {
