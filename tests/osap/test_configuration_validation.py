@@ -187,7 +187,7 @@ class TestValidateConfigurationIntegration:
     def test_development_mode_warns_but_continues(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("OSAP_ENV", "development")
         data = _toml("[db]\nhost = '127.0.0.1'\n")
-        config = _config()
+        config = _config(deployment="development")
         with pytest.warns(ConfigurationWarning, match="Campo 'oidc.issuer'"):
             validate_configuration(config, "osap-api", data, Path("osap.toml"))
 
