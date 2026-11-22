@@ -162,9 +162,6 @@ class ComposersService:
     def catalogues(self, prefix: str | None = None, composer: str | None = None) -> list[dict[str, object]]:
         return self._client.catalogues(prefix, composer)
 
-    def storage_web_admin_url(self) -> str:
-        return self._client.storage_web_admin_url()
-
     def storage_read_token(self) -> str:
         return self._client.storage_read_token()
 
