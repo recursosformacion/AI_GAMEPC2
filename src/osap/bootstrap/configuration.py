@@ -192,16 +192,6 @@ _SERVICE_REQUIRED_SECTIONS: dict[str, dict[str, list[str]]] = {
     },
 }
 
-# Valores por defecto inseguros detectados en producción.
-# Se mantienen como referencia para la validación, pero no se usan como defaults de la dataclass.
-_INSECURE_DB_DEFAULTS = {
-    "host": "127.0.0.1",
-    "user": "osap2027",
-    "password": "2027osapdb",
-    "name": "osap-api",
-}
-
-
 # -- helpers -------------------------------------------------------------
 
 
@@ -232,15 +222,24 @@ def _as_db_port(raw: Any, default: int = 3306) -> int:
 
 
 def _load_db_overrides(cfg: Configuration) -> dict[str, Any]:
-    """Lee los overrides de config persistidos en la BD operativa (app_config)."""
+    """Lee los overrides de app_config solo si existe una conexión explícita."""
+    # Never probe a local database with embedded fallback credentials. Besides being
+    # unsafe, doing so can accidentally bind the service to an unrelated local schema.
+    if not all((
+        cfg.osap_api_db_host,
+        cfg.osap_api_db_user,
+        cfg.osap_api_db_password,
+        cfg.osap_api_db_name,
+    )):
+        return {}
     try:
         from src.osap.infrastructure.state.op_store import build_op_store
 
         store = build_op_store(
-            host=cfg.osap_api_db_host or "127.0.0.1",
-            user=cfg.osap_api_db_user or "osap2027",
-            password=cfg.osap_api_db_password or "2027osapdb",
-            database=cfg.osap_api_db_name or "osap-api",
+            host=cfg.osap_api_db_host,
+            user=cfg.osap_api_db_user,
+            password=cfg.osap_api_db_password,
+            database=cfg.osap_api_db_name,
             port=cfg.osap_api_db_port,
             read_only=True,
         )
