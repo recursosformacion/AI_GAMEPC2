@@ -25,7 +25,7 @@ $dbDumps = ($dbs | ForEach-Object {
     "sudo mysqldump --no-tablespaces --single-transaction --routines --events $_ | gzip > `"$BackupRoot/$Stamp/$_.sql.gz`""
 }) -join "; "
 $tarDumps = ($dirs | ForEach-Object {
-    "tar -czf `"$BackupRoot/$Stamp/$_.tar.gz`" -C $RemoteRoot --exclude=.venv --exclude=__pycache__ --exclude='*.pyc' $_"
+    "tar -czf `"$BackupRoot/$Stamp/$_.tar.gz`" -C $RemoteRoot --exclude=.venv --exclude=__pycache__ --exclude='*.pyc' --exclude='*.bak-*' --exclude='*.bak' $_"
 }) -join "; "
 
 $remote = "set -e; mkdir -p $BackupRoot/$Stamp; $dbDumps; $tarDumps; " +
