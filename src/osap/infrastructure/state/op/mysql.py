@@ -1441,42 +1441,57 @@ class _MysqlStore(_MemoryStore):
             ],
         }
 
+    @staticmethod
+    def _amigos_taxonomy_items(data: dict[str, object], key: str) -> list[object]:
+        raw = data.get(key)
+        return raw if isinstance(raw, list) else []
+
     def replace_amigos_taxonomy(self, data: dict[str, object]) -> None:
         self._ensure_amigos_taxonomy()
         self._run("DELETE FROM amigos_role_templates")
         self._run("DELETE FROM amigos_section_templates")
         self._run("DELETE FROM amigos_group_types")
-        for index, item in enumerate(data.get("types") if isinstance(data.get("types"), list) else []):  # type: ignore[arg-type]
+        for index, item in enumerate(self._amigos_taxonomy_items(data, "types")):
             if not isinstance(item, dict):
                 continue
+            kind = item.get("kind")
             self._run(
                 "INSERT INTO amigos_group_types (code,parent_code,name,kind,sort_order) VALUES (%s,%s,%s,%s,%s)",
-                (item.get("code"), item.get("parent_code"), item.get("name"), item.get("kind") or "grupo", index),
+                (
+                    item.get("code"),
+                    item.get("parent_code"),
+                    item.get("name"),
+                    kind if isinstance(kind, str) and kind else "grupo",
+                    index,
+                ),
             )
-        for index, item in enumerate(data.get("roles") if isinstance(data.get("roles"), list) else []):  # type: ignore[arg-type]
+        for index, item in enumerate(self._amigos_taxonomy_items(data, "roles")):
             if not isinstance(item, dict):
                 continue
+            scope = item.get("scope")
+            code = item.get("code")
             self._run(
                 "INSERT INTO amigos_role_templates (id,type_code,scope,code,name,sort_order) "
                 "VALUES (%s,%s,%s,%s,%s,%s)",
                 (
                     secrets.token_hex(16),
                     item.get("type_code"),
-                    item.get("scope") or "admin",
-                    item.get("code") or f"role_{index}",
+                    scope if isinstance(scope, str) and scope else "admin",
+                    code if isinstance(code, str) and code else f"role_{index}",
                     item.get("name"),
                     index,
                 ),
             )
-        for index, item in enumerate(data.get("sections") if isinstance(data.get("sections"), list) else []):  # type: ignore[arg-type]
+        for index, item in enumerate(self._amigos_taxonomy_items(data, "sections")):
             if not isinstance(item, dict):
                 continue
+            code = item.get("code")
             self._run(
                 "INSERT INTO amigos_section_templates (id,type_code,code,name,sort_order) VALUES (%s,%s,%s,%s,%s)",
                 (
                     secrets.token_hex(16),
                     item.get("type_code"),
-                    item.get("code") or f"section_{index}",
+                    code if isinstance(code, str) and code else f"section_{index}",
                     item.get("name"),
                     index,
                 ),

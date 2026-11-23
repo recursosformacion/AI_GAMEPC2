@@ -219,9 +219,9 @@ class AuthProxyClient:
             # que osap-auth devuelve (por ejemplo, el detalle de validación 422).
             raw = exc.read()
             try:
-                doc: dict[str, object] = json.loads(raw) if raw else {}
+                error_doc: dict[str, object] = json.loads(raw) if raw else {}
             except (json.JSONDecodeError, UnicodeDecodeError):
-                doc = {}
-            return exc.code, doc
+                error_doc = {}
+            return exc.code, error_doc
         except Exception as exc:
             raise AuthProxyError(str(exc)) from exc

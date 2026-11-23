@@ -41,9 +41,9 @@ from .amigos import (
     AmigosMediaRead,
     AmigosMediaRequest,
     AmigosMemberGrantRequest,
-    AmigosMembershipRequest,
     AmigosMemberListRead,
     AmigosMemberRead,
+    AmigosMembershipRequest,
 )
 from .analytics import (
     ActivityMeResponse,

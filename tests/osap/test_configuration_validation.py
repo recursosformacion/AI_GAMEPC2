@@ -174,7 +174,8 @@ class TestValidateConfigurationIntegration:
             "token_issuer = 'http://x'\n"
             "[service]\nclient_id = '11111111-1111-4111-8111-111111111111'\nclient_secret = 'secret'\n"
             "admin_client_id = '22222222-2222-4222-8222-222222222222'\nadmin_client_secret = 'secret'\n"
-            "support_admin_client_id = '33333333-3333-4333-8333-333333333333'\nsupport_admin_client_secret = 'support-secret'\n"
+            "support_admin_client_id = '33333333-3333-4333-8333-333333333333'\n"
+            "support_admin_client_secret = 'support-secret'\n"
             "[news]\nbase_url = 'http://127.0.0.1:8401'\nservice_token = 'news'\n"
             "[ads]\nbase_url = 'http://127.0.0.1:8305'\nservice_token = 'ads'\n"
             "web_base = 'http://127.0.0.1:8305'\n"
@@ -244,7 +245,14 @@ def test_production_validation_accepts_centralized_effective_configuration() -> 
         {
             "db": ["host", "name", "user", "password"],
             "oidc": ["issuer", "client_id", "redirect_uri", "client_secret", "jwks_url", "audience", "token_issuer"],
-            "service": ["client_id", "client_secret", "admin_client_id", "admin_client_secret", "support_admin_client_id", "support_admin_client_secret"],
+            "service": [
+                "client_id",
+                "client_secret",
+                "admin_client_id",
+                "admin_client_secret",
+                "support_admin_client_id",
+                "support_admin_client_secret",
+            ],
             "news": ["base_url", "service_token"],
             "ads": ["base_url", "service_token", "web_base"],
         },

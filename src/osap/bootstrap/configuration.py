@@ -188,7 +188,14 @@ _SERVICE_REQUIRED_SECTIONS: dict[str, dict[str, list[str]]] = {
     "osap-api": {
         "db": ["host", "name", "user", "password"],
         "oidc": ["issuer", "client_id", "redirect_uri", "client_secret", "jwks_url", "audience", "token_issuer"],
-        "service": ["client_id", "client_secret", "admin_client_id", "admin_client_secret", "support_admin_client_id", "support_admin_client_secret"],
+        "service": [
+            "client_id",
+            "client_secret",
+            "admin_client_id",
+            "admin_client_secret",
+            "support_admin_client_id",
+            "support_admin_client_secret",
+        ],
         "news": ["base_url", "service_token"],
         "ads": ["base_url", "service_token", "web_base"],
     },

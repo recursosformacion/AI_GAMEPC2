@@ -518,7 +518,7 @@ class AmigosMixin(PlatformApiCore):
             is_global_admin=self._amigos_is_global_admin(token),
             group_id=group_id,
         )
-        return self._amigos_group_read(row)
+        return self._amigos_group_read(row).model_dump()
     def amigos_group_history(self, token: str | None, group_id: str) -> list[dict[str, object]]:
         actor = self._amigos_user(token)
         return self._amigos_service().list_group_history(

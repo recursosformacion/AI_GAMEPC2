@@ -786,9 +786,16 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         "/api/v1/admin/storage-web",
         tags=["System"],
         summary="Create Storage admin POST handoff",
-        description="Devuelve el destino y los datos de formulario para abrir osap-storage mediante POST. Nunca incluye el token en una URL.",
+        description=(
+            "Devuelve el destino y los datos de formulario para abrir osap-storage "
+            "mediante POST. Nunca incluye el token en una URL."
+        ),
         response_model=SuccessEnvelope[dict[str, str]] | ErrorEnvelope,
-        responses={200: _shared._resp("Storage handoff", _shared._example({})), 401: _shared._UNAUTHORIZED_401, 403: _shared._FORBIDDEN_403},
+        responses={
+            200: _shared._resp("Storage handoff", _shared._example({})),
+            401: _shared._UNAUTHORIZED_401,
+            403: _shared._FORBIDDEN_403,
+        },
     )
     def storage_web(
         response: Response,
@@ -830,7 +837,11 @@ def build_admin_ops_router(ctx: HttpContext) -> APIRouter:
         summary="Create Support admin POST handoff",
         description="Devuelve destino y datos de formulario para abrir osap-support mediante POST, sin token en URL.",
         response_model=SuccessEnvelope[dict[str, str]] | ErrorEnvelope,
-        responses={200: _shared._resp("Support handoff", _shared._example({})), 401: _shared._UNAUTHORIZED_401, 403: _shared._FORBIDDEN_403},
+        responses={
+            200: _shared._resp("Support handoff", _shared._example({})),
+            401: _shared._UNAUTHORIZED_401,
+            403: _shared._FORBIDDEN_403,
+        },
     )
     def support_web(
         response: Response,

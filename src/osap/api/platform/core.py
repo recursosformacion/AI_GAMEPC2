@@ -150,6 +150,10 @@ class PlatformApiCore:
         """Implementado por el mixin de votos/usuarios; consumido por providers/admin."""
         raise NotImplementedError
 
+    def _is_current_global_admin(self, token: str | None) -> bool:
+        """Implementado por el mixin de votos/usuarios; consumido por amigos/admin."""
+        raise NotImplementedError
+
     def current_user(self, token: str | None) -> Principal | None:
         """Implementado por el mixin de votos/usuarios; consumido por analítica personal."""
         raise NotImplementedError

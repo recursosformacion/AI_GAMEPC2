@@ -410,7 +410,7 @@ class AmigosService:
         row = self._store.set_amigos_join_code(group_id, _new_join_code(), expires)
         if row is None:
             raise AmigosError(404, "GROUP_NOT_FOUND", "Grupo no encontrado")
-        return row
+        return dict(row)
     def revoke_member(
         self,
         *,
@@ -463,7 +463,7 @@ class AmigosService:
                 sections.append({"type_code": code, "code": section_code, "name": section_name})
         data = {"types": types, "roles": roles, "sections": sections}
         self._store.replace_amigos_taxonomy(data)
-        return data  # type: ignore[no-any-return]
+        return data
 
     def save_taxonomy(
         self, *, actor_user_id: str, is_global_admin: bool, data: dict[str, object]

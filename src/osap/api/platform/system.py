@@ -4,8 +4,6 @@ import contextlib
 import json
 import re
 import secrets
-import urllib.parse
-import urllib.request
 from datetime import UTC, datetime
 
 from src.osap.api.contracts import (

@@ -79,7 +79,10 @@ def build_auth_router(ctx: HttpContext) -> APIRouter:
             200: _shared._resp("User profile", _shared._example({})),
             401: _shared._UNAUTHORIZED_401,
             403: _shared._FORBIDDEN_403,
-            502: _shared._resp("Identity service unavailable", _shared._error("BAD_GATEWAY", "Identity service unreachable")),
+            502: _shared._resp(
+                "Identity service unavailable",
+                _shared._error("BAD_GATEWAY", "Identity service unreachable"),
+            ),
         },
     )
     def current_user_profile(

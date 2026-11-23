@@ -34,7 +34,11 @@ def _handoff(section: str | None) -> dict[str, str]:
 
 
 def test_secciones_curadas() -> None:
-    assert _handoff("composers") == {"url": "https://storage.example/admin/session", "token": "TOK", "next": "/admin/maestros"}
+    assert _handoff("composers") == {
+        "url": "https://storage.example/admin/session",
+        "token": "TOK",
+        "next": "/admin/maestros",
+    }
     assert _handoff("works")["next"] == "/admin/obras"
     assert _handoff("representations")["next"] == "/admin/representations"
     assert _handoff("work-persons")["next"] == "/admin/work-persons"
