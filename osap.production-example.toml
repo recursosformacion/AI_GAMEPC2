@@ -42,6 +42,9 @@ client_id = ""
 client_secret = ""
 admin_client_id = ""
 admin_client_secret = ""
+# Cliente independiente: solo scope support:admin y audiencia osap-support.
+support_admin_client_id = ""
+support_admin_client_secret = ""
 
 # Integración servidor-a-servidor con ai_publicidad.
 [ads]
