@@ -19,7 +19,13 @@ if [ -z "$pid" ] || [ "$pid" = "0" ]; then echo "FAIL  osap-api no esta activo";
 env=$(sudo tr '\0' '\n' < /proc/$pid/environ 2>/dev/null)
 cid=$(printf '%s\n' "$env" | grep '^OSAP_SERVICE_CLIENT_ID=' | cut -d= -f2-)
 sec=$(printf '%s\n' "$env" | grep '^OSAP_SERVICE_CLIENT_SECRET=' | cut -d= -f2-)
+support_admin_cid=$(printf '%s\n' "$env" | grep '^OSAP_SUPPORT_ADMIN_CLIENT_ID=' | cut -d= -f2-)
+support_admin_sec=$(printf '%s\n' "$env" | grep '^OSAP_SUPPORT_ADMIN_CLIENT_SECRET=' | cut -d= -f2-)
+admin_cid=$(printf '%s\n' "$env" | grep '^OSAP_ADMIN_CLIENT_ID=' | cut -d= -f2-)
+admin_sec=$(printf '%s\n' "$env" | grep '^OSAP_ADMIN_CLIENT_SECRET=' | cut -d= -f2-)
 if [ -z "$cid" ] || [ -z "$sec" ]; then echo "FAIL  faltan OSAP_SERVICE_CLIENT_ID/SECRET"; exit 1; fi
+if [ -z "$support_admin_cid" ] || [ -z "$support_admin_sec" ]; then echo "FAIL  faltan OSAP_SUPPORT_ADMIN_CLIENT_ID/SECRET"; exit 1; fi
+if [ -z "$admin_cid" ] || [ -z "$admin_sec" ]; then echo "FAIL  faltan OSAP_ADMIN_CLIENT_ID/SECRET"; exit 1; fi
 
 UA='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36'
 TOKEN_URL='https://auth.openmusicrepository.com/auth-api/oauth/token'
@@ -51,12 +57,26 @@ check() {
 }
 
 t_storage=$(token 'storage:read' '')
-if [ -n "$t_storage" ]; then echo "PASS  token storage:read"; else echo "FAIL  token storage:read"; fail=1; fi
+t_storage_admin=$(token 'storage:admin' '' "$admin_cid" "$admin_sec")
 t_support=$(token 'api:read' 'osap-support')
-if [ -n "$t_support" ]; then echo "PASS  token api:read/osap-support"; else echo "FAIL  token api:read/osap-support"; fail=1; fi
+t_support_admin=$(token 'support:admin' 'osap-support' "$support_admin_cid" "$support_admin_sec")
 t_auth=$(token 'auth:read_public_names' 'osap-auth')
-if [ -n "$t_auth" ]; then echo "PASS  token auth:read_public_names/osap-auth"; else echo "FAIL  token auth:read_public_names/osap-auth"; fail=1; fi
+for item in "storage:read:$t_storage" "storage:admin:$t_storage_admin" "api:read/osap-support:$t_support" "support:admin/osap-support:$t_support_admin" "auth:read_public_names/osap-auth:$t_auth"; do
+  name="${item%%:*}"; value="${item#*:}"
+  if [ -n "$value" ]; then echo "PASS  token $name"; else echo "FAIL  token $name"; fail=1; fi
+done
 
+STORAGE_BASE=$(printf '%s\n' "$env" | grep '^OSAP_STORAGE_BASE_URL=' | cut -d= -f2-)
+[ -n "$STORAGE_BASE" ] || STORAGE_BASE='https://storage.openmusicrepository.com'
+STORAGE_READ_URL="${STORAGE_BASE%/}/api/v1/works?limit=1"
+SUPPORT_ADMIN_URL='http://127.0.0.1:8300/api/v1/admin/recognitions?user_id=__m2m_smoke_test__'
+
+check 'storage sin token' 401 "$STORAGE_READ_URL" ''
+check 'storage storage:read' 200 "$STORAGE_READ_URL" "$t_storage"
+check 'storage scope insuficiente (storage:admin)' 403 "$STORAGE_READ_URL" "$t_storage_admin"
+check 'support admin sin token' 401 "$SUPPORT_ADMIN_URL" ''
+check 'support admin scope insuficiente (api:read)' 403 "$SUPPORT_ADMIN_URL" "$t_support"
+check 'support admin cliente dedicado' 200 "$SUPPORT_ADMIN_URL" "$t_support_admin"
 check 'auth m2m public-users' 200 'https://auth.openmusicrepository.com/auth-api/auth/m2m/public-users' "$t_auth"
 check 'support m2m recognitions' 200 'http://127.0.0.1:8300/api/v1/m2m/recognitions?project=omr' "$t_support"
 check 'app colaboradores (e2e)' 200 'https://api.openmusicrepository.com/api/v1/public/collaborators?project=omr' ''
@@ -68,7 +88,7 @@ exit 0
 # PowerShell traduce a CRLF al tuberías a procesos nativos; se envía en base64 para
 # preservar los saltos de línea LF del script remoto.
 $payload = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes(($remote -replace "`r", "")))
-Write-Host "== Smoke test auth/M2M (osap-api -> auth/support) ==" -ForegroundColor Cyan
+Write-Host "== Smoke test auth/M2M (osap-api -> auth/storage/support) ==" -ForegroundColor Cyan
 ssh -o BatchMode=yes $HostAlias "echo $payload | base64 -d | bash"
 if ($LASTEXITCODE -ne 0) { Write-Error "Smoke test auth/M2M FALLO"; exit 1 }
 Write-Host "Smoke test auth/M2M OK." -ForegroundColor Green
