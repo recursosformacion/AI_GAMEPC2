@@ -52,6 +52,8 @@ class Configuration:
     service_client_secret: str | None = None
     admin_client_id: str | None = None
     admin_client_secret: str | None = None
+    support_admin_client_id: str | None = None
+    support_admin_client_secret: str | None = None
     osap_api_db_host: str | None = None
     osap_api_db_user: str | None = None
     osap_api_db_password: str | None = None
@@ -110,6 +112,8 @@ _CONFIG_FIELDS: dict[str, tuple[str, Any]] = {
     "service_client_secret": ("OSAP_SERVICE_CLIENT_SECRET", str),
     "admin_client_id": ("OSAP_ADMIN_CLIENT_ID", str),
     "admin_client_secret": ("OSAP_ADMIN_CLIENT_SECRET", str),
+    "support_admin_client_id": ("OSAP_SUPPORT_ADMIN_CLIENT_ID", str),
+    "support_admin_client_secret": ("OSAP_SUPPORT_ADMIN_CLIENT_SECRET", str),
     "oidc_issuer": ("OSAP_OIDC_ISSUER", str),
     "oidc_client_id": ("OSAP_OIDC_CLIENT_ID", str),
     "oidc_client_secret": ("OSAP_OIDC_CLIENT_SECRET", str),
@@ -149,6 +153,8 @@ _TOML_SECTIONS: dict[str, tuple[str, str]] = {
     "service_client_secret": ("service", "client_secret"),
     "admin_client_id": ("service", "admin_client_id"),
     "admin_client_secret": ("service", "admin_client_secret"),
+    "support_admin_client_id": ("service", "support_admin_client_id"),
+    "support_admin_client_secret": ("service", "support_admin_client_secret"),
     "oidc_issuer": ("oidc", "issuer"),
     "oidc_client_id": ("oidc", "client_id"),
     "oidc_client_secret": ("oidc", "client_secret"),
@@ -182,7 +188,7 @@ _SERVICE_REQUIRED_SECTIONS: dict[str, dict[str, list[str]]] = {
     "osap-api": {
         "db": ["host", "name", "user", "password"],
         "oidc": ["issuer", "client_id", "redirect_uri", "client_secret", "jwks_url", "audience", "token_issuer"],
-        "service": ["client_id", "client_secret", "admin_client_id", "admin_client_secret"],
+        "service": ["client_id", "client_secret", "admin_client_id", "admin_client_secret", "support_admin_client_id", "support_admin_client_secret"],
         "news": ["base_url", "service_token"],
         "ads": ["base_url", "service_token", "web_base"],
     },
@@ -205,6 +211,8 @@ _CONFIG_ATTR_BY_SECTION_FIELD: dict[tuple[str, str], str] = {
     ("service", "client_secret"): "service_client_secret",
     ("service", "admin_client_id"): "admin_client_id",
     ("service", "admin_client_secret"): "admin_client_secret",
+    ("service", "support_admin_client_id"): "support_admin_client_id",
+    ("service", "support_admin_client_secret"): "support_admin_client_secret",
     ("news", "base_url"): "news_api_base",
     ("news", "service_token"): "news_api_token",
     ("ads", "base_url"): "ads_base_url",
@@ -409,7 +417,7 @@ def _validate_strict(
             )
 
     # osap-auth identifica los service clients por UUID (no por el nombre OIDC).
-    for field in ("service_client_id", "admin_client_id"):
+    for field in ("service_client_id", "admin_client_id", "support_admin_client_id"):
         client_id = getattr(config, field, None)
         if client_id:
             try:
