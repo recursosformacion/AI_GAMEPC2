@@ -569,13 +569,14 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
         )
     )
 
-    # Admin de reconocimientos: osap-api usa un service token (aud=osap-support, support:admin).
+    # Admin de reconocimientos: cliente M2M separado, limitado a support:admin.
+    # No reutilizar el cliente general de API (api:read / storage scopes).
     container.set_support_admin_recognitions(
         SupportAdminRecognitionsClient(
             base_url=config.support_base_url or "http://127.0.0.1:8300",
             token_provider=ClientCredentialsServiceTokenProvider(
-                client_id=config.service_client_id or "osap-api",
-                client_secret=config.service_client_secret or "",
+                client_id=config.support_admin_client_id or "",
+                client_secret=config.support_admin_client_secret or "",
                 token_url=auth_token_url,
                 audience="osap-support",
             ),
