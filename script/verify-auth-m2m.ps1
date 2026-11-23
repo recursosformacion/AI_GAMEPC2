@@ -61,10 +61,15 @@ t_storage_admin=$(token 'storage:admin' '' "$admin_cid" "$admin_sec")
 t_support=$(token 'api:read' 'osap-support')
 t_support_admin=$(token 'support:admin' 'osap-support' "$support_admin_cid" "$support_admin_sec")
 t_auth=$(token 'auth:read_public_names' 'osap-auth')
-for item in "storage:read:$t_storage" "storage:admin:$t_storage_admin" "api:read/osap-support:$t_support" "support:admin/osap-support:$t_support_admin" "auth:read_public_names/osap-auth:$t_auth"; do
-  name="${item%%:*}"; value="${item#*:}"
+report_token() {
+  name="$1"; value="$2"
   if [ -n "$value" ]; then echo "PASS  token $name"; else echo "FAIL  token $name"; fail=1; fi
-done
+}
+report_token 'storage:read' "$t_storage"
+report_token 'storage:admin' "$t_storage_admin"
+report_token 'api:read/osap-support' "$t_support"
+report_token 'support:admin/osap-support' "$t_support_admin"
+report_token 'auth:read_public_names/osap-auth' "$t_auth"
 
 STORAGE_BASE=$(printf '%s\n' "$env" | grep '^OSAP_STORAGE_BASE_URL=' | cut -d= -f2-)
 [ -n "$STORAGE_BASE" ] || STORAGE_BASE='https://storage.openmusicrepository.com'
