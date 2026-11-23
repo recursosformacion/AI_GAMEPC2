@@ -115,9 +115,7 @@ def merge(conn: pymysql.Connection, build_db: str, live_db: str) -> tuple[int, i
             JOIN _osap_index_primary p ON p.live_id = l.id
             JOIN `{build_db}`.index_works b ON b.id = p.build_id
             SET l.title = b.title,
-                l.title_key = b.title_key,
                 l.composer_name = b.composer_name,
-                l.person_id = b.person_id,
                 l.catalogue = b.catalogue,
                 l.catalogue_key = b.catalogue_key,
                 l.year = b.year,
@@ -151,6 +149,20 @@ def merge(conn: pymysql.Connection, build_db: str, live_db: str) -> tuple[int, i
             "VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)"
         )
         for row in cur.fetchall():
+            # Seguridad: si ya existe una obra live con la MISMA (title_key, person_id),
+            # se MAPEA a ella en vez de insertar (evita chocar con uq_idx_title_composer).
+            cur.execute(
+                f"SELECT id FROM `{live_db}`.index_works "
+                "WHERE title_key=%s AND person_id <=> %s",
+                (row["title_key"], row["person_id"]),
+            )
+            existing = cur.fetchone()
+            if existing is not None:
+                cur.execute(
+                    "INSERT IGNORE INTO _osap_index_map (build_id, live_id) VALUES (%s,%s)",
+                    (row["id"], int(existing["id"])),
+                )
+                continue
             pid = row.get("public_id") or f"index-{row['id']}"
             values = [
                 pid, row["title"], row["title_key"], row["composer_name"], row["person_id"],
@@ -161,9 +173,26 @@ def merge(conn: pymysql.Connection, build_db: str, live_db: str) -> tuple[int, i
             try:
                 cur.execute(insert_sql, tuple(values))
             except pymysql.err.IntegrityError:
-                # Colisión de public_id (u otra clave): reintenta con un public_id único.
+                # Colisión de public_id: reintenta con un public_id único.
                 values[0] = f"{pid}-{row['id']}"
-                cur.execute(insert_sql, tuple(values))
+                try:
+                    cur.execute(insert_sql, tuple(values))
+                except pymysql.err.IntegrityError:
+                    # Conflicto por (title_key, person_id) creado en este mismo merge:
+                    # mapear a la obra existente en vez de duplicar.
+                    cur.execute(
+                        f"SELECT id FROM `{live_db}`.index_works "
+                        "WHERE title_key=%s AND person_id <=> %s",
+                        (row["title_key"], row["person_id"]),
+                    )
+                    existing = cur.fetchone()
+                    if existing is None:
+                        raise
+                    cur.execute(
+                        "INSERT IGNORE INTO _osap_index_map (build_id, live_id) VALUES (%s,%s)",
+                        (row["id"], int(existing["id"])),
+                    )
+                    continue
             cur.execute(
                 "INSERT INTO _osap_index_map (build_id, live_id) VALUES (%s,%s)",
                 (row["id"], cur.lastrowid),
