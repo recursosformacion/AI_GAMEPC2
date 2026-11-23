@@ -32,11 +32,11 @@ TOKEN_URL='https://auth.openmusicrepository.com/auth-api/oauth/token'
 fail=0
 
 token() {
-  scope="$1"; aud="$2"
+  scope="$1"; aud="$2"; client_id="${3:-$cid}"; client_secret="${4:-$sec}"
   if [ -n "$aud" ]; then
-    body="{\"grant_type\":\"client_credentials\",\"client_id\":\"$cid\",\"client_secret\":\"$sec\",\"scope\":\"$scope\",\"audience\":\"$aud\"}"
+    body="{\"grant_type\":\"client_credentials\",\"client_id\":\"$client_id\",\"client_secret\":\"$client_secret\",\"scope\":\"$scope\",\"audience\":\"$aud\"}"
   else
-    body="{\"grant_type\":\"client_credentials\",\"client_id\":\"$cid\",\"client_secret\":\"$sec\",\"scope\":\"$scope\"}"
+    body="{\"grant_type\":\"client_credentials\",\"client_id\":\"$client_id\",\"client_secret\":\"$client_secret\",\"scope\":\"$scope\"}"
   fi
   curl -s -A "$UA" -H 'Content-Type: application/json' -X POST "$TOKEN_URL" -d "$body" \
     | python3 -c 'import sys,json
