@@ -19,12 +19,12 @@
 ErrorDocument 503 /maintenance.html
 RewriteEngine On
 
-# Fichas públicas: compositores y obras las renderiza la app React en el servidor (3000),
-# con los mismos componentes que la SPA. Las URLs antiguas (/compositor, /obra,
-# /representacion) siguen en osap-api (8001), que responde 301 a las URLs nuevas.
+# Fichas públicas: compositores, obras y representaciones las renderiza React SSR en Node (3000).
+# Se usa el mismo proceso SSR que en producción para evitar diferencias de HTML y metadatos.
+# Las URLs antiguas (/compositor, /obra) siguen en osap-api (8001), que responde 301.
 RewriteRule ^composers/?$ http://127.0.0.1:3000/composers [P,QSA,L]
-RewriteRule ^(composers|obras)/(.*)$ http://127.0.0.1:3000/$1/$2 [P,QSA,L]
-RewriteRule ^(obra|compositor|representacion)/(.*)$ http://127.0.0.1:8001/$1/$2 [P,QSA,L]
+RewriteRule ^(composers|obras|representacion)/(.*)$ http://127.0.0.1:3000/$1/$2 [P,QSA,L]
+RewriteRule ^(obra|compositor)/(.*)$ http://127.0.0.1:8001/$1/$2 [P,QSA,L]
 
 # «Los amigos»: la página pública de cada grupo y de cada artículo las sirve osap-api
 # (HTML server-rendered con metadatos sociales). Los índices /amigos y /amigos/corales
