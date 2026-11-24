@@ -12,6 +12,12 @@
 - La diferencia de 198 compositores indicada en una revisión anterior no se ha podido reproducir; se retira como incidencia confirmada.
 - Se ha encontrado una ficha de obra con una representación de otro número de concierto. Detalle y recorrido técnico: [auditoría de asociaciones del índice](auditoria-index-2026-11-24.md).
 
+## 1.1 Despliegue documentado y estado de Vercel
+
+El procedimiento oficial versionado en este repositorio es despliegue directo al VPS mediante SSH/SCP, instalación del vhost Nginx y reinicio de servicios systemd (`script/deploy.ps1`, `script/deploy_all.ps1` y `script/deploy_with_maintenance.ps1`). Esto no demuestra qué procedimiento ejecutó DeepSeek en el último despliegue; para afirmarlo hacen falta sus logs.
+
+En los commits de esta revisión, el check de Vercel devolvió un fallo por límite de builds del plan. No hay un check de tests asociado a esos commits. Ese estado de Vercel no demuestra que la web pública esté caída ni que el despliegue directo al VPS haya fallado.
+
 ## 2. Correcciones de código
 
 ### 2.1 Enriquecimiento de búsqueda
