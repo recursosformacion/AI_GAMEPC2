@@ -34,7 +34,7 @@ El código, las migraciones y las pruebas de la versión desplegada son la evide
 - Este repositorio documenta la aplicación web, la API y su coordinación con los servicios.
 - Auth, Storage y Support mantienen sus contratos internos, migraciones, configuración y runbooks en sus propios repositorios. Aquí se documentan las integraciones y los contratos que consume OSAP API; no se duplican manuales internos completos.
 - Chorus es un producto y repositorio independiente. Su documentación y su despliegue no forman parte de la documentación operativa de OSAP API.
-- OMR es el repositorio musical visible para el usuario. Los datos integrados procedentes de PDMX se consultan como parte de OMR; PDMX no es una fuente independiente que el usuario deba configurar o consultar.
+- OMR es el repositorio musical visible para el usuario. Los datos integrados se consultan a través de OMR; el usuario no necesita configurar repositorios internos separados.
 
 ## Reglas de mantenimiento
 
