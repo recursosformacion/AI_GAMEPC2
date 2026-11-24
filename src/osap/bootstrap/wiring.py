@@ -247,22 +247,20 @@ def wire(container: Container, configuration: Configuration | None = None) -> Co
         storage_read_only = False
     auth_token_url = routes["auth_token"]
     auth_base = routes["auth_base"]
-    def _db_value(field: str, fallback: str) -> str:
+    def _db_value(field: str) -> str:
         val = getattr(config, field, None)
         if val:
             return str(val)
-        if config.deployment != "prod":
-            return fallback
         raise ConfigurationError(
             service="osap-api",
             message=f"Configuración requerida faltante: {field}. Defínala en osap.toml o por variable de entorno.",
         )
 
     db_config: dict[str, Any] = {
-        "host": _db_value("osap_api_db_host", "127.0.0.1"),
-        "user": _db_value("osap_api_db_user", "osap2027"),
-        "password": _db_value("osap_api_db_password", "2027osapdb"),
-        "database": _db_value("osap_api_db_name", "osap-api"),
+        "host": _db_value("osap_api_db_host"),
+        "user": _db_value("osap_api_db_user"),
+        "password": _db_value("osap_api_db_password"),
+        "database": _db_value("osap_api_db_name"),
         "port": config.osap_api_db_port,
         # Solo lectura: osap_ro no tiene DDL, así que los stores no crean tablas.
         "read_only": storage_read_only,
