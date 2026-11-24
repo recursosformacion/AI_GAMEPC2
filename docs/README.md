@@ -29,6 +29,10 @@ El código, las migraciones y las pruebas de la versión desplegada son la evide
 - [Matriz M2M](osap/m2m-service-matrix.md) — autenticación entre API, Auth, Storage y Support.
 - [Configuración actual](osap/configuration-current.md) — precedencia, OIDC, M2M e integraciones.
 - [Base de datos API](osap/database-current.md) — propiedad de datos y exportación de esquema en solo lectura.
+- [Integración publicitaria](ads-integration.md) — fachada, AdSlot, fallback y ruta de clic.
+- [Noticias](osap/news-integration.md) — integración con ai_noticias.
+- [Los Amigos](osap/amigos.md) — grupos, autorizaciones, agenda y artículos.
+- [Mantenimiento](osap/maintenance.md) — modo 503, revisión y despliegue coordinado.
 - [Modelo V6 Work–Resource–File](osap/v6-work-resource-model.md) — PLAN, no describe el esquema desplegado.
 - [Auditoría de identidad y materiales](osap/v6-api-material-identity-audit.md) — AUDITORÍA que debe contrastarse con la implementación actual antes de tomar decisiones.
 
