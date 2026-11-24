@@ -1,5 +1,7 @@
 # F4 — Migración de la búsqueda web a V2.1 y retirada de V1 (plan de corte)
 
+> **REGISTRO DE MIGRACIÓN COMPLETADA — 2026-09-09/11.** Este documento registra las decisiones y el corte de F4; no es una guía de ejecución actual. La búsqueda vigente se describe en [current-architecture.md](current-architecture.md) y sus rutas en [api-route-map.md](api-route-map.md).
+
 **Estado:** análisis de corte (2026-09-09), sin cambios de código todavía.
 **Decisiones ya tomadas:** F4 llega después de F3 (ADR-0035, Anexo B); en la web se
 **conserva el orden actual** de resultados (decisión 2026-09-09): F4 sustituye el agrupador
