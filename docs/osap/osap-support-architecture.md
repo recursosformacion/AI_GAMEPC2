@@ -1,5 +1,7 @@
 # OSAP Support — Arquitectura del servicio independiente de apoyo
 
+> **PROPUESTA HISTÓRICA PREVIA A LA IMPLEMENTACIÓN.** Support ya existe como servicio independiente. No utilizar este diseño como descripción del servicio desplegado; consultar el repositorio [AI_osap-support](https://github.com/recursosformacion/AI_osap-support) y la [matriz M2M](m2m-service-matrix.md).
+
 > **Fase Técnica 2 · Diseño técnico. Sin código, sin repo, sin BD, sin pagos, sin emails.**
 > Referencias: `docs/osap/support-architecture-separation.md`, `docs/osap/support-frontend-boundary-v1.md`,
 > `docs/osap/support-ecosystem-architecture.md`. Stack de referencia: `osap-auth` (servicio independiente pequeño).
