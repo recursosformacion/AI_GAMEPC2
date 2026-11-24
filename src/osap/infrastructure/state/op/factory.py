@@ -13,14 +13,17 @@ _LOGGER = logging.getLogger("osap.state")
 
 
 def build_op_store(
-    host: str = "127.0.0.1",
-    user: str = "osap2027",
-    password: str = "2027osapdb",
-    database: str = "osap-api",
+    host: str | None = None,
+    user: str | None = None,
+    password: str | None = None,
+    database: str | None = None,
     port: int = 3306,
     read_only: bool = False,
 ) -> _MemoryStore:
     """Factoría: MySQL con fallback a memoria si no está disponible."""
+    if not all((host, user, password, database)):
+        _LOGGER.info("Configuración MySQL incompleta; usando almacén en memoria")
+        return _MemoryStore()
     try:
         # __init__ crea tablas (`CREATE TABLE IF NOT EXISTS`); el DDL de migración va
         # aparte: `script/migrate_index_schema.py` (una vez por despliegue).
