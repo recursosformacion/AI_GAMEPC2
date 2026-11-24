@@ -1,7 +1,7 @@
 # Matriz mínima de autenticación entre servicios OSAP
 
-**Estado:** propuesta de endurecimiento compatible con la infraestructura M2M existente.  
-**Alcance:** Auth, API, Storage y Support. No despliega ni provisiona credenciales en producción.
+**Estado (2026-11-24):** integración API → Support implementada en código y cubierta por pruebas; la configuración de clientes y el smoke test HTTP de producción deben verificarse por separado. No se ha provisionado aquí ningún cliente ni se ha modificado producción.  
+**Alcance:** Auth, API, Storage y Support. Chorus utiliza una integración independiente y queda fuera de esta matriz.
 
 ## Principios
 
@@ -23,6 +23,18 @@
 | osap-api | osap-support | Cliente admin dedicado; audiencia `osap-support` | `support:admin` | Listar, conceder y revocar reconocimientos |
 | osap-api | osap-auth | Cliente general API; audiencia `osap-auth` | `auth:read_public_names` | Resolver nombres públicos |
 | osap-storage | osap-api | Sin token | — | `POST /api/v1/composers/resolve` es una operación pública y de solo lectura |
+
+## Estado de la integración API → Support
+
+La integración administrativa está implementada en OSAP API y Support:
+
+- API solicita un token OAuth2 `client_credentials` con audiencia `osap-support`.
+- El cliente dedicado tiene exclusivamente el scope `support:admin`; no se reutiliza el cliente general de API ni el cliente administrativo de Storage.
+- Support valida los tokens de servicio con su audiencia de servicio `osap-support` y el scope requerido.
+- La validación de tokens de usuario sigue usando la audiencia `osap-api` en `auth_audience`; no debe sustituirse por la audiencia M2M.
+- El provisionador de Auth es `scripts/provision_support_admin_client.py`. Por defecto hace dry-run; la aplicación exige confirmar el nombre exacto de la base de datos y bloquea entornos productivos.
+
+La integración se considera **lista en código**, pero no verificada en producción hasta que se confirme el cliente real de Auth, las variables de entorno de API y Support y la ejecución satisfactoria del smoke test HTTP.
 
 ## Clientes que deben existir en osap-auth
 
