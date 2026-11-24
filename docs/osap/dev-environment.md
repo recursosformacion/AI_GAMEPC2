@@ -17,7 +17,7 @@ http://osap-app                     Apache (XAMPP) — VirtualHost *:80
    │   RewriteRule ^ /index.html [L]                        (SPA fallback)
    │
    ├─ /api/*            → ProxyPass → http://127.0.0.1:8001/api/   (backend uvicorn)
-   ├─ /obra/*, /compositor/* → osap-api (HTML SEO server-rendered, `api/http/seo.py`)
+   ├─ /obras/*, /composers/*, /representacion/*, /amigos/* → osap-api (HTML SEO server-rendered, `api/http/seo.py`)
    ├─ /sitemap.xml, /sitemaps/* → osap-api (sitemaps dinámicos, `api/http/sitemap.py`)
    ├─ /docs             → ProxyPass → http://127.0.0.1:8001/docs
    ├─ /openapi.json     → ProxyPass → http://127.0.0.1:8001/openapi.json
@@ -200,16 +200,16 @@ La SPA enlaza al blog desde el ítem «Blog» del menú lateral. El build de pro
 
 ---
 
-## Capa pública SEO (/obra y /compositor)
+## Capa pública SEO (/obras y /composers)
 
 Las URLs indexables de entidad las sirve **osap-api** con HTML server-rendered
 (`src/osap/api/http/seo.py` + plantillas en `src/osap/api/templates/`). No forman parte de
 `/api` y no las renderiza la SPA:
 
-- `/compositor/{person_id}` → 301 a `/compositor/{person_id}/{slug}`
-- `/compositor/{person_id}/{slug}` → ficha HTML (biografía + obras + JSON-LD)
-- `/obra/{work_id}` → 301 a `/obra/{work_id}/{slug}`
-- `/obra/{work_id}/{slug}` → ficha HTML (recursos + JSON-LD)
+- `/composers/{person_id}` → 301 a `/composers/{person_id}/{slug}`
+- `/composers/{person_id}/{slug}` → ficha HTML (biografía + obras + JSON-LD)
+- `/obras/{work_id}` → 301 a `/obras/{work_id}/{slug}`
+- `/obras/{work_id}/{slug}` → ficha HTML (representaciones + JSON-LD)
 - `/sitemap.xml` → índice de sitemaps (referencias a `/sitemaps/works-N.xml` y `persons-N.xml`)
 - `/sitemaps/{works|persons}-{N}.xml` → páginas de URLs: obras hasta
   `OSAP_SITEMAP_PAGE_SIZE` (por defecto 20.000, tope 50.000) y personas hasta 500
