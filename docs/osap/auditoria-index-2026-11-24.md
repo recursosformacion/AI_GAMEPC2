@@ -17,11 +17,13 @@ La ficha pública inspeccionada fue la ruta heredada `/obras/index-533295`, que 
 
 ## 2. Recorrido de código comprobado
 
-1. `SeoMixin.seo_work()` obtiene la ficha mediante `IndexCatalogProvider.get_work_with_representations()`.
-2. `get_work_with_representations()` lee `index_works` por `public_id` y recupera las filas de `index_representations` con `WHERE work_id = %s`.
-3. La ficha muestra `title_provider` (o `xml_title`) de esas filas. No vuelve a validar que el título de cada representación sea compatible con el número de obra de la fila padre.
+1. La ficha canónica se renderiza mediante React SSR en `web/ssr/server.mjs` (Node, puerto interno 3000).
+2. El SSR consulta `GET /api/v1/works/public/{work_id}` en OSAP API.
+3. El router `src/osap/api/http/works.py` llama a `ctx.api.seo_work()`; `SeoMixin.seo_work()` usa `IndexCatalogProvider.get_work_with_representations()`.
+4. `get_work_with_representations()` lee `index_works` por `public_id` y recupera las filas de `index_representations` con `WHERE work_id = %s`.
+5. La ficha muestra `title_provider` (o `xml_title`) de esas filas. No vuelve a validar que el título de cada representación sea compatible con el número de obra de la fila padre.
 
-Por tanto, la asociación incorrecta ya está presente en el índice persistido o en la fuente que lo alimentó; la plantilla HTML no inventa el título de la segunda representación.
+Por tanto, la asociación incorrecta ya está presente en el índice persistido o en la fuente que lo alimentó; ni el SSR ni la plantilla HTML inventan el título de la segunda representación.
 
 ## 3. Segundo problema detectado y corregido en código
 
