@@ -13,7 +13,8 @@
 | [Scripts](scripts.md) | Inventario y uso de scripts de API y Storage | AUDITORÍA PENDIENTE: contiene referencias históricas que deben depurarse |
 | [Matriz M2M](m2m-service-matrix.md) | Clientes, audiencias y scopes entre servicios | VIGENTE CON CONFIGURACIÓN DE PRODUCCIÓN PENDIENTE DE VERIFICAR |
 | [Base de datos de API](../osap-api-database.md) | Esquema y persistencia de API | AUDITORÍA PENDIENTE |
-| [Configuración](../configuration-v1.md) | Configuración de la aplicación | AUDITORÍA PENDIENTE |
+| [Configuración actual](configuration-current.md) | Loader, precedencia, OIDC, M2M e integraciones | VIGENTE |
+| [Configuración v1](../configuration-v1.md) | Etapa anterior; contiene valores y reglas obsoletos | HISTÓRICO — NO USAR |
 
 ## 2. Arquitectura y contratos actuales
 
