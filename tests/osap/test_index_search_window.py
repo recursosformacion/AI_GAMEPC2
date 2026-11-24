@@ -3,5 +3,8 @@ from src.osap.infrastructure.catalogs.index.index_catalog_provider import IndexC
 
 def test_index_provider_keeps_a_wide_candidate_window():
     """Una ventana de 400 dejaba fuera obras válidas en búsquedas amplias por título."""
-    provider = IndexCatalogProvider()
+    provider = IndexCatalogProvider(
+        host="127.0.0.1", user="", password="", database=""
+    )
     assert provider._max_results == 2000
+    assert provider._password == ""
