@@ -60,18 +60,21 @@ La factory `src.osap.api.platform_app:create_platform_app` crea la aplicación F
 
 Los endpoints de representación pueden aceptar `?view=1` para solicitar visualización inline. La disponibilidad y la descarga dependen del proveedor: OMR/Storage y Mutopia pueden ofrecer ficheros servibles por OSAP; IMSLP y CPDL se presentan como fuentes externas cuando el fichero directo no es servible.
 
-## 3. Rutas HTML públicas
+## 3. Rutas HTML públicas y proceso que las sirve
 
 Estas rutas son HTML server-rendered y no forman parte de `/api`:
 
-- `/composers` y `/composers/{person_id}/{slug}`.
-- `/obras/{work_id}/{slug}`.
-- `/representacion/{representation_id}`.
-- `/amigos/corales/{group_id}/{slug}`, `/amigos/articulos` y `/amigos/articulo/{article_id}/{slug}`.
-- Los aliases heredados `/obra/{work_id}` y `/compositor/{person_id}` siguen registrados y redirigen a las rutas canónicas plurales.
-- `/sitemap.xml` y `/sitemaps/{kind}-{page}.xml`.
+| Ruta | Proceso | Función |
+|---|---|---|
+| `/composers`, `/composers/{person_id}/{slug}` | Node SSR, puerto 3000 | Listado y ficha de compositor |
+| `/obras/{work_id}/{slug}` | Node SSR, puerto 3000 | Ficha de obra; consulta `GET /api/v1/works/public/{work_id}` |
+| `/representacion/{representation_id}` | Node SSR, puerto 3000 | Ficha de representación; consulta `GET /api/v1/representations/{representation_id}` |
+| `/genres`, `/catalogues`, `/epochs`, `/ensembles`, `/instruments` | Node SSR, puerto 3000 | Listados de clasificación |
+| `/amigos/corales/{group_id}/{slug}`, `/amigos/articulos`, `/amigos/articulo/{article_id}/{slug}` | FastAPI, puerto 8001 | Páginas públicas de Los Amigos |
+| `/obra/{work_id}`, `/compositor/{person_id}` | FastAPI, puerto 8001 | Aliases heredados y redirecciones canónicas |
+| `/sitemap.xml`, `/sitemaps/{kind}-{page}.xml` | FastAPI, puerto 8001 | Sitemaps dinámicos |
 
-Los IDs son la identidad estable; los slugs son descriptivos. Los aliases y redirecciones deben preservar URLs históricas y nunca redirigir una identidad ambigua a una obra distinta.
+Nginx en producción y Apache mediante `web/public/.htaccess` en desarrollo enrutan estas páginas a los procesos indicados. Los IDs son la identidad estable; los slugs son descriptivos. Los aliases y redirecciones deben preservar URLs históricas y nunca redirigir una identidad ambigua a una obra distinta.
 
 ## 4. Seguridad de los contratos
 
