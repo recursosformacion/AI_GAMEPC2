@@ -32,7 +32,7 @@ La sección `[db]` o sus variables equivalentes define la conexión a la BD de O
 | `[db].password` | `OSAP_API_DB_PASSWORD` |
 | `[db].port` | `OSAP_API_DB_PORT` |
 
-El puerto por defecto es 3306. No copiar contraseñas reales a documentación, ejemplos, tickets o Git.
+El puerto por defecto es 3306. OSAP API exige que host, usuario, contraseña y nombre de BD estén configurados explícitamente también en desarrollo; no mantiene credenciales de fallback embebidas en el wiring ni en el proveedor de índice. No copiar contraseñas reales a documentación, ejemplos, tickets o Git.
 
 ## 3. Entorno de ejecución
 
