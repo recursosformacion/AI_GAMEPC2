@@ -516,6 +516,26 @@ oindex` en rutas internas. Infra: nginx/`.htaccess` proxya las rutas SEO. Compat
 
 ## Operaciones registradas
 
+### Chorus 0.16.4 — despliegue de producción (2026-11-24) — CERRADA
+
+- **Alcance:** UI de Chorus («Mi Trabajo» con grupos y proyectos, biblioteca bajo
+  «Trabajar con partituras», selector de trabajo activo y corrección del render de
+  preparación), cliente M2M de servicio y migración de la base de datos.
+- **BD:** `osap_chorus` legacy (19 tablas, baseline `mysql_schema_v1`) → esquema 0.16.4
+  (37 tablas, 33 migraciones) mediante reconstrucción 001–043 y copia de datos
+  (1 grupo, 1 miembro, 2 citas, 2 borradores, 1 espacio). Backups:
+  `/home/ocw/backups/20261124-173232` (BD legacy + código) y
+  `/home/ocw/backups/20261124-174126` (snapshot del esquema nuevo).
+- **M2M:** cliente `8fef8e81-7ab4-4a16-b8ed-c533c3386bdc` (`auth:read_public_names`,
+  audiencia `osap-auth`) en `osap_auth`; claves `[auth] m2m_*` en el `osap.toml` de
+  Chorus (modo 600).
+- **Dependencia:** `sqlparse` pasa a dependencia de ejecución y se instaló en el venv
+  de producción.
+- **Verificación:** `chorus.service` activo, `/health` ok, web pública 200 con assets
+  `0.16.4`, `/api/v1/spaces` 401 sin token y lookup M2M 1/1.
+- **Rollback:** dump y tar de código en `/home/ocw/backups/20261124-173232`; la base
+  nueva se conserva como `osap_chorus_new`.
+
 ### SEC-A — Rotación de la clave JWT de osap-auth (2026-09-28) — CERRADA
 
 - **Motivo:** la clave de firma JWT de producción era **la misma que la de desarrollo**, con
