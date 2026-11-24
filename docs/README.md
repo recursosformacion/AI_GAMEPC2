@@ -25,6 +25,7 @@ El código, las migraciones y las pruebas de la versión desplegada son la evide
 - [Entorno de desarrollo](osap/dev-environment.md) — Apache local, frontend, backend y servicios.
 - [Scripts](osap/scripts.md) — herramientas operativas y de mantenimiento.
 - [Matriz M2M](osap/m2m-service-matrix.md) — autenticación entre API, Auth, Storage y Support.
+- [Configuración actual](osap/configuration-current.md) — precedencia, OIDC, M2M e integraciones.
 - [Modelo V6 Work–Resource–File](osap/v6-work-resource-model.md) — PLAN, no describe el esquema desplegado.
 - [Auditoría de identidad y materiales](osap/v6-api-material-identity-audit.md) — AUDITORÍA que debe contrastarse con la implementación actual antes de tomar decisiones.
 
