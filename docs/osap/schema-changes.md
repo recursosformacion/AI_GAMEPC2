@@ -1,5 +1,7 @@
 # Registro de cambios de esquema
 
+> **HISTÓRICO — snapshot hasta 2026-09-20.** Este registro no refleja las migraciones ni el estado de esquema posteriores. No usarlo para decidir si producción está migrada. La referencia actual es [database-current.md](database-current.md); el estado real requiere comparar inventarios de solo lectura y migraciones de cada servicio.
+
 Cambios de esquema aplicados fuera de los repos, con su equivalente reproducible en código
 para que **dev y producción converjan**. (Obligatorio para cualquier cambio en tablas de
 `osap-storage`, que está en reorganización.)
