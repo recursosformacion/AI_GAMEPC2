@@ -70,6 +70,7 @@ Se creó y reorganizó el índice central en docs/:
 - docs/osap/current-architecture.md: arquitectura actual 6.x, límites y propiedad de datos.
 - docs/osap/api-route-map.md: familias de routers, endpoints de referencia y aliases SEO.
 - docs/osap/configuration-current.md: precedencia de configuración, OIDC, M2M e integraciones.
+- docs/osap/database-current.md: propiedad de datos y procedimiento de inventario físico SQL de solo lectura.
 - docs/osap/m2m-service-matrix.md: estado real de API → Support y separación de clientes.
 - docs/osap/scripts.md: inventario y seguridad de scripts.
 - docs/osap/auditoria-index-2026-11-24.md: incidencia de identidad del índice.
@@ -79,12 +80,14 @@ El Architecture Book V2.2 se marca como histórico. Los documentos V6 siguen mar
 
 ## 5. Pendiente de verificación
 
-1. Ejecutar las pruebas añadidas de búsqueda y configuración en el entorno local; el estado de CI consultado no devolvió checks.
-2. Ejecutar un diagnóstico SQL de solo lectura sobre la Work IDP 3 y sus representaciones; rastrear el origen de la fila IDP 2.
-3. Preparar y validar en desarrollo el rebuild o la reparación de índice, conservando IDs públicos y aliases.
-4. Probar con una cuenta de usuario: login/registro, nombre visible, Mi Actividad, cuotas, aportaciones, biblioteca y operaciones de subida/descarga disponibles.
-5. Cerrar el manual español con esas pruebas; después corregir traducciones y metadatos canónicos/hreflang en los cuatro idiomas.
-6. Completar la verificación funcional de las áreas públicas y privadas que requieren interacción real.
+1. Ejecutar las pruebas añadidas de búsqueda, configuración, rutas SSR y herramientas de auditoría en el entorno local; el estado de CI consultado no devolvió checks.
+2. Generar el inventario de esquema de desarrollo con script/export_api_schema_inventory.py y contrastarlo con el código y las migraciones.
+3. Ejecutar un diagnóstico SQL de solo lectura sobre la Work IDP 3 y sus representaciones; rastrear el origen de la fila IDP 2.
+4. Si se autoriza, generar el inventario de esquema de producción en solo lectura y compararlo con desarrollo.
+5. Preparar y validar en desarrollo el rebuild o la reparación de índice, conservando IDs públicos y aliases.
+6. Probar con una cuenta de usuario: login/registro, nombre visible, Mi Actividad, cuotas, aportaciones, biblioteca y operaciones de subida/descarga disponibles.
+7. Cerrar el manual español con esas pruebas; después corregir traducciones y metadatos canónicos/hreflang en los cuatro idiomas.
+8. Completar la verificación funcional de las áreas públicas y privadas que requieren interacción real.
 
 ## 6. Restricciones respetadas
 
