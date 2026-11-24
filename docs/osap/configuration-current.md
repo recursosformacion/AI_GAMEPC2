@@ -38,6 +38,7 @@ El puerto por defecto es 3306. OSAP API exige que host, usuario, contraseña y n
 
 - `OSAP_DEPLOYMENT` tiene prioridad sobre `OSAP_ENV`.
 - Si no se define `OSAP_DEPLOYMENT`, `OSAP_ENV=development` selecciona desarrollo; en otro caso el default es producción.
+- Esta resolución es especial: el modo efectivo se decide por esas variables (default producción), no por el valor de `[osap].deployment` del TOML. Para desarrollo, definir explícitamente `OSAP_DEPLOYMENT=development` o `OSAP_ENV=development`; no confiar solo en el TOML.
 - `OSAP_DEV_MODE` controla el modo de datos dentro de desarrollo: `0` usa las dependencias locales; `1` conecta al origen real configurado en modo de solo lectura, según el wiring descrito en [dev-environment.md](dev-environment.md).
 
 En producción se aplica validación estricta antes de atender tráfico. En desarrollo se emiten advertencias para los campos ausentes, salvo errores de configuración que impidan arrancar.
