@@ -51,8 +51,9 @@ La factory `src.osap.api.platform_app:create_platform_app` crea la aplicación F
 | GET/POST/DELETE | `/api/v1/workspace/library` y `/{item_id}` | Biblioteca personal autenticada |
 | POST/GET | `/api/v1/contributions` y `/{contribution_id}` | Aportaciones propias autenticadas |
 | POST | `/api/v1/contributions/{contribution_id}/upload` | Subida asociada a una aportación autenticada |
-| GET/POST | `/api/v1/admin/contributions` y `/{contribution_id}/review` | Revisión administrativa de aportaciones |
-| GET | `/api/v1/amigos/my` y `/my/groups`, `/my/events`, `/my/blog` | Área personal de Los Amigos |
+| GET | `/api/v1/admin/contributions` y `/{contribution_id}` | Listado y detalle administrativo de aportaciones |
+| POST | `/api/v1/admin/contributions/{contribution_id}/review` y `/relations/{relation_id}/review` | Revisión administrativa de aportaciones y relaciones |
+| GET | `/api/v1/amigos/my`, `/my/groups`, `/my/events`, `/my/blog`, `/my/permissions` | Área personal y permisos efectivos de Los Amigos |
 | GET | `/api/v1/analytics/me` | Usuario autenticado; identidad derivada del token |
 | GET | `/api/v1/activity/me` | Usuario autenticado; panel personal |
 | GET | `/api/v1/admin/analytics/overview` | Rol admin |
