@@ -21,6 +21,7 @@ El código, las migraciones y las pruebas de la versión desplegada son la evide
 - [Arquitectura actual 6.x](osap/current-architecture.md) — arquitectura implementada y límites de los servicios.
 - [Mapa de rutas API](osap/api-route-map.md) — routers, familias de endpoints y rutas SEO.
 - [Auditoría del índice](osap/auditoria-index-2026-11-24.md) — incidencia confirmada de asociación entre obras numeradas.
+- [Auditoría general](osap/auditoria-general-2026-11-24.md) — cambios aplicados, verificaciones y pendientes.
 - [Manual de usuario](../web/public/manual/es/index.html) — versión maestra en castellano; las traducciones se revisan después de cerrar el texto español.
 - [Versionado](osap/versioning.md) — clasificación A/B/C y reglas de entrega.
 - [Entorno de desarrollo](osap/dev-environment.md) — Apache local, frontend, backend y servicios.
