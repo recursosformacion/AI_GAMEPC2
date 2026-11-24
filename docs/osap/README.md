@@ -30,7 +30,14 @@ El documento [Architecture Book V2.2](v2/osap-architecture-book.md) es **HISTÓR
 
 No usar el antiguo libro V2.2 como descripción de la arquitectura desplegada.
 
-## 3. Integración entre servicios
+## 3. Funcionalidades y operación
+
+- [Los Amigos](amigos.md) — grupos, permisos de autoría y agenda.
+- [Noticias](news-integration.md) — integración con ai_noticias.
+- [Mantenimiento](maintenance.md) — activación, revisión y liberación.
+- [Integración publicitaria](../ads-integration.md) — fachada API, AdSlot y click-through; código integrado, producción pendiente de verificar.
+
+## 4. Integración entre servicios
 
 - [Matriz M2M](m2m-service-matrix.md): contrato de llamadas y separación de credenciales.
 - Auth, Storage y Support mantienen sus runbooks, migraciones y configuración interna en sus repositorios respectivos.
