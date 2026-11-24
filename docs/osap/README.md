@@ -10,7 +10,7 @@
 |---|---|---|
 | [Entorno de desarrollo](dev-environment.md) | Apache/XAMPP, build SPA, uvicorn, servicios locales y modo de solo lectura | VIGENTE, revisar tras cambios de infraestructura |
 | [Versionado](versioning.md) | Clasificación A/B/C, coherencia de versiones y reglas de publicación | VIGENTE |
-| [Scripts](scripts.md) | Inventario y uso de scripts de API y Storage | AUDITORÍA PENDIENTE: contiene referencias históricas que deben depurarse |
+| [Scripts](scripts.md) | Inventario y precauciones de scripts de API | VIGENTE, inventario en script/README.md |
 | [Matriz M2M](m2m-service-matrix.md) | Clientes, audiencias y scopes entre servicios | VIGENTE CON CONFIGURACIÓN DE PRODUCCIÓN PENDIENTE DE VERIFICAR |
 | [Base de datos de API](../osap-api-database.md) | Esquema y persistencia de API | AUDITORÍA PENDIENTE |
 | [Configuración actual](configuration-current.md) | Loader, precedencia, OIDC, M2M e integraciones | VIGENTE |
