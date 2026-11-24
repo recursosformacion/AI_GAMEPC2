@@ -1,5 +1,7 @@
 # Capa Provider — Arquitectura (Provider API v1.3)
 
+> **SNAPSHOT HISTÓRICO — 2026-08-27.** Este documento conserva el diseño de Provider API v1.3 y el inventario de proveedores de esa fecha. No usar sus listas de proveedores pendientes ni sus estados como inventario actual: contrastar con la tabla providers, el código de adapters y las pruebas vigentes. Los límites de servicio actuales están en [current-architecture.md](current-architecture.md).
+
 > Documenta la nueva capa de adaptación de proveedores. Todos los proveedores devuelven
 > el mismo contrato (`ProviderWork`); OSAP-API es el único que lo transforma al modelo
 > interno. El núcleo (Canonicalizer, Matcher, Ranking, Work Resolution, Relationships,
