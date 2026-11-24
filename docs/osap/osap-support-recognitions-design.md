@@ -8,6 +8,8 @@
 > Alcance: diseño de `projects`, `recognitions` (+historial), `contributions`, reglas de
 > derivación, endpoints (usuario / público consentido / admin / M2M) y contrato M2M con OMR.
 
+> **Nota de vigencia (2026-11-24):** este documento conserva el diseño histórico del flujo de reconocimientos e ingestión. Para la integración administrativa actual API → Support, usar [m2m-service-matrix.md](m2m-service-matrix.md). No copiar la antigua clave `identity.audience` de los ejemplos de abajo: en la configuración actual de Support se separan `auth_audience=osap-api` para tokens de usuario y `service_audience=osap-support` para tokens M2M. Las secciones que describen una única audiencia común son históricas y no son una guía de despliegue vigente.
+
 ---
 
 ## 1. Objetivo y restricciones
