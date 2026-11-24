@@ -8,14 +8,14 @@
 
 | Documento | Uso | Estado |
 |---|---|---|
-| [Entorno de desarrollo](dev-environment.md) | Apache/XAMPP, build SPA, uvicorn, servicios locales y modo de solo lectura | VIGENTE, revisar tras cambios de infraestructura |
+| [Entorno de desarrollo](dev-environment.md) | Apache/XAMPP, build SPA + SSR, Node 3000, uvicorn y servicios locales | VIGENTE |
 | [Versionado](versioning.md) | Clasificación A/B/C, coherencia de versiones y reglas de publicación | VIGENTE |
 | [Scripts](scripts.md) | Inventario y precauciones de scripts de API | VIGENTE, inventario en script/README.md |
 | [Matriz M2M](m2m-service-matrix.md) | Clientes, audiencias y scopes entre servicios | VIGENTE CON CONFIGURACIÓN DE PRODUCCIÓN PENDIENTE DE VERIFICAR |
 | [Base de datos actual](database-current.md) | Propiedad de datos y exportación de inventario físico de solo lectura | VIGENTE, inventario pendiente |
 | [Snapshot de BD 2026-09-06](../osap-api-database.md) | Selección parcial de tablas y conteos | HISTÓRICO / PARCIAL |
 | [Configuración actual](configuration-current.md) | Loader, precedencia, OIDC, M2M e integraciones | VIGENTE |
-| [Configuración v1](../configuration-v1.md) | Etapa anterior; contiene valores y reglas obsoletos | HISTÓRICO — NO USAR |
+| [Configuración v1](../configuration-v1.md) | Aviso de retirada que enlaza a la guía actual | RETIRADO |
 
 ## 2. Arquitectura y contratos actuales
 
@@ -24,7 +24,7 @@
 - [Auditoría del índice 2026-11-24](auditoria-index-2026-11-24.md) — incidencia confirmada de una representación IDP 2 asociada a IDP 3; reparación de datos pendiente de traza de solo lectura.
 - [Auditoría general 2026-11-24](auditoria-general-2026-11-24.md) — cambios de código y documentación, verificaciones y pendientes.
 
-La arquitectura vigente describe el código de la línea 6.x: aplicación React servida como build estático, backend FastAPI, API pública consumida por la SPA e integración autenticada con Auth, Storage y Support.
+La arquitectura vigente describe el código de la línea 6.x: React SPA + Node SSR para páginas públicas, backend FastAPI, índice federado e integración autenticada con Auth, Storage y Support.
 
 El documento [Architecture Book V2.2](v2/osap-architecture-book.md) es **HISTÓRICO** y no describe la arquitectura desplegada. Los documentos antiguos de v1/ y v2/ se conservan para trazabilidad; los documentos de otras generaciones deben clasificarse individualmente antes de reutilizarlos. La fuente de verdad de la línea actual es current-architecture.md y el código.
 
