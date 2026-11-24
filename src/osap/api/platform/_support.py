@@ -451,8 +451,31 @@ def _is_arrangement_extra(extra: set[str]) -> bool:
     return bool(extra) and all(bool(_ARRANGEMENT_EXTRA.match(t)) for t in extra)
 
 
-def _title_core_match(core_tokens: set[str], title: str) -> bool:
-    """True si el título conserva al menos la mitad de los tokens del núcleo de la obra."""
+def _title_core_match(
+    core_tokens: set[str], title: str, *, reference_title: str | None = None
+) -> bool:
+    """Comprueba el núcleo textual y veta números de obra incompatibles.
+
+    comparison_title elimina deliberadamente número, catálogo y tonalidad para comparar
+    ediciones. Esa normalización no puede utilizarse sola para enriquecer una Work:
+    dos conciertos numerados del mismo compositor pueden compartir exactamente el mismo
+    núcleo ("Violin Concerto") y seguir siendo obras distintas.
+    """
+    if reference_title:
+        reference = MetadataNormalizer.normalize(reference_title, None)
+        candidate = MetadataNormalizer.normalize(str(title or ""), None)
+        if (
+            reference.normalized_number
+            and candidate.normalized_number
+            and reference.normalized_number != candidate.normalized_number
+        ):
+            return False
+        if (
+            reference.normalized_catalog
+            and candidate.normalized_catalog
+            and reference.normalized_catalog != candidate.normalized_catalog
+        ):
+            return False
     if not core_tokens:
         return True
     title_tokens = set(str(title or "").lower().split())
