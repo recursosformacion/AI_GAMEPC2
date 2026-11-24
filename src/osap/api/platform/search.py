@@ -824,7 +824,7 @@ class SearchMixin(PlatformApiCore):
         for group in groups:
             for m in group.representations:
                 m_title = str(getattr(m.work_descriptor, "title", None) or "")
-                if not _title_core_match(core_tokens, m_title):
+                if not _title_core_match(core_tokens, m_title, reference_title=work.title):
                     continue
                 rep_composer = getattr(m.work_descriptor, "composer", None)
                 rep_comp = _NORMALIZER.canonical_composer(rep_composer) if rep_composer else ""
