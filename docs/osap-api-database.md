@@ -1,3 +1,5 @@
+> **PARCIAL / HISTÓRICO — snapshot 2026-09-06.** Este documento describe una selección de tablas y conteos de una copia local; no es el inventario completo ni el estado actual de producción. No usar sus credenciales, nombres de BD, conteos o afirmaciones de migración como configuración vigente. La referencia actual y el procedimiento para generar el esquema real están en [database-current.md](osap/database-current.md).
+
 # Base de datos de osap-api — esquema y descripción de tablas
 
 > Documento de referencia del esquema MySQL de la base de datos **`osap-api`** (el servicio
