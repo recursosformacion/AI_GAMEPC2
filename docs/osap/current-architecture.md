@@ -21,6 +21,19 @@ OSAP API coordina la experiencia pública y la búsqueda federada. No es la base
 
 La SPA pública debe consumir OSAP API. No debe acceder directamente a bases de datos ni a endpoints internos protegidos de Auth, Storage o Support.
 
+## 1.1 Propiedad de datos y bases de datos
+
+Cada servicio mantiene su propia persistencia y es responsable de sus datos:
+
+| Servicio | Datos que gobierna | Papel de su BD |
+|---|---|---|
+| OSAP API | Configuración operativa, índice federado, analítica de uso, sugerencias y estado de trabajos | Proyección de búsqueda y estado de la aplicación; no sustituye al catálogo maestro |
+| osap-auth | Usuarios, credenciales, sesiones, clientes OAuth y claves de firma | Autoridad de identidad y emisión de tokens |
+| osap-storage | Obras, personas, atribuciones, representaciones, relaciones y metadatos de ficheros | Fuente autoritativa del catálogo y de los recursos almacenados |
+| osap-support | Membresías, donaciones, pagos, eventos de comunicación, contribuciones y reconocimientos | Fuente autoritativa de las operaciones de apoyo |
+
+Las bases de datos son independientes. Un servicio no debe consultar tablas internas de otro servicio ni realizar JOIN entre sus esquemas: la integración se hace mediante contratos HTTP autenticados. El índice de OSAP API es una proyección derivada y debe poder reconstruirse desde las fuentes que le correspondan sin convertirse en una segunda autoridad editorial.
+
 ## 2. Aplicación web y API
 
 ### Cliente web
