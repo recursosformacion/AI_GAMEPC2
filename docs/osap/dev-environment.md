@@ -17,9 +17,10 @@ http://osap-app                     Apache (XAMPP) — VirtualHost *:80
    │   RewriteRule ^ /index.html [L]                        (SPA fallback)
    │
    ├─ /api/*            → ProxyPass → http://127.0.0.1:8001/api/   (backend uvicorn)
-   ├─ /obras/*, /composers/*, /representacion/*, /amigos/* → osap-api (HTML SEO server-rendered, `api/http/seo.py`)
-   └─ /obra/*, /compositor/* → osap-api (aliases heredados con redirección canónica)
-   ├─ /sitemap.xml, /sitemaps/* → osap-api (sitemaps dinámicos, `api/http/sitemap.py`)
+   ├─ /composers/*, /obras/*, /representacion/* → osap-ssr (Node, puerto 3000)
+   ├─ /amigos/corales/*, /amigos/articulo/* → osap-api (HTML público)
+   ├─ /obra/*, /compositor/* → osap-api (aliases heredados con redirección canónica)
+   ├─ /sitemap.xml, /sitemaps/* → osap-api (sitemaps dinámicos)
    ├─ /docs             → ProxyPass → http://127.0.0.1:8001/docs
    ├─ /openapi.json     → ProxyPass → http://127.0.0.1:8001/openapi.json
    └─ /redoc            → ProxyPass → http://127.0.0.1:8001/redoc
@@ -40,6 +41,8 @@ http://osap-app                     Apache (XAMPP) — VirtualHost *:80
 | `ai-publicidad` | Publicidad local (uvicorn 8305; panel `/admin` con token local) |
 | `ai-noticias` | Corpus de noticias de solo lectura (uvicorn 8401; API interna con `X-OSAP-News-Token`) |
 | `chorus` | Área de trabajo y mensajería de grupos (uvicorn 9600; migraciones SQLite al arrancar) |
+
+El proceso `osap-ssr` es Node en `127.0.0.1:3000`. `script/restart-dev.ps1` lo arranca junto con los servicios y permite reconstruir SSR y SPA con `-Build`.
 
 Todos apuntan a `127.0.0.1`.
 
@@ -123,17 +126,16 @@ python -m uvicorn --factory src.osap.api.platform_app:create_platform_app --host
 - Cualquier cambio en `src/osap/` **requiere reiniciar uvicorn** (o usar `--reload`).
 - Verificación: `http://osap-app/api/v1/system/health` → `{"success":true,...,"status":"ok"}`.
 
-### 2. Frontend (web/) — SIEMPRE rebuildar `web/dist`
+### 2. Frontend (web/) — rebuildar SPA y SSR
+
+La opción recomendada es:
 
 ```powershell
-cd web
-.\node_modules\.bin\tsc.cmd --noEmit        # typecheck (opcional, recomendado)
-node node_modules/vite/bin/vite.js build    # genera web/dist
+pwsh script/restart-dev.ps1 -Build
 ```
 
-- Atajo: `pwsh script/restart-dev.ps1 -Build` recompila la SPA (tsc + vite) y reinicia los
-  servicios de una vez (evita olvidar el rebuild tras editar `web/src`).
-- `web/dist` es lo que sirve Apache. **No** usar `npm run dev` ni `pnpm dev`.
+Este comando ejecuta typecheck, reconstruye `web/dist-ssr` y `web/dist`, y reinicia el proceso `osap-ssr` para cargar el bundle SSR nuevo. Evita actualizar solo la SPA y dejar el HTML inicial desfasado.
+- `web/dist` es lo que sirve Apache para la SPA; `web/dist-ssr` lo consume Node. **No** usar `npm run dev` ni `pnpm dev`.
 - Apache sirve `web/dist` en tiempo real: tras el build basta **recargar `http://osap-app`**
   (con cache limpia / Ctrl+F5), **no** hay que reiniciar Apache por cambios de frontend.
 - Nota: `npm run dev` falla porque el hook de pnpm lanza `pnpm install` y esbuild tiene el
@@ -201,27 +203,43 @@ La SPA enlaza al blog desde el ítem «Blog» del menú lateral. El build de pro
 
 ---
 
-## Capa pública SEO (/obras y /composers)
+## Rutas públicas SSR y aliases SEO
 
-Las URLs indexables de entidad las sirve **osap-api** con HTML server-rendered
-(`src/osap/api/http/seo.py` + plantillas en `src/osap/api/templates/`). No forman parte de
-`/api` y no las renderiza la SPA:
+Las fichas canónicas de obras, compositores y representaciones las sirve **Node SSR**
+(`web/ssr/server.mjs`, puerto 3000), tanto en desarrollo como en producción:
 
-- `/composers/{person_id}` → 301 a `/composers/{person_id}/{slug}`
-- `/composers/{person_id}/{slug}` → ficha HTML (biografía + obras + JSON-LD)
-- `/obras/{work_id}` → 301 a `/obras/{work_id}/{slug}`
-- `/obras/{work_id}/{slug}` → ficha HTML (representaciones + JSON-LD)
-- `/sitemap.xml` → índice de sitemaps (referencias a `/sitemaps/works-N.xml` y `persons-N.xml`)
-- `/sitemaps/{works|persons}-{N}.xml` → páginas de URLs: obras hasta
-  `OSAP_SITEMAP_PAGE_SIZE` (por defecto 20.000, tope 50.000) y personas hasta 500
-  (límite del API de personas). Cacheadas en memoria y en el cliente.
+- `/composers` y `/composers/{person_id}/{slug}` → listado y ficha de compositor.
+- `/obras/{work_id}/{slug}` → ficha de obra.
+- `/representacion/{representation_id}` → ficha de representación.
+- Las clasificaciones públicas (`/genres`, `/catalogues`, `/epochs`, `/ensembles`, `/instruments`) también se renderizan en SSR.
 
-En **desarrollo** el proxy lo hace `web/public/.htaccess` (regla `[P]` a `127.0.0.1:8001`),
-así que tras cambiar el backend **reinicia uvicorn**. En **producción** lo hace la
-`location` de `deploy/app.openmusicrepository.com.conf`. El resto de rutas sigue siendo la SPA.
+Node SSR consulta OSAP API mediante `OSAP_API_ORIGIN`. La ficha de obra consume
+`GET /api/v1/works/public/{work_id}`; la representación consume
+`GET /api/v1/representations/{representation_id}`.
 
-La base canónica se puede cambiar con la variable de entorno `OSAP_PUBLIC_BASE_URL`
-(por defecto `https://app.openmusicrepository.com`).
+Las rutas heredadas `/obra/{work_id}` y `/compositor/{person_id}` siguen en
+`src/osap/api/http/seo.py` y redirigen a las rutas canónicas. Las páginas públicas de
+Los Amigos (`/amigos/corales/...` y `/amigos/articulo/...`) y los sitemaps los sirve
+OSAP API con HTML/XML.
+
+En desarrollo, `web/public/.htaccess` dirige las rutas canónicas a Node SSR en
+`127.0.0.1:3000`, los aliases y páginas de Los Amigos a FastAPI en `127.0.0.1:8001`.
+En producción, `deploy/app.openmusicrepository.com.conf` aplica el mismo reparto mediante
+Nginx. La base canónica se configura con `OSAP_PUBLIC_BASE_URL` (por defecto
+`https://app.openmusicrepository.com`).
+
+## Despliegue de producción documentado
+
+El procedimiento versionado del repositorio es despliegue directo al VPS mediante SSH/SCP,
+no un deploy de Vercel:
+
+- `script/deploy.ps1` construye backend, SPA y SSR, transfiere los artefactos y el vhost Nginx,
+  valida la configuración Nginx y reinicia `osap-api.service` y `osap-ssr.service`.
+- `script/deploy_all.ps1` coordina la publicación de API, Auth, Storage y Support, sus builds
+  web cuando corresponda, el SSR y los servicios systemd.
+
+Esto documenta el procedimiento previsto por el repositorio; no demuestra qué comando ejecutó
+DeepSeek en el último despliegue. Para confirmarlo hacen falta los registros de esa ejecución.
 
 ---
 
