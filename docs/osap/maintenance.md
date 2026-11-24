@@ -17,6 +17,12 @@ Guarda ese enlace: **es el token de revisión**. Abrirlo en el navegador fija la
 503. El token también queda en `web/dist/maintenance.token` (local; no se despliega) y
 `deploy_with_maintenance.ps1` lo imprime al final.
 
+## Despliegue coordinado
+
+El procedimiento `script/deploy_with_maintenance.ps1` activa el mantenimiento remoto, verifica el 503 con la página OSAP, ejecuta `script/deploy_all.ps1` (SPA + SSR + cuatro backends) y deja el mantenimiento activo para revisión manual. No libera el sitio automáticamente.
+
+Tras comprobar web y servicios, desactivar el mantenimiento remoto con el comando de la sección siguiente.
+
 ## Desactivar
 
 ```powershell
