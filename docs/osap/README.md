@@ -12,7 +12,8 @@
 | [Versionado](versioning.md) | Clasificación A/B/C, coherencia de versiones y reglas de publicación | VIGENTE |
 | [Scripts](scripts.md) | Inventario y precauciones de scripts de API | VIGENTE, inventario en script/README.md |
 | [Matriz M2M](m2m-service-matrix.md) | Clientes, audiencias y scopes entre servicios | VIGENTE CON CONFIGURACIÓN DE PRODUCCIÓN PENDIENTE DE VERIFICAR |
-| [Base de datos de API](../osap-api-database.md) | Esquema y persistencia de API | AUDITORÍA PENDIENTE |
+| [Base de datos actual](database-current.md) | Propiedad de datos y exportación de inventario físico de solo lectura | VIGENTE, inventario pendiente |
+| [Snapshot de BD 2026-09-06](../osap-api-database.md) | Selección parcial de tablas y conteos | HISTÓRICO / PARCIAL |
 | [Configuración actual](configuration-current.md) | Loader, precedencia, OIDC, M2M e integraciones | VIGENTE |
 | [Configuración v1](../configuration-v1.md) | Etapa anterior; contiene valores y reglas obsoletos | HISTÓRICO — NO USAR |
 
