@@ -5,8 +5,8 @@
 # (SPA + SSR + los cuatro backends) y deja el mantenimiento ACTIVO para revisar. Cuando se
 # valide, se desactiva a mano con `web/scripts/maintenance.ps1 -RemoteOnly -Off`.
 #
-# No despliega el SSR de React: producción sigue sirviendo /composers y /obras con
-# osap-api (Jinja) hasta la ventana del plan `docs/osap/prod-ssr-plan.md`.
+# deploy_all.ps1 construye y despliega SPA + SSR de React y los cuatro backends; también
+# instala el vhost Nginx actualizado. El mantenimiento queda activo para revisión manual.
 #
 # Uso:
 #   pwsh script/deploy_with_maintenance.ps1
