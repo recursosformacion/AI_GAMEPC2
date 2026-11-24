@@ -78,7 +78,7 @@ La búsqueda combina el índice local con adaptadores de proveedores. En el cód
 
 El indexador `script/index_works.py` mantiene `index_works`, `index_representations` e información auxiliar. Lee datos de OMR/Storage y CPDL ya materializado en Storage, y puede incorporar IMSLP, Mutopia y MusicBrainz según los parámetros y fuentes disponibles. La cobertura exacta depende de la última ejecución del indexador y de los proveedores activos.
 
-OMR es el repositorio propio que se presenta al usuario. Los datos históricos integrados se consultan a través de OMR; no se configura ni consulta PDMX como repositorio independiente.
+OMR es el repositorio propio que se presenta al usuario. Los datos integrados se consultan a través de OMR; no se configuran repositorios internos separados.
 
 ## 5. Modelo de datos actual y destino V6
 
