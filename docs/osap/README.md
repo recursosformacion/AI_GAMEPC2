@@ -17,7 +17,10 @@
 
 ## 2. Arquitectura y contratos actuales
 
-La arquitectura vigente debe describir el código de la línea 6.x: aplicación React servida como build estático, backend FastAPI, API pública consumida por la SPA e integración autenticada con Auth, Storage y Support.
+- [Arquitectura actual 6.x](current-architecture.md) — VIGENTE, contrastada con el código y los contratos de la línea 6.x.
+- [Auditoría del índice 2026-11-24](auditoria-index-2026-11-24.md) — incidencia confirmada de una representación IDP 2 asociada a IDP 3; reparación de datos pendiente de traza de solo lectura.
+
+La arquitectura vigente describe el código de la línea 6.x: aplicación React servida como build estático, backend FastAPI, API pública consumida por la SPA e integración autenticada con Auth, Storage y Support.
 
 El documento [Architecture Book V2.2](v2/osap-architecture-book.md) y los documentos de v1/, v2/ y v3/ conservan la evolución del diseño anterior. **Son HISTÓRICOS**, no la fuente de verdad de la arquitectura 6.x. Se mantienen para trazabilidad hasta completar su clasificación y archivo.
 
