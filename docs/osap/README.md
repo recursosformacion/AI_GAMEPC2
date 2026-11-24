@@ -69,6 +69,8 @@ La decisión de iniciar la implementación V6 requiere cerrar el inventario de c
 
 El manual de usuario vive en web/public/manual/. El castellano es el texto maestro. La revisión debe contrastar cada instrucción con la interfaz actual y las operaciones reales; las traducciones no se consideran correctas solo por existir.
 
+Los documentos que no están enlazados en este índice permanecen pendientes de clasificación; no son fuente de verdad para el comportamiento 6.x ni para operaciones de producción.
+
 ## 8. Regla de actualización
 
 Cuando cambie una funcionalidad:
