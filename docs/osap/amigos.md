@@ -7,10 +7,10 @@ SEO server-rendered existentes.
 ## Jerarquía funcional
 
 ```
-Los amigos → Corales → CTV → Artículos
+Los Amigos → Corales → CTV → Artículos
 ```
 
-- `Los amigos`: entrada de la sección (SPA `/amigos`).
+- `Los Amigos`: entrada de la sección (SPA `/amigos`).
 - `Corales`: índice de agrupaciones (SPA `/amigos/corales`).
 - `CTV`: página estable del grupo, HTML server-rendered (`/amigos/corales/{id}[/{slug}]`).
 - `Artículos`: publicaciones individuales con URL pública permanente, HTML server-rendered
@@ -167,8 +167,11 @@ auditoría `amigos_events`, que mantiene su nombre):
 | `amigos_actuacion_groups` | Relación evento ↔ grupos participantes/organizador (`role`), reutilizando `amigos_groups` (kind `coral` etc.). |
 
 API: público `GET /api/v1/amigos/events` (filtros: `kind`, `locality`, `group_id`, `from_date`,
-`to_date`; solo publicados) y `GET /api/v1/amigos/events/{id}`; admin (global)
-`POST/PATCH /api/v1/admin/amigos/events` y `POST …/{id}/status`.
+`to_date`; solo publicados) y `GET /api/v1/amigos/events/{id}`. La creación y edición mediante
+`POST/PATCH /api/v1/admin/amigos/events` admiten autores con autorización `scope='events'`
+o administración global. En `POST /api/v1/admin/amigos/events/{id}/status`, la publicación
+requiere administración global; el autor autorizado puede gestionar el estado de su propio
+anuncio dentro de los límites del servicio.
 
 La escritura de eventos utiliza la autorización global por ámbito `events`: la administración
 global concede o revoca esa autorización. Un autor autorizado puede crear borradores y enviar
@@ -179,7 +182,7 @@ públicas forman parte de la implementación actual.
 
 ### «Artículos» — blog general (implementado)
 
-Blog general de OSAP dentro de «Los amigos», con **permiso de escritura independiente** de los
+Blog general de OSAP dentro de «Los Amigos», con **permiso de escritura independiente** de los
 grupos. Decisión tomada: **`group_id` opcional + `scope`** (`group`|`general`) en
 `amigos_articles` (reusa el motor editorial, el editor, los estados y los recursos).
 
@@ -194,9 +197,9 @@ grupos. Decisión tomada: **`group_id` opcional + `scope`** (`group`|`general`) 
 La **agenda de eventos** usa el mismo mecanismo: escritura reservada a autores autorizados
 (`scope='events'`) o admin global, con `pending` por defecto.
 
-### v6 — independizar «Los amigos» (dominio y BD propios)
+### v6 — independizar «Los Amigos» (dominio y BD propios)
 
-**Anotado para la versión 6.** Extraer «Los amigos» a su **propio servicio/dominio y base de
+**Anotado para la versión 6.** Extraer «Los Amigos» a su **propio servicio/dominio y base de
 datos**, siguiendo el patrón ya existente de osap-storage/osap-support/osap-auth (API + SPA de
 mantenimiento + su esquema). Motivo: evitar que osap-api siga absorbiendo dominios y contener su
 tamaño. Implica: mover las tablas `amigos_*` a una BD propia, exponer el dominio por API y adaptar
