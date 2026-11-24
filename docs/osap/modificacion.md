@@ -1,5 +1,7 @@
 # Modificación (registro de trabajo)
 
+> **HISTÓRICO — registro de cambios de una etapa anterior.** No describe el estado actual ni acredita despliegues posteriores. Consultar [la arquitectura actual](current-architecture.md) y el historial Git para cambios recientes.
+
 ## 2026-08-08 — Provider API v1.3 + UX de lista de obras + limpieza de legacy
 
 ### Entorno (importante)
