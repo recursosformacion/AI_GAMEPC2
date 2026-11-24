@@ -1,5 +1,7 @@
 # OSAP — Plan técnico de implementación (apoyo común osap-app + Chorus)
 
+> **PLAN HISTÓRICO PRE-IMPLEMENTACIÓN.** Los elementos de este plan no son una lista de tareas vigente. La implementación actual se mantiene en el repositorio AI_osap-support; las integraciones consumidas por API se describen en [m2m-service-matrix.md](m2m-service-matrix.md).
+
 > **Estado:** plan. No se implementa código en esta entrega (regla §15).
 > Referencias: `docs/osap/support-ecosystem-architecture.md` (arquitectura), `docs/osap/support-phase1-support-page.md` (Fase 1), `docs/osap/support-membership-architecture.md` (análisis previo).
 > Fecha: 2026-08-28.
