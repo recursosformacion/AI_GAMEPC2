@@ -92,6 +92,16 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 | Programas afectados | todos | ≥1 | exactamente 1 |
 
 ## Historial
+- **6.5.0 (B) — osap-api + osap-auth (2026-11-24)**: Chorus deja de compartir el
+  refresh token de OSAP (enlaces sin tokens; el handoff ignora e invalida cookies
+  heredadas) y crea su propia sesión OIDC con renovación proactiva. `osap-auth` limita
+  la revocación por reuso de refresh a la sesión afectada (antes cerraba todas las
+  sesiones del usuario y tumbaba el resto de programas). Incluye Chorus 0.16.6:
+  agenda mensual al abrir, catálogo de cargos/roles/secciones, tipos «Letra» y «Todo»,
+  botón de añadir obra siempre visible y «Pertenencias» desde los grupos de Chorus.
+  Sin cambios de contrato ni de esquema en OSAP. Evidencia: auth 37 tests; Chorus 121
+  tests no-integración + migración 044; SPA compilada y desplegada; verificación en
+  producción (0.16.6, catálogo 8+4, datos intactos).
 - **6.4.2 (C) — osap-api (2026-11-24)**: retira la etiqueta «Compartir» de la barra de iconos de «Próximas actuaciones» (quedan solo los iconos, con `aria-label`), apunta el visor de OSAP a Chorus con `chorusBaseUrl()` y añade las herramientas de reparación del split de Pieltain (`script/repair_index_split_pieltain.py`, `script/test_repair_index_split_pieltain.ps1`, `tests/osap/test_index_title_key.py`) con su documentación. Corrige dos regresiones de calidad: identificador inválido en `test_search_enrichment_identity.py` y estrechamiento de tipos en las factorías de almacenes. Sin cambios de esquema, contrato ni IDs. Evidencia: `ruff`/`mypy` limpios; `pytest tests/osap` 979 passed/2 skipped; desplegado con mantenimiento verificado (503 → off), backup previo de SPA/osap-api, assets nuevos 200, `health` ok y chunk de eventos sin la etiqueta. Alcance: osap-api (C); versión del conjunto para los cuatro programas.
 - **6.4.1 (C) — osap-api (2026-11-23)**: corrige los *quality gates* (`ruff`/`mypy`) y dos retornos de la capa de amigos/auth (`rotate_join_code` devuelve `dict`, `set_amigos_join_code` normaliza `dict(row)`, `auth_proxy` distingue `error_doc`), sin cambios de esquema, contrato ni IDs. Evidencia: `ruff`/`mypy` limpios; `pytest tests/osap` 968 passed/2 skipped; despliegue coordinado 6.4.1 con mantenimiento y backup. Alcance: osap-api (C); versión del conjunto para los cuatro programas.
 - **6.4.0 (B) — osap-api (2026-11-19)**: enriquecimiento multifuente (fase 1): conector Wikidata (resolución `wbsearchentities` + extracción EntityData de personas/obras), utilidades IIIF (validación de manifiestos y enlace como fuente), staging `enrichment_candidates` y CLI `script/enrich_entity.py` (`--person|--work`, `--iiif-manifest`, `--stage`). Solo escribe en staging; no toca `works`/`persons`/índice. Diseño en `docs/osap/enriquecimiento-multifuente.md`. Evidencia: 6 tests, ruff/mypy limpios; prueba en vivo Mozart (22 candidatos) y “Eine kleine Nachtmusik” (Q12025).

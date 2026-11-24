@@ -19,15 +19,11 @@ export function chorusHomeUrl(): string {
   return `${chorusBaseUrl()}/`;
 }
 
-export function chorusSessionUrl(
-  token?: string | null,
-  refreshToken?: string | null,
-): string {
-  const base = chorusBaseUrl();
-  if (!token) return `${base}/`;
-  const params = new URLSearchParams({ token });
-  if (refreshToken) params.set("refresh_token", refreshToken);
-  return `${base}/?${params.toString()}`;
+// Chorus crea su propia sesión OIDC (refresh independiente). No se pasan
+// tokens de OSAP en la URL: compartir el refresh provoca que la rotación de
+// cualquiera de los dos clientes invalide la sesión del otro.
+export function chorusSessionUrl(): string {
+  return `${chorusBaseUrl()}/`;
 }
 
 

@@ -11,8 +11,6 @@ export function AmigosPage() {
   const { t } = useI18n();
   const user = useAuth((s) => s.user);
   const isAdmin = useAuth((s) => s.isAdmin());
-  const token = useAuth((s) => s.accessToken);
-  const refreshToken = useAuth((s) => s.refreshToken);
 
   return (
     <div className="space-y-6">
@@ -46,7 +44,7 @@ export function AmigosPage() {
         <Card title={t("friends.chorusTitle")}>
           <p className="text-sm text-osap-muted">{t("friends.chorusSubtitle")}</p>
           <a
-            href={chorusSessionUrl(token, refreshToken)}
+            href={chorusSessionUrl()}
             target="_blank"
             rel="noopener noreferrer"
             referrerPolicy="no-referrer"

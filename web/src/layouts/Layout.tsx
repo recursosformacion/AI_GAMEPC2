@@ -318,7 +318,7 @@ function SidebarSection({
     entry.sessionHandoff
       ? blogHomeUrl()
       : entry.chorusHandoff
-        ? chorusSessionUrl(token, refreshToken)
+        ? chorusSessionUrl()
         : entry.to;
 
   const handleBlogHandoff = (
