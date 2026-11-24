@@ -24,6 +24,7 @@ El contenido de `script/oneoff/` es histórico. Antes de reutilizar una herramie
 | `migrate_index_schema.py` | DDL idempotente del esquema del índice | Es una operación de esquema; revisar migraciones aplicadas primero |
 | `finalize_index_identity.py`, `resolve_index_composers.py` | Normalización y resolución de identidad | Validar muestra, duplicados y relaciones antes de aceptar cambios |
 | `audit_index_associations.py` | Diagnóstico SQL de solo lectura de títulos/números incompatibles | Requiere confirmar la BD; bloquea producción salvo autorización explícita |
+| `export_api_schema_inventory.py` | Exporta el esquema desde information_schema | Requiere confirmar la BD; bloquea producción salvo autorización explícita |
 | `backfill_source_ids.py`, `backfill_index_url_aliases.py` | Backfills de identificadores y aliases | No repetir sin comprobar idempotencia y estado previo |
 
 ## 3. Despliegue y comprobación
