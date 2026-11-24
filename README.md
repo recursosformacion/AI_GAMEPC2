@@ -24,14 +24,17 @@ It is not the authoritative store for every catalogue record or physical file. T
 | **[AI_osap-support](https://github.com/recursosformacion/AI_osap-support)** | Donations, memberships, recognitions and support-related operations |
 | **[ai-importacion](https://github.com/recursosformacion/ai-importacion)** | Independent discovery, inventory and review of music materials |
 | **[ai_recogeYouTube](https://github.com/recursosformacion/ai_recogeYouTube)** | Discovery and review of YouTube recordings associated with musical works |
+| **[ai_noticias](https://github.com/recursosformacion/ai_noticias)** | News discovery and editorial feed consumed by OSAP |
+| **[ai_publicidad](https://github.com/recursosformacion/ai_publicidad)** | Campaign management, ad composition, impressions and click-through |
 
 Each service has its own configuration, database responsibilities, tests and deployment procedure. The API consumes service contracts; the public browser client must not bypass the API to access protected service databases or internal endpoints.
 
 ## Current architecture (6.x)
 
 - **Web client:** React + TypeScript, built into `web/dist`.
+- **SSR:** Node process (`web/ssr/server.mjs`) renders public work, composer, representation and classification pages on port 3000.
 - **API:** FastAPI application composed through `src/osap/api/platform_app.py` and its platform/router layers.
-- **Public catalogue pages:** server-rendered HTML for indexable work and composer pages, alongside the SPA.
+- **Public routes:** Nginx sends canonical catalogue pages to Node SSR; legacy aliases and Los Amigos pages are handled by FastAPI.
 - **Authentication:** user sessions and tokens are issued by osap-auth.
 - **Service authentication:** API-to-service calls use dedicated OAuth2 client-credentials tokens with receiver-specific audiences and scopes.
 - **Catalogue and files:** osap-storage is the authoritative service for catalogue records and stored files.
@@ -47,7 +50,7 @@ OMR is the repository presented to users. Data already integrated into OMR is co
 
 ## Development
 
-Read [the development environment guide](docs/osap/dev-environment.md) before starting services or changing the frontend. The documented local workflow uses Apache to serve the built SPA and proxies API requests to FastAPI; editing the React source requires rebuilding `web/dist`.
+Read [the development environment guide](docs/osap/dev-environment.md) before starting services or changing the frontend. The documented local workflow uses Apache for the SPA, Node SSR on port 3000 for canonical public pages, and FastAPI for `/api` and legacy/social routes. Rebuild both `web/dist` and `web/dist-ssr` with `script/restart-dev.ps1 -Build`.
 
 Useful references:
 
