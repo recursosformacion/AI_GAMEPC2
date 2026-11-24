@@ -41,6 +41,15 @@ def _md(value: Any) -> str:
     return str(value).replace("|", "\\|").replace("\n", " ")
 
 
+def _safe_default(column_name: str, value: Any) -> str:
+    if value is None:
+        return "—"
+    sensitive = ("password", "secret", "token", "api_key", "private_key")
+    if any(term in column_name.lower() for term in sensitive):
+        return "[REDACTED]"
+    return _md(value)
+
+
 def _render(database: str, tables: list[dict[str, Any]], columns: list[dict[str, Any]],
             indexes: list[dict[str, Any]], foreign_keys: list[dict[str, Any]]) -> str:
     lines = [
@@ -80,7 +89,7 @@ def _render(database: str, tables: list[dict[str, Any]], columns: list[dict[str,
             lines.append(
                 f"| {row.get('ORDINAL_POSITION')} | {_md(row.get('COLUMN_NAME'))} | "
                 f"{_md(row.get('COLUMN_TYPE'))} | {_md(row.get('IS_NULLABLE'))} | "
-                f"{_md(row.get('COLUMN_DEFAULT'))} | {_md(row.get('COLUMN_KEY'))} | "
+                f"{_safe_default(str(row.get('COLUMN_NAME') or ''), row.get('COLUMN_DEFAULT'))} | {_md(row.get('COLUMN_KEY'))} | "
                 f"{_md(row.get('EXTRA'))} | {_md(row.get('COLUMN_COMMENT'))} |"
             )
         if table_indexes:
