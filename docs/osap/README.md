@@ -21,6 +21,7 @@
 - [Arquitectura actual 6.x](current-architecture.md) — VIGENTE, contrastada con el código y los contratos de la línea 6.x.
 - [Mapa de rutas API](api-route-map.md) — VIGENTE, familias de routers, endpoints de referencia y aliases SEO.
 - [Auditoría del índice 2026-11-24](auditoria-index-2026-11-24.md) — incidencia confirmada de una representación IDP 2 asociada a IDP 3; reparación de datos pendiente de traza de solo lectura.
+- [Auditoría general 2026-11-24](auditoria-general-2026-11-24.md) — cambios de código y documentación, verificaciones y pendientes.
 
 La arquitectura vigente describe el código de la línea 6.x: aplicación React servida como build estático, backend FastAPI, API pública consumida por la SPA e integración autenticada con Auth, Storage y Support.
 
