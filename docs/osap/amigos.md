@@ -1,4 +1,4 @@
-# «Los amigos» — miniblog de grupos musicales
+# «Los Amigos» — grupos musicales, agenda y artículos
 
 Sección integrada en OSAP (no es WordPress ni una app aparte). Reutiliza la arquitectura
 hexagonal, la autenticación de osap-auth, el almacén operativo (MySQL/Memoria) y la capa
@@ -20,7 +20,7 @@ Los artículos **no** son ítems de menú: viven dentro de la página de su cora
 viaja en el `id` estable; el slug es descriptivo y un slug distinto provoca un 301 al canónico
 (igual que `/obra` y `/compositor`), de modo que el enlace permanente nunca se rompe.
 
-## Modelo (BD `osap-api`)
+## Modelo (BD operativa de OSAP API)
 
 | Tabla | Contenido |
 |---|---|
@@ -76,6 +76,12 @@ respaldo para cuando no exista persona enlazada. El estado del grupo admite `dis
 
 Principio de mínimo privilegio. Designar/retirar administradores de grupo está reservado a la
 administración global.
+
+Los roles de cargo (presidencia, dirección, jefatura de sección, etc.) y los roles de catálogo
+son actualmente datos organizativos; no crean por sí solos una jerarquía de autorización.
+Si se incorpora autoridad delegada —por ejemplo, jefaturas de sección con capacidad sobre
+miembros concretos— debe modelarse como permisos delegados con alcance explícito, sin elevar
+esos cargos a roles globales de OSAP.
 
 ## Flujo editorial (decisión cerrada)
 
@@ -150,7 +156,7 @@ Tras tocar el backend: reiniciar uvicorn. Tras tocar el frontend: rebuildar `web
 
 ## Roadmap
 
-### Agenda: «Próximas actuaciones y eventos» (implementado — backend)
+### Agenda: «Próximas actuaciones y eventos» (implementado)
 
 Categoría nueva al mismo nivel que «Corales». Entidad propia (no reutiliza la tabla de
 auditoría `amigos_events`, que mantiene su nombre):
@@ -164,9 +170,12 @@ API: público `GET /api/v1/amigos/events` (filtros: `kind`, `locality`, `group_i
 `to_date`; solo publicados) y `GET /api/v1/amigos/events/{id}`; admin (global)
 `POST/PATCH /api/v1/admin/amigos/events` y `POST …/{id}/status`.
 
-**Decisión pendiente**: la **política de permisos** de eventos (quién puede gestionarlos: por
-grupo, por autor autorizado, etc.). De momento las escrituras se reservan a la **administración
-global**. El resto (UI de administración y páginas públicas) queda para el siguiente bloque.
+La escritura de eventos utiliza la autorización global por ámbito `events`: la administración
+global concede o revoca esa autorización. Un autor autorizado puede crear borradores y enviar
+eventos a revisión; si tiene `direct_publish=true`, puede publicarlos directamente. La
+administración global puede publicar directamente. La autorización de eventos es independiente
+de la membresía y de los cargos internos del grupo. La UI de administración y las páginas
+públicas forman parte de la implementación actual.
 
 ### «Artículos» — blog general (implementado)
 
