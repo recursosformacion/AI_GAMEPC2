@@ -18,6 +18,7 @@ http://osap-app                     Apache (XAMPP) — VirtualHost *:80
    │
    ├─ /api/*            → ProxyPass → http://127.0.0.1:8001/api/   (backend uvicorn)
    ├─ /obras/*, /composers/*, /representacion/*, /amigos/* → osap-api (HTML SEO server-rendered, `api/http/seo.py`)
+   └─ /obra/*, /compositor/* → osap-api (aliases heredados con redirección canónica)
    ├─ /sitemap.xml, /sitemaps/* → osap-api (sitemaps dinámicos, `api/http/sitemap.py`)
    ├─ /docs             → ProxyPass → http://127.0.0.1:8001/docs
    ├─ /openapi.json     → ProxyPass → http://127.0.0.1:8001/openapi.json
