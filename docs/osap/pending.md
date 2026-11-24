@@ -1,5 +1,7 @@
 # Pendientes — 2026-10-21
 
+> **HISTÓRICO — lista de pendientes de octubre de 2026.** No es el backlog actual ni debe utilizarse para decidir el siguiente trabajo. Consultar [el índice de documentación](README.md) y la [auditoría general 2026-11-24](auditoria-general-2026-11-24.md).
+
 Notas para retomar mañana. No es un plan aprobado ni código: es el estado comprobado y las
 decisiones que faltan. No se ha modificado `ai-recogeYouTube` ni se ha escrito en producción.
 
