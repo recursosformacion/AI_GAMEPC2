@@ -24,7 +24,7 @@ El código, las migraciones y las pruebas de la versión desplegada son la evide
 - [Auditoría general](osap/auditoria-general-2026-11-24.md) — cambios aplicados, verificaciones y pendientes.
 - [Manual de usuario](../web/public/manual/es/index.html) — versión maestra en castellano; las traducciones se revisan después de cerrar el texto español.
 - [Versionado](osap/versioning.md) — clasificación A/B/C y reglas de entrega.
-- [Entorno de desarrollo](osap/dev-environment.md) — Apache local, frontend, backend y servicios.
+- [Entorno de desarrollo](osap/dev-environment.md) — Apache local, Node SSR, FastAPI y servicios.
 - [Scripts](osap/scripts.md) — herramientas operativas y de mantenimiento.
 - [Matriz M2M](osap/m2m-service-matrix.md) — autenticación entre API, Auth, Storage y Support.
 - [Configuración actual](osap/configuration-current.md) — precedencia, OIDC, M2M e integraciones.
