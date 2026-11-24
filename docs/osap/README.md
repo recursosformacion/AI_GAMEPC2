@@ -1,81 +1,66 @@
-# Documentación de OSAP
+# Índice de documentación de OSAP API
 
-Documentación organizada por **versión general**. Los contratos (`domain/` y `ports/`)
-son **API pública congelada**: cambiarlos requiere un ADR.
+**Revisión:** 2026-11-24.  
+**Repositorio:** recursosformacion/AI_GAMEPC2 (OSAP API y cliente web).  
+**Estado:** índice de trabajo; los documentos marcados como PLAN, AUDITORÍA o HISTÓRICO no describen necesariamente producción.
 
-```
-osap/
-├── v1/     Base / pre-V2 (arquitectura, API REST, frontend, jobs, datasets, ...)
-├── v2/     V2: contratos y diseños congelados
-│           · osap-architecture-book.md (fuente de verdad técnica)
-│           · architecture-audit.md   (Auditoría 2026, congelada)
-│           · provider-contract.md    (Contrato de proveedores)
-│           · search-engine-design.md (Search Intelligence V2.1)
-│           · normalization-explorable.md (Normalización explicable V2.1.1)
-│           · work-matcher-design.md  (WorkMatcher V2.1.2)
-│           · ranking-design.md       (Ranking de obras V2.1.3)
-│           · evidence-design.md      (Evidence definitivo V2.2.a)
-│           · dedup-merge-design.md   (Dedup/Merge V2.2.b)
-│           · jobs-design.md          (Jobs V2.2.c)
-│           · knowledge-mining-design.md (Knowledge Mining V2.2.d)
-│           · web-docs.md             (documentación web)
-│           · presentation-v22.md     (presentación 20 diapositivas)
-├── v3/     V3: plataforma
-│           · api-design.md           (API REST, contrato congelado V3.1.a)
-├── adr/    Architecture Decision Records (0001–0037)
-└── old/    Documentos obsoletos (histórico, no se editan)
-```
+## 1. Documentación vigente y operativa
 
-## Para empezar a trabajar
+| Documento | Uso | Estado |
+|---|---|---|
+| [Entorno de desarrollo](dev-environment.md) | Apache/XAMPP, build SPA, uvicorn, servicios locales y modo de solo lectura | VIGENTE, revisar tras cambios de infraestructura |
+| [Versionado](versioning.md) | Clasificación A/B/C, coherencia de versiones y reglas de publicación | VIGENTE |
+| [Scripts](scripts.md) | Inventario y uso de scripts de API y Storage | AUDITORÍA PENDIENTE: contiene referencias históricas que deben depurarse |
+| [Matriz M2M](m2m-service-matrix.md) | Clientes, audiencias y scopes entre servicios | VIGENTE CON CONFIGURACIÓN DE PRODUCCIÓN PENDIENTE DE VERIFICAR |
+| [Base de datos de API](../osap-api-database.md) | Esquema y persistencia de API | AUDITORÍA PENDIENTE |
+| [Configuración](../configuration-v1.md) | Configuración de la aplicación | AUDITORÍA PENDIENTE |
 
-- **`dev-environment.md`** — **LEER PRIMERO**: cómo levantar el entorno (Apache `osap-app`
-  sirve `web/dist` y proxya `/api` a uvicorn 8001). Cómo hacer cambios de frontend
-  (rebuild `web/dist`) y de backend (reiniciar uvicorn). Evita errores conocidos.
+## 2. Arquitectura y contratos actuales
 
-## Documentos fundamentales
+La arquitectura vigente debe describir el código de la línea 6.x: aplicación React servida como build estático, backend FastAPI, API pública consumida por la SPA e integración autenticada con Auth, Storage y Support.
 
-1. `v2/osap-architecture-book.md` — **fuente de verdad técnica** de OSAP V2.2.
-2. `v2/architecture-audit.md` — Auditoría arquitectónica (congelada).
-3. `ROADMAP.md` (raíz) — versiones de plataforma.
-4. `v2/provider-contract.md` — contrato de proveedores.
-5. `v2/search-engine-design.md` — diseño del Search Intelligence.
+El documento [Architecture Book V2.2](v2/osap-architecture-book.md) y los documentos de v1/, v2/ y v3/ conservan la evolución del diseño anterior. **Son HISTÓRICOS**, no la fuente de verdad de la arquitectura 6.x. Se mantienen para trazabilidad hasta completar su clasificación y archivo.
 
-Chorus (producto independiente): `docs/chorus-vision.md` (visión),
-`docs/chorus-product.md` (producto/MVP), `docs/chorus-separation.md` (frontera OSAP ≠ Chorus),
-`docs/chorus-web.md` (web independiente).
+No usar el antiguo libro V2.2 como descripción de la arquitectura desplegada.
 
-## Mejoras pendientes (anotadas)
+## 3. Integración entre servicios
 
-- **Organización e ingeniería post-subvención** (`organizacion-post-subvencion.md`): plan
-  para unificar build/arranque/verificación, definición de hecho, contrato compartido de
-  obras/representaciones, CI, trazabilidad y disciplina de incidentes. **No ejecutar hasta
-  recibir financiación.**
-- **Pendientes 2026-10-21** (`pending.md`): integración del módulo externo
-  `ai-recogeYouTube` (búsqueda global + valoraciones, correspondencia de obras y cuota) y
-  estado de las fuentes externas de partituras (BNE, BnF, BL, DNB, LOC, Europeana, Cantorion,
-  Gallica).
-- **Ficha de PROD SSR** (`prod-ssr-plan.md`): runbook completo para desplegar el HTML SSR
-  React (Node 3000, systemd, nginx, caché, verificación y rollback), con fechas y versión
-  pendientes de rellenar.
-- **Subida 5.5.0** (`release-5.5.0.md`): checklist de la entrega actual con mantenimiento en
-  servidor, verificación por `?preview` y rollback; **no** incluye el SSR de React.
-- **Mantenimiento y token de revisión** (`maintenance.md`): cómo activar/desactivar y dónde
-  está el enlace `?preview=<TOKEN>` (impreso por el script y en `web/dist/maintenance.token`).
-- **Noticias en OSAP** (`news-integration.md`): acceso por sesión, preferencias en `osap-auth` y consulta interna a `ai_noticias`; el correo queda fuera de la vía de acceso.
-- **Boletín de noticias** (`news-digest.md`): librería común, cron, idempotencia y worker de `osap-support`.
-- **V6 — Work/Resource/File** (`v6-work-resource-model.md`): plan para sustituir los tres
-  niveles actuales (storage works, índice index_works, representaciones/ficheros) por un
-  modelo con Work + Resource + File, reparto de campos, IDs estables, migración y preguntas
-  abiertas. Es un cambio **A (major)**: exige punto de control antes de empezar.
-- **Estudio YouTube / ai-recogeYouTube** (`ai-recogeyoutube-integration-study.md`): botón en
-  la ficha de obra, pantalla nueva dentro de OSAP, búsqueda/voto, arquitectura de invocación,
-  asociación de obras, cuota y fases. Sin implementar.
+- [Matriz M2M](m2m-service-matrix.md): contrato de llamadas y separación de credenciales.
+- Auth, Storage y Support mantienen sus runbooks, migraciones y configuración interna en sus repositorios respectivos.
+- La configuración real de producción solo se considera verificada después de comprobar el servicio desplegado y su comportamiento HTTP; el código y las plantillas no bastan.
 
-- **Catálogo de formaciones vocales (voicings)**: además de los términos normalizados de
-  búsqueda (`SATB`, `STTB`, `AATB`, `ATTB`, …), valorar una tabla/catálogo de voicings con
-  pequeña descripción de cada formación (voces, uso típico) para filtros/presentación.
-  Pendiente de decidir dónde vive (corpus CPDL/osap-storage) y si aporta valor real.
-- **Compositores desde CPDL**: posibilidad de importar compositores de CPDL si nos interesa
-  (evaluar coste/beneficio antes de construir el importer).
-- **Cron semanal de CPDL**: crear un proceso programado (cron) que actualice semanalmente
-  las works de CPDL (`import_cpdl_pages`/reindex de corpus) de forma reproducible.
+## 4. V6 — PLAN, todavía no implementado como modelo de producción
+
+Los documentos siguientes describen la remodelación Work → Resource → File y sus impactos. No deben utilizarse para interpretar el esquema actual como si la migración ya estuviera ejecutada:
+
+- [Modelo Work–Resource–File](v6-work-resource-model.md).
+- [Matriz de consumidores de Work](v6-work-field-consumer-matrix.md).
+- [Contrato DTO e identidad](v6-work-dto-identity-contract.md).
+- [Espacio personal y aportaciones](v6-user-workspace-contributions.md).
+- [Integración Storage e índice](v6-storage-integration-index.md).
+- [Feed del índice](v6-index-feed.md).
+- [Retirada de StorageLocations](v6-storage-locations-removal.md).
+- [Auditoría de identidad y materiales](v6-api-material-identity-audit.md).
+
+La decisión de iniciar la implementación V6 requiere cerrar el inventario de columnas, consumidores, contratos, migración y validaciones. No se debe inferir que un documento de planificación autoriza escrituras o migraciones en producción.
+
+## 5. Auditorías, incidencias y documentación histórica
+
+- incidents/: informes de incidentes con fecha; válidos para el episodio descrito, no como diagnóstico actual.
+- old/: investigación histórica y documentación obsoleta.
+- adr/: decisiones de arquitectura. Una ADR registra una decisión en su contexto temporal; comprobar si ha sido sustituida por otra posterior.
+- v1/, v2/, v3/: documentación de versiones anteriores, en proceso de clasificación como histórica.
+
+## 6. Manual público
+
+El manual de usuario vive en web/public/manual/. El castellano es el texto maestro. La revisión debe contrastar cada instrucción con la interfaz actual y las operaciones reales; las traducciones no se consideran correctas solo por existir.
+
+## 7. Regla de actualización
+
+Cuando cambie una funcionalidad:
+
+1. actualizar pruebas y contrato de API;
+2. actualizar este índice si cambia el estado o la ubicación de la documentación;
+3. actualizar la guía española si afecta al usuario;
+4. revisar las traducciones después de cerrar el castellano;
+5. registrar fecha, versión, evidencia y estado de verificación.
