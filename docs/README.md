@@ -20,6 +20,7 @@ El código, las migraciones y las pruebas de la versión desplegada son la evide
 - [Documentación de OSAP](osap/README.md) — índice detallado por estado y área.
 - [Arquitectura actual 6.x](osap/current-architecture.md) — arquitectura implementada y límites de los servicios.
 - [Mapa de rutas API](osap/api-route-map.md) — routers, familias de endpoints y rutas SEO.
+- [Auditoría funcional de producción 2026-11-24](osap/auditoria-produccion-web-2026-11-24.md) — evidencias públicas, discrepancias entre producción y main, y pruebas pendientes.
 - [Auditoría del índice](osap/auditoria-index-2026-11-24.md) — incidencia confirmada de asociación entre obras numeradas.
 - [Auditoría general](osap/auditoria-general-2026-11-24.md) — cambios aplicados, verificaciones y pendientes.
 - [Manual de usuario](../web/public/manual/es/index.html) — versión maestra en castellano; las traducciones se revisan después de cerrar el texto español.
