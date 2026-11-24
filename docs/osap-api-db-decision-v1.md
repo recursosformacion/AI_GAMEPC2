@@ -1,5 +1,7 @@
 # OSAP — BD propia de osap-api: decisión (v1)
 
+> **DECISIÓN HISTÓRICA V1:** conserva la frontera de datos acordada en su contexto original. Para la arquitectura vigente, consultar [current-architecture.md](osap/current-architecture.md) y [database-current.md](osap/database-current.md).
+
 **Estado:** DECISIÓN CONFIRMADA (frontera de datos). Las obras de usuario quedan abiertas.
 **Formulación:**
 
