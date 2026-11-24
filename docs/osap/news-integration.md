@@ -1,5 +1,7 @@
 # Noticias en OSAP
 
+> **Estado 2026-11-24:** la integración de lectura está implementada en OSAP API. El servicio independiente [ai_noticias](https://github.com/recursosformacion/ai_noticias) tiene su primera implementación RSS/Atom y la BD `osap_noticias` creada/verificada en el entorno local. Esto no acredita un despliegue productivo de ai_noticias; la disponibilidad real del servicio y sus secretos deben verificarse por separado.
+
 ## Acceso
 
 Las noticias se leen en **`/noticias`** con la sesión de OSAP. No hay acceso por correo
