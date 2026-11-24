@@ -1,177 +1,71 @@
-# OSAP — Open Score Acquisition Platform
+# OSAP API — OpenMusicRepository
 
-**OpenMusicRepository** is the public music catalogue and resource-discovery platform powered by OSAP.  
-Website: [openmusicrepository.com](https://openmusicrepository.com)
+**OSAP (Open Score Acquisition Platform)** powers the public catalogue and resource-discovery website **OpenMusicRepository**.
 
-OSAP helps musicians, choirs, educators and researchers discover musical works, explore catalogue information, and locate scores and related resources. Its core resolves resources for a requested musical work; separate open-source repositories provide tools and services for importing and discovering material, authentication, storage, and community support.
+- **Production website:** https://app.openmusicrepository.com/
+- **Source repository:** https://github.com/recursosformacion/AI_GAMEPC2
+- **Documentation index:** [docs/README.md](docs/README.md)
 
-## Project repositories
+OSAP helps musicians, choirs, educators and researchers discover musical works, explore catalogue information, compare editions and representations, and reach the source or file that is actually available.
 
-The OSAP ecosystem is developed across these public repositories:
+## What this repository contains
 
-| Repository | Purpose |
+This repository contains the OSAP API, the public React web application, the federated search/index layer, SEO-rendered public catalogue pages, and integration clients for the OSAP services.
+
+It is not the authoritative store for every catalogue record or physical file. Those responsibilities are separated into the dedicated services below.
+
+## OSAP service boundaries
+
+| Repository | Responsibility |
 |---|---|
-| **[AI_GAMEPC2](https://github.com/recursosformacion/AI_GAMEPC2)** (this repository) | OSAP core and resource-resolution engine, alongside the Chorus Study Generator codebase. |
-| **[ai-importacion](https://github.com/recursosformacion/ai-importacion)** | Independent tool to discover, catalogue and review music materials from Internet Archive. It maintains its own database and does not write directly to OSAP production data. |
-| **[ai_recogeYouTube](https://github.com/recursosformacion/ai_recogeYouTube)** | Tool to discover, classify and review YouTube recordings associated with musical works, including choir practice tracks and individual vocal parts. |
-| **[AI_osap-auth](https://github.com/recursosformacion/AI_osap-auth)** | Authentication and identity service for the OSAP ecosystem. |
-| **[AI_osap-storage](https://github.com/recursosformacion/AI_osap-storage)** | Storage service for OSAP resources and files. |
-| **[AI_osap-support](https://github.com/recursosformacion/AI_osap-support)** | Support services, including donations and recurring memberships. |
+| **[AI_GAMEPC2](https://github.com/recursosformacion/AI_GAMEPC2)** | Public web application, API orchestration, federated search/index and integration with OSAP services |
+| **[AI_osap-auth](https://github.com/recursosformacion/AI_osap-auth)** | User identity, authentication, OAuth/OIDC and service-to-service tokens |
+| **[AI_osap-storage](https://github.com/recursosformacion/AI_osap-storage)** | Authoritative catalogue data, musical resources and file access |
+| **[AI_osap-support](https://github.com/recursosformacion/AI_osap-support)** | Donations, memberships, recognitions and support-related operations |
+| **[ai-importacion](https://github.com/recursosformacion/ai-importacion)** | Independent discovery, inventory and review of music materials |
+| **[ai_recogeYouTube](https://github.com/recursosformacion/ai_recogeYouTube)** | Discovery and review of YouTube recordings associated with musical works |
 
-These repositories have distinct responsibilities and are maintained as separate projects. Their integration and maturity differ; tools for importing and discovering external resources are designed to support review and traceability rather than silently modifying production catalogue data.
+Each service has its own configuration, database responsibilities, tests and deployment procedure. The API consumes service contracts; the public browser client must not bypass the API to access protected service databases or internal endpoints.
 
-## Public reach
+## Current architecture (6.x)
 
-Google Analytics recorded approximately **18,000 page views over a 28-day period in October 2026**. This figure represents page views, not unique users.
+- **Web client:** React + TypeScript, built into `web/dist`.
+- **API:** FastAPI application composed through `src/osap/api/platform_app.py` and its platform/router layers.
+- **Public catalogue pages:** server-rendered HTML for indexable work and composer pages, alongside the SPA.
+- **Authentication:** user sessions and tokens are issued by osap-auth.
+- **Service authentication:** API-to-service calls use dedicated OAuth2 client-credentials tokens with receiver-specific audiences and scopes.
+- **Catalogue and files:** osap-storage is the authoritative service for catalogue records and stored files.
+- **Support operations:** osap-support has its own authentication and persistence boundary.
 
-## Maintainer
+The deployed website displayed **v6.4.1** on 2026-11-24. That visible version is evidence for the public web application only; it does not, by itself, certify the deployed revision or configuration of every backend service.
 
-Maintained by [Miguel García](https://www.linkedin.com/in/miguel-garcia-rf/).
+### Current catalogue model vs V6 target
 
----
+The deployed code still uses the existing Work/index/Representation/resource/file structures and their current API contracts. The proposed V6 model **Work → Resource → File** is a future coordinated remodel, not a claim that production has already migrated. See [the V6 plan](docs/osap/v6-work-resource-model.md).
 
-## Core architecture
+OMR is the repository presented to users. Data already integrated into OMR is consulted through OMR; it is not exposed as a separate repository that users need to configure.
 
-> **OSAP no busca partituras. Construye conocimiento fiable sobre las obras musicales.**
+## Development
 
-OSAP es una plataforma de **resolución de recursos musicales**. El usuario
-indica qué obra necesita; OSAP localiza, evalúa, selecciona y obtiene la mejor
-representación disponible, gestionando automáticamente los recursos que
-necesita. El usuario nunca piensa en PDMX, OpenScore, IMSLP, Hugging Face o
-GitHub.
+Read [the development environment guide](docs/osap/dev-environment.md) before starting services or changing the frontend. The documented local workflow uses Apache to serve the built SPA and proxies API requests to FastAPI; editing the React source requires rebuilding `web/dist`.
 
-> Referencia técnica completa (fuente de verdad): **[OSAP Architecture Book](docs/osap/v2/osap-architecture-book.md)** ·
-> Documentación web: [web-docs.md](docs/osap/v2/web-docs.md) ·
-> Presentación V2.2 (20 diapositivas): [presentation-v22.md](docs/osap/v2/presentation-v22.md)
+Useful references:
 
-### Estado actual
+- [Documentation index](docs/README.md)
+- [OSAP documentation map](docs/osap/README.md)
+- [Versioning and release rules](docs/osap/versioning.md)
+- [Service-to-service authentication matrix](docs/osap/m2m-service-matrix.md)
+- [Operational scripts](docs/osap/scripts.md)
+- [Public user manual](web/public/manual/es/index.html)
 
-| Versión | Estado |
-|---------|--------|
-| V2.0 · V2.1 · V2.2.a · V2.2.b · V2.2.c | ✅ Implementado |
-| V2.2.d — Knowledge Mining | ⏳ Pendiente |
-| V3 — Motor inteligente | 🔮 Futuro |
+## Verification and production safety
 
-Principios clave:
+- Run the relevant tests and quality checks before committing.
+- Treat migration and deployment scripts as potentially state-changing; inspect their target environment before execution.
+- Do not use production credentials in development or commit secrets.
+- Do not run production migrations, write production data, or deploy without explicit authorization.
+- A successful API health endpoint is necessary but not sufficient: verify the actual user workflows and service-to-service operations.
 
-- **Work-Centric**: se resuelve la obra (`WorkDescriptor`), no el documento.
-- **Metadata-first** (ADR-0011): nunca se busca leyendo MusicXML.
-- **Dataset-first** (ADR-0012): los datos estructurados tienen prioridad sobre OMR/IA.
-- **Resource management transparente**: OSAP decide e instala lo que necesita.
-- **Identity ≠ Similarity**: OSAP decide identidad, no solo parecido textual.
-- **Explicable y determinista**: cada decisión deja Evidence estructurado; **nunca IA para decidir identidad**.
-- El dominio solo conoce `WorkDescriptor`, `CandidateRepresentation`, `ResolveRequest`, `ResolveResult` y `Resource`.
+## Licence
 
-### Estructura
-
-```
-src/
-├── osap/
-│   ├── domain/            # WorkDescriptor, ResolveRequest/Result, Resource, VOs
-│   ├── ports/             # ICatalogProvider, IResourceProvider, IRankingEngine, ...
-│   ├── application/       # WorkResolutionEngine, CatalogManager, ResourceManager
-│   ├── infrastructure/    # catalogs/, resources/, export/, library/, rankings/
-│   ├── bootstrap/         # Container, Configuration, wiring
-│   └── cli/               # osap
-├── chorus/                # Producto independiente Chorus (ver docs/chorus-separation.md)
-└── shared/
-tests/
-docs/
-├── osap/                    # Documentación de OSAP (por versión)
-│   ├── v1/                  # Base / pre-V2 (arquitectura, API, frontend, ...)
-│   ├── v2/                  # V2: contratos y diseños (auditoría, provider, search intelligence, ...)
-│   ├── adr/                 # Architecture Decision Records
-│   └── old/                 # Documentos obsoletos (histórico)
-├── chorus-vision.md         # Visión de Chorus (producto independiente)
-├── chorus-product.md        # Definición de producto Chorus (MVP)
-├── chorus-separation.md     # Frontera arquitectónica OSAP ≠ Chorus
-└── chorus-web.md            # Propuesta de web independiente de Chorus
-```
-
-### CLI
-
-```bash
-pip install -e ".[datasets]"
-```
-
-Resolución (uso normal — OSAP gestiona los recursos):
-
-```bash
-osap resolve "Mozart Nocturnes"
-osap resolve "Mozart Nocturnes" --format musicxml
-osap resolve "Ave Maria" --voices SATB --composer "Franz Schubert"
-osap download "Die Sterne" --composer "Schubert" --format musicxml
-```
-
-Si hay varias versiones, `resolve`/`download` muestran una lista numerada para elegir (o `--index N` para evitar el prompt).
-
-Búsqueda tolerante (acentos, mayúsculas, parcial):
-
-```bash
-osap search Schubert          # obras del compositor
-osap search Schubert --works  # todas las obras del compositor
-osap search "Ave Maria"
-osap search nocturne
-```
-
-Datasets (instalación explícita, nunca automática):
-
-```bash
-osap dataset list
-osap dataset info pdmx
-osap dataset install pdmx      # muestra progreso
-osap dataset verify pdmx
-osap dataset location pdmx
-```
-
-Gestión (avanzado):
-
-```bash
-osap catalog list
-osap catalog info openscore
-osap resource list
-```
-
-### Proveedores
-
-- **OpenScore** (`OpenScore/Lieder`, GitHub): proveedor de referencia, **completamente funcional**. Busca por título/compositor/palabras parciales mediante la GitHub REST API y descarga MusicXML (.mxl) por raw URL, almacenándolos en la biblioteca.
-- **PDMX** (Hugging Face): dataset local opcional gestionado por `DatasetManager`; su ausencia en la resolución se reporta como `SKIPPED` (nunca error).
-- IMSLP, CPDL, Local, Filesystem: en implementación.
-
-### Documentación
-
-> Índice y estructura: [docs/osap/README.md](docs/osap/README.md)
-
-- [Arquitectura](docs/osap/v1/architecture.md)
-- [Contrato de proveedores (V2)](docs/osap/v2/provider-contract.md)
-- [Search Intelligence (diseño V2.1)](docs/osap/v2/search-engine-design.md)
-- [Normalización explicable (V2.1.1)](docs/osap/v2/normalization-explorable.md)
-- [WorkMatcher (diseño V2.1.2)](docs/osap/v2/work-matcher-design.md)
-- [Ranking de obras (diseño V2.1.3)](docs/osap/v2/ranking-design.md)
-- [Evidence definitivo (diseño V2.2.a)](docs/osap/v2/evidence-design.md)
-- [Dedup/Merge (diseño V2.2.b)](docs/osap/v2/dedup-merge-design.md)
-- [Jobs (diseño V2.2.c)](docs/osap/v2/jobs-design.md)
-- [OSAP Architecture Book (fuente de verdad)](docs/osap/v2/osap-architecture-book.md)
-- [Documentación web](docs/osap/v2/web-docs.md)
-- [Integración de anuncios ai_publicidad](docs/ads-integration.md)
-- [Presentación V2.2 (20 diapositivas)](docs/osap/v2/presentation-v22.md)
-- [Auditoría arquitectónica 2026 (congelada)](docs/osap/v2/architecture-audit.md)
-- [Pipeline](docs/osap/v1/pipeline.md)
-- [Subsistema de datasets](docs/osap/v1/datasets.md)
-- [Modelo de calidad](docs/osap/v1/quality.md)
-- [Knowledge Base](docs/osap/v1/knowledge_base.md)
-- [Jobs (procesamiento asíncrono)](docs/osap/v1/jobs.md)
-- [API REST (contrato)](docs/osap/v1/api.md)
-- [Frontend React (contrato)](docs/osap/v1/frontend.md)
-- [Responsabilidades](docs/osap/v1/responsibilities.md)
-- [ADRs](docs/osap/adr/)
-- [Documentos obsoletos (histórico)](docs/osap/old/)
-
-### Desarrollo
-
-```bash
-pip install -e .
-mypy --strict
-ruff check src tests
-pytest tests/
-```
+See [LICENSE](LICENSE) and the licence notices for third-party material and providers.
