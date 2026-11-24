@@ -78,7 +78,7 @@ def create_platform_app(
         description="Public REST API of OSAP (V3.1). Exposes the domain as use cases; never internal components.",
         version="3.1",
         license_info={"name": "MIT", "url": "https://opensource.org/licenses/MIT"},
-        contact={"name": "OSAP", "url": "https://example.com", "email": "osap@example.com"},
+        contact={"name": "OSAP", "url": "https://app.openmusicrepository.com"},
         openapi_tags=_TAGS,
     )
 
