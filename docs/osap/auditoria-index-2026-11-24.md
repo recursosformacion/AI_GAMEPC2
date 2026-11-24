@@ -42,7 +42,19 @@ Commits:
 
 Esta corrección evita nuevas asociaciones de este tipo en el recorrido de enriquecimiento, pero **no repara las filas que ya están almacenadas en `index_representations`**.
 
-## 4. Investigación de datos pendiente
+## 4. Diagnóstico de solo lectura disponible
+
+Se ha añadido `script/audit_index_associations.py`. Consulta una única Work, abre una transacción `READ ONLY`, compara los números explícitos del título padre y de cada representación y no contiene ninguna operación de escritura.
+
+En desarrollo, con el `osap.toml` correcto:
+
+```powershell
+python script/audit_index_associations.py --confirm-database <nombre-exacto-de-bd>
+```
+
+Para producción requiere además `--allow-production-read`, y solo debe utilizarse tras autorizar expresamente esa consulta. El argumento `--confirm-database` debe coincidir exactamente con la base configurada. El script no muestra credenciales ni las modifica.
+
+## 5. Investigación de datos pendiente
 
 Antes de escribir en ninguna base de datos:
 
