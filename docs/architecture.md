@@ -1,5 +1,7 @@
 # OSAP — architecture (consolidado)
 
+> **HISTÓRICO:** este documento describe una arquitectura anterior de OSAP. No es la fuente de verdad de la línea 6.x. Usa [la arquitectura actual](osap/current-architecture.md) y el [mapa de rutas](osap/api-route-map.md).
+
 
 ## Parte: OSAP_Architecture_Book.md
 
