@@ -43,6 +43,10 @@ El código, las migraciones y las pruebas de la versión desplegada son la evide
 - Chorus es un producto y repositorio independiente. Su documentación y su despliegue no forman parte de la documentación operativa de OSAP API.
 - OMR es el repositorio musical visible para el usuario. Los datos integrados se consultan a través de OMR; el usuario no necesita configurar repositorios internos separados.
 
+## Estado de documentos no indexados
+
+Los documentos que aún no aparecen enlazados en este índice no deben tratarse como guía vigente hasta que se revisen y clasifiquen. Algunos se conservan por trazabilidad histórica.
+
 ## Reglas de mantenimiento
 
 1. No presentar propuestas, auditorías antiguas ni ejemplos como comportamiento vigente.
