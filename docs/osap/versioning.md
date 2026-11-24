@@ -96,9 +96,9 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
   refresh token de OSAP (enlaces sin tokens; el handoff ignora e invalida cookies
   heredadas) y crea su propia sesión OIDC con renovación proactiva. `osap-auth` limita
   la revocación por reuso de refresh a la sesión afectada (antes cerraba todas las
-  sesiones del usuario y tumbaba el resto de programas). Incluye Chorus 0.16.6:
+  sesiones del usuario y tumbaba el resto de programas). Incluye Chorus 0.16.7:
   agenda mensual al abrir, catálogo de cargos/roles/secciones, tipos «Letra» y «Todo»,
-  botón de añadir obra siempre visible y «Pertenencias» desde los grupos de Chorus.
+  botón de añadir obra siempre visible, «Pertenencias» desde los grupos de Chorus y migración a una cookie de sesión OIDC propia (se descartan las cookies heredadas del handoff).
   Sin cambios de contrato ni de esquema en OSAP. Evidencia: auth 37 tests; Chorus 121
   tests no-integración + migración 044; SPA compilada y desplegada; verificación en
   producción (0.16.6, catálogo 8+4, datos intactos).
