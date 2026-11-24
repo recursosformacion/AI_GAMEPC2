@@ -40,10 +40,11 @@ Las bases de datos son independientes. Un servicio no debe consultar tablas inte
 
 - Código React y TypeScript en `web/src/`.
 - Build estático generado en `web/dist/`.
+- Build SSR generado en `web/dist-ssr/` y ejecutado por Node mediante `web/ssr/server.mjs` en el puerto interno 3000.
 - Manual de usuario en `web/public/manual/`.
 - La aplicación publicada se sirve en https://app.openmusicrepository.com/.
 
-En desarrollo, la guía operativa describe Apache/XAMPP sirviendo `web/dist` y enviando las peticiones API al backend FastAPI. Por tanto, modificar componentes React no actualiza el cliente servido hasta reconstruir `web/dist`.
+En producción, Nginx enruta las fichas públicas a Node SSR. En desarrollo local, Apache/XAMPP sirve `web/dist` y `web/public/.htaccess` dirige las rutas a cada servicio local. Modificar React requiere reconstruir `web/dist`; modificar las páginas SSR requiere además `npm run build:ssr` y reiniciar el proceso Node.
 
 ### Backend
 
@@ -81,9 +82,11 @@ Las cuotas de descarga se aplican a las descargas OMR que correspondan; la visua
 
 ### Páginas públicas indexables
 
-OSAP API genera páginas HTML públicas para obras, compositores y representaciones. Las rutas canónicas y heredadas se gestionan en `src/osap/api/http/seo.py`; las plantillas y vistas asociadas viven en `src/osap/api/seo/`.
+Las fichas canónicas de obras, compositores, representaciones y clasificaciones se renderizan con React SSR en Node (`web/ssr/server.mjs`, puerto interno 3000). Nginx enruta `/obras/`, `/composers/`, `/representacion/` y las clasificaciones al proceso SSR. Este proceso consulta la API mediante `OSAP_API_ORIGIN`; para una ficha de obra llama a `GET /api/v1/works/public/{work_id}`.
 
-Las rutas SEO no son equivalentes a los endpoints JSON de `/api`. La SPA y el HTML indexable pueden tener mecanismos de renderizado diferentes; las pruebas deben cubrir ambos.
+La API obtiene esa ficha mediante `seo_work()` y `IndexCatalogProvider`, que lee `index_works` e `index_representations`. Por tanto, los errores de asociación del índice se reflejan tanto en la SPA como en el HTML SSR.
+
+`src/osap/api/http/seo.py` conserva las rutas heredadas `/obra/` y `/compositor/` y las redirecciones canónicas; también sirve páginas públicas de Los Amigos. Los sitemaps se generan desde la API. Estas rutas HTML/SSR no son equivalentes a los endpoints JSON de `/api`; las pruebas deben cubrir tanto la respuesta inicial SSR como la navegación de la SPA.
 
 ## 4. Búsqueda federada y proveedores
 
