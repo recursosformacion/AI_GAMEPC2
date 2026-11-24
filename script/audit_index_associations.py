@@ -106,7 +106,7 @@ def main() -> int:
                 return 1
 
             cur.execute(
-                "SELECT provider, format, download_url, available, resource_id, "
+                "SELECT provider, format, download_url, available, resource_id, source_rep_id, "
                 "title_provider, xml_title "
                 "FROM index_representations WHERE work_id = %s "
                 "ORDER BY provider, format",
@@ -130,8 +130,8 @@ def main() -> int:
                 conflicts += 1
             print(
                 f"{status} provider={row.get('provider')} format={row.get('format')} "
-                f"resource_id={row.get('resource_id')} available={row.get('available')} "
-                f"title={title!r}"
+                f"source_rep_id={row.get('source_rep_id')} resource_id={row.get('resource_id')} "
+                f"available={row.get('available')} title={title!r}"
             )
             if work_number:
                 print(
