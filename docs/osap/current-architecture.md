@@ -31,6 +31,8 @@ Cada servicio mantiene su propia persistencia y es responsable de sus datos:
 | osap-auth | Usuarios, credenciales, sesiones, clientes OAuth y claves de firma | Autoridad de identidad y emisión de tokens |
 | osap-storage | Obras, personas, atribuciones, representaciones, relaciones y metadatos de ficheros | Fuente autoritativa del catálogo y de los recursos almacenados |
 | osap-support | Membresías, donaciones, pagos, eventos de comunicación, contribuciones y reconocimientos | Fuente autoritativa de las operaciones de apoyo |
+| ai_noticias | Fuentes RSS/Atom, noticias y clasificación editorial | Servicio independiente; DB osap_noticias en desarrollo local. Integración de lectura en API; producción pendiente de verificar |
+| ai_publicidad | Campañas, anuncios, impresiones y clics | Servicio independiente; DB OSAP_PUBLICIDAD. API usa fachada y token servidor-a-servidor; producción pendiente de verificar |
 
 Las bases de datos son independientes. Un servicio no debe consultar tablas internas de otro servicio ni realizar JOIN entre sus esquemas: la integración se hace mediante contratos HTTP autenticados. El índice de OSAP API es una proyección derivada y debe poder reconstruirse desde las fuentes que le correspondan sin convertirse en una segunda autoridad editorial.
 
