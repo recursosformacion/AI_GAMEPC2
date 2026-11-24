@@ -97,3 +97,61 @@ El código, las plantillas de configuración y los tests locales no demuestran p
 - Ningún despliegue.
 - Ningún cambio en Chorus.
 - Trabajo documental y correcciones de código únicamente en `main`; sin ramas ni PR.
+
+## 7. Segunda pasada: búsqueda, visor, descargas y proveedores
+
+### 7.1 Búsqueda — contrato revisado; ejecución real pendiente
+
+El router define `POST /api/v1/searches` (201, con Location) y `GET /api/v1/searches/{search_id}`. Rechaza búsquedas sin query, composer, title o catalogue. La búsqueda es pública en el router actual. Esto acredita el contrato del código, no la ejecución en producción. Quedan pendientes pruebas desde el navegador por título, compositor, catálogo, filtros combinados y navegación entre resultados.
+
+### 7.2 Visor y descargas — comportamiento implementado en código
+
+El router define ficha de representación, `/probe`, descarga normal y `?view=1`:
+
+- `GET /api/v1/representations/{id}`: ficha.
+- `GET /api/v1/representations/{id}/probe`: indica si el servidor puede leer el fichero externo. CPDL/Cloudflare puede devolver `readable=false` por anti-bot; no significa que el recurso no exista.
+- `GET /api/v1/representations/{id}/download?view=1`: intenta servir inline para el visor.
+- `GET /api/v1/representations/{id}/download`: descarga attachment.
+
+Comportamiento observado en el código:
+- Recursos OMR/Storage se recuperan desde Storage y se sirven con nombre legible y Content-Disposition adecuado.
+- MusicXML comprimido (firma ZIP) se etiqueta como MXL.
+- La descarga normal OMR consume cuota; la vista inline no.
+- IMSLP/CPDL y otros proveedores externos pueden acabar en redirección 302 al navegador. Ante anti-bot, el navegador puede resolver el reto.
+- Sin URL de descarga/vista: 404. Fallo al recuperar un recurso propio desde Storage: 502.
+- La interfaz genera rutas de visor para MusicXML/MXL/XML/MEI/PDF y MIDI; las acciones dependen de URL, proveedor y flags available/downloadable.
+
+**No se ha descargado ningún fichero real en esta pasada.** Para certificar producción hay que probar un PDF y un MusicXML/MXL de OMR, un PDF IMSLP y una referencia CPDL, anotando status, Content-Type, Content-Disposition y destino final.
+
+### 7.3 Manual de fuentes — correspondencia con el código
+
+El manual español explica que IMSLP se utiliza como referencia externa; CPDL conserva referencias y formatos declarados, pero los archivos siguen en ChoralWiki y pueden requerir resolver anti-bot en el navegador; OMR es repositorio propio y el visor depende de disponibilidad y compatibilidad; Mutopia depende del recurso incorporado. Estas afirmaciones son coherentes con las ramas proxy/redirect del router. Falta probar enlaces concretos y resultados HTTP de producción.
+
+## 8. Auth, Storage y Support — rutas y límites de comprobación
+
+### 8.1 Auth
+
+La configuración versionada define host `auth.openmusicrepository.com`, prefijo `/auth-api/`, health backend `GET /health` (ruta pública esperada `/auth-api/health`), JWKS `/auth-api/auth/.well-known/jwks.json` e issuer `https://auth.openmusicrepository.com`. El virtual host aplica gate por Referer/Origin/IP con excepciones para discovery, authorize y OAuth. La herramienta de consulta no permite establecer las cabeceras esperadas y no recuperó health ni JWKS. **Auth no queda certificado en producción.**
+
+### 8.2 Storage
+
+La configuración versionada define host `storage.openmusicrepository.com` y health `GET /api/v1/health`, que consulta DB y repositorio y devuelve checks/contadores. El virtual host aplica gate por Referer/Origin/IP. La consulta externa sin esas cabeceras no pudo recuperar health. **No quedan certificados DB, repositorio ni descargas de Storage en producción.**
+
+### 8.3 Support
+
+La configuración versionada define `support.openmusicrepository.com`, con prefijo `/support-api/` reescrito al backend; la raíz del host devuelve un health estático del proxy. El backend documenta `GET /health` y `GET /ready`. Support valida tokens de usuario con audiencia `osap-api`, tokens de servicio con audiencia `osap-support`, y exige `support:admin` para administración.
+
+La consulta externa no pudo recuperar el host por las restricciones del virtual host. El health estático del proxy no probaría DB ni M2M. La integración API→Support está implementada en código/tests, pero no se acreditan cliente de producción, variables efectivas ni smoke test HTTP real. **Support M2M no queda certificado en producción.**
+
+## 9. Bloqueos y siguiente ejecución
+
+El navegador disponible no permite fijar de forma fiable Referer/Origin de los virtual hosts protegidos ni mantener una sesión. La falta de respuesta de health no se interpreta como caída: es una limitación de acceso y una protección prevista en la configuración.
+
+Pruebas técnicas pendientes desde el servidor o un navegador autorizado:
+1. Auth: `/auth-api/health` y JWKS; validar issuer, firma, expiración y audiencia de token de usuario.
+2. Storage: `/api/v1/health`; comprobar `database=true` y `repository=true`; solicitar recurso con token de servicio API y probar descarga pequeña.
+3. Support: `/health` y `/ready` por proxy; M2M `aud=osap-support`; operación admin con `support:admin`, sin token (401), sin scope (403) y token usuario (rechazo).
+4. API: POST/GET búsqueda y pruebas de visor/descarga por proveedor.
+5. Registrar status, cabeceras y resultados sin guardar tokens, secretos, emails ni datos personales.
+
+Estas comprobaciones no requieren modificar datos productivos. Subidas, aportaciones, pagos y cambios de cuenta quedan fuera hasta autorización expresa para crear datos de prueba.
