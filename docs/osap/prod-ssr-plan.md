@@ -1,3 +1,5 @@
+> **PLAN HISTÓRICO — 2026-10-21.** Este documento describe la preparación inicial del SSR y contiene pasos de instalación y proxy que han sido superados por el despliegue automatizado actual. El código, el servicio systemd, el vhost Nginx y los scripts actuales incluyen SPA + SSR. No usar esta ficha como runbook operativo. La referencia vigente es [dev-environment.md](dev-environment.md), [maintenance.md](maintenance.md) y `script/deploy_all.ps1`. El hecho de que el repositorio contenga esta configuración no demuestra por sí solo qué revisión está activa en el VPS; comprobar health y rutas públicas.
+
 # Ficha de PROD — SSR de páginas públicas (2026-10-21)
 
 Documento de preparación. **No se ha desplegado nada.** Las fechas y la versión se dejan
