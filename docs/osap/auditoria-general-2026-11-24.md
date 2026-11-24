@@ -35,7 +35,11 @@ Se añadió una prueba para impedir que el arranque de desarrollo vuelva a recur
 
 Commits: 0d87dd4, 64dd5d8, 78bd5ef, 391fab9.
 
-### 2.3 Metadatos OpenAPI
+### 2.3 Diagnóstico de datos del índice
+
+Se añadió `script/audit_index_associations.py`, una consulta de solo lectura para revisar los números de obra del título padre y de sus representaciones. Exige confirmar el nombre exacto de la BD y una opción explícita adicional para permitir lectura en producción. Tiene pruebas unitarias del detector de conflictos.
+
+### 2.4 Metadatos OpenAPI
 
 Se retiró el contacto de ejemplo que apuntaba a example.com y se sustituyó por la web pública real, sin inventar una dirección de correo.
 
