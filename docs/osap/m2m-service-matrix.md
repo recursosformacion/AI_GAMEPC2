@@ -3,6 +3,8 @@
 **Estado (2026-11-24):** integración API → Support implementada en código y cubierta por pruebas; la configuración de clientes y el smoke test HTTP de producción deben verificarse por separado. No se ha provisionado aquí ningún cliente ni se ha modificado producción.  
 **Alcance:** Auth, API, Storage y Support. Chorus utiliza una integración independiente y queda fuera de esta matriz.
 
+> Esta matriz cubre clientes OAuth M2M emitidos por osap-auth. Noticias y publicidad usan actualmente tokens de servicio estáticos propios (`OSAP_NEWS_API_TOKEN` y `OSAP_ADS_SERVICE_TOKEN`); no deben confundirse con JWT M2M ni reutilizar credenciales de Auth.
+
 ## Principios
 
 - `osap-auth` es el emisor central de service tokens OAuth2 `client_credentials`.
