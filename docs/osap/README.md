@@ -64,6 +64,11 @@ La decisión de iniciar la implementación V6 requiere cerrar el inventario de c
 - incidents/: informes de incidentes con fecha; válidos para el episodio descrito, no como diagnóstico actual.
 - old/: investigación histórica y documentación obsoleta.
 - adr/: decisiones de arquitectura. Una ADR registra una decisión en su contexto temporal; comprobar si ha sido sustituida por otra posterior.
+- [F4 — migración de búsqueda](f4-search-migration.md): registro de migración completada en septiembre de 2026; no es runbook.
+- [Capa Provider v1.3](providers-layer.md): snapshot de proveedores de agosto de 2026; no es inventario actual.
+- [F5 — deuda estructural](f5-structural-debt.md): auditoría read-only histórica de septiembre de 2026.
+- [Decisiones Support](support-decisions.md): ADR de dominio; implementación vigente en AI_osap-support.
+- [Frontera frontend Support v1](support-frontend-boundary-v1.md): diseño pre-extracción histórico.
 - v1/, v2/, v3/: documentación de versiones anteriores, en proceso de clasificación como histórica.
 
 ## 7. Manual público
