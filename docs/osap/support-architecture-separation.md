@@ -1,5 +1,7 @@
 # OSAP — Separación de Chorus y diseño del servicio OSAP Support/Membership
 
+> **DISEÑO HISTÓRICO DE SEPARACIÓN.** La separación de Support ya está implementada en su repositorio propio. Consultar [AI_osap-support](https://github.com/recursosformacion/AI_osap-support), [la arquitectura actual](current-architecture.md) y [la matriz M2M](m2m-service-matrix.md).
+
 > **Documento de propuesta arquitectónica. Sin cambios de código (regla principal respetada).**
 > Referencias: `docs/osap/support-ecosystem-architecture.md`, `docs/osap/support-tech-plan.md`,
 > `docs/osap/support-phase1-support-page.md`, `docs/chorus-vision.md`, `docs/osap/adr/0001-osap-chorus-independent.md`,
