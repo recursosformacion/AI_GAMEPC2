@@ -1,5 +1,7 @@
 # F5 — Deuda estructural: inventario y plan de división
 
+> **AUDITORÍA HISTÓRICA — 2026-09-09.** Es una fotografía read-only de deuda estructural de esa fecha, no un backlog vigente ni una descripción garantizada del tamaño actual de los módulos. Revalidar cada hallazgo contra el código antes de actuar.
+
 **Estado:** espiga read-only (2026-09-09). Sin cambios de código. Disciplina: inventario de
 responsabilidades → división mecánica → **cero cambios funcionales** (cada extracción empieza
 y termina con la suite verde; facades/re-exports para no romper imports; no se aprovecha el
