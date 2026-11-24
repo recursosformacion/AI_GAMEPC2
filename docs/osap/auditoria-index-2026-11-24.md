@@ -67,7 +67,7 @@ Antes de escribir en ninguna base de datos:
 
 No borrar la representación ni separar la Work basándose solo en el título mostrado: primero hay que confirmar la identidad nativa y la fila exacta.
 
-## 5. Criterio de aceptación
+## 6. Criterio de aceptación
 
 - La ficha de IDP 3 solo muestra materiales que pertenecen a IDP 3 o que se han verificado como ediciones/arreglos de esa misma obra.
 - IDP 2 aparece en su propia Work.
