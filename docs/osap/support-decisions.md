@@ -1,5 +1,7 @@
 # OSAP Support — Decisiones arquitectónicas (ADR) y registro de variantes
 
+> **REGISTRO ADR HISTÓRICO Y NORMATIVO.** Las decisiones de dominio siguen siendo referencia, pero la descripción de implementación y los estados operativos deben contrastarse con [current-architecture.md](current-architecture.md), [m2m-service-matrix.md](m2m-service-matrix.md) y el repositorio AI_osap-support.
+
 > **Registro consolidado de decisiones de OSAP Support.** Nacido en la **fase documental**
 > (2026-08-29, ADR-001…012); el servicio `osap-support` se implementó y se cerró para
 > producción (2026-09-05) siguiendo esas decisiones. ADR-013…017 (2026-09-06) amplían el
