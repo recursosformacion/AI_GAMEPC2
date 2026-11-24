@@ -242,6 +242,20 @@ def _title_numbers(title: str) -> set[str]:
     return set(re.findall(r"\d+", str(title or "")))
 
 
+def _disambiguated_tk(base_tk: str, title: str) -> str:
+    """Añade los números del título a la clave cuando dos obras comparten el título base.
+
+    Evita que obras de la misma persona con el mismo `title_key` pero distinto número
+    (p. ej. «Violin Concerto No.1 in F major» y «… No.3 in B-flat major» -> «violin
+    concerto») colisionen en la clave única `(title_key, person_id)` y una absorba la
+    representación de la otra.
+    """
+    numbers = sorted(_title_numbers(title), key=lambda value: (len(value), value))
+    if not numbers:
+        return base_tk[:255]
+    return f"{base_tk} {' '.join(numbers)}"[:255]
+
+
 def _tokens_subset_sets(a: set[str], b: set[str]) -> bool:
     """Versión sobre conjuntos ya normalizados (evita recalcular `title_key`)."""
     if not a or not b:
@@ -973,14 +987,19 @@ def _ingest_page(
 
     inserted = updated = skipped = 0
     with api.cursor() as cur:
-        # 1) Prefetch de las filas existentes de la página por title_key (1 consulta por lote).
-        tks = sorted({r["tk"] for r in prepared})
+        # 1) Prefetch de las filas existentes de la página por title_key, incluyendo las
+        #    claves desambiguadas por número (No.1/No.3) para localizar obras ya separadas.
+        candidate_tks = {r["tk"] for r in prepared}
+        for record in prepared:
+            if _title_numbers(record["title"]):
+                candidate_tks.add(_disambiguated_tk(record["tk"], record["title"]))
+        tks = sorted(candidate_tks)
         existing: dict[tuple[str, str], dict] = {}
         for start in range(0, len(tks), 500):
             chunk = tks[start : start + 500]
             placeholders = ",".join(["%s"] * len(chunk))
             cur.execute(
-                "SELECT id, title_key, person_id, composer_name FROM index_works "
+                "SELECT id, title_key, person_id, composer_name, title FROM index_works "
                 f"WHERE title_key IN ({placeholders})",
                 chunk,
             )
@@ -1066,7 +1085,23 @@ def _ingest_page(
         for record, row in resolved:
             strong = False
             if row is None:
+                base_tk = record["tk"]
                 cid = str(record.get("person_id") or "")
+                candidate_keys = [(base_tk, cid)]
+                if record.get("composer_name"):
+                    candidate_keys.append((base_tk, f"name:{record['composer_name']}"))
+                # Si el título base ya existe para la misma persona pero con otro número
+                # (No.1 vs No.3), desambiguar la clave en vez de absorber la obra.
+                numbers = _title_numbers(record["title"])
+                if numbers:
+                    for candidate in candidate_keys:
+                        existing_row = existing.get(candidate)
+                        if not existing_row:
+                            continue
+                        existing_numbers = _title_numbers(existing_row.get("title") or "")
+                        if existing_numbers and existing_numbers != numbers:
+                            record["tk"] = _disambiguated_tk(base_tk, record["title"])
+                            break
                 row = existing.get((record["tk"], cid))
                 if row is None and record.get("composer_name"):
                     row = existing.get((record["tk"], f"name:{record['composer_name']}"))

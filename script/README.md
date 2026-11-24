@@ -20,6 +20,7 @@ Esta carpeta se divide por **frecuencia de uso**. La regla es simple:
 | `migrate_index_schema.py` | DDL idempotente del índice. |
 | `finalize_index_identity.py`, `resolve_index_composers.py` | Identidad del índice. |
 | `audit_index_associations.py` | Diagnóstico SQL de solo lectura de números de obra incompatibles en una Work. |
+| `repair_index_split_pieltain.py`, `test_repair_index_split_pieltain.ps1` | Split No.1/No.3 de Pieltain: reparación dirigida y prueba en dev (conserva IDs/aliases de la No.3). |
 | `export_api_schema_inventory.py` | Exporta tablas, columnas, índices y claves foráneas desde information_schema, solo lectura. |
 | `indexnow.py`, `notify.py` | Avisos posteriores al reindexado. |
 | `backfill_source_ids.py`, `backfill_index_url_aliases.py` | Backfills de la migración de IDs. |

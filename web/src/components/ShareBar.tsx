@@ -155,7 +155,6 @@ export function ShareBar({
 
   return (
     <div className={`flex flex-wrap items-center gap-1.5 text-xs ${className}`}>
-      <span className="text-osap-muted">{t("friends.share")}:</span>
       {targets.map((target) => (
         <a
           key={target.key}

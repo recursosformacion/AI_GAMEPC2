@@ -16,6 +16,7 @@ import { buildNoteSequence, type NoteSequenceLike } from "../viewer/osmdSequence
 import { SynthPlayer } from "../viewer/audioSynth";
 import { parseMidi } from "../viewer/midi";
 import { limitMeasures } from "../viewer/musicxmlLimit";
+import { chorusBaseUrl } from "../lib/chorus";
 
 type State = "loading" | "rendering" | "ready" | "midi" | "pdf" | "error";
 
@@ -182,7 +183,7 @@ export function ViewerPage() {
     ).toString();
     const viewerBase =
       import.meta.env.VITE_MUSEENCORE_VIEWER_URL ||
-      "https://chorus.openmusicrepository.com/muse-viewer/";
+      `${chorusBaseUrl()}/muse-viewer/`;
     window.open(`${viewerBase}?url=${encodeURIComponent(source)}`, "_blank", "noopener");
   };
 

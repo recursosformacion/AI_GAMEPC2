@@ -1,7 +1,7 @@
 # Auditoría de asociación de representaciones del índice
 
 **Fecha:** 2026-11-24.  
-**Estado:** incidencia confirmada en una ficha pública; causa de los datos persistidos pendiente de traza SQL de solo lectura.  
+**Estado:** incidencia confirmada en una ficha pública; causa persistida confirmada; reparación preparada y probada en dev.  
 **Producción:** no se han ejecutado escrituras, reconstrucciones ni migraciones.
 
 ## 1. Caso reproducible
@@ -40,7 +40,7 @@ Commits:
 - `14f736d` — aplicación de la referencia original en el enriquecimiento.
 - `8928d2d` — pruebas de regresión.
 
-**Pruebas:** se han añadido tres pruebas nuevas, pero no se han ejecutado en el entorno de esta revisión. El estado de CI del commit no devolvió resultados; hay que ejecutar la suite local antes de considerar validada la corrección.
+**Pruebas:** la suite completa de osap-api se ejecutó el 2026-11-24 durante la verificación del despliegue 6.4.1: **968 passed, 2 skipped**, incluidas las pruebas añadidas; CI queda pendiente de confirmación externa.
 
 Esta corrección evita nuevas asociaciones de este tipo en el recorrido de enriquecimiento, pero **no repara las filas que ya están almacenadas en `index_representations`**.
 
@@ -76,3 +76,20 @@ No borrar la representación ni separar la Work basándose solo en el título mo
 - La búsqueda no vuelve a unir obras con números explícitos distintos.
 - Los IDs públicos antiguos continúan resolviendo al destino correcto, sin colisiones ni redirecciones a obras ajenas.
 - El rebuild y la reparación son idempotentes y no pierden representaciones legítimas.
+
+## 7. Traza confirmada y reparación preparada (2026-11-24)
+
+**Storage (fuente correcta):**
+
+| Obra Storage | Título | Catálogo | Origen IMSLP |
+|---|---|---|---|
+| 562742 | Violin Concerto No.1 in F major | IDP 2 | 533293 |
+| 562936 | Violin Concerto No.3 in B-flat major | IDP 3 | 533295 |
+
+**Índice vivo (producción):** `index_works` 459747 (`public_id index-376284cace625701f1ef`, título No.3, catálogo IDP 3, `title_key "violin concerto"`, person Pieltain) contiene dos representaciones: `source_rep_id 533293` (No.1, incorrecta) y `533295` (No.3). En dev el caso es idéntico con `index_works` 431086 (`public_id index-431086`). La fuente `osap_api_legacy_import` solo tiene la obra No.3; la No.1 existe en Storage.
+
+**Causa:** `script/index_works.py` calcula `record["tk"] = title_key(title)` (que descarta números) y el índice tiene la clave única `(title_key, person_id)`. Los dos conciertos de Pieltain comparten `"violin concerto"` + persona, por lo que el builder/merge absorbe la No.1 en la No.3. La corrección del enriquecimiento (`MetadataNormalizer`) evita nuevas coincidencias difusas, pero no repara filas persistidas.
+
+**Reparación dev (preparada y probada):** `script/repair_index_split_pieltain.py` (dry-run/apply, backup JSON, transacción, idempotente) crea la obra No.1 con `public_id index-562742` (estable, derivado de la obra Storage), `title_key "violin concerto 1"` y catálogo IDP 2; mueve la representación 533293 y copia los voicings. **No modifica** `public_id`, catálogo, título ni `title_key` de la No.3, ni `index_id_aliases`/`legacy_index_map`, ni osap-storage. `script/test_repair_index_split_pieltain.ps1` ejecuta el caso sobre `osap_api_repair_test`: **16/16 PASS**. El builder incorpora `_disambiguated_tk` y detección de colisión de números en `index_works.py` (prueba unitaria 2/2) para evitar la reincidencia en futuros rebuilds.
+
+**Producción pendiente:** no se ha aplicado. Antes de hacerlo: backup verificable, autorización explícita y revisión del mapa de IDs/aliases. La No.3 conserva su `public_id` actual (`index-376284…`, que coincide con el hash de la fuente No.1) y su alias `/obras/index-533295`; la No.1 nueva usará `index-562742`. No se alteran IDs ni aliases existentes; hay que validar 301/sitemap antes del corte.

@@ -21,7 +21,7 @@ def build_quota_store(
     read_only: bool = False,
 ) -> _MemoryStore:
     """Factoría: MySQL con fallback a memoria si no está disponible."""
-    if not all((host, user, password, database)):
+    if host is None or user is None or password is None or database is None:
         _LOGGER.info("Configuración MySQL incompleta; usando almacén en memoria")
         return _MemoryStore()
     try:

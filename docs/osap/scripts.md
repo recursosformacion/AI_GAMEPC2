@@ -24,6 +24,8 @@ El contenido de `script/oneoff/` es histórico. Antes de reutilizar una herramie
 | `migrate_index_schema.py` | DDL idempotente del esquema del índice | Es una operación de esquema; revisar migraciones aplicadas primero |
 | `finalize_index_identity.py`, `resolve_index_composers.py` | Normalización y resolución de identidad | Validar muestra, duplicados y relaciones antes de aceptar cambios |
 | `audit_index_associations.py` | Diagnóstico SQL de solo lectura de títulos/números incompatibles | Requiere confirmar la BD; bloquea producción salvo autorización explícita |
+| `repair_index_split_pieltain.py` | Split dirigido No.1/No.3 de Pieltain (dry-run/apply) conservando el `public_id`/catálogo/aliases de la No.3 | Backup + confirmación de BD; no ejecutar en producción sin autorización |
+| `test_repair_index_split_pieltain.ps1` | Prueba en dev del split sobre `osap_api_repair_test` | Solo dev/test; crea y borra su BD de test |
 | `export_api_schema_inventory.py` | Exporta el esquema desde information_schema | Requiere confirmar la BD; bloquea producción salvo autorización explícita |
 | `backfill_source_ids.py`, `backfill_index_url_aliases.py` | Backfills de identificadores y aliases | No repetir sin comprobar idempotencia y estado previo |
 

@@ -27,7 +27,7 @@ def test_focused_enrichment_keeps_same_number_across_editions() -> None:
     assert _title_core_match(core, candidate, reference_title=reference)
 
 
-def test_focused_enrichment_preserves_un-numbered_title_matching() -> None:
+def test_focused_enrichment_preserves_un_numbered_title_matching() -> None:
     reference = "Ave Verum Corpus"
     candidate = "Ave Verum Corpus a 4"
     core = _core(reference, "Wolfgang Amadeus Mozart")
