@@ -43,7 +43,7 @@ No usar el antiguo libro V2.2 como descripción de la arquitectura desplegada.
 - Auth, Storage y Support mantienen sus runbooks, migraciones y configuración interna en sus repositorios respectivos.
 - La configuración real de producción solo se considera verificada después de comprobar el servicio desplegado y su comportamiento HTTP; el código y las plantillas no bastan.
 
-## 4. V6 — PLAN, todavía no implementado como modelo de producción
+## 5. V6 — PLAN, todavía no implementado como modelo de producción
 
 Los documentos siguientes describen la remodelación Work → Resource → File y sus impactos. No deben utilizarse para interpretar el esquema actual como si la migración ya estuviera ejecutada:
 
@@ -58,18 +58,18 @@ Los documentos siguientes describen la remodelación Work → Resource → File 
 
 La decisión de iniciar la implementación V6 requiere cerrar el inventario de columnas, consumidores, contratos, migración y validaciones. No se debe inferir que un documento de planificación autoriza escrituras o migraciones en producción.
 
-## 5. Auditorías, incidencias y documentación histórica
+## 6. Auditorías, incidencias y documentación histórica
 
 - incidents/: informes de incidentes con fecha; válidos para el episodio descrito, no como diagnóstico actual.
 - old/: investigación histórica y documentación obsoleta.
 - adr/: decisiones de arquitectura. Una ADR registra una decisión en su contexto temporal; comprobar si ha sido sustituida por otra posterior.
 - v1/, v2/, v3/: documentación de versiones anteriores, en proceso de clasificación como histórica.
 
-## 6. Manual público
+## 7. Manual público
 
 El manual de usuario vive en web/public/manual/. El castellano es el texto maestro. La revisión debe contrastar cada instrucción con la interfaz actual y las operaciones reales; las traducciones no se consideran correctas solo por existir.
 
-## 7. Regla de actualización
+## 8. Regla de actualización
 
 Cuando cambie una funcionalidad:
 
