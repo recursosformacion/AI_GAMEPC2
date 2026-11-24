@@ -6,7 +6,7 @@
 #
 # Servicios (host 127.0.0.1): osap-storage 8000, osap-api 8001, ai-noticias 8401, osap-auth 8200,
 # osap-support 8300, osap-blog 8500, chorus 9600, ai-publicidad 8305 y osap-ssr 3000 (Node: HTML SSR de
-# compositores y obras).
+# compositores, obras y representaciones).
 # Apache (osap-app) NO se toca: sirve la SPA y hace de proxy.
 #
 # Uso:
