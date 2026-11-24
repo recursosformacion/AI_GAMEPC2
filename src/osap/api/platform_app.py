@@ -194,7 +194,7 @@ def create_platform_app(
     app.include_router(build_quota_router(ctx))
     app.include_router(build_omr_router(ctx))
 
-    # --- capa pública SEO (HTML server-rendered: /compositor y /obra) ---------
+    # --- capa pública SEO (HTML server-rendered: /composers y /obras) --------
     app.include_router(build_seo_router(ctx))
 
     # --- sitemaps dinámicos (/sitemap.xml + /sitemaps/{kind}-{page}.xml) ------
