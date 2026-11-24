@@ -1,5 +1,7 @@
 # Frontend — Fronteras v1 · SupportGateway y mapa de código (Chorus / osap-app / compartido)
 
+> **DISEÑO HISTÓRICO PRE-EXTRACCIÓN — 2026-08-29.** Este documento describe una frontera frontend temporal anterior a la existencia del servicio independiente osap-support. No usarlo como mapa de código actual; consultar [current-architecture.md](current-architecture.md), [m2m-service-matrix.md](m2m-service-matrix.md) y el repositorio AI_osap-support.
+
 > **Estado:** Fase Técnica 1 (modificación mínima y reversible).
 > Referencias: `support-architecture-separation.md` (arquitectura), `support-ecosystem-architecture.md`, `support-phase1-support-page.md`.
 > Fecha: 2026-08-29
