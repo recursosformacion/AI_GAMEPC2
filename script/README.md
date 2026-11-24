@@ -19,6 +19,7 @@ Esta carpeta se divide por **frecuencia de uso**. La regla es simple:
 | `weekly_novelties.py` | Rutina semanal; reindexa con el rebuild seguro. |
 | `migrate_index_schema.py` | DDL idempotente del índice. |
 | `finalize_index_identity.py`, `resolve_index_composers.py` | Identidad del índice. |
+| `audit_index_associations.py` | Diagnóstico SQL de solo lectura de números de obra incompatibles en una Work. |
 | `indexnow.py`, `notify.py` | Avisos posteriores al reindexado. |
 | `backfill_source_ids.py`, `backfill_index_url_aliases.py` | Backfills de la migración de IDs. |
 | `deploy.ps1`, `deploy_all.ps1`, `deploy_with_maintenance.ps1` | Despliegue. |
