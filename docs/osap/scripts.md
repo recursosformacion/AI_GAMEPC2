@@ -34,6 +34,8 @@ El contenido de `script/oneoff/` es histórico. Antes de reutilizar una herramie
 El inventario operativo incluye:
 
 - `deploy.ps1`, `deploy_all.ps1`, `deploy_with_maintenance.ps1`: procedimientos de despliegue.
+- `deploy_ads.ps1`: despliega `ai_publicidad` (tar + `pip install -e .` + restart de `ai-publicidad`) y verifica que `/auth/session` sea POST-only y valide `Origin`. Uso: `powershell -File script/deploy_ads.ps1`.
+- `deploy_blog.ps1`: despliega `osap-blog` (tar + `requirements.txt` + restart de `osap-blog`) y verifica `/health`, que GET `/auth/session?token=` devuelva 405 y que POST con `Origin` ajeno devuelva 403. Requiere `OSAP_BLOG_SESSION_SECRET` en `/etc/openmusicrepository/osap-blog.env`. Uso: `powershell -File script/deploy_blog.ps1 -Apply` (sin `-Apply` es dry-run).
 - Scripts de backup, comprobación y smoke test.
 - `restart-dev.ps1`, `restart-dev.*` y `osap-tunnel.ps1`: desarrollo local.
 

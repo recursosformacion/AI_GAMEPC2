@@ -92,6 +92,23 @@ Sí se commitean en el repo correspondiente para que el despliegue los reproduzc
 | Programas afectados | todos | ≥1 | exactamente 1 |
 
 ## Historial
+- **6.6.0 (B) — handoffs admin, storage y sesión propia del blog (2026-11-25)**: cierra
+  la corrección de los cuatro handoffs administrativos y los fallos detectados al revisar
+  el ecosistema. `ai_publicidad` 0.6.0, `osap-blog`, `osap-support` y `osap-storage` usan
+  POST con validación de `Origin` contra `admin_handoff_origins` (OSAP app). Se corrige el
+  403 que quedaba tras el handoff: nginx bloqueaba la navegación a `/admin/maestros`
+  (y `/favicon.ico`) porque el 303 llega sin `Referer`/`Origin` y desde una IP de
+  Cloudflare; ahora se acepta la petición si existe `osap_storage_admin` (o
+  `osap_support_admin` en support) y el backend sigue validando el token y el scope.
+  `osap-storage` tolera representaciones sin `relative_path` (obras externas) y cae al
+  `file_id` en vez de devolver 500. El handoff del blog deja de compartir el refresh de
+  OSAP: solo viaja el access token y el blog borra la cookie de refresh, evitando
+  rotaciones cruzadas. Incluye la SPA 6.6.0 (`submitAdminHandoff`, visor `/muse/`) y los
+  scripts `deploy_ads.ps1`/`deploy_blog.ps1`. Sin cambios de esquema, contrato ni IDs.
+  Evidencia: POST storage 303 seguido de navegación permitida; support con la misma
+  regla; `pytest tests/api/test_urls.py` 3; blog 22; build SPA; `nginx -t` y reload;
+  `/admin/maestros` deja de devolver el 403 de nginx. Backup: configuración de storage,
+  support y blog en `/root` y `/tmp` del servidor.
 - **6.5.0 (B) — osap-api + osap-auth (2026-11-24)**: Chorus deja de compartir el
   refresh token de OSAP (enlaces sin tokens; el handoff ignora e invalida cookies
   heredadas) y crea su propia sesión OIDC con renovación proactiva. `osap-auth` limita

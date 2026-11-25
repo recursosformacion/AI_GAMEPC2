@@ -9,6 +9,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
 import { ApiError } from "../api/errors";
+import { submitAdminHandoff } from "../lib/adminHandoff";
 import type { WorkAiProposal, WorkAiProposalStatus, WorkAiReviewAction } from "../api/types";
 import { Card } from "../components/Card";
 import { Spinner } from "../components/Spinner";
@@ -160,20 +161,9 @@ export function AdminWorkPersonAiPage() {
     void (async () => {
       try {
         const handoff = await apiClient.createStorageWebHandoff("work-persons");
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = handoff.url;
-        form.target = target;
-        for (const [name, value] of Object.entries({ token: handoff.token, next: handoff.next })) {
-          const input = document.createElement("input");
-          input.type = "hidden";
-          input.name = name;
-          input.value = value;
-          form.appendChild(input);
+        if (!submitAdminHandoff(handoff, target)) {
+          throw new Error("el navegador no pudo enviar el formulario de sesión");
         }
-        document.body.appendChild(form);
-        form.submit();
-        form.remove();
       } catch {
         popup.close();
         setError("El mantenimiento de Storage no está disponible.");

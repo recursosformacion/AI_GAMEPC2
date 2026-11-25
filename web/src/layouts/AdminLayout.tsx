@@ -9,6 +9,7 @@
 import type { ReactNode } from "react";
 import { Link, NavLink, Outlet, useNavigate } from "react-router-dom";
 import { apiClient } from "../api/ApiClient";
+import { submitAdminHandoff } from "../lib/adminHandoff";
 import { useI18n } from "../i18n/I18n";
 import type { TKey } from "../i18n/translations";
 import { useOidcLogin } from "../components/useOidcLogin";
@@ -129,20 +130,9 @@ export function AdminLayout(): ReactNode {
     void (async () => {
       try {
         const handoff = await apiClient.createStorageWebHandoff(section);
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = handoff.url;
-        form.target = target;
-        for (const [name, value] of Object.entries({ token: handoff.token, next: handoff.next })) {
-          const input = document.createElement("input");
-          input.type = "hidden";
-          input.name = name;
-          input.value = value;
-          form.appendChild(input);
+        if (!submitAdminHandoff(handoff, target)) {
+          throw new Error("el navegador no pudo enviar el formulario de sesión");
         }
-        document.body.appendChild(form);
-        form.submit();
-        form.remove();
       } catch (error) {
         popup.close();
         const detail = error instanceof Error ? error.message : String(error);
@@ -162,20 +152,9 @@ export function AdminLayout(): ReactNode {
     void (async () => {
       try {
         const handoff = await apiClient.createAdsWebHandoff();
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = handoff.url;
-        form.target = target;
-        for (const [name, value] of Object.entries({ token: handoff.token, next: handoff.next })) {
-          const input = document.createElement("input");
-          input.type = "hidden";
-          input.name = name;
-          input.value = value;
-          form.appendChild(input);
+        if (!submitAdminHandoff(handoff, target)) {
+          throw new Error("el navegador no pudo enviar el formulario de sesión");
         }
-        document.body.appendChild(form);
-        form.submit();
-        form.remove();
       } catch (error) {
         popup.close();
         const detail = error instanceof Error ? error.message : String(error);
@@ -195,20 +174,9 @@ export function AdminLayout(): ReactNode {
     void (async () => {
       try {
         const handoff = await apiClient.createSupportWebHandoff(section);
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = handoff.url;
-        form.target = target;
-        for (const [name, value] of Object.entries({ token: handoff.token, next: handoff.next })) {
-          const input = document.createElement("input");
-          input.type = "hidden";
-          input.name = name;
-          input.value = value;
-          form.appendChild(input);
+        if (!submitAdminHandoff(handoff, target)) {
+          throw new Error("el navegador no pudo enviar el formulario de sesión");
         }
-        document.body.appendChild(form);
-        form.submit();
-        form.remove();
       } catch (error) {
         popup.close();
         const detail = error instanceof Error ? error.message : String(error);

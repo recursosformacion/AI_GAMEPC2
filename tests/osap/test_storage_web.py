@@ -35,6 +35,9 @@ def _handoff(section: str | None) -> dict[str, str]:
 
 def test_secciones_curadas() -> None:
     assert _handoff("composers") == {
+        # Produce iterado hoy en producción: /admin/session/ responde 405 al POST y además
+        # nginx descarta el cuerpo al redirigir, así que la URL debe ser exactamente la del
+        # endpoint (@router.post("/admin/session")).
         "url": "https://storage.example/admin/session",
         "token": "TOK",
         "next": "/admin/maestros",

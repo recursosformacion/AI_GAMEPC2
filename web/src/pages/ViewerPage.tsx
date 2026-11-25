@@ -181,9 +181,11 @@ export function ViewerPage() {
       `/api/v1/representations/${encodeURIComponent(rep)}/download/viewer.mxl?view=1`,
       window.location.origin,
     ).toString();
+    // El visor MuseEncore se sirve en Chorus bajo /muse/. /muse-viewer/ no existe:
+    // cae en el fallback de la SPA de Chorus y el usuario se queda en la app principal.
     const viewerBase =
       import.meta.env.VITE_MUSEENCORE_VIEWER_URL ||
-      `${chorusBaseUrl()}/muse-viewer/`;
+      `${chorusBaseUrl()}/muse/`;
     window.open(`${viewerBase}?url=${encodeURIComponent(source)}`, "_blank", "noopener");
   };
 

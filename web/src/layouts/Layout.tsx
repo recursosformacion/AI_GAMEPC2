@@ -22,18 +22,15 @@ import { useAuth } from "../state/auth";
 import { useNotifications } from "../state/notifications";
 import { useSystem } from "../state/system";
 
-function submitBlogSessionHandoff(
-  accessToken: string,
-  refreshToken: string | null | undefined,
-  next = "/admin",
-) {
+function submitBlogSessionHandoff(accessToken: string, next = "/admin") {
   const form = document.createElement("form");
   form.method = "POST";
   form.action = blogSessionUrl();
   form.hidden = true;
 
+  // No se comparte el refresh token: lo rota OSAP y el blog debe usar una
+  // sesión propia. Con solo el access token el blog vuelve a pedir handoff.
   const fields: Record<string, string> = { access_token: accessToken, next };
-  if (refreshToken) fields.refresh_token = refreshToken;
 
   for (const [name, value] of Object.entries(fields)) {
     const input = document.createElement("input");
@@ -313,7 +310,6 @@ function SidebarSection({
   const { t } = useI18n();
   const location = useLocation();
   const token = useAuth((s) => s.accessToken);
-  const refreshToken = useAuth((s) => s.refreshToken);
   const hrefFor = (entry: NavItem) =>
     entry.sessionHandoff
       ? blogHomeUrl()
@@ -328,7 +324,7 @@ function SidebarSection({
     if (!entry.sessionHandoff || !token) return;
     event.preventDefault();
 
-    submitBlogSessionHandoff(token, refreshToken, "/admin");
+    submitBlogSessionHandoff(token, "/admin");
   };
   return (
     <div className="mt-5">
@@ -466,7 +462,7 @@ function TopBar({ onMenu }: { onMenu: () => void }) {
       token = useAuth.getState().accessToken;
     }
     if (!token) return false;
-    submitBlogSessionHandoff(token, useAuth.getState().refreshToken, "/admin");
+    submitBlogSessionHandoff(token, "/admin");
     return true;
   }, []);
   const { start: startOidc, error: oidcError } = useOidcLogin(handoffToBlog);
