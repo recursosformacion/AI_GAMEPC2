@@ -32,7 +32,13 @@ class SeoMixin(PlatformApiCore):
         return cast("str | None", getter(work_id)) if callable(getter) else None
 
     def seo_work(self, work_id: str) -> dict[str, object] | None:
-        """Ficha de obra del índice local (None si no existe o el índice no responde)."""
+        """Ficha de obra del índice local (None si no existe o el índice no responde).
+
+        El índice es la fuente de la ficha pública; los metadatos ampliados
+        (descripción, géneros, opus, tonalidad, fuente) deben incorporarse al índice
+        durante la sincronización, no resolverse por id contra storage (los ids no
+        coinciden entre ambos).
+        """
         provider = self._index_provider()
         if provider is None:
             return None

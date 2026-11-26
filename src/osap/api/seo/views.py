@@ -97,6 +97,19 @@ class WorkView:
     canonical_url: str = ""
     description: str = ""
     json_ld: str = ""
+    # Contenido y metadatos ampliados de la obra (procedentes de storage).
+    description_text: str = ""
+    genres: list[str] = field(default_factory=list)
+    opus: str | None = None
+    musical_key: str | None = None
+    source_url: str | None = None
+    license: str | None = None
+    public_domain: bool = False
+    attribution_type: str | None = None
+    duration: str | None = None
+    language: str | None = None
+    epoch: str | None = None
+    source_links: list[AuthorityLink] = field(default_factory=list)
     # Hay página SSR del compositor (algunos anónimos no la tienen: enlazar daría 404).
     composer_page: bool = True
 
@@ -198,6 +211,22 @@ def build_work_view(
     year = _int_or_none(data.get("year"))
     instrumentation = _str_or_none(data.get("instrumentation"))
     composer_slug = person_slug(composer) if composer else None
+    opus = _str_or_none(data.get("opus"))
+    musical_key = _str_or_none(data.get("musical_key"))
+    source_url = _str_or_none(data.get("source_url"))
+    license_name = _str_or_none(data.get("license"))
+    public_domain = bool(data.get("public_domain"))
+    attribution_type = _str_or_none(data.get("attribution_type"))
+    duration = _str_or_none(data.get("duration"))
+    language = _str_or_none(data.get("language"))
+    epoch = _str_or_none(data.get("epoch") or data.get("epoch_title"))
+    raw_genres = data.get("genres")
+    genres = [
+        str(item).strip()
+        for item in (raw_genres if isinstance(raw_genres, list) else [])
+        if str(item).strip()
+    ]
+    description_text = _str_or_none(data.get("description")) or ""
 
     raw_reps = data.get("representations")
     representations: list[RepresentationLink] = []
@@ -233,12 +262,26 @@ def build_work_view(
 
     canonical = canonical_work_url(work_id, slug)
     composer_label = composer or "compositor desconocido"
-    description = (
+    if not description_text:
+        parts = [f"«{title}» es una obra de {composer_label}"]
+        if year:
+            parts.append(f"compuesta en {year}")
+        if instrumentation:
+            parts.append(f"para {instrumentation}")
+        if genres:
+            parts.append(f"del género {genres[0]}")
+        description_text = ", ".join(parts) + "."
+    description = _clip(
         f"{title} de {composer_label}"
         + (f" ({catalogue})" if catalogue else "")
         + (f", {year}" if year else "")
-        + ". Partituras y recursos disponibles en OpenMusicRepository."
+        + f". {description_text}"
     )
+    source_links: list[AuthorityLink] = []
+    if source_url and source_url.startswith("http"):
+        host = urlsplit(source_url).netloc.lower()
+        label = "IMSLP" if "imslp.org" in host else "CPDL" if "cpdl.org" in host else host
+        source_links.append(AuthorityLink(label=label, url=source_url))
 
     breadcrumb: list[tuple[str, str | None]] = [("Inicio", public_base_url() + "/")]
     if composer and composer_id and composer_slug and composer_page:
@@ -259,6 +302,17 @@ def build_work_view(
         composition["composer"] = composer_node
     if year:
         composition["datePublished"] = str(year)
+    composition["description"] = description_text
+    if genres:
+        composition["genre"] = genres
+    if musical_key:
+        composition["musicalKey"] = musical_key
+    if language:
+        composition["inLanguage"] = language
+    if source_url and source_url.startswith("http"):
+        composition["sameAs"] = source_url
+    if license_name and license_name.startswith("http"):
+        composition["license"] = license_name
 
     json_ld = _dump(
         {
@@ -282,6 +336,18 @@ def build_work_view(
         canonical_url=canonical,
         description=description,
         json_ld=json_ld,
+        description_text=description_text,
+        genres=genres,
+        opus=opus,
+        musical_key=musical_key,
+        source_url=source_url,
+        license=license_name,
+        public_domain=public_domain,
+        attribution_type=attribution_type,
+        duration=duration,
+        language=language,
+        epoch=epoch,
+        source_links=source_links,
         composer_page=composer_page,
     )
 

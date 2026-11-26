@@ -263,6 +263,32 @@ def test_titulo_con_script_no_rompe_json_ld() -> None:
     assert composition["name"] == "Ave </script><script>alert(1)</script>"
 
 
+def test_obra_con_descripcion_genero_y_fuente_en_html_y_json_ld() -> None:
+    work = {
+        **_WORK,
+        "description": "Motete eucarístico para coro y orquesta.",
+        "genres": ["Música Sacra / Himnología"],
+        "musical_key": "D mayor",
+        "source_url": "https://imslp.org/wiki/Ave_verum_corpus,_K.618_(Mozart,_Wolfgang_Amadeus)",
+        "public_domain": True,
+        "opus": "K. 618",
+        "epoch": "Clasicismo",
+    }
+    client = _client(_FakeApi(work=work))
+    resp = client.get("/obras/index-7/ave-verum-corpus")
+    assert resp.status_code == 200
+    assert "Sobre la obra" in resp.text
+    assert "Motete eucarístico para coro y orquesta." in resp.text
+    assert "Música Sacra / Himnología" in resp.text
+    assert "https://imslp.org/wiki/Ave_verum_corpus" in resp.text
+    payload = _json_ld(resp.text)
+    composition = next(node for node in payload["@graph"] if node["@type"] == "MusicComposition")
+    assert composition["description"] == "Motete eucarístico para coro y orquesta."
+    assert composition["genre"] == ["Música Sacra / Himnología"]
+    assert composition["musicalKey"] == "D mayor"
+    assert composition["sameAs"] == work["source_url"]
+
+
 def test_obra_sin_compositor_ni_recursos_genera_html_valido() -> None:
     lonely = {
         "work_id": "index-9",
