@@ -1,5 +1,7 @@
 # Matriz mínima de autenticación entre servicios OSAP
 
+**Actualización integral (2026-11-26):** se endurecieron los orígenes de handoff y se verificaron localmente los contratos de Storage, Publicidad y OSAP. Publicidad sigue usando delegación de usuario del handoff y no un service token como identidad de usuario.
+
 **Estado (2026-11-24):** integración API → Support implementada en código y cubierta por pruebas; la configuración de clientes y el smoke test HTTP de producción deben verificarse por separado. No se ha provisionado aquí ningún cliente ni se ha modificado producción.  
 **Alcance:** Auth, API, Storage y Support. Chorus utiliza una integración independiente y queda fuera de esta matriz.
 

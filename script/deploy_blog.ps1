@@ -35,5 +35,5 @@ rm -rf ~/deploy_tmp
 '@
 $remote = $remote.Replace("__REMOTE__", $RemoteDir)
 $tmpFile = Join-Path $env:TEMP "blog_deploy.sh"
-[IO.File]::WriteAllText($tmpFile, $remote.Replace("`r`n","`n"))
+[IO.File]::WriteAllText($tmpFile, $remote.Replace("`r`n", "`n"))
 Get-Content $tmpFile -Raw | ssh -o BatchMode=yes $HostAlias "bash -s"
