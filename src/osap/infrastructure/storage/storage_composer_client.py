@@ -123,6 +123,21 @@ class StorageComposerClient:
             return doc
         return None
 
+    def get_composer_admin_detail(self, person_id: str) -> dict[str, object] | None:
+        """Detalle completo del maestro (incluye identificadores y referencias).
+
+        Se usa en las fichas SEO para poder emitir `sameAs`, imagen y bibliografía.
+        """
+        status, doc = self._call_persons_first(
+            "GET",
+            f"/api/admin/composers/{_q(person_id)}",
+            scope="storage:admin",
+            provider=self._admin_token_provider,
+        )
+        if 200 <= status < 300 and isinstance(doc, dict):
+            return doc
+        return None
+
     def get_composer_biography(self, person_id: str) -> dict[str, object] | None:
         """Detalle público de una persona con su biografía (endpoint público de storage)."""
         status, doc = self._call_persons_first(
@@ -385,7 +400,9 @@ class StorageComposerClient:
         """Token de servicio storage:admin (client_credentials) para la web de administración."""
         if self._admin_token_provider is not None:
             try:
-                return self._admin_token_provider.token(("storage:admin",))
+                # Handoff al navegador: nunca reutilizar un token cacheado que pueda
+                # estar a punto de caducar (dejaba la sesión admin con segundos de vida).
+                return self._admin_token_provider.token(("storage:admin",), force_refresh=True)
             except Exception:  # noqa: BLE001
                 return ""
         return ""

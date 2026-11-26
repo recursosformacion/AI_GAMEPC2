@@ -97,11 +97,22 @@ class SeoMixin(PlatformApiCore):
         return None
 
     def seo_person(self, person_id: str) -> dict[str, object] | None:
-        """Ficha pública de una persona (con biografía). None si no es visible o falla."""
+        """Ficha pública de una persona (con biografía). None si no es visible o falla.
+
+        Se usa el detalle admin, que incluye identificadores de autoridad y referencias
+        (el DTO público de personas no los exponía), con fallback al endpoint público.
+        """
+        detail: dict[str, object] | None = None
         try:
-            detail = self.composers().get_composer_biography(person_id)
+            getter = getattr(self.composers(), "get_composer_admin_detail", None)
+            detail = getter(person_id) if callable(getter) else None
         except StorageComposerError:
-            return None
+            detail = None
+        if detail is None:
+            try:
+                detail = self.composers().get_composer_biography(person_id)
+            except StorageComposerError:
+                return None
         if detail is None or not bool(detail.get("visible", True)):
             return None
         return detail

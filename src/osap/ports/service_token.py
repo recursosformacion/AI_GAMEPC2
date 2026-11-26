@@ -12,5 +12,11 @@ class IServiceTokenProvider(ABC):
     """Emite/entrega un service token con los scopes solicitados."""
 
     @abstractmethod
-    def token(self, scopes: tuple[str, ...]) -> str:
+    def token(self, scopes: tuple[str, ...], *, force_refresh: bool = False) -> str:
+        """Devuelve un token con los scopes.
+
+        `force_refresh=True` obliga a pedir uno nuevo a osap-auth. Los handoffs al
+        panel admin lo usan para no entregar al navegador un token cacheado que puede
+        estar a pocos segundos de caducar.
+        """
         raise NotImplementedError

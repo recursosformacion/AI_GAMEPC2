@@ -66,3 +66,16 @@ def test_reutiliza_el_token_cacheado_por_scopes(monkeypatch) -> None:
     assert provider.token(("storage:admin",)) == "tok"
     assert seen["calls"] == 2
     assert seen["body"]["scope"] == "storage:admin"
+
+
+def test_force_refresh_ignora_la_cache_para_handoffs(monkeypatch) -> None:
+    seen = _capture(monkeypatch)
+    provider = stp.ClientCredentialsServiceTokenProvider("cid", "sec", "http://auth/oauth/token")
+
+    assert provider.token(("storage:admin",)) == "tok"
+    assert seen["calls"] == 1
+    assert provider.token(("storage:admin",), force_refresh=True) == "tok"
+    assert seen["calls"] == 2
+    # Tras el refresco forzado, la caché vuelve a servir el token nuevo.
+    assert provider.token(("storage:admin",)) == "tok"
+    assert seen["calls"] == 2

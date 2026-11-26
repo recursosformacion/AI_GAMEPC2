@@ -75,6 +75,9 @@ class ComposersService:
     def get_composer(self, person_id: str) -> dict[str, object] | None:
         return self._client.get_composer(person_id)
 
+    def get_composer_admin_detail(self, person_id: str) -> dict[str, object] | None:
+        return self._client.get_composer_admin_detail(person_id)
+
     def get_composer_biography(self, person_id: str) -> dict[str, object] | None:
         return self._client.get_composer_biography(person_id)
 

@@ -102,6 +102,14 @@ class WorkView:
 
 
 @dataclass(frozen=True)
+class AuthorityLink:
+    """Enlace a una fuente de autoridad o referencia externa."""
+
+    label: str
+    url: str
+
+
+@dataclass(frozen=True)
 class PersonView:
     person_id: str
     slug: str
@@ -116,6 +124,12 @@ class PersonView:
     canonical_url: str = ""
     description: str = ""
     json_ld: str = ""
+    # Texto único de la ficha: biografía si existe; si no, ficha catalográfica factual.
+    intro: str = ""
+    catalog_note: str = ""
+    authority_links: list[AuthorityLink] = field(default_factory=list)
+    reference_links: list[AuthorityLink] = field(default_factory=list)
+    has_biography: bool = False
     # Campos del formulario de persona (vista de solo lectura en la ficha pública).
     givenname: str | None = None
     familyname: str | None = None
@@ -331,6 +345,120 @@ def build_representation_payload(
     }
 
 
+_AUTHORITY_URLS: dict[str, tuple[str, str]] = {
+    "wikidata_qid": ("Wikidata", "https://www.wikidata.org/wiki/{value}"),
+    "viaf": ("VIAF", "https://viaf.org/viaf/{value}"),
+    "imslp": ("IMSLP", "https://imslp.org/wiki/{value}"),
+    "musicbrainz": ("MusicBrainz", "https://musicbrainz.org/artist/{value}"),
+    "mbid": ("MusicBrainz", "https://musicbrainz.org/artist/{value}"),
+    "gnd": ("GND", "https://d-nb.info/gnd/{value}"),
+    "isni": ("ISNI", "https://isni.org/isni/{value}"),
+    "rism": ("RISM", "https://rism.online/{value}"),
+    "bnf": ("BnF", "https://data.bnf.fr/ark:/12148/{value}"),
+    "lccn": ("LCCN", "https://id.loc.gov/authorities/names/{value}.html"),
+    "discogs": ("Discogs", "https://www.discogs.com/artist/{value}"),
+}
+
+
+def _authority_links(raw: object) -> list[AuthorityLink]:
+    if not isinstance(raw, list):
+        return []
+    links: list[AuthorityLink] = []
+    seen: set[str] = set()
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        kind = str(item.get("id_type") or item.get("identity_type") or "").lower()
+        value = str(item.get("id_value") or item.get("identity_value") or "").strip()
+        spec = _AUTHORITY_URLS.get(kind)
+        if not value or spec is None:
+            continue
+        label, template = spec
+        url = template.format(value=quote(value, safe="/'(),:_-"))
+        if url in seen:
+            continue
+        seen.add(url)
+        links.append(AuthorityLink(label=label, url=url))
+    return links
+
+
+def _reference_links(raw: object) -> list[AuthorityLink]:
+    if isinstance(raw, str):
+        items: list[object] = [part.strip() for part in raw.split(";") if part.strip()]
+    elif isinstance(raw, list):
+        items = raw
+    else:
+        items = []
+    links: list[AuthorityLink] = []
+    seen: set[str] = set()
+    for item in items:
+        if isinstance(item, dict):
+            label = str(item.get("source") or item.get("title") or item.get("label") or "").strip()
+            url = str(item.get("url") or "").strip()
+        else:
+            label = str(item).strip()
+            url = ""
+        if not label and not url:
+            continue
+        key = url or label.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        links.append(AuthorityLink(label=label or url, url=url))
+    return links
+
+
+def _image_url(raw: object) -> str | None:
+    image = _str_or_none(raw)
+    if not image:
+        return None
+    if image.startswith("//"):
+        return "https:" + image
+    if image.startswith("http://"):
+        host = urlsplit(image).netloc.lower()
+        if host in {"commons.wikimedia.org", "upload.wikimedia.org"}:
+            return "https://" + image[len("http://"):]
+        return image
+    if image.startswith("https://"):
+        return image
+    if image.startswith("/"):
+        return public_base_url() + image
+    # Wikidata P18 suele venir como nombre de fichero de Commons.
+    return "https://commons.wikimedia.org/wiki/Special:FilePath/" + quote(
+        image, safe="%/:"
+    )
+
+
+def _clip(text: str, limit: int = 158) -> str:
+    if len(text) <= limit:
+        return text
+    cut = text[: limit - 1].rsplit(" ", 1)[0].rstrip(" ,.;:")
+    return cut + "…"
+
+
+def _catalog_intro(
+    name: str,
+    years: str | None,
+    nationality: str | None,
+    era: str | None,
+    total: int,
+    titles: list[str],
+) -> str:
+    lead = f"{name}{f' ({years})' if years else ''}"
+    works_word = f"obra{'s' if total != 1 else ''}"
+    documented = f"documentada{'s' if total != 1 else ''}"
+    parts = [f"{lead} reúne {total} {works_word} {documented} en OpenMusicRepository"]
+    if nationality:
+        parts.append(f"con nacionalidad {nationality}")
+    if era:
+        parts.append(f"adscrito a la época {era}")
+    text = ", ".join(parts) + "."
+    if titles:
+        quoted = ", ".join(f"«{title}»" for title in titles[:4])
+        text += f" Entre las obras catalogadas figuran {quoted}."
+    return text
+
+
 def build_person_view(detail: dict[str, object], works: dict[str, object]) -> PersonView:
     person_id = str(detail.get("id") or "")
     name = str(detail.get("name") or "").strip() or "Compositor"
@@ -364,12 +492,33 @@ def build_person_view(detail: dict[str, object], works: dict[str, object]) -> Pe
                 )
             )
     total = _int_or_none(works.get("total")) or len(work_links)
+    authority_links = _authority_links(detail.get("identifiers"))
+    reference_links = _reference_links(detail.get("biography_references"))
+    display_nationality = _str_or_none(detail.get("nationality")) or nationality
+    image_url = _image_url(detail.get("image_url"))
+    has_biography = bool(summary)
+    work_titles = [link.title for link in work_links]
+    intro = summary or _catalog_intro(
+        name, years, display_nationality, era, total, work_titles
+    )
+    catalog_note = (
+        f"Ficha catalográfica de {name}: {total} obra{'s' if total != 1 else ''} "
+        f"documentada{'s' if total != 1 else ''} en OpenMusicRepository"
+        + (
+            f", con {len(authority_links)} enlace{'s' if len(authority_links) != 1 else ''} "
+            "a fuentes de autoridad."
+            if authority_links
+            else "."
+        )
+    )
 
     canonical = canonical_person_url(person_id, slug)
-    description = (
-        f"Obras y partituras de {name}"
-        + (f" ({years})" if years else "")
-        + " disponibles en OpenMusicRepository, con recursos musicales y enlaces a cada obra."
+    base_description = (
+        f"{name}{f' ({years})' if years else ''}: {total} obra{'s' if total != 1 else ''} "
+        "y partituras en OpenMusicRepository"
+    )
+    description = _clip(
+        base_description + (f". {summary}" if summary else f". {intro}")
     )
 
     person: dict[str, object] = {
@@ -378,10 +527,13 @@ def build_person_view(detail: dict[str, object], works: dict[str, object]) -> Pe
         "url": canonical,
         "jobTitle": "Compositor",
     }
-    if summary:
-        person["description"] = summary
-    if nationality:
-        person["nationality"] = nationality
+    person["description"] = summary or intro
+    if display_nationality:
+        person["nationality"] = display_nationality
+    if image_url:
+        person["image"] = image_url
+    if authority_links:
+        person["sameAs"] = [link.url for link in authority_links]
     birth = _str_or_none(detail.get("birth_year"))
     death = _str_or_none(detail.get("death_year"))
     if birth and len(birth) == 4 and birth.isdigit():
@@ -419,15 +571,20 @@ def build_person_view(detail: dict[str, object], works: dict[str, object]) -> Pe
         canonical_url=canonical,
         description=description,
         json_ld=json_ld,
+        intro=intro,
+        catalog_note=catalog_note,
+        authority_links=authority_links,
+        reference_links=reference_links,
+        has_biography=has_biography,
         givenname=_str_or_none(detail.get("given_name") or detail.get("givenname")),
         familyname=_str_or_none(detail.get("family_name") or detail.get("familyname")),
         sortname=_str_or_none(detail.get("sort_name") or detail.get("sortname")),
-        display_nationality=_str_or_none(detail.get("nationality")),
+        display_nationality=display_nationality,
         biography_nationality=nationality,
         birth_year=_str_or_none(detail.get("birth_year")),
         death_year=_str_or_none(detail.get("death_year")),
-        image_url=_str_or_none(detail.get("image_url")),
+        image_url=image_url,
         biography_key_fact=_str_or_none(detail.get("biography_key_fact")),
-        biography_references=_str_or_none(detail.get("biography_references")),
+        biography_references=None,
         visible=bool(detail.get("visible", True)),
     )

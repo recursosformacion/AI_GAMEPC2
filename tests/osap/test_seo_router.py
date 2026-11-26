@@ -309,9 +309,8 @@ def test_pagina_de_compositor_lista_obras_y_json_ld(client: TestClient) -> None:
     assert 'href="/obras/index-7/ave-verum-corpus"' in resp.text
     assert 'href="/obras/index-8/requiem"' in resp.text
     assert f'<link rel="canonical" href="{_BASE}/composers/person-1/wolfgang-amadeus-mozart" />' in resp.text
-    # Ficha en fieldsets (diseño aprobado de la ficha HTML), sin CTA a la app.
-    assert "<legend>Identidad y nombre</legend>" in resp.text
-    assert "<legend>Biografía</legend>" in resp.text
+    # Ficha con contenido único (biografía) y sin CTA a la app.
+    assert "Sobre Wolfgang Amadeus Mozart" in resp.text
     assert "Obras disponibles" in resp.text
     assert "Ver en la app" not in resp.text
     payload = _json_ld(resp.text)

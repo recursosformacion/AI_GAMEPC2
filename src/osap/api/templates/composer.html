@@ -1,6 +1,16 @@
 {% extends "base.html" %}
 {% block title %}{{ view.name }}{% if view.years %} ({{ view.years }}){% endif %} — Obras y partituras | OpenMusicRepository{% endblock %}
 {% block description %}{{ view.description }}{% endblock %}
+{% block social %}
+    <meta property="og:type" content="profile" />
+    <meta property="og:title" content="{{ view.name }}{% if view.years %} ({{ view.years }}){% endif %} — Obras y partituras" />
+    <meta property="og:description" content="{{ view.description }}" />
+    <meta property="og:url" content="{{ view.canonical_url }}" />
+    {% if view.image_url %}<meta property="og:image" content="{{ view.image_url }}" />{% endif %}
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="{{ view.name }}{% if view.years %} ({{ view.years }}){% endif %}" />
+    <meta name="twitter:description" content="{{ view.description }}" />
+{% endblock %}
 {% block json_ld %}<script type="application/ld+json">{{ view.json_ld | safe }}</script>{% endblock %}
 {% block content %}
 <nav class="crumbs" aria-label="breadcrumb">
@@ -19,35 +29,49 @@
   <span class="badge">{{ view.works_total }} obras</span>
 </div>
 
+<section class="panel" aria-labelledby="sobre-compositor">
+  <h2 id="sobre-compositor">Sobre {{ view.name }}</h2>
+  <p>{{ view.intro }}</p>
+  {% if view.has_biography and (view.era or view.display_nationality or view.birth_year or view.death_year or view.biography_key_fact) %}
+  <dl class="detail">
+    {% if view.era %}<dt>Época</dt><dd>{{ view.era }}</dd>{% endif %}
+    {% if view.display_nationality %}<dt>Nacionalidad</dt><dd>{{ view.display_nationality }}</dd>{% endif %}
+    {% if view.birth_year %}<dt>Año de nacimiento</dt><dd>{{ view.birth_year }}</dd>{% endif %}
+    {% if view.death_year %}<dt>Año de fallecimiento</dt><dd>{{ view.death_year }}</dd>{% endif %}
+    {% if view.biography_key_fact %}<dt>Dato clave</dt><dd>{{ view.biography_key_fact }}</dd>{% endif %}
+  </dl>
+  {% endif %}
+  {% if view.catalog_note %}<p class="muted">{{ view.catalog_note }}</p>{% endif %}
+</section>
+
 {% if view.image_url %}
-<p><img src="{{ view.image_url }}" alt="{{ view.name }}" style="max-width:180px;height:auto;border-radius:0.5rem" loading="lazy"></p>
+<figure class="entity-card">
+  <img src="{{ view.image_url }}" alt="Retrato de {{ view.name }}" style="max-width:180px;height:auto;border-radius:0.5rem" loading="lazy">
+  <figcaption class="muted">Retrato de {{ view.name }}</figcaption>
+</figure>
 {% endif %}
 
-<section class="person-view" aria-label="Ficha de la persona">
-  <fieldset>
-    <legend>Identidad y nombre</legend>
-    <dl class="fields">
-      <div><dt>Identificador</dt><dd>{{ view.person_id }}</dd></div>
-      <div><dt>Nombre de pila</dt><dd>{{ view.givenname or '—' }}</dd></div>
-      <div><dt>Apellidos</dt><dd>{{ view.familyname or '—' }}</dd></div>
-      <div><dt>Nombre para ordenar</dt><dd>{{ view.sortname or '—' }}</dd></div>
-      <div><dt>Visible</dt><dd>{{ 'Sí' if view.visible else 'No' }}</dd></div>
-    </dl>
-  </fieldset>
-
-  <fieldset>
-    <legend>Biografía</legend>
-    <dl class="fields">
-      <div><dt>Resumen</dt><dd class="multiline">{{ view.summary or '—' }}</dd></div>
-      <div><dt>Época</dt><dd>{{ view.era or '—' }}</dd></div>
-      <div><dt>Nacionalidad</dt><dd>{{ view.display_nationality or '—' }}</dd></div>
-      <div><dt>Año de nacimiento</dt><dd>{{ view.birth_year or '—' }}</dd></div>
-      <div><dt>Año de fallecimiento</dt><dd>{{ view.death_year or '—' }}</dd></div>
-      <div><dt>Dato clave</dt><dd>{{ view.biography_key_fact or '—' }}</dd></div>
-      <div><dt>Referencias</dt><dd class="multiline">{{ view.biography_references or '—' }}</dd></div>
-    </dl>
-  </fieldset>
+{% if view.authority_links %}
+<section class="panel" aria-labelledby="fuentes-autoridad">
+  <h2 id="fuentes-autoridad">Fuentes de autoridad</h2>
+  <ul class="refs">
+    {% for link in view.authority_links %}
+    <li><a href="{{ link.url }}" target="_blank" rel="noopener">{{ link.label }}</a></li>
+    {% endfor %}
+  </ul>
 </section>
+{% endif %}
+
+{% if view.reference_links %}
+<section class="panel" aria-labelledby="referencias">
+  <h2 id="referencias">Referencias</h2>
+  <ul class="refs">
+    {% for ref in view.reference_links %}
+    <li>{% if ref.url %}<a href="{{ ref.url }}" target="_blank" rel="noopener">{{ ref.label }}</a>{% else %}{{ ref.label }}{% endif %}</li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
 
 <h2>Obras disponibles</h2>
 {% if view.works %}

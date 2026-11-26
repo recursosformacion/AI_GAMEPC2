@@ -27,7 +27,13 @@ _WORKS = [
         "updated_at": "2026-01-03",
     },
 ]
-_PERSONS = [{"id": "person-1", "name": "Wolfgang Amadeus Mozart"}]
+_PERSONS = [
+    {
+        "id": "person-1",
+        "name": "Wolfgang Amadeus Mozart",
+        "updated_at": "2026-11-26 10:00:00",
+    }
+]
 
 
 class _FakeApi:
@@ -103,6 +109,7 @@ def test_sitemap_persons_urls_canonicas(client: TestClient) -> None:
     resp = client.get("/sitemaps/persons-1.xml")
     assert resp.status_code == 200
     assert f"<loc>{_BASE}/composers/person-1/wolfgang-amadeus-mozart</loc>" in resp.text
+    assert "<lastmod>2026-11-26</lastmod>" in resp.text
 
 
 def test_pagina_fuera_de_rango_404(client: TestClient) -> None:

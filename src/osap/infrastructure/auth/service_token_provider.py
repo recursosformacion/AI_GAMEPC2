@@ -43,12 +43,12 @@ class ClientCredentialsServiceTokenProvider(IServiceTokenProvider):
         self._lock = threading.Lock()
         self._cache: dict[tuple[tuple[str, ...], str | None], tuple[str, float]] = {}
 
-    def token(self, scopes: tuple[str, ...]) -> str:
+    def token(self, scopes: tuple[str, ...], *, force_refresh: bool = False) -> str:
         key = (tuple(scopes), self._audience)
         now = time.monotonic()
         with self._lock:
             cached = self._cache.get(key)
-            if cached is not None and cached[1] > now:
+            if not force_refresh and cached is not None and cached[1] > now:
                 return cached[0]
             token, expires_in = self._request_token(scopes)
             ttl = expires_in if expires_in > 0 else 300.0
@@ -91,5 +91,5 @@ class StaticServiceTokenProvider(IServiceTokenProvider):
     def __init__(self, token: str) -> None:
         self._token = token
 
-    def token(self, scopes: tuple[str, ...]) -> str:
+    def token(self, scopes: tuple[str, ...], *, force_refresh: bool = False) -> str:
         return self._token

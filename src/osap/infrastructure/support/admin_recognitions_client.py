@@ -41,8 +41,12 @@ class SupportAdminRecognitionsClient:
         return self._base_url
 
     def admin_token(self) -> str:
-        """Service token (`aud=osap-support`, scope `support:admin`) para la capa web propia."""
-        return self._token_provider.token(_ADMIN_SCOPE)
+        """Service token (`aud=osap-support`, scope `support:admin`) para la capa web propia.
+
+        Es un handoff al navegador: se fuerza uno nuevo para no reutilizar un token
+        cacheado que pueda estar a punto de caducar.
+        """
+        return self._token_provider.token(_ADMIN_SCOPE, force_refresh=True)
 
     def _headers(self) -> dict[str, str]:
         token = self._token_provider.token(_ADMIN_SCOPE)

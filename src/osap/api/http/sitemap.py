@@ -161,7 +161,9 @@ def _persons_urlset(ctx: HttpContext, page: int) -> str:
         name = str(row.get("name") or "")
         if not person_id or not name:
             continue
-        urls.append((canonical_person_url(person_id, person_slug(name)), None))
+        updated = row.get("updated_at")
+        lastmod = str(updated)[:10] if updated else None
+        urls.append((canonical_person_url(person_id, person_slug(name)), lastmod))
     return render_sitemap_urlset(urls)
 
 
