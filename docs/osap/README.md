@@ -36,6 +36,7 @@ No usar el antiguo libro V2.2 como descripción de la arquitectura desplegada.
 - [Los Amigos](amigos.md) — grupos, permisos de autoría y agenda.
 - [Noticias](news-integration.md) — integración con ai_noticias.
 - [Mantenimiento](maintenance.md) — activación, revisión y liberación.
+- [Plan de enriquecimiento de fichas](plan-enriquecimiento.md) — estado y siguiente paso técnico de personas y obras (cursor IMSLP, índice, CPDL/PDMX).
 - [Checklist funcional](manual-verification-checklist.md) — pruebas de cuenta y operaciones internas, con límites de escritura.
 - [Integración publicitaria](../ads-integration.md) — fachada API, AdSlot y click-through; código integrado, producción pendiente de verificar.
 
