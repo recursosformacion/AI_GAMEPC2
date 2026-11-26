@@ -85,6 +85,9 @@ homónimos). Priorizar:
 
 ### 6. Calidad y SEO continuo
 
+- [x] El email diario de incidencias incluye un resumen “TRABAJO RECIENTE”
+      (IMSLP acumulado/cursor/candidatas y personas visibles/promoción) y ya no marca
+      `osap-ai-enrich` como caído por ser un oneshot.
 - [ ] Informe semanal: personas ocultas con obras, obras sin compositor visible,
       sin año y sin instrumentación.
 - [ ] Tras cada reindexación: purgar Cloudflare y reenviar sitemap.

@@ -26,6 +26,7 @@ Esta carpeta se divide por **frecuencia de uso**. La regla es simple:
 | `backfill_source_ids.py`, `backfill_index_url_aliases.py` | Backfills de la migración de IDs. |
 | `deploy.ps1`, `deploy_all.ps1`, `deploy_with_maintenance.ps1` | Despliegue. |
 | `deploy_ads.ps1`, `deploy_blog.ps1` | Despliegue de `ai_publicidad` y `osap-blog` con verificación del handoff POST. |
+| `osap-daily-review.sh` | Revisión diaria del VPS; email solo con incidencias e incluye un resumen del trabajo de enriquecimiento reciente. |
 | `backup`, `check-*`, `smoke-*` | Verificación y operación. |
 | `maintenance.html`, `restart-dev.*`, `osap-tunnel.ps1` | Desarrollo local. |
 
