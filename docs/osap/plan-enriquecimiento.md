@@ -23,14 +23,16 @@ semanas después, empezar por aquí.
   - `enrich_works_imslp.py` — metadatos de obras desde el wikitext de IMSLP.
 - Piloto IMSLP (2.000 obras, 81 s): 1.205 años, 1.907 instrumentaciones, 147 opus,
   1.969 épocas.
+- Lote IMSLP de 20.000 obras completado el 2026-11-26 (11 min):
+  13.116 años, 18.386 instrumentaciones, 1.464 opus, 300 tonalidades, 19.707 épocas.
+  Cursor actual: **332.505**. Quedan ~244.546 obras IMSLP candidatas (~12 lotes).
 
 ## Siguiente paso técnico (orden obligatorio)
 
 ### 1. Terminar el barrido IMSLP
 
-- [ ] Comprobar el lote de 20.000 en curso:
-      `systemctl list-units | grep imslp`
-- [ ] Repetir lotes hasta agotar el cursor:
+- [x] Primer lote de 20.000 completado (2026-11-26 18:31).
+- [ ] Repetir lotes hasta agotar el cursor (hay uno de 20.000 en curso):
       `enrich_works_imslp.py --limit 20000 --sleep 0.4 --apply --allow-prod`
 - [ ] Cursor: `osap-storage/var/imslp_works_cursor.txt`
 - [ ] Revisar informes: `osap-storage/var/imslp_works_*.json`
